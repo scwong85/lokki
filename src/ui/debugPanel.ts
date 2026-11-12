@@ -66,13 +66,13 @@ export class DebugPanel {
     body.hidden = true;
   }
 
-  frame(dt: number): void {
+  frame(dt: number, extra = ''): void {
     this.frames++;
     this.acc += dt;
     this.worst = Math.max(this.worst, dt);
     if (this.acc >= 0.5) {
       const fps = this.frames / this.acc;
-      this.stats.textContent = `${fps.toFixed(0)} fps · ${(1000 / fps).toFixed(1)} ms · worst ${(this.worst * 1000).toFixed(0)} ms  [click canvas = mouse look]`;
+      this.stats.textContent = `${fps.toFixed(0)} fps · ${(1000 / fps).toFixed(1)} ms · worst ${(this.worst * 1000).toFixed(0)} ms · ${extra}  [click canvas = mouse look]`;
       this.frames = 0;
       this.acc = 0;
       this.worst = 0;

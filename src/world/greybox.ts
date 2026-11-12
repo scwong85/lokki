@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { palette } from '../render/palette';
 import type { Box } from './collision';
 import type { Target } from '../gameplay/targets';
+import { createTargetMeshes } from './targetMeshes';
 
 const box = (
   min: [number, number, number],
@@ -83,21 +84,6 @@ export function buildCourseVisuals(boxes: readonly Box[], targets: readonly Targ
   water.position.set(230, 0.05, 0);
   group.add(water);
 
-  const targetMeshes = targets.map((t) => {
-    const g = new THREE.Group();
-    const scoop = new THREE.Mesh(new THREE.SphereGeometry(t.radius, 10, 8), mat(0xff8fab));
-    const cone = new THREE.Mesh(new THREE.ConeGeometry(t.radius * 0.7, t.radius * 1.6, 8), mat(0xf2c28b));
-    cone.rotation.x = Math.PI;
-    cone.position.y = -t.radius * 1.1;
-    const pillar = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.08, 0.08, 8, 6),
-      new THREE.MeshBasicMaterial({ color: 0xff8fab, transparent: true, opacity: 0.35 }),
-    );
-    pillar.position.y = 4.5;
-    g.add(scoop, cone, pillar);
-    g.position.set(t.x, t.y, t.z);
-    group.add(g);
-    return g;
-  });
+  const targetMeshes = createTargetMeshes(targets, group);
   return { group, targetMeshes };
 }

@@ -5,7 +5,7 @@
   "type": "module",
   "license": "MIT",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.18"
   },
   "scripts": {
     "dev": "vite",
@@ -13,18 +13,25 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:smoke": "playwright test"
+    "test:smoke": "playwright test",
+    "data:fetch": "node scripts/fetch-data.ts",
+    "data:build": "node scripts/build-world.ts"
   },
   "dependencies": {
+    "earcut": "^3.2.4",
     "three": "^0.187.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.65.0",
+    "@types/earcut": "^3.0.0",
+    "@types/node": "^26.6.6",
+    "@types/proj4": "^2.5.6",
     "@types/three": "^0.187.0",
     "eslint": "^10.14.0",
     "globals": "^17.14.0",
     "playwright": "^1.65.0",
+    "proj4": "^2.23.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.2",
     "vite": "^8.3.8",

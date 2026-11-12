@@ -2,7 +2,7 @@
 
 *Lokki* ("gull" in Finnish) is a browser-based 3D game: you are a seagull causing gentle slapstick havoc in downtown Helsinki. Low-poly, pastel, mouse + keyboard. See [`docs/PLAN.md`](docs/PLAN.md) for the full plan.
 
-Status: **M2 – The gull** (procedural model + animation + placeholder sounds), awaiting playtest. M1 flight feel passed decision gate 1.
+Status: **M3 – Helsinki blockout** (pastel low-poly Kauppatori), awaiting playtest. M0–M2 done.
 
 ## Run
 
@@ -16,7 +16,11 @@ npm run preview    # serve dist/ locally
 npm run lint
 npm test           # unit tests (Vitest)
 npm run test:smoke # Playwright smoke test (needs Chromium)
+npm run data:build # regenerate data/generated/kauppatori.json from data/raw/ (Node >= 22.18)
+npm run data:fetch # re-download the raw snapshot from Helsinki open data (needs network)
 ```
+
+`?greybox` in the URL (e.g. `http://localhost:5173/?greybox`) loads the M1 test course instead of the city.
 
 ## Controls (M1)
 
@@ -29,6 +33,7 @@ npm run test:smoke # Playwright smoke test (needs Chromium)
 | Mouse | click canvas for mouse look (Esc releases) |
 | R | reset gull |
 | M | mute / unmute |
+| C | credits |
 | F3 | debug panel: live tuning, "Copy tuning as JSON" |
 
 ## Audio
@@ -37,7 +42,9 @@ All sounds so far are synthesised at runtime with WebAudio (no sample files, not
 
 ## Data credits
 
-_Placeholder._ From M3: Helsinki 3D city model (CC BY 4.0, City of Helsinki), © OpenStreetMap contributors (ODbL). CC0 audio/art credits from M2/M9.
+- **Buildings, streets, parks, coastline:** City of Helsinki open data (Helsingin kaupunki), licence [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), © City of Helsinki. Layers and processing are recorded in [`data/raw/SOURCES.md`](data/raw/SOURCES.md).
+- **Sounds:** synthesised at runtime, no sample files.
+- Landmarks (cathedral, tents, ferry, statue) are original stylised props.
 
 ## Licence
 

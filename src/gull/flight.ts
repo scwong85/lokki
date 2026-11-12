@@ -1,5 +1,5 @@
 import { tuning } from '../core/tuning';
-import { collideSphere, surfaceBelow, type Box } from '../world/collision';
+import type { World } from '../world/collision';
 import { windAt } from './wind';
 import { bestAimTarget, type Target } from '../gameplay/targets';
 
@@ -74,7 +74,7 @@ export function divePreview(
   s: { x: number; y: number; z: number },
   heading: number,
   angle: number,
-  boxes: readonly Box[],
+  world: World,
 ): { x: number; y: number; z: number } | null {
   const dx = -Math.sin(heading) * Math.cos(angle);
   const dy = -Math.sin(angle);
@@ -87,10 +87,7 @@ export function divePreview(
     x += dx * step;
     y += dy * step;
     z += dz * step;
-    if (y <= 0) return { x, y: 0, z };
-    for (const b of boxes) {
-      if (x >= b.min[0] && x <= b.max[0] && y >= b.min[1] && y <= b.max[1] && z >= b.min[2] && z <= b.max[2]) return { x, y, z };
-    }
+    if (world.solidAt(x, y, z)) return { x, y: Math.max(0, y), z };
   }
   return null;
 }
@@ -115,7 +112,7 @@ export function stepFlight(
   inp: FlightInput,
   camYaw: number,
   dt: number,
-  boxes: readonly Box[],
+  world: World,
   time: number,
   targets: readonly Target[] = [],
 ): FlightEvent[] {
@@ -133,7 +130,7 @@ export function stepFlight(
   s.stunT = Math.max(0, s.stunT - dt);
   const ctl: FlightInput = stunned ? { ax: 0, ay: 0, flap: false, dive: false, aimPitch: inp.aimPitch } : inp;
 
-  const surf = surfaceBelow(boxes, s.x, s.z, s.y - GULL_RADIUS + 0.05);
+  const surf = world.surfaceBelow(s.x, s.z, s.y - GULL_RADIUS + 0.05);
   s.heightAbove = Math.max(0, s.y - GULL_RADIUS - surf.y);
   const wasGrounded = s.mode === 'ground';
   const prevHeading = s.heading;
@@ -270,7 +267,7 @@ export function stepFlight(
   // ---- collide ----
   const wasDive = s.mode === 'dive';
   const pos = { x: s.x, y: s.y, z: s.z };
-  const contacts = collideSphere(boxes, pos, GULL_RADIUS);
+  const contacts = world.collide(pos, GULL_RADIUS);
   s.x = pos.x;
   s.y = pos.y;
   s.z = pos.z;
@@ -280,16 +277,17 @@ export function stepFlight(
     const vn = s.vx * c.nx + s.vy * c.ny + s.vz * c.nz;
     if (vn >= 0) {
       if (c.ny > 0.6) grounded = true;
-      if (c.ny > 0.6 && c.box?.kind === 'perch') perch = true;
+      if (c.ny > 0.6 && c.kind === 'perch') perch = true;
       continue;
     }
     const impact = -vn;
     s.vx -= vn * c.nx;
     s.vy -= vn * c.ny;
     s.vz -= vn * c.nz;
+    if (c.kind === 'bound') continue; // invisible map edge: just stop, no stun
     if (c.ny > 0.6) {
       grounded = true;
-      perch = perch || c.box?.kind === 'perch';
+      perch = perch || c.kind === 'perch';
       if (!wasGrounded) {
         const quality = impact < l.softSpeed.value ? 'soft' : impact < l.hardSpeed.value ? 'rough' : 'hard';
         if (quality === 'rough') s.stunT = l.stunSoft.value;

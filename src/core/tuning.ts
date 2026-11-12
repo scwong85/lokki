@@ -98,8 +98,8 @@ export const tuning = {
     wind: p(0.5, 0, 1, 0.05), // air-rush loudness
   },
   render: {
-    fogNear: p(40, 0, 200, 1),
-    fogFar: p(220, 50, 800, 1),
+    fogNear: p(150, 0, 400, 1),
+    fogFar: p(700, 100, 1500, 1),
   },
 };
 

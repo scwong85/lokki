@@ -20,7 +20,7 @@ export class FollowCamera {
   private roll = 0;
 
   constructor(aspect: number) {
-    this.camera = new THREE.PerspectiveCamera(tuning.camera.fov.value, aspect, 0.1, 1000);
+    this.camera = new THREE.PerspectiveCamera(tuning.camera.fov.value, aspect, 0.3, 1500);
   }
 
   rotate(dx: number, dy: number): void {

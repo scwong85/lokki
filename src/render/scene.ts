@@ -27,11 +27,12 @@ export function createScene() {
   sun.position.set(30, 50, 20);
   scene.add(sun);
 
-  const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(1200, 1200),
-    new THREE.MeshLambertMaterial({ color: palette.ground, flatShading: true }),
-  );
+  return scene;
+}
+
+/** Big flat plane at y=0 (used by the greybox course; the city brings its own water and land). */
+export function addGroundPlane(scene: THREE.Scene, color: number): void {
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(1200, 1200), new THREE.MeshLambertMaterial({ color, flatShading: true }));
   ground.rotation.x = -Math.PI / 2;
   scene.add(ground);
-  return scene;
 }

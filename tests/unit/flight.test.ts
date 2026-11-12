@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { aimDiveAngle, divePreview, newFlightState, stepFlight, type FlightEvent, type FlightInput, type FlightState } from '../../src/gull/flight';
 import { tuning } from '../../src/core/tuning';
-import type { Box } from '../../src/world/collision';
+import { World, type Box } from '../../src/world/collision';
 import type { Target } from '../../src/gameplay/targets';
 
 const DT = 1 / 60;
@@ -19,7 +19,7 @@ function run(
 ) {
   for (let i = 0; i < Math.round(secs / DT); i++) {
     const input = typeof inp === 'function' ? inp(s) : inp;
-    evs.push(...stepFlight(s, input, camYaw, DT, boxes, (t += DT), targets));
+    evs.push(...stepFlight(s, input, camYaw, DT, new World(boxes), (t += DT), targets));
   }
 }
 
@@ -195,7 +195,7 @@ describe('aimed dive', () => {
   });
   it('preview ray lands on the ground where a straight dive would', () => {
     const s = airborne(30);
-    const hit = divePreview(s, 0, Math.PI / 4, [])!;
+    const hit = divePreview(s, 0, Math.PI / 4, new World())!;
     expect(hit.y).toBe(0);
     expect(hit.z).toBeCloseTo(-30, 0);
   });
@@ -206,7 +206,7 @@ describe('aimed dive', () => {
       const s = airborne(40);
       let best = Infinity;
       for (let i = 0; i < 200; i++) {
-        stepFlight(s, { ...idle, dive: true, aimPitch: 0.4 }, 0, DT, [], (t += DT), [target]);
+        stepFlight(s, { ...idle, dive: true, aimPitch: 0.4 }, 0, DT, new World(), (t += DT), [target]);
         best = Math.min(best, Math.hypot(s.x - target.x, s.y - target.y, s.z - target.z));
         if (s.mode === 'ground') break;
       }

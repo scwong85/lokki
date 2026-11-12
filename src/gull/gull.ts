@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { newFlightState, stepFlight, GULL_RADIUS, type FlightEvent, type FlightInput, type FlightState } from './flight';
-import { surfaceBelow, type Box } from '../world/collision';
+import type { World } from '../world/collision';
 import type { Target } from '../gameplay/targets';
 import { tuning } from '../core/tuning';
 import { GullModel } from './model';
@@ -42,13 +42,13 @@ export class Gull {
     this.beakT = Math.max(this.beakT, secs);
   }
 
-  update(inp: FlightInput, camYaw: number, dt: number, boxes: readonly Box[], time: number, targets: readonly Target[] = []): FlightEvent[] {
+  update(inp: FlightInput, camYaw: number, dt: number, world: World, time: number, targets: readonly Target[] = []): FlightEvent[] {
     const s = this.state;
     this.prev = { x: s.x, y: s.y, z: s.z, heading: s.heading };
-    return stepFlight(s, inp, camYaw, dt, boxes, time, targets);
+    return stepFlight(s, inp, camYaw, dt, world, time, targets);
   }
 
-  applyInterpolation(alpha: number, frameDt: number, boxes: readonly Box[]): void {
+  applyInterpolation(alpha: number, frameDt: number, world: World): void {
     const s = this.state;
     const p = this.prev;
     this.time += frameDt;
@@ -86,9 +86,9 @@ export class Gull {
     );
 
     // blob shadow on the surface below (helps judge height and landings)
-    const surf = surfaceBelow(boxes, this.position.x, this.position.z, this.position.y - GULL_RADIUS + 0.05);
+    const surf = world.surfaceBelow(this.position.x, this.position.z, this.position.y - GULL_RADIUS + 0.05);
     const h = Math.max(0, this.position.y - GULL_RADIUS - surf.y);
-    this.shadow.position.set(this.position.x, surf.y + 0.03, this.position.z);
+    this.shadow.position.set(this.position.x, surf.y + 0.12, this.position.z);
     const sc = Math.max(0.4, 1.6 - h * 0.03);
     this.shadow.scale.set(sc, sc, sc);
     (this.shadow.material as THREE.MeshBasicMaterial).opacity = Math.max(0.12, 0.4 - h * 0.01);
