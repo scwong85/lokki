@@ -2,6 +2,7 @@
 export class Input {
   private down = new Set<string>();
   private pressedThisStep = new Set<string>();
+  private clicked = false;
   private mdx = 0;
   private mdy = 0;
   locked = false;
@@ -21,12 +22,20 @@ export class Input {
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === canvas;
     });
+    addEventListener('mousedown', (e) => {
+      if (this.locked && e.button === 0) this.clicked = true;
+    });
     addEventListener('mousemove', (e) => {
       if (this.locked || e.buttons & 1) {
         this.mdx += e.movementX;
         this.mdy += e.movementY;
       }
     });
+  }
+
+  /** Left click while the pointer is captured (used to poop). */
+  wasClicked(): boolean {
+    return this.clicked;
   }
 
   isDown(code: string): boolean {
@@ -54,5 +63,6 @@ export class Input {
   /** Call once per sim step after reading input. */
   endStep(): void {
     this.pressedThisStep.clear();
+    this.clicked = false;
   }
 }

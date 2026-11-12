@@ -12,7 +12,11 @@ import { windAt } from './gull/wind';
 import { buildCourse, buildCourseVisuals } from './world/greybox';
 import { buildCity } from './world/city';
 import { World } from './world/collision';
+import type { PropSpawn } from './gameplay/props';
 import { Credits } from './ui/credits';
+import { PhysicsWorld } from './physics/physics';
+import { Interaction, type GagEvent } from './gameplay/interaction';
+import { Reticle } from './render/reticle';
 import { bestAimTarget, diveHits, updateTargets, type Target } from './gameplay/targets';
 import { DiveMarker } from './render/diveMarker';
 import { DebugPanel } from './ui/debugPanel';
@@ -25,6 +29,10 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 app.appendChild(renderer.domElement);
 
+const RAPIER = (await import('@dimforge/rapier3d-compat')).default;
+await RAPIER.init();
+const phys = new PhysicsWorld(RAPIER);
+
 const scene = createScene();
 // `?greybox` loads the M1 test course instead of the city
 const greybox = new URLSearchParams(location.search).has('greybox');
@@ -32,6 +40,7 @@ let world: World;
 let targets: Target[];
 let targetMeshes: THREE.Object3D[];
 let start: { x: number; z: number };
+let propSpawns: PropSpawn[] = [];
 if (greybox) {
   const course = buildCourse();
   const visuals = buildCourseVisuals(course.boxes, course.targets);
@@ -44,14 +53,20 @@ if (greybox) {
   const city = buildCity();
   scene.add(city.group);
   world = city.world;
-  ({ targets, start, targetMeshes } = city);
+  ({ targets, start, targetMeshes, propSpawns } = city);
+  phys.addStaticMesh(city.physicsMesh.vertices, city.physicsMesh.indices);
 }
 const gull = new Gull(start);
+phys.createGullBody(GULL_RADIUS, start.x, GULL_RADIUS, start.z);
+const interaction = new Interaction(phys, world, scene);
+for (const sp of propSpawns) interaction.props.spawn(sp);
+const poopReticle = new Reticle();
+scene.add(poopReticle.mesh);
 const marker = new DiveMarker();
 scene.add(gull.mesh, gull.shadow, marker.group);
 const cam = new FollowCamera(innerWidth / innerHeight);
 const input = new Input(renderer.domElement);
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction };
 const debug = new DebugPanel(document.body);
 const hud = new Hud(document.body);
 const credits = new Credits(document.body);
@@ -61,6 +76,7 @@ let simTime = 0;
 let hits = 0;
 
 events.on('tuningChanged', () => {
+  phys.setGravity(tuning.physics.gravity.value);
   const f = scene.fog as THREE.Fog;
   f.near = tuning.render.fogNear.value;
   f.far = tuning.render.fogFar.value;
@@ -95,12 +111,50 @@ function onFlightEvents(evs: FlightEvent[]): void {
   }
 }
 
+function onGags(gags: GagEvent[]): void {
+  for (const g of gags) {
+    switch (g.type) {
+      case 'grab':
+        audio.play('pop');
+        gull.openBeak(0.25);
+        hud.toast(`Got the ${g.prop.def.name}!`, 0.7);
+        break;
+      case 'toss':
+        audio.play('hop');
+        break;
+      case 'heavy':
+        hud.toast(`The ${g.prop.def.name} is too heavy!`, 0.8);
+        break;
+      case 'splat':
+        audio.play('splat');
+        break;
+      case 'poopProp':
+        audio.play('splat');
+        hud.toast(`Splat! ${g.prop.def.name}`, 0.9);
+        break;
+      case 'break':
+        audio.play('crash');
+        hud.toast('Crash!', 0.9);
+        break;
+      case 'clatter':
+        audio.play('clatter');
+        break;
+      case 'tipped':
+        hud.toast(`${g.prop.def.name} tipped over!`, 1);
+        break;
+    }
+  }
+}
+
 startLoop({
   update(dt) {
     simTime += dt;
     const m = input.consumeMouse();
     cam.rotate(m.dx, m.dy);
-    if (input.wasPressed('KeyR')) gull.reset();
+    if (input.wasPressed('KeyR')) {
+      gull.reset();
+      interaction.reset();
+    }
     if (input.wasPressed('KeyC')) credits.toggle();
     if (input.wasPressed('KeyM')) hud.toast(audio.toggleMute() ? 'Sound off' : 'Sound on', 0.8);
     const { x, y } = input.axes();
@@ -109,6 +163,7 @@ startLoop({
       { ax: x, ay: y, flap: input.isDown('Space'),
         dive: input.isDown('ShiftLeft') || input.isDown('ShiftRight'),
         aimPitch: cam.pitch,
+        carryMass: interaction.carriedMass,
       },
       cam.yaw,
       dt,
@@ -117,6 +172,14 @@ startLoop({
       targets,
     );
     onFlightEvents(evs);
+    onGags(
+      interaction.update(
+        gull.state,
+        { grab: input.wasPressed('KeyE'), toss: input.wasPressed('KeyQ'), poop: input.wasPressed('KeyF') || input.wasClicked() },
+        dt,
+        simTime,
+      ),
+    );
     if (wasDive) {
       const s = gull.state;
       const got = diveHits(targets, { x: s.x, y: s.y, z: s.z }, GULL_RADIUS);
@@ -131,6 +194,7 @@ startLoop({
   },
   render(alpha, frameDt) {
     gull.applyInterpolation(alpha, frameDt, world);
+    interaction.render(alpha);
     targets.forEach((t, i) => (targetMeshes[i].visible = t.cooldown === 0));
     const s = gull.state;
     // dive aim aid: where a dive would land, and which target (if any) is on the line
@@ -146,6 +210,11 @@ startLoop({
       marker.update(null, null, false, false);
     }
     targets.forEach((t, i) => targetMeshes[i].scale.setScalar(t === aimTarget ? 1.5 : 1));
+    // poop aim reticle + context prompt
+    const poopReady = 1 - Math.min(1, interaction.poopCd / tuning.poop.cooldown.value);
+    const aimPoop = s.mode !== 'ground' && s.stunT === 0 && interaction.poopCd <= 0;
+    poopReticle.update(aimPoop ? interaction.poopPrediction(s, simTime) : null);
+    hud.setInteraction(interaction.grabPrompt(s), poopReady);
     cam.update(gull.position, frameDt, { vx: s.vx, vy: s.vy, vz: s.vz, diving: s.mode === 'dive', turnRate: s.turnRate });
     audio.setAir(Math.hypot(s.vx, s.vy, s.vz) / tuning.dive.speed.value, s.mode !== 'ground');
     renderer.render(scene, cam.camera);

@@ -42,6 +42,8 @@ export interface FlightInput {
   dive: boolean;
   /** Camera pitch: aims dive steepness. */
   aimPitch: number;
+  /** kg in the beak: weakens flapping. */
+  carryMass?: number;
 }
 
 export type FlightEvent =
@@ -128,7 +130,7 @@ export function stepFlight(
   s.flapAnim += dt;
   const stunned = s.stunT > 0;
   s.stunT = Math.max(0, s.stunT - dt);
-  const ctl: FlightInput = stunned ? { ax: 0, ay: 0, flap: false, dive: false, aimPitch: inp.aimPitch } : inp;
+  const ctl: FlightInput = stunned ? { ax: 0, ay: 0, flap: false, dive: false, aimPitch: inp.aimPitch, carryMass: inp.carryMass } : inp;
 
   const surf = world.surfaceBelow(s.x, s.z, s.y - GULL_RADIUS + 0.05);
   s.heightAbove = Math.max(0, s.y - GULL_RADIUS - surf.y);
@@ -228,7 +230,8 @@ export function stepFlight(
         s.flapCd = f.flapInterval.value;
         if (s.stamina >= f.flapCost.value) {
           s.stamina -= f.flapCost.value;
-          s.vy = Math.min(f.maxClimb.value, Math.max(s.vy, 0) + f.flapImpulse.value);
+          const load = 1 / (1 + (ctl.carryMass ?? 0) * tuning.interaction.carryPenalty.value);
+          s.vy = Math.min(f.maxClimb.value, Math.max(s.vy, 0) + f.flapImpulse.value * load);
           sp = Math.min(f.maxSpeed.value, sp + f.flapBoost.value);
           s.flapAnim = 0;
           ev.push({ type: 'flap' });

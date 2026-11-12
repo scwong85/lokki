@@ -5,6 +5,7 @@ import { World, type Box, type Prism } from './collision';
 import { buildLandmarks, type LandmarkSrc, type PrismDef } from './landmarks';
 import { createTargetMeshes } from './targetMeshes';
 import type { Target } from '../gameplay/targets';
+import type { PropSpawn } from '../gameplay/props';
 import cityJson from '../../data/generated/kauppatori.json';
 
 interface CityData {
@@ -32,6 +33,9 @@ export interface City {
   targets: Target[];
   targetMeshes: THREE.Object3D[];
   start: { x: number; z: number };
+  propSpawns: PropSpawn[];
+  /** Triangle soup of every building/landmark for static physics colliders. */
+  physicsMesh: { vertices: Float32Array; indices: Uint32Array };
   stats: { buildings: number; prisms: number; chunks: number };
 }
 
@@ -133,6 +137,7 @@ export function buildCity(): City {
 
   // landmarks + buildings share one prism pipeline
   const lm = buildLandmarks(data.landmarks);
+  for (const m of lm.mats) group.add(flatLayer([{ rings: m.rings }], 0.05, m.color, 4));
   const defs: PrismDef[] = data.buildings.map((b) => ({
     rings: b.rings, y0: 0, y1: b.h, kind: 'building', wall: WALLS[b.c] ?? WALLS[0], roof: ROOFS[b.c] ?? ROOFS[0],
   }));
@@ -155,7 +160,12 @@ export function buildCity(): City {
     extrude(buf, d);
   }
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
-  for (const buf of chunks.values()) group.add(buf.mesh(mat));
+  const phys: number[] = [];
+  for (const buf of chunks.values()) {
+    group.add(buf.mesh(mat));
+    for (const v of buf.pos) phys.push(v);
+  }
+  const physicsMesh = { vertices: new Float32Array(phys), indices: Uint32Array.from({ length: phys.length / 3 }, (_, i) => i) };
 
   const prisms: Prism[] = defs;
   const boxes: Box[] = [];
@@ -163,5 +173,5 @@ export function buildCity(): City {
 
   const targets = lm.targets;
   const targetMeshes = createTargetMeshes(targets, group);
-  return { world, group, targets, targetMeshes, start: { x: 0, z: -12 }, stats: { buildings: data.buildings.length, prisms: defs.length, chunks: chunks.size } };
+  return { world, group, targets, targetMeshes, start: { x: 0, z: -12 }, propSpawns: lm.props, physicsMesh, stats: { buildings: data.buildings.length, prisms: defs.length, chunks: chunks.size } };
 }

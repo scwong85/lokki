@@ -92,6 +92,31 @@ export const tuning = {
   course: {
     targetRespawn: p(8, 1, 60, 0.5),
   },
+  interaction: {
+    grabRange: p(1.8, 0.5, 5, 0.1), // m from the beak
+    grabConeDeg: p(80, 20, 180, 5), // props inside this cone ahead of the gull can be grabbed
+    carryMax: p(1, 0.1, 50, 0.1), // kg the gull can lift (Fat bird skill raises this later)
+    carryPenalty: p(0.8, 0, 5, 0.05), // flap strength is divided by (1 + carried kg * this)
+    tossSpeed: p(10, 2, 30, 0.5),
+    tossUp: p(4, 0, 15, 0.5),
+    grabCooldown: p(0.3, 0, 2, 0.05),
+  },
+  poop: {
+    cooldown: p(1.2, 0.2, 8, 0.1),
+    inherit: p(0.8, 0, 1.5, 0.05), // share of the gull's velocity the poop starts with
+    gravity: p(16, 4, 40, 0.5),
+    drag: p(0.35, 0, 3, 0.05), // pulls the poop's sideways speed toward the wind
+    windEffect: p(1, 0, 3, 0.05),
+    splatSize: p(0.9, 0.3, 3, 0.05),
+    maxDecals: p(80, 10, 300, 1),
+  },
+  physics: {
+    gravity: p(14, 4, 30, 0.5), // props only; the gull has its own flight gravity
+    friction: p(0.8, 0, 2, 0.05),
+    restitution: p(0.3, 0, 1, 0.05),
+    breakSpeed: p(6, 1, 30, 0.5), // impact speed that shatters fragile props
+    noiseSpeed: p(2.5, 0.5, 20, 0.5), // impact speed that makes a noisy prop clatter
+  },
   audio: {
     master: p(0.5, 0, 1, 0.05),
     sfx: p(0.8, 0, 1, 0.05),

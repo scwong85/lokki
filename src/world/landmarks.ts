@@ -1,5 +1,7 @@
 import type { Prism } from './collision';
 import type { Target } from '../gameplay/targets';
+import type { PropSpawn } from '../gameplay/props';
+import { restY } from '../data/props';
 
 /** A prism with its wall/roof colours, so landmarks render through the same path as buildings. */
 export interface PrismDef extends Prism {
@@ -22,9 +24,16 @@ export interface LandmarkSrc {
   count?: number;
 }
 
+export interface Mat {
+  rings: number[][];
+  color: number;
+}
+
 export interface LandmarkOut {
   prisms: PrismDef[];
   targets: Target[];
+  props?: PropSpawn[];
+  mats?: Mat[];
 }
 
 /** Regular polygon ring (flat x,z). */
@@ -142,10 +151,41 @@ function lamps(l: LandmarkSrc): LandmarkOut {
   return { prisms, targets: [] };
 }
 
-const BUILDERS: Record<string, (l: LandmarkSrc) => LandmarkOut> = { cathedral, statue, tents, ferry, lamps };
+/** Test area for gags: food, hats, bottles, bins, crates and a chair stack on a flat mat. */
+function sandbox(l: LandmarkSrc): LandmarkOut {
+  const { x, z } = l;
+  const props: PropSpawn[] = [];
+  const add = (type: PropSpawn['type'], dx: number, dz: number, base = 0, rotY = 0) =>
+    props.push({ type, x: x + dx, y: restY(type, base), z: z + dz, rotY });
+  // front row on the ground
+  for (const dx of [-8, -6, -4]) add('fish', dx, 5);
+  for (const dx of [0, 1, 2]) add('bottle', dx, 5);
+  for (const dx of [5, 6.5]) add('bun', dx, 5);
+  for (const dx of [9, 10.5]) add('cap', dx, 5);
+  // tables (crates) with things on top
+  for (const dx of [-6, 0, 6]) add('crate', dx, -1);
+  add('icecream', -6.2, -1, 0.7);
+  add('icecream', -5.8, -1, 0.7);
+  add('tophat', -0.2, -1, 0.7);
+  add('cap', 0.3, -1, 0.7);
+  add('bun', 5.8, -1, 0.7);
+  add('fish', 6.3, -1, 0.7);
+  // bins to knock over
+  add('bin', -10, -6);
+  add('bin', -8, -6);
+  // chair stack that wants to fall
+  for (let i = 0; i < 4; i++) add('chair', 11 + (i % 2) * 0.06, -5, i * 0.9, i * 0.3);
+  // crate pyramid
+  add('crate', -12.9, -2);
+  add('crate', -12.1, -2);
+  add('crate', -12.5, -2, 0.7);
+  return { prisms: [], targets: [], props, mats: [{ rings: [rect(x, z, 28, 18)], color: 0xfff3b8 }] };
+}
 
-export function buildLandmarks(list: readonly LandmarkSrc[]): LandmarkOut {
-  const out: LandmarkOut = { prisms: [], targets: [] };
+const BUILDERS: Record<string, (l: LandmarkSrc) => LandmarkOut> = { cathedral, statue, tents, ferry, lamps, sandbox };
+
+export function buildLandmarks(list: readonly LandmarkSrc[]): Required<LandmarkOut> {
+  const out: Required<LandmarkOut> = { prisms: [], targets: [], props: [], mats: [] };
   for (const l of list) {
     const b = BUILDERS[l.type];
     if (!b) {
@@ -155,6 +195,8 @@ export function buildLandmarks(list: readonly LandmarkSrc[]): LandmarkOut {
     const r = b(l);
     out.prisms.push(...r.prisms);
     out.targets.push(...r.targets);
+    out.props.push(...(r.props ?? []));
+    out.mats.push(...(r.mats ?? []));
   }
   return out;
 }

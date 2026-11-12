@@ -9,6 +9,8 @@ export class Hud {
   private arrow: HTMLElement;
   private toastEl: HTMLElement;
   private toastT = 0;
+  private promptEl: HTMLElement;
+  private pbar: HTMLElement;
 
   constructor(root: HTMLElement) {
     this.el = document.createElement('div');
@@ -17,13 +19,24 @@ export class Hud {
       <div class="info"></div>
       <div class="wind"><span class="arrow">➤</span></div>
       <div class="toast"></div>
+      <div class="prompt"></div>
       <div class="stam"><div class="bar"></div></div>
-      <div class="keys">WASD steer · Space hop / flap · Shift dive (hold; aim with mouse, height = steepness) · S flare/brake · R reset · M sound · C credits · F3 tuning</div>`;
+      <div class="poop"><div class="pbar"></div></div>
+      <div class="keys">WASD steer · Space hop/flap · Shift dive (aim: mouse) · S flare · E grab/drop · Q toss · F or click poop · R reset · M sound · C credits · F3 tuning</div>`;
     root.appendChild(this.el);
     this.bar = this.el.querySelector('.bar')!;
     this.info = this.el.querySelector('.info')!;
     this.arrow = this.el.querySelector('.arrow')!;
     this.toastEl = this.el.querySelector('.toast')!;
+    this.promptEl = this.el.querySelector('.prompt')!;
+    this.pbar = this.el.querySelector('.pbar')!;
+  }
+
+  /** Context prompt (what E does) and poop recharge (0..1). */
+  setInteraction(prompt: string, poopReady: number): void {
+    this.promptEl.textContent = prompt;
+    this.pbar.style.width = `${Math.round(poopReady * 100)}%`;
+    this.pbar.style.background = poopReady >= 1 ? '#fbfaf4' : '#c9b8a0';
   }
 
   toast(msg: string, secs = 1.2): void {

@@ -14,7 +14,7 @@ describe('generated Kauppatori data', () => {
     expect(d.buildings.length).toBeGreaterThan(200);
     expect(d.land.length).toBeGreaterThan(0);
     expect(d.streets.length).toBeGreaterThan(50);
-    expect(d.landmarks.map((l: { type: string }) => l.type).sort()).toEqual(['cathedral', 'ferry', 'lamps', 'statue', 'tents']);
+    expect(d.landmarks.map((l: { type: string }) => l.type).sort()).toEqual(['cathedral', 'ferry', 'lamps', 'sandbox', 'statue', 'tents']);
   });
   it('buildings are sane: >=3 points per ring, heights 3..60 m, inside the map', () => {
     for (const b of d.buildings) {
