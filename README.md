@@ -24,7 +24,7 @@ npm run test:smoke # Playwright smoke test (needs Chromium)
 |---|---|
 | WASD | walk / steer (relative to camera) |
 | Space | hop on the ground; flap in the air (hold to keep flapping, costs stamina) |
-| Shift (hold) | committed dive; release after the minimum time to swoop up |
+| Shift (hold) | committed dive along the camera aim (mouse up/down = steeper/shallower); release after the minimum time to swoop up |
 | S (in the air) | flare / brake, for precise landings |
 | Mouse | click canvas for mouse look (Esc releases) |
 | R | reset gull |

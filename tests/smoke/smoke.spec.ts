@@ -10,6 +10,7 @@ test('loads, renders a canvas, no console errors', async ({ page }) => {
   await page.keyboard.down('Space'); // hop + flap: take off
   await page.waitForTimeout(2500);
   await page.keyboard.up('Space');
+  await page.screenshot({ path: 'tests/__screenshots__/m1-aim.png' }); // aim marker while airborne
   await page.keyboard.down('Shift'); // dive
   await page.waitForTimeout(600);
   await page.keyboard.up('Shift');

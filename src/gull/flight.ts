@@ -1,6 +1,7 @@
 import { tuning } from '../core/tuning';
 import { collideSphere, surfaceBelow, type Box } from '../world/collision';
 import { windAt } from './wind';
+import { bestAimTarget, type Target } from '../gameplay/targets';
 
 export const GULL_RADIUS = 0.5;
 
@@ -24,6 +25,8 @@ export interface FlightState {
   hopCd: number;
   diveT: number;
   diveCd: number;
+  /** Current dive steepness (rad below horizontal). */
+  diveAngle: number;
   /** Seconds since the last flap (wing animation). */
   flapAnim: number;
   perched: boolean;
@@ -37,6 +40,8 @@ export interface FlightInput {
   ay: number;
   flap: boolean;
   dive: boolean;
+  /** Camera pitch: aims dive steepness. */
+  aimPitch: number;
 }
 
 export type FlightEvent =
@@ -51,9 +56,43 @@ export type FlightEvent =
 export function newFlightState(x = 0, z = 0): FlightState {
   return {
     x, y: GULL_RADIUS, z, vx: 0, vy: 0, vz: 0, heading: 0, turnRate: 0, mode: 'ground',
-    stamina: tuning.flight.staminaMax.value, stunT: 0, flapCd: 0, hopCd: 0, diveT: 0, diveCd: 0,
+    stamina: tuning.flight.staminaMax.value, stunT: 0, flapCd: 0, hopCd: 0, diveT: 0, diveCd: 0, diveAngle: 0.7,
     flapAnim: 99, perched: false, heightAbove: 0,
   };
+}
+
+/** Dive steepness the player is aiming for, from camera pitch. */
+export function aimDiveAngle(aimPitch: number): number {
+  const d = tuning.dive;
+  const span = Math.max(1e-3, d.pitchHigh.value - d.pitchLow.value);
+  const t = Math.min(1, Math.max(0, (aimPitch - d.pitchLow.value) / span));
+  return ((d.minAngleDeg.value + (d.maxAngleDeg.value - d.minAngleDeg.value) * t) * Math.PI) / 180;
+}
+
+/** Where a dive along (heading, angle) from the gull would hit the world. Null if nothing within range. */
+export function divePreview(
+  s: { x: number; y: number; z: number },
+  heading: number,
+  angle: number,
+  boxes: readonly Box[],
+): { x: number; y: number; z: number } | null {
+  const dx = -Math.sin(heading) * Math.cos(angle);
+  const dy = -Math.sin(angle);
+  const dz = -Math.cos(heading) * Math.cos(angle);
+  const step = 0.4;
+  let x = s.x;
+  let y = s.y;
+  let z = s.z;
+  for (let i = 0; i < 400; i++) {
+    x += dx * step;
+    y += dy * step;
+    z += dz * step;
+    if (y <= 0) return { x, y: 0, z };
+    for (const b of boxes) {
+      if (x >= b.min[0] && x <= b.max[0] && y >= b.min[1] && y <= b.max[1] && z >= b.min[2] && z <= b.max[2]) return { x, y, z };
+    }
+  }
+  return null;
 }
 
 const angleDiff = (a: number, b: number) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
@@ -78,6 +117,7 @@ export function stepFlight(
   dt: number,
   boxes: readonly Box[],
   time: number,
+  targets: readonly Target[] = [],
 ): FlightEvent[] {
   const ev: FlightEvent[] = [];
   const f = tuning.flight;
@@ -91,7 +131,7 @@ export function stepFlight(
   s.flapAnim += dt;
   const stunned = s.stunT > 0;
   s.stunT = Math.max(0, s.stunT - dt);
-  const ctl: FlightInput = stunned ? { ax: 0, ay: 0, flap: false, dive: false } : inp;
+  const ctl: FlightInput = stunned ? { ax: 0, ay: 0, flap: false, dive: false, aimPitch: inp.aimPitch } : inp;
 
   const surf = surfaceBelow(boxes, s.x, s.z, s.y - GULL_RADIUS + 0.05);
   s.heightAbove = Math.max(0, s.y - GULL_RADIUS - surf.y);
@@ -140,9 +180,10 @@ export function stepFlight(
     }
   } else {
     // ---- airborne (glide or dive) ----
-    const { wx, wz, len } = worldDir(ctl.ax, Math.max(ctl.ay, 0), camYaw);
-    const flare = ctl.ay < 0;
     const diving = s.mode === 'dive';
+    // gliding: W/A/D steer; diving: always aim along the camera, A/D bend the line
+    const { wx, wz, len } = worldDir(ctl.ax, diving ? 1 : Math.max(ctl.ay, 0), camYaw);
+    const flare = ctl.ay < 0;
     if (len > 0) {
       const diff = angleDiff(Math.atan2(-wx, -wz), s.heading);
       const rate = f.airTurnRate.value * (diving ? d.turnFactor.value : 1);
@@ -151,7 +192,23 @@ export function stepFlight(
 
     if (diving) {
       s.diveT += dt;
-      const a = (d.angleDeg.value * Math.PI) / 180;
+      let aim = aimDiveAngle(ctl.aimPitch);
+      const tgt = d.assistStrength.value > 0 ? bestAimTarget(targets, s, s.heading, s.diveAngle) : null;
+      if (tgt) {
+        // light aim assist: bend heading and steepness toward the target on the line
+        const dx = tgt.x - s.x;
+        const dz = tgt.z - s.z;
+        const hd = Math.hypot(dx, dz);
+        if (hd > 1.5) {
+          const k = d.assistStrength.value * 4 * dt;
+          s.heading += clamp(angleDiff(Math.atan2(-dx, -dz), s.heading), -k, k);
+          const want = clamp(Math.atan2(s.y - tgt.y, hd), 0.1, 1.45);
+          aim += (want - aim) * d.assistStrength.value;
+        }
+      }
+      const ar = d.angleRate.value * dt;
+      s.diveAngle += clamp(aim - s.diveAngle, -ar, ar);
+      const a = s.diveAngle;
       const sp3 = Math.min(d.speed.value, Math.hypot(s.vx, s.vy, s.vz) + d.accel.value * dt);
       s.vx = -Math.sin(s.heading) * Math.cos(a) * sp3;
       s.vz = -Math.cos(s.heading) * Math.cos(a) * sp3;
@@ -191,6 +248,7 @@ export function stepFlight(
       if (ctl.dive && s.diveCd <= 0 && s.heightAbove >= d.minHeight.value) {
         s.mode = 'dive';
         s.diveT = 0;
+        s.diveAngle = aimDiveAngle(ctl.aimPitch);
         ev.push({ type: 'diveStart' });
       }
     }

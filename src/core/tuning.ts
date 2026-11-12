@@ -40,17 +40,24 @@ export const tuning = {
     perchRegen: p(60, 0, 200, 1),
   },
   dive: {
-    angleDeg: p(55, 20, 85, 1),
+    minAngleDeg: p(25, 10, 60, 1), // dive steepness when the camera is low (aim: mouse up/down)
+    maxAngleDeg: p(75, 40, 89, 1), // ...and when the camera is high
+    pitchLow: p(0, -0.3, 0.6, 0.05), // camera pitch that maps to minAngle
+    pitchHigh: p(1, 0.4, 1.2, 0.05), // camera pitch that maps to maxAngle
+    angleRate: p(1.5, 0.2, 6, 0.1), // how fast the dive angle follows the aim (rad/s)
     speed: p(34, 15, 60, 0.5),
     accel: p(45, 5, 150, 1),
     minTime: p(0.7, 0.1, 2, 0.05), // committed: cannot be cancelled before this
     maxTime: p(2, 0.5, 5, 0.1),
-    turnFactor: p(0.3, 0, 1, 0.05), // steering authority while diving
+    turnFactor: p(0.9, 0, 1.5, 0.05), // steering authority while diving (1 = same as gliding)
     minHeight: p(3, 0, 20, 0.5), // need this much clearance to start
     cooldown: p(1, 0, 5, 0.1),
     pullOutRate: p(30, 5, 100, 1), // how fast falling speed bleeds off after a dive
     pullUpRatio: p(0.25, 0, 1, 0.05), // share of dive speed turned into a swoop up on release
-    hitForgiveness: p(0.8, 0, 3, 0.1), // extra target radius for dive hits
+    hitForgiveness: p(1.2, 0, 3, 0.1), // extra target radius for dive hits
+    assistStrength: p(0.6, 0, 1, 0.05), // 0 = no aim assist
+    assistConeDeg: p(20, 0, 45, 1), // targets inside this cone around the dive line get assist
+    assistRange: p(70, 10, 150, 1),
   },
   landing: {
     softSpeed: p(3.5, 0.5, 10, 0.1), // below: clean landing

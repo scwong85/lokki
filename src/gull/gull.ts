@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { palette } from '../render/palette';
 import { newFlightState, stepFlight, GULL_RADIUS, type FlightEvent, type FlightInput, type FlightState } from './flight';
 import { surfaceBelow, type Box } from '../world/collision';
+import type { Target } from '../gameplay/targets';
 
 /** Graybox gull: capsule + beak + two wing planks + blob shadow (readability aids only; real model is M2). */
 export class Gull {
@@ -52,10 +53,10 @@ export class Gull {
     this.prev = { x: this.state.x, y: this.state.y, z: this.state.z, heading: 0 };
   }
 
-  update(inp: FlightInput, camYaw: number, dt: number, boxes: readonly Box[], time: number): FlightEvent[] {
+  update(inp: FlightInput, camYaw: number, dt: number, boxes: readonly Box[], time: number, targets: readonly Target[] = []): FlightEvent[] {
     const s = this.state;
     this.prev = { x: s.x, y: s.y, z: s.z, heading: s.heading };
-    return stepFlight(s, inp, camYaw, dt, boxes, time);
+    return stepFlight(s, inp, camYaw, dt, boxes, time, targets);
   }
 
   applyInterpolation(alpha: number, frameDt: number, boxes: readonly Box[]): void {

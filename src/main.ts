@@ -6,10 +6,11 @@ import { tuning } from './core/tuning';
 import { createScene } from './render/scene';
 import { FollowCamera } from './render/camera';
 import { Gull } from './gull/gull';
-import { GULL_RADIUS, type FlightEvent } from './gull/flight';
+import { GULL_RADIUS, aimDiveAngle, divePreview, type FlightEvent } from './gull/flight';
 import { windAt } from './gull/wind';
 import { buildCourse, buildCourseVisuals } from './world/greybox';
-import { diveHits, updateTargets } from './gameplay/targets';
+import { bestAimTarget, diveHits, updateTargets } from './gameplay/targets';
+import { DiveMarker } from './render/diveMarker';
 import { DebugPanel } from './ui/debugPanel';
 import { Hud } from './ui/hud';
 
@@ -24,7 +25,8 @@ const course = buildCourse();
 const visuals = buildCourseVisuals(course.boxes, course.targets);
 scene.add(visuals.group);
 const gull = new Gull(course.start);
-scene.add(gull.mesh, gull.shadow);
+const marker = new DiveMarker();
+scene.add(gull.mesh, gull.shadow, marker.group);
 const cam = new FollowCamera(innerWidth / innerHeight);
 const input = new Input(renderer.domElement);
 const debug = new DebugPanel(document.body);
@@ -62,11 +64,15 @@ startLoop({
     const { x, y } = input.axes();
     const wasDive = gull.state.mode === 'dive';
     const evs = gull.update(
-      { ax: x, ay: y, flap: input.isDown('Space'), dive: input.isDown('ShiftLeft') || input.isDown('ShiftRight') },
+      { ax: x, ay: y, flap: input.isDown('Space'),
+        dive: input.isDown('ShiftLeft') || input.isDown('ShiftRight'),
+        aimPitch: cam.pitch,
+      },
       cam.yaw,
       dt,
       course.boxes,
       simTime,
+      course.targets,
     );
     onFlightEvents(evs);
     if (wasDive) {
@@ -84,6 +90,19 @@ startLoop({
     gull.applyInterpolation(alpha, frameDt, course.boxes);
     course.targets.forEach((t, i) => (visuals.targetMeshes[i].visible = t.cooldown === 0));
     const s = gull.state;
+    // dive aim aid: where a dive would land, and which target (if any) is on the line
+    const diving = s.mode === 'dive';
+    const canDive = s.mode === 'air' && s.stunT === 0 && s.heightAbove >= tuning.dive.minHeight.value;
+    let aimTarget: ReturnType<typeof bestAimTarget> = null;
+    if (diving || canDive) {
+      const heading = diving ? s.heading : cam.yaw;
+      const angle = diving ? s.diveAngle : aimDiveAngle(cam.pitch);
+      aimTarget = bestAimTarget(course.targets, s, heading, angle);
+      marker.update(gull.position, divePreview(s, heading, angle, course.boxes), aimTarget !== null, diving);
+    } else {
+      marker.update(null, null, false, false);
+    }
+    course.targets.forEach((t, i) => visuals.targetMeshes[i].scale.setScalar(t === aimTarget ? 1.5 : 1));
     cam.update(gull.position, frameDt, { vx: s.vx, vy: s.vy, vz: s.vz, diving: s.mode === 'dive', turnRate: s.turnRate });
     renderer.render(scene, cam.camera);
     debug.frame(frameDt);
