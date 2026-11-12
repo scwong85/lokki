@@ -109,6 +109,8 @@ export const tuning = {
     windEffect: p(1, 0, 3, 0.05),
     splatSize: p(0.9, 0.3, 3, 0.05),
     maxDecals: p(80, 10, 300, 1),
+    assistStrength: p(0.8, 0, 1, 0.05), // 0 = no aim assist toward tourists
+    assistRadius: p(3, 0.5, 8, 0.5), // a tourist this close to the landing spot pulls the poop in
   },
   physics: {
     gravity: p(14, 4, 30, 0.5), // props only; the gull has its own flight gravity
@@ -116,6 +118,30 @@ export const tuning = {
     restitution: p(0.3, 0, 1, 0.05),
     breakSpeed: p(6, 1, 30, 0.5), // impact speed that shatters fragile props
     noiseSpeed: p(2.5, 0.5, 20, 0.5), // impact speed that makes a noisy prop clatter
+  },
+  npc: {
+    walkSpeed: p(1.4, 0.5, 4, 0.1),
+    runSpeed: p(3.6, 1, 7, 0.1), // panic and chase
+    turnRate: p(3.5, 0.5, 10, 0.1), // rad/s
+    sightRange: p(14, 3, 40, 0.5),
+    sightConeDeg: p(130, 30, 360, 5),
+    eatSightFactor: p(0.45, 0.1, 1, 0.05), // eating tourists are distracted
+    blindAboveDeg: p(55, 20, 90, 1), // gulls straight overhead are not seen
+    noticeTime: p(0.4, 0.1, 2, 0.05),
+    shieldRange: p(10, 2, 25, 0.5),
+    handTurnRate: p(4, 1, 12, 0.5), // how fast the hand with the ice cream swings to the far side
+    hearRange: p(24, 5, 60, 1),
+    distractTime: p(2.5, 0.5, 8, 0.1),
+    snatchReach: p(1.2, 0.5, 3, 0.1),
+    panicTime: p(1.8, 0.3, 6, 0.1),
+    chaseTime: p(4, 1, 12, 0.5),
+    recoverTime: p(3, 0.5, 10, 0.5),
+    loseSightTime: p(2.5, 0.5, 8, 0.1),
+  },
+  quest: {
+    timeLimit: p(90, 15, 300, 5), // ice-cream snatch, starts when the first tourist spots you
+    escapeDistance: p(30, 10, 80, 1),
+    escapeTime: p(3, 0.5, 15, 0.5),
   },
   audio: {
     master: p(0.5, 0, 1, 0.05),

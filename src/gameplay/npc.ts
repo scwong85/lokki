@@ -1,0 +1,327 @@
+import { tuning } from '../core/tuning';
+import type { Rng } from '../core/rng';
+import type { World } from '../world/collision';
+
+/**
+ * Tourist brain: a small state machine with senses (sight cone, hearing), things it cares about
+ * (the ice cream in its hand) and reactions (notice, shield, panic, chase, recover). Pure logic, no rendering.
+ */
+export type NpcMode = 'idle' | 'walk' | 'eat' | 'notice' | 'shield' | 'panic' | 'chase' | 'recover';
+
+export interface NpcSpawn {
+  x: number;
+  z: number;
+  heading?: number;
+  /** Holds an ice cream. */
+  ice: boolean;
+  /** Jacket colour. */
+  color: number;
+}
+
+export interface Npc {
+  id: number;
+  x: number;
+  z: number;
+  heading: number;
+  mode: NpcMode;
+  /** Seconds in the current mode. */
+  t: number;
+  homeX: number;
+  homeZ: number;
+  targetX: number | null;
+  targetZ: number | null;
+  /** Prop id of the ice cream in hand, or null. */
+  holding: number | null;
+  /** World bearing (heading convention) from the tourist towards where it last saw the gull: the ice cream hides on the other side. */
+  shieldFrom: number;
+  /** World angle of the hand around the body (heading convention). */
+  handAngle: number;
+  distractT: number;
+  noiseX: number;
+  noiseZ: number;
+  lostSightT: number;
+  noticeCd: number;
+  walkPhase: number;
+  moving: boolean;
+  speed: number;
+  seesGull: boolean;
+  /** Mode timers for idle/eat cycling. */
+  nextT: number;
+}
+
+export interface GullInfo {
+  x: number;
+  y: number;
+  z: number;
+  diving: boolean;
+}
+
+export interface Noise {
+  x: number;
+  z: number;
+  /** Multiplier of hearRange (1 = clatter, 0.5 = splat). */
+  loud: number;
+}
+
+export type NpcEvent = { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc };
+
+export interface NpcCtx {
+  world: World;
+  walkable: (x: number, z: number) => boolean;
+  rng: Rng;
+}
+
+export const BODY_RADIUS = 0.42;
+export const BODY_HEIGHT = 1.8;
+
+const angleDiff = (a: number, b: number) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
+/** Bearing (heading convention, 0 = -Z) of the vector (dx,dz). */
+export const bearing = (dx: number, dz: number) => Math.atan2(-dx, -dz);
+
+export function newNpc(id: number, sp: NpcSpawn): Npc {
+  const h = sp.heading ?? 0;
+  return {
+    id, x: sp.x, z: sp.z, heading: h, mode: 'idle', t: 0, homeX: sp.x, homeZ: sp.z, targetX: null, targetZ: null,
+    holding: null, shieldFrom: h, handAngle: h - Math.PI / 2, distractT: 0, noiseX: 0, noiseZ: 0, lostSightT: 0, noticeCd: 0,
+    walkPhase: 0, moving: false, speed: 0, seesGull: false, nextT: 2,
+  };
+}
+
+/** Does the tourist see the gull right now? Range, cone, blind spot overhead, line of sight. */
+export function canSee(n: Npc, g: GullInfo, world: World): boolean {
+  const t = tuning.npc;
+  const dx = g.x - n.x, dz = g.z - n.z;
+  const d2 = Math.hypot(dx, dz);
+  const dy = g.y - 1.6;
+  const range = t.sightRange.value * (n.mode === 'eat' ? t.eatSightFactor.value : 1) * (g.diving ? 1.3 : 1);
+  if (Math.hypot(d2, dy) > range) return false;
+  if (d2 > 2.5) {
+    if (Math.abs(angleDiff(bearing(dx, dz), n.heading)) > (t.sightConeDeg.value * Math.PI) / 360) return false;
+    if ((Math.atan2(dy, d2) * 180) / Math.PI > t.blindAboveDeg.value) return false;
+  }
+  // line of sight: walls, roofs and tent canopies block
+  const steps = Math.ceil(Math.hypot(d2, dy));
+  for (let i = 1; i < steps; i++) {
+    const f = i / steps;
+    if (world.solidAt(n.x + dx * f, 1.6 + dy * f, n.z + dz * f)) return false;
+  }
+  return true;
+}
+
+/** Where the ice cream hand is, in world space. */
+export function handPos(n: Npc): { x: number; y: number; z: number } {
+  if (n.mode === 'eat') return { x: n.x - Math.sin(n.heading) * 0.3, y: 1.45, z: n.z - Math.cos(n.heading) * 0.3 };
+  if (n.mode === 'panic') return { x: n.x - Math.sin(n.handAngle) * 0.3, y: 1.95, z: n.z - Math.cos(n.handAngle) * 0.3 };
+  const r = n.mode === 'shield' ? 0.55 : 0.5;
+  return { x: n.x - Math.sin(n.handAngle) * r, y: n.mode === 'shield' ? 1.2 : 1.1, z: n.z - Math.cos(n.handAngle) * r };
+}
+
+/** Can a beak at `beak` reach this tourist's ice cream? Blocked when the body is in the way (shielding). */
+export function snatchable(n: Npc, beak: { x: number; y: number; z: number }): boolean {
+  if (n.holding === null) return false;
+  const h = handPos(n);
+  const d = Math.hypot(beak.x - h.x, beak.y - h.y, beak.z - h.z);
+  if (d > tuning.npc.snatchReach.value) return false;
+  for (let i = 0; i <= 6; i++) {
+    const f = i / 7; // never test the hand end itself
+    const x = beak.x + (h.x - beak.x) * f, y = beak.y + (h.y - beak.y) * f, z = beak.z + (h.z - beak.z) * f;
+    if (y < BODY_HEIGHT && Math.hypot(x - n.x, z - n.z) < BODY_RADIUS) return false;
+  }
+  return true;
+}
+
+function enter(n: Npc, mode: NpcMode): void {
+  n.mode = mode;
+  n.t = 0;
+  n.targetX = n.targetZ = null;
+}
+
+/** Walk/turn towards a point. Returns true while moving. */
+function moveToward(n: Npc, tx: number, tz: number, speed: number, dt: number, ctx: NpcCtx): boolean {
+  const want = bearing(tx - n.x, tz - n.z);
+  const diff = angleDiff(want, n.heading);
+  const turn = tuning.npc.turnRate.value * dt;
+  n.heading += Math.max(-turn, Math.min(turn, diff));
+  if (Math.abs(diff) > 1.0) return false; // turn first
+  const nx = n.x - Math.sin(n.heading) * speed * dt;
+  const nz = n.z - Math.cos(n.heading) * speed * dt;
+  if (!ctx.walkable(nx, nz)) return false;
+  n.x = nx;
+  n.z = nz;
+  n.speed = speed;
+  return true;
+}
+
+function faceToward(n: Npc, tx: number, tz: number, dt: number): void {
+  const diff = angleDiff(bearing(tx - n.x, tz - n.z), n.heading);
+  const turn = tuning.npc.turnRate.value * dt;
+  n.heading += Math.max(-turn, Math.min(turn, diff));
+}
+
+function pickWanderTarget(n: Npc, ctx: NpcCtx): void {
+  for (let i = 0; i < 8; i++) {
+    const a = ctx.rng.range(0, Math.PI * 2);
+    const r = ctx.rng.range(3, 10);
+    const x = n.homeX + Math.cos(a) * r, z = n.homeZ + Math.sin(a) * r;
+    if (ctx.walkable(x, z)) {
+      n.targetX = x;
+      n.targetZ = z;
+      return;
+    }
+  }
+  n.targetX = n.homeX;
+  n.targetZ = n.homeZ;
+}
+
+/** Disturbances the NPC reacts to from outside. */
+export function startle(n: Npc, kind: 'pooped' | 'snatched'): NpcEvent[] {
+  const ev: NpcEvent[] = [];
+  if (kind === 'snatched') {
+    n.holding = null;
+    enter(n, 'chase');
+    ev.push({ type: 'chase', npc: n });
+  } else {
+    enter(n, 'panic');
+    ev.push({ type: 'panic', npc: n });
+  }
+  n.handAngle = n.heading - Math.PI / 2;
+  return ev;
+}
+
+export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: number, ctx: NpcCtx): NpcEvent[] {
+  const t = tuning.npc;
+  const ev: NpcEvent[] = [];
+  n.t += dt;
+  n.noticeCd = Math.max(0, n.noticeCd - dt);
+  n.distractT = Math.max(0, n.distractT - dt);
+  n.speed = 0;
+  const calm = n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat';
+
+  // ---- senses ----
+  n.seesGull = canSee(n, g, ctx.world);
+  for (const s of noises) {
+    if (Math.hypot(s.x - n.x, s.z - n.z) <= t.hearRange.value * s.loud && (calm || n.mode === 'shield' || n.mode === 'notice')) {
+      n.noiseX = s.x;
+      n.noiseZ = s.z;
+      n.distractT = t.distractTime.value;
+      ev.push({ type: 'distracted', npc: n });
+      if (n.mode === 'notice') enter(n, 'idle');
+    }
+  }
+
+  // ---- reactions ----
+  if (calm && n.seesGull && n.noticeCd <= 0 && n.distractT <= 0) {
+    enter(n, 'notice');
+    ev.push({ type: 'noticed', npc: n });
+  }
+
+  const gullBearing = bearing(g.x - n.x, g.z - n.z);
+  const gullDist = Math.hypot(g.x - n.x, g.z - n.z);
+  switch (n.mode) {
+    case 'idle': {
+      if (n.distractT > 0) faceToward(n, n.noiseX, n.noiseZ, dt);
+      if (n.t >= n.nextT && n.distractT <= 0) {
+        if (n.holding !== null && ctx.rng.next() < 0.5) {
+          enter(n, 'eat');
+          n.nextT = ctx.rng.range(2, 3.5);
+        } else {
+          enter(n, 'walk');
+          pickWanderTarget(n, ctx);
+        }
+      }
+      break;
+    }
+    case 'eat':
+      if (n.distractT > 0) faceToward(n, n.noiseX, n.noiseZ, dt);
+      if (n.t >= n.nextT) {
+        enter(n, 'idle');
+        n.nextT = ctx.rng.range(1.5, 4);
+      }
+      break;
+    case 'walk': {
+      if (n.distractT > 0) {
+        faceToward(n, n.noiseX, n.noiseZ, dt);
+        break;
+      }
+      if (n.targetX === null || n.targetZ === null) pickWanderTarget(n, ctx);
+      const tx = n.targetX!, tz = n.targetZ!;
+      n.moving = moveToward(n, tx, tz, t.walkSpeed.value, dt, ctx);
+      if (Math.hypot(tx - n.x, tz - n.z) < 0.6 || n.t > 8) {
+        enter(n, 'idle');
+        n.nextT = ctx.rng.range(2, 5);
+      }
+      break;
+    }
+    case 'notice':
+      faceToward(n, g.x, g.z, dt);
+      n.shieldFrom = gullBearing;
+      if (n.t >= t.noticeTime.value) {
+        if (n.holding !== null) {
+          enter(n, 'shield');
+          ev.push({ type: 'shield', npc: n });
+        } else {
+          enter(n, 'idle');
+          n.nextT = ctx.rng.range(2, 4);
+          n.noticeCd = 4;
+        }
+      }
+      break;
+    case 'shield': {
+      const attentive = n.distractT <= 0;
+      if (attentive) {
+        faceToward(n, g.x, g.z, dt);
+        if (n.seesGull) {
+          n.shieldFrom = gullBearing;
+          n.lostSightT = 0;
+        } else n.lostSightT += dt;
+      } else faceToward(n, n.noiseX, n.noiseZ, dt); // distracted: body turns to the noise, the hand stays where it was
+      // the hand swings to the side away from where the gull was last seen
+      const want = n.shieldFrom + Math.PI;
+      const diff = angleDiff(want, n.handAngle);
+      const hr = t.handTurnRate.value * dt;
+      n.handAngle += Math.max(-hr, Math.min(hr, diff));
+      if (n.lostSightT >= t.loseSightTime.value || gullDist > t.shieldRange.value * 1.8) {
+        enter(n, 'idle');
+        n.nextT = ctx.rng.range(2, 4);
+        n.noticeCd = 3;
+        n.lostSightT = 0;
+      }
+      break;
+    }
+    case 'panic': {
+      n.handAngle = n.heading - Math.PI / 2;
+      const away = bearing(n.x - g.x, n.z - g.z);
+      const tx = n.x - Math.sin(away) * 5, tz = n.z - Math.cos(away) * 5;
+      n.moving = moveToward(n, tx, tz, t.runSpeed.value, dt, ctx);
+      if (n.t >= t.panicTime.value) {
+        enter(n, 'recover');
+        n.noticeCd = 2;
+      }
+      break;
+    }
+    case 'chase': {
+      if (gullDist > 2.5) n.moving = moveToward(n, g.x, g.z, t.runSpeed.value, dt, ctx);
+      else faceToward(n, g.x, g.z, dt);
+      if (n.t >= t.chaseTime.value || gullDist > 25) {
+        enter(n, 'recover');
+        n.noticeCd = 2;
+      }
+      break;
+    }
+    case 'recover':
+      faceToward(n, g.x, g.z, dt);
+      if (n.t >= t.recoverTime.value) {
+        enter(n, 'idle');
+        n.nextT = ctx.rng.range(2, 4);
+      }
+      break;
+  }
+  if (n.mode !== 'shield' && n.mode !== 'panic') {
+    // hand rests at the side (right hand), following the body
+    const want = n.heading - Math.PI / 2;
+    n.handAngle += angleDiff(want, n.handAngle) * Math.min(1, 8 * dt);
+  }
+  n.moving = n.speed > 0;
+  n.walkPhase += n.speed * dt * 2.2;
+  return ev;
+}

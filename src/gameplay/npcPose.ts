@@ -1,0 +1,47 @@
+import type { NpcMode } from './npc';
+
+export interface NpcPoseInput {
+  mode: NpcMode;
+  moving: boolean;
+  walkPhase: number;
+  t: number;
+  time: number;
+  holding: boolean;
+}
+
+export interface NpcPose {
+  /** Hip swing amplitude in rad. */
+  legSwing: number;
+  /** Free arm swing amplitude. */
+  armSwing: number;
+  /** Free arm raised (0..1): panic, waving. */
+  armRaise: number;
+  /** Body lean forward (rad). */
+  lean: number;
+  bob: number;
+  /** Floating indicator above the head. */
+  indicator: 'none' | 'notice' | 'alarm';
+}
+
+/** Pure animation rules for a tourist. */
+export function npcPose(i: NpcPoseInput): NpcPose {
+  const stride = i.moving ? 1 : 0;
+  switch (i.mode) {
+    case 'walk':
+      return { legSwing: 0.6 * stride, armSwing: 0.5 * stride, armRaise: 0, lean: 0.05, bob: Math.abs(Math.sin(i.walkPhase)) * 0.03 * stride, indicator: 'none' };
+    case 'eat':
+      return { legSwing: 0, armSwing: 0, armRaise: 0, lean: 0, bob: Math.sin(i.time * 6) * 0.01, indicator: 'none' };
+    case 'notice':
+      return { legSwing: 0, armSwing: 0, armRaise: 0.2, lean: -0.1, bob: 0, indicator: 'notice' };
+    case 'shield':
+      return { legSwing: 0, armSwing: 0, armRaise: 0.3, lean: -0.08, bob: 0, indicator: 'alarm' };
+    case 'panic':
+      return { legSwing: 0.9 * stride, armSwing: 0, armRaise: 1, lean: 0.1, bob: Math.abs(Math.sin(i.walkPhase)) * 0.05 * stride, indicator: 'alarm' };
+    case 'chase':
+      return { legSwing: 0.9 * stride, armSwing: 0, armRaise: 0.8 + Math.sin(i.time * 14) * 0.2, lean: 0.2, bob: Math.abs(Math.sin(i.walkPhase)) * 0.04 * stride, indicator: 'alarm' };
+    case 'recover':
+      return { legSwing: 0, armSwing: 0, armRaise: 0, lean: 0.15, bob: 0, indicator: 'none' };
+    default:
+      return { legSwing: 0, armSwing: 0, armRaise: 0, lean: 0, bob: Math.sin(i.time * 1.5) * 0.008, indicator: 'none' };
+  }
+}

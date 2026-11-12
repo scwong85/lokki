@@ -180,7 +180,7 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M1 Flight feel (graybox) — **gate 1 passed**
 - [x] M2 The gull
 - [x] M3 Helsinki blockout
-- [ ] M4 Interaction core
+- [x] M4 Interaction core
 - [ ] M5 First NPC + quest — **gate 2**
 - [ ] M6 Heat and deterrents
 - [ ] M7 Market Square quest pack

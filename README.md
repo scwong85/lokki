@@ -2,7 +2,7 @@
 
 *Lokki* ("gull" in Finnish) is a browser-based 3D game: you are a seagull causing gentle slapstick havoc in downtown Helsinki. Low-poly, pastel, mouse + keyboard. See [`docs/PLAN.md`](docs/PLAN.md) for the full plan.
 
-Status: **M4 – Interaction core** (grab/carry/toss, poop, prop physics, sandbox), awaiting playtest. M0–M3 done.
+Status: **M5 – First NPC and quest** (tourists, ice-cream snatch, to-do list), awaiting playtest / decision gate 2. M0–M4 done.
 
 ## Run
 

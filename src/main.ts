@@ -22,6 +22,12 @@ import { DiveMarker } from './render/diveMarker';
 import { DebugPanel } from './ui/debugPanel';
 import { Hud } from './ui/hud';
 import { AudioManager } from './core/audio';
+import { NpcManager } from './gameplay/npcs';
+import { QuestLog, type QuestNote } from './gameplay/quest';
+import { QUESTS } from './data/quests';
+import { TOURIST_SPAWNS } from './data/npcs';
+import type { NpcEvent } from './gameplay/npc';
+import { Todo } from './ui/todo';
 
 const app = document.getElementById('app')!;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -41,6 +47,7 @@ let targets: Target[];
 let targetMeshes: THREE.Object3D[];
 let start: { x: number; z: number };
 let propSpawns: PropSpawn[] = [];
+let walkable: (x: number, z: number) => boolean = () => true;
 if (greybox) {
   const course = buildCourse();
   const visuals = buildCourseVisuals(course.boxes, course.targets);
@@ -53,20 +60,28 @@ if (greybox) {
   const city = buildCity();
   scene.add(city.group);
   world = city.world;
-  ({ targets, start, targetMeshes, propSpawns } = city);
+  ({ targets, start, targetMeshes, propSpawns, walkable } = city);
   phys.addStaticMesh(city.physicsMesh.vertices, city.physicsMesh.indices);
 }
 const gull = new Gull(start);
 phys.createGullBody(GULL_RADIUS, start.x, GULL_RADIUS, start.z);
 const interaction = new Interaction(phys, world, scene);
 for (const sp of propSpawns) interaction.props.spawn(sp);
+// tourists and the quest log only exist in the city
+const npcs = greybox ? null : new NpcManager(world, interaction.props, scene, walkable);
+if (npcs) {
+  for (const sp of TOURIST_SPAWNS) npcs.spawn(sp);
+  interaction.npcs = npcs;
+}
+const quests = new QuestLog(greybox ? [] : QUESTS);
+const todo = new Todo(document.body);
 const poopReticle = new Reticle();
 scene.add(poopReticle.mesh);
 const marker = new DiveMarker();
 scene.add(gull.mesh, gull.shadow, marker.group);
 const cam = new FollowCamera(innerWidth / innerHeight);
 const input = new Input(renderer.domElement);
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests };
 const debug = new DebugPanel(document.body);
 const hud = new Hud(document.body);
 const credits = new Credits(document.body);
@@ -111,6 +126,33 @@ function onFlightEvents(evs: FlightEvent[]): void {
   }
 }
 
+/** Quest notifications -> toasts and sounds. */
+function notes(list: QuestNote[]): void {
+  for (const n of list) {
+    const q = quests.quests.find((x) => x.id === n.quest)!;
+    if (n.type === 'started') hud.toast(`Spotted! ${Math.round(tuning.quest.timeLimit.value)} seconds!`, 1.4);
+    else if (n.type === 'objective') {
+      const text = q.objectives.find((o) => o.id === n.objective)!.text;
+      hud.toast(`✓ ${text}`, 1.6);
+    } else if (n.type === 'won') {
+      audio.play('win');
+      hud.toast(q.timed ? 'Ice cream secured!' : 'All extras done!', 2.2);
+    } else if (n.type === 'lost') {
+      audio.play('lose');
+      hud.toast('Time is up! Press R to try again', 3);
+    }
+  }
+}
+
+function onNpcEvents(evs: NpcEvent[]): void {
+  for (const e of evs) {
+    if (e.type === 'noticed') {
+      audio.play('gasp');
+      notes(quests.onEvent('alert'));
+    } else if (e.type === 'panic' || e.type === 'chase') audio.play('yelp');
+  }
+}
+
 function onGags(gags: GagEvent[]): void {
   for (const g of gags) {
     switch (g.type) {
@@ -127,21 +169,44 @@ function onGags(gags: GagEvent[]): void {
         break;
       case 'splat':
         audio.play('splat');
+        npcs?.addNoise(g.x, g.z, 0.4);
+        break;
+      case 'snatch':
+        audio.play('yelp');
+        hud.toast('Snatched!', 1);
+        notes(quests.onEvent('snatch'));
+        break;
+      case 'poopNpc':
+        audio.play('splat');
+        audio.play('yelp');
+        hud.toast('Splat! Right on a tourist!', 1.1);
+        notes(quests.onEvent('poopNpc'));
         break;
       case 'poopProp':
         audio.play('splat');
         hud.toast(`Splat! ${g.prop.def.name}`, 0.9);
         break;
-      case 'break':
+      case 'break': {
         audio.play('crash');
         hud.toast('Crash!', 0.9);
+        const t = g.prop.body.translation();
+        npcs?.addNoise(t.x, t.z, 1);
+        if (g.prop.type === 'bottle') notes(quests.onEvent('breakBottle'));
         break;
-      case 'clatter':
+      }
+      case 'clatter': {
         audio.play('clatter');
+        const t = g.prop.body.translation();
+        npcs?.addNoise(t.x, t.z, 1);
         break;
-      case 'tipped':
+      }
+      case 'tipped': {
         hud.toast(`${g.prop.def.name} tipped over!`, 1);
+        const t = g.prop.body.translation();
+        npcs?.addNoise(t.x, t.z, 1);
+        if (g.prop.type === 'bin') notes(quests.onEvent('tipBin'));
         break;
+      }
     }
   }
 }
@@ -154,6 +219,8 @@ startLoop({
     if (input.wasPressed('KeyR')) {
       gull.reset();
       interaction.reset();
+      npcs?.reset();
+      quests.reset();
     }
     if (input.wasPressed('KeyC')) credits.toggle();
     if (input.wasPressed('KeyM')) hud.toast(audio.toggleMute() ? 'Sound off' : 'Sound on', 0.8);
@@ -172,6 +239,7 @@ startLoop({
       targets,
     );
     onFlightEvents(evs);
+    npcs?.pushGull(gull.state);
     onGags(
       interaction.update(
         gull.state,
@@ -180,6 +248,11 @@ startLoop({
         simTime,
       ),
     );
+    if (npcs) {
+      const g = gull.state;
+      onNpcEvents(npcs.update(dt, { x: g.x, y: g.y, z: g.z, diving: g.mode === 'dive' }));
+      notes(quests.tick({ dt, carryingStolen: interaction.carried?.stolen === true, nearestNpc: npcs.nearestDistance(g) }));
+    }
     if (wasDive) {
       const s = gull.state;
       const got = diveHits(targets, { x: s.x, y: s.y, z: s.z }, GULL_RADIUS);
@@ -195,6 +268,8 @@ startLoop({
   render(alpha, frameDt) {
     gull.applyInterpolation(alpha, frameDt, world);
     interaction.render(alpha);
+    npcs?.render(simTime);
+    todo.update(quests.quests);
     targets.forEach((t, i) => (targetMeshes[i].visible = t.cooldown === 0));
     const s = gull.state;
     // dive aim aid: where a dive would land, and which target (if any) is on the line

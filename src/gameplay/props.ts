@@ -24,6 +24,10 @@ export interface Prop {
   collider: Collider;
   mesh: THREE.Group;
   carried: boolean;
+  /** Id of the NPC holding it (kinematic, follows the hand). */
+  heldBy: number | null;
+  /** Snatched from an NPC. */
+  stolen: boolean;
   broken: boolean;
   dirty: number;
   tipped: boolean;
@@ -74,7 +78,7 @@ export class PropManager {
     this.parent.add(mesh);
     const prop: Prop = {
       id: this.nextId++, type: sp.type, def, spawn: sp, body, collider, mesh,
-      carried: false, broken: false, dirty: 0, tipped: false, impactCd: 0.3, ignoreGrab: 0,
+      carried: false, heldBy: null, stolen: false, broken: false, dirty: 0, tipped: false, impactCd: 0.3, ignoreGrab: 0,
       prev: { p: new THREE.Vector3(sp.x, sp.y, sp.z), q: new THREE.Quaternion() },
       cur: { p: new THREE.Vector3(sp.x, sp.y, sp.z), q: new THREE.Quaternion() },
       lastVel: new THREE.Vector3(),
@@ -89,7 +93,7 @@ export class PropManager {
 
   /** Props that can be grabbed or shoved: alive and not in the beak. */
   free(): Prop[] {
-    return this.props.filter((p) => !p.broken && !p.carried);
+    return this.props.filter((p) => !p.broken && !p.carried && p.heldBy === null);
   }
 
   candidates(): GrabCandidate[] {
@@ -111,7 +115,20 @@ export class PropManager {
   }
 
   // ---- carrying ----
+  /** An NPC takes the prop in hand: kinematic, no collisions, follows the hand. */
+  attach(p: Prop, npcId: number): void {
+    p.heldBy = npcId;
+    p.body.setBodyType(this.phys.R.RigidBodyType.KinematicPositionBased, true);
+    p.collider.setCollisionGroups(GROUPS.CARRIED);
+  }
+
+  setHoldTarget(p: Prop, at: { x: number; y: number; z: number }): void {
+    p.body.setNextKinematicTranslation(at);
+  }
+
   grab(p: Prop): void {
+    if (p.heldBy !== null) p.stolen = true;
+    p.heldBy = null;
     p.carried = true;
     p.body.setBodyType(this.phys.R.RigidBodyType.KinematicPositionBased, true);
     p.collider.setCollisionGroups(GROUPS.CARRIED);
@@ -154,7 +171,7 @@ export class PropManager {
       const r = p.body.rotation();
       p.cur.p.set(t.x, t.y, t.z);
       p.cur.q.set(r.x, r.y, r.z, r.w);
-      if (p.carried) {
+      if (p.carried || p.heldBy !== null) {
         p.lastVel.set(0, 0, 0);
         continue;
       }
@@ -212,6 +229,8 @@ export class PropManager {
       p.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
     }
     p.carried = false;
+    p.heldBy = null;
+    p.stolen = false;
     p.tipped = false;
     p.impactCd = 0.5;
     p.cur.p.set(sp.x, sp.y, sp.z);

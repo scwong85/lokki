@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import earcut from 'earcut';
 import { palette } from '../render/palette';
-import { World, type Box, type Prism } from './collision';
+import { World, pointInRings, type Box, type Prism } from './collision';
 import { buildLandmarks, type LandmarkSrc, type PrismDef } from './landmarks';
 import { createTargetMeshes } from './targetMeshes';
 import type { Target } from '../gameplay/targets';
@@ -34,6 +34,8 @@ export interface City {
   targetMeshes: THREE.Object3D[];
   start: { x: number; z: number };
   propSpawns: PropSpawn[];
+  /** Is this spot dry land that a tourist can stand on (not water, not inside a building or stall counter)? */
+  walkable: (x: number, z: number) => boolean;
   /** Triangle soup of every building/landmark for static physics colliders. */
   physicsMesh: { vertices: Float32Array; indices: Uint32Array };
   stats: { buildings: number; prisms: number; chunks: number };
@@ -173,5 +175,5 @@ export function buildCity(): City {
 
   const targets = lm.targets;
   const targetMeshes = createTargetMeshes(targets, group);
-  return { world, group, targets, targetMeshes, start: { x: 0, z: -12 }, propSpawns: lm.props, physicsMesh, stats: { buildings: data.buildings.length, prisms: defs.length, chunks: chunks.size } };
+  return { world, group, targets, targetMeshes, start: { x: 0, z: -12 }, propSpawns: lm.props, walkable: (x, z) => data.land.some((l) => pointInRings(l.rings, x, z)) && !world.solidAt(x, 0.9, z), physicsMesh, stats: { buildings: data.buildings.length, prisms: defs.length, chunks: chunks.size } };
 }

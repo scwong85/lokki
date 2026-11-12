@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { PROPS, classifyImpact, halfHeight, hasTag } from '../../src/data/props';
 import { pickGrabTarget } from '../../src/gameplay/grab';
-import { predictPoop, spawnPoop, stepPoop } from '../../src/gameplay/poop';
+import { predictPoop, spawnPoop, spawnPoopAssisted, stepPoop } from '../../src/gameplay/poop';
 import { World, type Box } from '../../src/world/collision';
 import { tuning } from '../../src/core/tuning';
 
@@ -96,5 +96,25 @@ describe('poop', () => {
   it('hits a prop sphere on the way down', () => {
     const hit = predictPoop({ x: 0, y: 10, z: 0 }, { x: 0, y: 0, z: 0 }, 0, floor, [{ x: 0, y: 3, z: 0, r: 0.5 }])!;
     expect(hit.prop).toBe(0);
+  });
+
+  it('aim assist pulls a near-miss toward a tourist, ignores far ones, and can be switched off', () => {
+    const target = { x: 2, y: 1, z: 0, r: 0.5 }; // 2 m off the drop line
+    const from = { x: 0, y: 12, z: 0 };
+    const still = { x: 0, y: 0, z: 0 };
+    const drift = (strength: number, t = target) => {
+      tuning.poop.assistStrength.value = strength;
+      const p = spawnPoopAssisted(from, still, 0, floor, [], [t]);
+      return Math.hypot(p.vx, p.vz);
+    };
+    expect(drift(0)).toBe(0);
+    expect(drift(0.8)).toBeGreaterThan(0.1);
+    expect(drift(0.8, { ...target, x: 30 })).toBe(0); // out of radius
+    tuning.poop.assistStrength.value = 0.8;
+    const hit = predictPoop(from, still, 0, floor, [target], [target])!;
+    expect(hit.prop).toBe(0); // with the assist the poop now reaches the tourist
+    tuning.poop.assistStrength.value = 0;
+    expect(predictPoop(from, still, 0, floor, [target], [target])!.prop).toBeNull();
+    tuning.poop.assistStrength.value = 0.8;
   });
 });

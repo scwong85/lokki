@@ -1,13 +1,21 @@
 import * as THREE from 'three';
 import { tuning } from '../core/tuning';
 import type { FlightState } from '../gull/flight';
-import { pickGrabTarget } from './grab';
-import { spawnPoop, stepPoop, predictPoop, type PoopState, type PoopHit } from './poop';
+import { pickGrabTarget, type GrabCandidate } from './grab';
+import { spawnPoopAssisted, stepPoop, predictPoop, type HitSphere, type PoopState, type PoopHit } from './poop';
 import { PropManager, type Prop } from './props';
 import type { PhysicsWorld } from '../physics/physics';
 import type { World } from '../world/collision';
 import { DecalPool } from '../render/decals';
 import { Debris } from '../render/debris';
+
+/** What the NPC system offers the interaction layer. */
+export interface NpcHooks {
+  snatchCandidates(beak: { x: number; y: number; z: number }): GrabCandidate[];
+  onSnatched(propId: number): void;
+  poopSpheres(): HitSphere[];
+  onPooped(index: number): void;
+}
 
 export interface InteractionInput {
   grab: boolean; // E: grab / drop
@@ -17,11 +25,13 @@ export interface InteractionInput {
 
 export type GagEvent =
   | { type: 'grab'; prop: Prop }
+  | { type: 'snatch'; prop: Prop }
+  | { type: 'poopNpc' }
   | { type: 'drop'; prop: Prop }
   | { type: 'toss'; prop: Prop }
   | { type: 'heavy'; prop: Prop }
   | { type: 'poopDrop' }
-  | { type: 'splat' }
+  | { type: 'splat'; x: number; z: number }
   | { type: 'poopProp'; prop: Prop }
   | { type: 'break'; prop: Prop }
   | { type: 'clatter'; prop: Prop; speed: number }
@@ -47,6 +57,8 @@ export class Interaction {
   private grabCd = 0;
   private poops: LivePoop[] = [];
 
+  npcs: NpcHooks | null = null;
+
   constructor(private phys: PhysicsWorld, private world: World, parent: THREE.Object3D) {
     this.props = new PropManager(phys, this.group);
     this.group.add(this.decals.group, this.debris.group);
@@ -62,11 +74,23 @@ export class Interaction {
     return { x: s.x - Math.sin(s.heading) * 0.85, y: s.y + 0.05, z: s.z - Math.cos(s.heading) * 0.85 };
   }
 
+  private takeInBeak(p: Prop, ev: GagEvent[]): void {
+    const fromNpc = p.heldBy !== null;
+    if (fromNpc) this.npcs?.onSnatched(p.id);
+    this.props.grab(p);
+    this.carried = p;
+    this.grabCd = tuning.interaction.grabCooldown.value;
+    ev.push({ type: 'grab', prop: p });
+    if (fromNpc) ev.push({ type: 'snatch', prop: p });
+  }
+
   /** Text for the on-screen prompt: what E would do right now. */
   grabPrompt(s: FlightState): string {
     if (this.carried) return `E drop · Q toss ${this.carried.def.name}`;
     const it = tuning.interaction;
-    const pick = pickGrabTarget(this.beakPos(s), s.heading, this.props.candidates(), it.grabRange.value, it.grabConeDeg.value, it.carryMax.value);
+    const beak = this.beakPos(s);
+    const cands = [...this.props.candidates(), ...(this.npcs?.snatchCandidates(beak) ?? [])];
+    const pick = pickGrabTarget(beak, s.heading, cands, it.grabRange.value, it.grabConeDeg.value, it.carryMax.value);
     if (!pick) return '';
     const p = this.props.byId(pick.id)!;
     return pick.tooHeavy ? `${p.def.name}: too heavy` : `E grab ${p.def.name}`;
@@ -74,8 +98,10 @@ export class Interaction {
 
   /** Landing spot of a poop dropped right now (aim reticle). */
   poopPrediction(s: FlightState, time: number): PoopHit | null {
-    const { spheres } = this.props.hitSpheres();
-    return predictPoop({ x: s.x, y: s.y, z: s.z }, { x: s.vx, y: s.vy, z: s.vz }, time, this.world, spheres);
+    const { spheres: ps } = this.props.hitSpheres();
+    const npcSpheres = this.npcs?.poopSpheres() ?? [];
+    const spheres = [...ps, ...npcSpheres];
+    return predictPoop({ x: s.x, y: s.y, z: s.z }, { x: s.vx, y: s.vy, z: s.vz }, time, this.world, spheres, npcSpheres);
   }
 
   update(s: FlightState, inp: InteractionInput, dt: number, time: number): GagEvent[] {
@@ -96,18 +122,21 @@ export class Interaction {
           this.grabCd = it.grabCooldown.value;
           ev.push({ type: 'drop', prop: p });
         } else {
-          const pick = pickGrabTarget(this.beakPos(s), s.heading, this.props.candidates(), it.grabRange.value, it.grabConeDeg.value, it.carryMax.value);
+          const beak = this.beakPos(s);
+          const cands = [...this.props.candidates(), ...(this.npcs?.snatchCandidates(beak) ?? [])];
+          const pick = pickGrabTarget(beak, s.heading, cands, it.grabRange.value, it.grabConeDeg.value, it.carryMax.value);
           if (pick) {
             const p = this.props.byId(pick.id)!;
             if (pick.tooHeavy) ev.push({ type: 'heavy', prop: p });
             else {
-              this.props.grab(p);
-              this.carried = p;
-              this.grabCd = it.grabCooldown.value;
-              ev.push({ type: 'grab', prop: p });
+              this.takeInBeak(p, ev);
             }
           }
         }
+      } else if (!this.carried && s.mode === 'dive') {
+        // diving at a held ice cream snatches it without pressing anything
+        const hit = this.npcs?.snatchCandidates(this.beakPos(s))[0];
+        if (hit) this.takeInBeak(this.props.byId(hit.id)!, ev);
       } else if (inp.toss && this.carried) {
         const p = this.carried;
         this.props.release(p, {
@@ -125,14 +154,18 @@ export class Interaction {
     // ---- poop ----
     if (inp.poop && !stunned && this.poopCd <= 0) {
       this.poopCd = tuning.poop.cooldown.value;
-      const state = spawnPoop({ x: s.x, y: s.y, z: s.z }, { x: s.vx, y: s.vy, z: s.vz });
+      const { spheres: pSpheres } = this.props.hitSpheres();
+      const nSpheres = this.npcs?.poopSpheres() ?? [];
+      const state = spawnPoopAssisted({ x: s.x, y: s.y, z: s.z }, { x: s.vx, y: s.vy, z: s.vz }, time, this.world, [...pSpheres, ...nSpheres], nSpheres);
       const mesh = new THREE.Mesh(poopGeo, poopMat);
       mesh.position.set(state.x, state.y, state.z);
       this.group.add(mesh);
       this.poops.push({ state, mesh });
       ev.push({ type: 'poopDrop' });
     }
-    const { spheres, props } = this.props.hitSpheres();
+    const { spheres: propSpheres, props } = this.props.hitSpheres();
+    const npcSpheres = this.npcs?.poopSpheres() ?? [];
+    const spheres = [...propSpheres, ...npcSpheres];
     for (let i = this.poops.length - 1; i >= 0; i--) {
       const lp = this.poops[i];
       const hit = stepPoop(lp.state, dt, time, this.world, spheres);
@@ -140,7 +173,11 @@ export class Interaction {
       if (!hit) continue;
       this.group.remove(lp.mesh);
       this.poops.splice(i, 1);
-      if (hit.prop !== null) {
+      if (hit.prop !== null && hit.prop >= propSpheres.length) {
+        this.npcs?.onPooped(hit.prop - propSpheres.length);
+        this.decals.add({ x: hit.x, y: 0, z: hit.z }, { x: 0, y: 1, z: 0 }, 0.5);
+        ev.push({ type: 'poopNpc' });
+      } else if (hit.prop !== null) {
         const p = props[hit.prop];
         p.dirty++;
         const blob = new THREE.Mesh(blobGeo, poopMat);
@@ -151,7 +188,7 @@ export class Interaction {
         ev.push({ type: 'poopProp', prop: p });
       } else {
         this.decals.add(hit, { x: hit.nx, y: hit.ny, z: hit.nz });
-        ev.push({ type: 'splat' });
+        ev.push({ type: 'splat', x: hit.x, z: hit.z });
       }
     }
 
