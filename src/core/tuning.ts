@@ -92,6 +92,11 @@ export const tuning = {
   course: {
     targetRespawn: p(8, 1, 60, 0.5),
   },
+  audio: {
+    master: p(0.5, 0, 1, 0.05),
+    sfx: p(0.8, 0, 1, 0.05),
+    wind: p(0.5, 0, 1, 0.05), // air-rush loudness
+  },
   render: {
     fogNear: p(40, 0, 200, 1),
     fogFar: p(220, 50, 800, 1),

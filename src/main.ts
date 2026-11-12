@@ -13,6 +13,7 @@ import { bestAimTarget, diveHits, updateTargets } from './gameplay/targets';
 import { DiveMarker } from './render/diveMarker';
 import { DebugPanel } from './ui/debugPanel';
 import { Hud } from './ui/hud';
+import { AudioManager } from './core/audio';
 
 const app = document.getElementById('app')!;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -31,6 +32,9 @@ const cam = new FollowCamera(innerWidth / innerHeight);
 const input = new Input(renderer.domElement);
 const debug = new DebugPanel(document.body);
 const hud = new Hud(document.body);
+const audio = new AudioManager();
+for (const ev of ['pointerdown', 'keydown'] as const) addEventListener(ev, () => audio.unlock());
+(window as unknown as { __lokki: unknown }).__lokki = { gull };
 let simTime = 0;
 let hits = 0;
 
@@ -47,11 +51,25 @@ addEventListener('resize', () => {
 
 function onFlightEvents(evs: FlightEvent[]): void {
   for (const e of evs) {
-    if (e.type === 'exhausted') hud.toast('Out of breath!', 0.6);
-    else if (e.type === 'land' && e.quality === 'hard') hud.toast('Oof!');
-    else if (e.type === 'land' && e.quality === 'rough') hud.toast('Rough landing', 0.6);
-    else if (e.type === 'land' && e.perch) hud.toast('Perched', 0.8);
-    else if (e.type === 'bonk') hud.toast('Bonk!');
+    if (e.type === 'flap') audio.play('flap');
+    else if (e.type === 'hop') audio.play('hop');
+    else if (e.type === 'diveStart') {
+      audio.play('screech');
+      gull.openBeak(0.5);
+    } else if (e.type === 'exhausted') hud.toast('Out of breath!', 0.6);
+    else if (e.type === 'land' && e.quality === 'hard') {
+      hud.toast('Oof!');
+      audio.play('thud');
+      gull.openBeak(0.8);
+    } else if (e.type === 'land' && e.quality === 'rough') {
+      hud.toast('Rough landing', 0.6);
+      audio.play('thud');
+    } else if (e.type === 'land' && e.perch) hud.toast('Perched', 0.8);
+    else if (e.type === 'bonk') {
+      hud.toast('Bonk!');
+      audio.play('bonk');
+      gull.openBeak(0.8);
+    }
   }
 }
 
@@ -61,6 +79,7 @@ startLoop({
     const m = input.consumeMouse();
     cam.rotate(m.dx, m.dy);
     if (input.wasPressed('KeyR')) gull.reset();
+    if (input.wasPressed('KeyM')) hud.toast(audio.toggleMute() ? 'Sound off' : 'Sound on', 0.8);
     const { x, y } = input.axes();
     const wasDive = gull.state.mode === 'dive';
     const evs = gull.update(
@@ -80,6 +99,7 @@ startLoop({
       const got = diveHits(course.targets, { x: s.x, y: s.y, z: s.z }, GULL_RADIUS);
       if (got.length) {
         hits += got.length;
+        audio.play('chime');
         hud.toast(got.length > 1 ? `Double hit! x${got.length}` : 'Got it!', 0.8);
       }
     }
@@ -104,6 +124,7 @@ startLoop({
     }
     course.targets.forEach((t, i) => visuals.targetMeshes[i].scale.setScalar(t === aimTarget ? 1.5 : 1));
     cam.update(gull.position, frameDt, { vx: s.vx, vy: s.vy, vz: s.vz, diving: s.mode === 'dive', turnRate: s.turnRate });
+    audio.setAir(Math.hypot(s.vx, s.vy, s.vz) / tuning.dive.speed.value, s.mode !== 'ground');
     renderer.render(scene, cam.camera);
     debug.frame(frameDt);
     hud.update(s, tuning.flight.staminaMax.value, windAt(simTime), cam.yaw, hits, course.targets.length, frameDt);

@@ -18,7 +18,7 @@ export class Hud {
       <div class="wind"><span class="arrow">➤</span></div>
       <div class="toast"></div>
       <div class="stam"><div class="bar"></div></div>
-      <div class="keys">WASD steer · Space hop / flap · Shift dive (hold; aim with mouse, height = steepness) · S flare/brake · R reset · F3 tuning</div>`;
+      <div class="keys">WASD steer · Space hop / flap · Shift dive (hold; aim with mouse, height = steepness) · S flare/brake · R reset · M sound · F3 tuning</div>`;
     root.appendChild(this.el);
     this.bar = this.el.querySelector('.bar')!;
     this.info = this.el.querySelector('.info')!;

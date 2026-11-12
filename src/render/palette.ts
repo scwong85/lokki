@@ -13,4 +13,8 @@ export const palette = {
   sun: 0xfff2cc,
   gull: 0xffffff,
   gullBeak: 0xffb347,
+  gullGrey: 0xc4cfdb,
+  gullBlack: 0x3a3f4a,
+  gullLegs: 0xff9a5c,
+  gullEye: 0x22232b,
 } as const;

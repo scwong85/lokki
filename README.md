@@ -2,7 +2,7 @@
 
 *Lokki* ("gull" in Finnish) is a browser-based 3D game: you are a seagull causing gentle slapstick havoc in downtown Helsinki. Low-poly, pastel, mouse + keyboard. See [`docs/PLAN.md`](docs/PLAN.md) for the full plan.
 
-Status: **M1 – Flight feel (graybox)**, awaiting playtest / decision gate 1.
+Status: **M2 – The gull** (procedural model + animation + placeholder sounds), awaiting playtest. M1 flight feel passed decision gate 1.
 
 ## Run
 
@@ -28,7 +28,12 @@ npm run test:smoke # Playwright smoke test (needs Chromium)
 | S (in the air) | flare / brake, for precise landings |
 | Mouse | click canvas for mouse look (Esc releases) |
 | R | reset gull |
+| M | mute / unmute |
 | F3 | debug panel: live tuning, "Copy tuning as JSON" |
+
+## Audio
+
+All sounds so far are synthesised at runtime with WebAudio (no sample files, nothing to credit).
 
 ## Data credits
 
