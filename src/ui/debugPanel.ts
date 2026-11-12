@@ -72,7 +72,7 @@ export class DebugPanel {
     this.worst = Math.max(this.worst, dt);
     if (this.acc >= 0.5) {
       const fps = this.frames / this.acc;
-      this.stats.textContent = `${fps.toFixed(0)} fps · ${(1000 / fps).toFixed(1)} ms · worst ${(this.worst * 1000).toFixed(0)} ms  [F3: tuning · click: mouse look · WASD]`;
+      this.stats.textContent = `${fps.toFixed(0)} fps · ${(1000 / fps).toFixed(1)} ms · worst ${(this.worst * 1000).toFixed(0)} ms  [click canvas = mouse look]`;
       this.frames = 0;
       this.acc = 0;
       this.worst = 0;

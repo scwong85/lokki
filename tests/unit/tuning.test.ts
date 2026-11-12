@@ -4,8 +4,8 @@ import { exportTuning, importTuning, tuning } from '../../src/core/tuning';
 describe('tuning', () => {
   it('exports plain numbers and round-trips with clamping', () => {
     const out = exportTuning();
-    expect(out.gull.maxSpeed).toBe(tuning.gull.maxSpeed.value);
-    importTuning({ gull: { maxSpeed: 9999, nope: 1 } });
-    expect(tuning.gull.maxSpeed.value).toBe(tuning.gull.maxSpeed.max);
+    expect(out.flight.maxSpeed).toBe(tuning.flight.maxSpeed.value);
+    importTuning({ flight: { maxSpeed: 9999, nope: 1 } });
+    expect(tuning.flight.maxSpeed.value).toBe(tuning.flight.maxSpeed.max);
   });
 });

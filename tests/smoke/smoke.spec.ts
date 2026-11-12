@@ -7,7 +7,12 @@ test('loads, renders a canvas, no console errors', async ({ page }) => {
   await page.goto('/');
   await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true);
   await page.keyboard.down('KeyW');
-  await page.waitForTimeout(1000);
+  await page.keyboard.down('Space'); // hop + flap: take off
+  await page.waitForTimeout(2500);
+  await page.keyboard.up('Space');
+  await page.keyboard.down('Shift'); // dive
+  await page.waitForTimeout(600);
+  await page.keyboard.up('Shift');
   await page.keyboard.up('KeyW');
   await expect(page.locator('canvas')).toBeVisible();
   await page.screenshot({ path: 'tests/__screenshots__/m0.png' });

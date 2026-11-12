@@ -28,25 +28,10 @@ export function createScene() {
   scene.add(sun);
 
   const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(600, 600),
+    new THREE.PlaneGeometry(1200, 1200),
     new THREE.MeshLambertMaterial({ color: palette.ground, flatShading: true }),
   );
   ground.rotation.x = -Math.PI / 2;
   scene.add(ground);
-
-  // A few pastel blocks so motion/parallax is readable.
-  const colors = [palette.cream, palette.peach, palette.mint, palette.lilac];
-  for (let i = 0; i < 40; i++) {
-    const w = 3 + ((i * 7) % 5);
-    const h = 2 + ((i * 13) % 9);
-    const m = new THREE.Mesh(
-      new THREE.BoxGeometry(w, h, w),
-      new THREE.MeshLambertMaterial({ color: colors[i % colors.length], flatShading: true }),
-    );
-    const a = i * 2.399;
-    const r = 15 + (i % 8) * 9;
-    m.position.set(Math.cos(a) * r, h / 2, Math.sin(a) * r);
-    scene.add(m);
-  }
   return scene;
 }

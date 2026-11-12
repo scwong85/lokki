@@ -2,7 +2,7 @@
 
 *Lokki* ("gull" in Finnish) is a browser-based 3D game: you are a seagull causing gentle slapstick havoc in downtown Helsinki. Low-poly, pastel, mouse + keyboard. See [`docs/PLAN.md`](docs/PLAN.md) for the full plan.
 
-Status: **M0 – Foundations** (capsule gull on a pastel plane).
+Status: **M1 – Flight feel (graybox)**, awaiting playtest / decision gate 1.
 
 ## Run
 
@@ -18,9 +18,17 @@ npm test           # unit tests (Vitest)
 npm run test:smoke # Playwright smoke test (needs Chromium)
 ```
 
-## Controls (M0)
+## Controls (M1)
 
-WASD move · click canvas for mouse look (Esc releases) · F3 debug/tuning panel · "Copy tuning as JSON" to export values.
+| Key | Action |
+|---|---|
+| WASD | walk / steer (relative to camera) |
+| Space | hop on the ground; flap in the air (hold to keep flapping, costs stamina) |
+| Shift (hold) | committed dive; release after the minimum time to swoop up |
+| S (in the air) | flare / brake, for precise landings |
+| Mouse | click canvas for mouse look (Esc releases) |
+| R | reset gull |
+| F3 | debug panel: live tuning, "Copy tuning as JSON" |
 
 ## Data credits
 
