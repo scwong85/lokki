@@ -7,7 +7,12 @@ export function activeMarkers(defs: readonly QuestDef[], quests: readonly QuestS
   for (const q of quests) {
     const d = defs.find((x) => x.id === q.id);
     if (!d) continue;
-    if (q.status === 'idle' && d.startMarkers) out.push(...d.startMarkers);
+    if (q.status === 'idle') {
+      // point at where to begin: explicit start markers, or the first objective when it IS the start action (take the cap)
+      const first = d.objectives[0];
+      if (d.startMarkers) out.push(...d.startMarkers);
+      else if (first.markers && first.event && d.startOn?.includes(first.event)) out.push(...first.markers);
+    }
     if (q.status !== 'active') continue;
     const i = q.objectives.findIndex((o) => !o.done);
     if (i < 0) continue;

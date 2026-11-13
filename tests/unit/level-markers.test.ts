@@ -3,7 +3,7 @@ import { LevelStats, formatTime } from '../../src/gameplay/levelStats';
 import { activeMarkers } from '../../src/gameplay/questMarkers';
 import { QuestLog } from '../../src/gameplay/quest';
 import { QUESTS } from '../../src/data/quests';
-import { FERRY_FUNNEL, STATUE } from '../../src/data/places';
+import { BUN_CHECKPOINTS, FERRY_FUNNEL, STATUE } from '../../src/data/places';
 
 describe('level stats', () => {
   it('counts what happened, tracks the peak heat and the time', () => {
@@ -27,24 +27,24 @@ describe('level stats', () => {
 });
 
 describe('quest markers', () => {
-  it('shows nothing for idle quests that have no start marker, and points at the next objective of an active quest', () => {
+  it('points at the statue before the cap heist starts, then at the ferry roof', () => {
     const q = new QuestLog(QUESTS);
-    expect(activeMarkers(QUESTS, q.quests)).toEqual([]);
-    q.onEvent('grab:statueCap'); // cap heist starts: take the cap first
-    let m = activeMarkers(QUESTS, q.quests);
+    const idle = activeMarkers(QUESTS, q.quests);
+    expect(idle).toHaveLength(1); // the cap quest starts by taking the cap; the other idle quests have no start spot
+    expect(idle[0]).toMatchObject({ x: STATUE.x, z: STATUE.z });
+    q.onEvent('grab:statueCap'); // starting the quest also takes the cap
+    const m = activeMarkers(QUESTS, q.quests);
     expect(m).toHaveLength(1);
-    expect(m[0]).toMatchObject({ x: STATUE.x, z: STATUE.z });
-    q.onEvent('grab:statueCap');
-    m = activeMarkers(QUESTS, q.quests);
-    expect(m[0].y).toBeGreaterThan(5); // now the ferry roof
+    expect(m[0].y).toBeGreaterThan(5); // the ferry roof
   });
   it('bun ring shows one checkpoint at a time, in order', () => {
     const q = new QuestLog(QUESTS);
+    const has = (i: number) => activeMarkers(QUESTS, q.quests).some((m) => m.x === BUN_CHECKPOINTS[i].x && m.z === BUN_CHECKPOINTS[i].z);
+    expect([has(0), has(1), has(2)]).toEqual([false, false, false]); // not started: no checkpoint shown
     q.onEvent('grab:bun');
-    const first = activeMarkers(QUESTS, q.quests)[0];
+    expect([has(0), has(1), has(2)]).toEqual([true, false, false]);
     q.onEvent('bun1');
-    const second = activeMarkers(QUESTS, q.quests)[0];
-    expect(second.x).not.toBe(first.x);
+    expect([has(0), has(1), has(2)]).toEqual([false, true, false]);
   });
   it('the unlocked finale points at the ferry funnel until it starts', () => {
     const q = new QuestLog(QUESTS);
