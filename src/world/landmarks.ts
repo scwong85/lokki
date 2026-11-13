@@ -92,6 +92,8 @@ function statue(l: LandmarkSrc): LandmarkOut {
       prism(ngon(x, z, 0.55), 3, 5.2, 0x8fbfa8, 0x8fbfa8, 'perch'),
     ],
     targets: [],
+    // the student cap on the statue's head (cap heist)
+    props: [{ type: 'cap', x, y: restY('cap', 5.2), z, tag: 'statueCap' }],
   };
 }
 
@@ -114,7 +116,13 @@ function tents(l: LandmarkSrc): LandmarkOut {
       }
     }
   }
-  return { prisms, targets };
+  // a pastry on a counter of the south row (finale): column 5, last row
+  const props: PropSpawn[] = [];
+  if (cols > 5 && rows > 2) {
+    const [ox, oz] = rot((5 - (cols - 1) / 2) * dx, (rows - 1 - (rows - 1) / 2) * dz, a);
+    props.push({ type: 'bun', x: l.x + ox, y: restY('bun', 1.0), z: l.z + oz, tag: 'stallBun' });
+  }
+  return { prisms, targets, props };
 }
 
 function ferry(l: LandmarkSrc): LandmarkOut {
@@ -160,6 +168,7 @@ function sandbox(l: LandmarkSrc): LandmarkOut {
   // front row on the ground
   for (const dx of [-8, -6, -4]) add('fish', dx, 5);
   for (const dx of [0, 1, 2]) add('bottle', dx, 5);
+  for (const dx of [-2.6, -1.6]) add('salmiakki', dx, 5); // for the salmiakki swap
   for (const dx of [5, 6.5]) add('bun', dx, 5);
   for (const dx of [9, 10.5]) add('cap', dx, 5);
   // tables (crates) with things on top

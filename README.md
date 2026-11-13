@@ -2,7 +2,7 @@
 
 *Lokki* ("gull" in Finnish) is a browser-based 3D game: you are a seagull causing gentle slapstick havoc in downtown Helsinki. Low-poly, pastel, mouse + keyboard. See [`docs/PLAN.md`](docs/PLAN.md) for the full plan.
 
-Status: **M6 – Heat and deterrents** (heat meter, spray bottles, scare lines, nets, the Gull Warden, learning), awaiting playtest. M0–M5 done.
+Status: **M7 – Market Square quest pack** (six quests, finale, level-complete screen), awaiting playtest. M0–M6 done.
 
 ## Run
 

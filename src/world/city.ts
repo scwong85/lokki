@@ -34,6 +34,8 @@ export interface City {
   targetMeshes: THREE.Object3D[];
   start: { x: number; z: number };
   propSpawns: PropSpawn[];
+  /** Land (as opposed to the sea), buildings or not. */
+  isLand: (x: number, z: number) => boolean;
   /** Is this spot dry land that a tourist can stand on (not water, not inside a building or stall counter)? */
   walkable: (x: number, z: number) => boolean;
   /** Triangle soup of every building/landmark for static physics colliders. */
@@ -175,5 +177,5 @@ export function buildCity(): City {
 
   const targets = lm.targets;
   const targetMeshes = createTargetMeshes(targets, group);
-  return { world, group, targets, targetMeshes, start: { x: 0, z: -12 }, propSpawns: lm.props, walkable: (x, z) => data.land.some((l) => pointInRings(l.rings, x, z)) && !world.solidAt(x, 0.9, z), physicsMesh, stats: { buildings: data.buildings.length, prisms: defs.length, chunks: chunks.size } };
+  return { world, group, targets, targetMeshes, start: { x: 0, z: -12 }, propSpawns: lm.props, isLand: (x, z) => data.land.some((l) => pointInRings(l.rings, x, z)), walkable: (x, z) => data.land.some((l) => pointInRings(l.rings, x, z)) && !world.solidAt(x, 0.9, z), physicsMesh, stats: { buildings: data.buildings.length, prisms: defs.length, chunks: chunks.size } };
 }

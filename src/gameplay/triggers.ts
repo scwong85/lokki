@@ -18,6 +18,7 @@ export type TriggerDef =
   | { id: string; kind: 'carryCheckpoints'; propType: PropType; points: { x: number; z: number; r: number }[]; events: string[]; maxY?: number };
 
 export interface PropView {
+  id?: number;
   type: PropType;
   tag?: string;
   x: number;

@@ -139,6 +139,11 @@ export class CityDefense {
     return this.tierEvents(this.heat.add(reason));
   }
 
+  /** A quest started: the city is at least this alert. */
+  ensureHeat(min: number): DefenseEvent[] {
+    return this.tierEvents(this.heat.raiseTo(min));
+  }
+
   private tierEvents(c: TierChange | null): DefenseEvent[] {
     if (!c) return [];
     const ev: DefenseEvent[] = [{ type: 'tier', tier: c.to, up: c.to > c.from }];

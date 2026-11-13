@@ -6,8 +6,10 @@ export const TOURIST_SPAWNS: NpcSpawn[] = [
   { x: -10, z: -26, heading: 3.0, ice: true, color: 0x7fd1ae },
   { x: 14, z: -22, heading: -1.2, ice: true, color: 0xffc971 },
   { x: 28, z: -18, heading: 1.5, ice: true, color: 0x9ec9f0 },
-  { x: -30, z: -14, heading: 0.2, ice: false, color: 0xc9a7f0 },
-  { x: 36, z: -24, heading: 2.2, ice: false, color: 0xf7a1c4 },
+  // the lilac tourist loves sweets (salmiakki swap): she picks up and eats sweets lying near her
+  { x: -30, z: -14, heading: 0.2, holds: 'candy', wants: ['candy', 'salmiakki'], color: 0xc9a7f0 },
+  // the pink tourist at the east side is holding a map (map sabotage)
+  { x: 36, z: -24, heading: 2.2, holds: 'map', color: 0xf7a1c4 },
 ];
 
 /** Reaction table of a tourist, documented as data (what it cares about and how it reacts). */

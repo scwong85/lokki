@@ -34,6 +34,13 @@ import type { HeatReason } from './gameplay/heat';
 import type { Noise } from './gameplay/npc';
 import { HeatMeter } from './ui/heatMeter';
 import { Announce } from './ui/announce';
+import { TriggerSystem, type PropView } from './gameplay/triggers';
+import { TRIGGERS } from './data/triggers';
+import { WRONG_FERRY } from './data/places';
+import { LevelStats } from './gameplay/levelStats';
+import { LevelComplete } from './ui/levelComplete';
+import { activeMarkers } from './gameplay/questMarkers';
+import { MarkerPool } from './render/markers';
 
 const app = document.getElementById('app')!;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -54,6 +61,7 @@ let targetMeshes: THREE.Object3D[];
 let start: { x: number; z: number };
 let propSpawns: PropSpawn[] = [];
 let walkable: (x: number, z: number) => boolean = () => true;
+let isLand: (x: number, z: number) => boolean = () => true;
 if (greybox) {
   const course = buildCourse();
   const visuals = buildCourseVisuals(course.boxes, course.targets);
@@ -66,7 +74,7 @@ if (greybox) {
   const city = buildCity();
   scene.add(city.group);
   world = city.world;
-  ({ targets, start, targetMeshes, propSpawns, walkable } = city);
+  ({ targets, start, targetMeshes, propSpawns, walkable, isLand } = city);
   phys.addStaticMesh(city.physicsMesh.vertices, city.physicsMesh.indices);
 }
 const gull = new Gull(start);
@@ -99,6 +107,11 @@ if (npcs && defense) {
   };
 }
 const quests = new QuestLog(greybox ? [] : QUESTS);
+const triggers = new TriggerSystem(greybox ? [] : TRIGGERS);
+const stats = new LevelStats();
+const levelComplete = new LevelComplete(document.body);
+const markerPool = new MarkerPool();
+scene.add(markerPool.group);
 const todo = new Todo(document.body);
 const poopReticle = new Reticle();
 scene.add(poopReticle.mesh);
@@ -106,7 +119,7 @@ const marker = new DiveMarker();
 scene.add(gull.mesh, gull.shadow, marker.group);
 const cam = new FollowCamera(innerWidth / innerHeight);
 const input = new Input(renderer.domElement);
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, defense, noise, heat };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, defense, noise, heat, triggers, stats, notes };
 const debug = new DebugPanel(document.body);
 const hud = new Hud(document.body);
 const credits = new Credits(document.body);
@@ -183,6 +196,7 @@ function onDefense(evs: DefenseEvent[]): void {
         break;
       }
       case 'dodged': {
+        stats.add('dodge');
         const what = { vendors: 'Dodged the spray!', warden: 'Dodged the swat!', lines: 'Slipped past the scare lines!', nets: 'Flew under the net!' }[e.id];
         hud.toast(`${what} (gulls learning ${e.count}/${e.need})`, 1.6);
         if (!explainedLearning) {
@@ -195,6 +209,7 @@ function onDefense(evs: DefenseEvent[]): void {
         announce.show(`The gulls learned: ${DETERRENT_NAMES[e.id]}`, 'It barely works on them any more.', 'learned');
         break;
       case 'hit': {
+        stats.add('sprayed');
         const dropped = applyHit(gull.state, e.hit);
         if (!dropped) {
           hud.toast('Slipped through!', 0.8);
@@ -220,6 +235,7 @@ function onDefense(evs: DefenseEvent[]): void {
         hud.toast('Splat! That vendor is out of action for a bit', 1.4);
         break;
       case 'poopWarden':
+        stats.add('poopWarden');
         audio.play('splat');
         audio.play('yelp');
         hud.toast('Splat! The Warden is NOT amused', 1.8);
@@ -237,16 +253,27 @@ function onDefense(evs: DefenseEvent[]): void {
 function notes(list: QuestNote[]): void {
   for (const n of list) {
     const q = quests.quests.find((x) => x.id === n.quest)!;
-    if (n.type === 'started') hud.toast(`Spotted! ${Math.round(tuning.quest.timeLimit.value)} seconds!`, 1.4);
-    else if (n.type === 'objective') {
+    const def = QUESTS.find((d) => d.id === n.quest)!;
+    if (n.type === 'started') {
+      hud.toast(q.timed ? `${q.title}: ${Math.round(q.timeLeft)} seconds!` : `Quest started: ${q.title}`, 1.6);
+      if (def.startHeat && defense) onDefense(defense.ensureHeat(def.startHeat));
+    } else if (n.type === 'objective') {
       const text = q.objectives.find((o) => o.id === n.objective)!.text;
       hud.toast(`✓ ${text}`, 1.6);
     } else if (n.type === 'won') {
       audio.play('win');
-      hud.toast(q.timed ? 'Ice cream secured!' : 'All extras done!', 2.2);
+      hud.toast(n.quest === 'extras' ? 'All extras done!' : `Quest complete: ${q.title}!`, 2.4);
+      if (n.quest === 'finale') {
+        levelComplete.show(stats.summary(), quests.quests.filter((x) => x.id !== 'extras').map((x) => ({ title: x.title, won: x.status === 'won' })));
+      }
     } else if (n.type === 'lost') {
       audio.play('lose');
-      hud.toast('Time is up! Press R to try again', 3);
+      hud.toast(`${q.title}: time is up! Try again in a moment`, 3);
+    } else if (n.type === 'unlocked') {
+      announce.show(`New quest: ${q.title}`, def.teaser ?? '', 'learned');
+      audio.play('win');
+    } else if (n.type === 'retry') {
+      hud.toast(`${q.title}: ready to try again`, 1.4);
     }
   }
 }
@@ -258,6 +285,17 @@ function onNpcEvents(evs: NpcEvent[]): void {
       notes(quests.onEvent('alert'));
       heat('noticed');
     } else if (e.type === 'panic' || e.type === 'chase') audio.play('yelp');
+    else if (e.type === 'tookItem') {
+      audio.play('pop');
+      notes(quests.onEvent(`tookItem:${e.propType}`));
+    } else if (e.type === 'yuck') {
+      audio.play('yelp');
+      hud.toast('Yuck! Salmiakki!', 1.6);
+      notes(quests.onEvent('yuck'));
+    } else if (e.type === 'arrived' && e.goal === 'ferry') {
+      hud.toast('They are waiting at the wrong ferry...', 1.8);
+      notes(quests.onEvent('wrongFerry'));
+    }
   }
 }
 
@@ -268,6 +306,8 @@ function onGags(gags: GagEvent[]): void {
         audio.play('pop');
         gull.openBeak(0.25);
         hud.toast(`Got the ${g.prop.def.name}!`, 0.7);
+        if (g.prop.tag) notes(quests.onEvent(`grab:${g.prop.tag}`));
+        notes(quests.onEvent(`grab:${g.prop.type}`));
         break;
       case 'toss':
         audio.play('hop');
@@ -282,7 +322,8 @@ function onGags(gags: GagEvent[]): void {
       case 'snatch':
         audio.play('yelp');
         hud.toast('Snatched!', 1);
-        notes(quests.onEvent('snatch'));
+        notes(quests.onEvent(`snatch:${g.prop.type}`));
+        stats.add('snatch');
         heat('snatch');
         break;
       case 'poopNpc':
@@ -290,6 +331,7 @@ function onGags(gags: GagEvent[]): void {
         audio.play('yelp');
         hud.toast('Splat! Right on a tourist!', 1.1);
         notes(quests.onEvent('poopNpc'));
+        stats.add('poopPerson');
         heat('poopNpc');
         break;
       case 'poopProp':
@@ -302,6 +344,7 @@ function onGags(gags: GagEvent[]): void {
         const t = g.prop.cur.p;
         noise(t.x, t.z, 1);
         heat('break');
+        stats.add('break');
         if (g.prop.type === 'bottle') notes(quests.onEvent('breakBottle'));
         break;
       }
@@ -317,7 +360,9 @@ function onGags(gags: GagEvent[]): void {
         const t = g.prop.cur.p;
         noise(t.x, t.z, 1);
         heat('tipped');
+        stats.add('tip');
         if (g.prop.type === 'bin') notes(quests.onEvent('tipBin'));
+        if (g.prop.type === 'chair') notes(quests.onEvent('tipChair'));
         break;
       }
     }
@@ -336,8 +381,12 @@ startLoop({
       defense?.reset();
       announce.clear();
       quests.reset();
+      triggers.reset();
+      stats.reset();
+      levelComplete.hide();
     }
     if (input.wasPressed('KeyC')) credits.toggle();
+    if (input.wasPressed('Enter') && levelComplete.visible) levelComplete.hide();
     if (input.wasPressed('KeyH') && defense?.activateHawk()) hud.toast('Hawk-eye!', 0.8);
     if (input.wasPressed('KeyM')) hud.toast(audio.toggleMute() ? 'Sound off' : 'Sound on', 0.8);
     const { x, y } = input.axes();
@@ -374,6 +423,28 @@ startLoop({
       notes(quests.tick({ dt, carryingStolen: interaction.carried?.stolen === true, nearestNpc: npcs.nearestDistance(g) }));
       if (defense) onDefense(defense.update(dt, g, stepNoises, npcs.npcs.some((n) => n.seesGull)));
       stepNoises.length = 0;
+      // world triggers (delivery zones, the sea, the ferry horn, bun checkpoints) -> quest events
+      const views: PropView[] = interaction.props.props.map((p) => ({
+        id: p.id, type: p.type, tag: p.tag, x: p.cur.p.x, y: p.cur.p.y, z: p.cur.p.z, free: !p.broken && !p.carried && p.heldBy === null,
+      }));
+      const car = interaction.carried;
+      const fired = triggers.update(
+        {
+          props: views,
+          gull: { x: g.x, y: g.y, z: g.z, grounded: g.mode === 'ground' },
+          carried: car ? { type: car.type, tag: car.tag, x: car.cur.p.x, y: car.cur.p.y, z: car.cur.p.z, free: false } : null,
+          isLand,
+        },
+        quests.wanted(),
+      );
+      for (const ev of fired) {
+        notes(quests.onEvent(ev));
+        if (ev === 'mapInSea') {
+          const map = views.find((v) => v.type === 'map' && v.free && !isLand(v.x, v.z));
+          if (map?.id !== undefined) npcs.sendVictimTo(map.id, WRONG_FERRY.x, WRONG_FERRY.z, 'ferry');
+        }
+      }
+      stats.tick(dt, defense?.heat.value ?? 0);
     }
     if (wasDive) {
       const s = gull.state;
@@ -393,6 +464,7 @@ startLoop({
     npcs?.render(simTime, interaction.beakPos(gull.state), cam.camera.quaternion);
     defense?.render(simTime, frameDt);
     if (defense && heatMeter) heatMeter.update(defense.heat, defense.response, defense.hawkReady, defense.hawkActive);
+    markerPool.update(greybox ? [] : activeMarkers(QUESTS, quests.quests), simTime);
     todo.update(quests.quests, npcs ? npcs.nearestDistance(gull.state) : Infinity, interaction.carried?.stolen === true);
     targets.forEach((t, i) => (targetMeshes[i].visible = t.cooldown === 0));
     const s = gull.state;

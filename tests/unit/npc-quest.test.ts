@@ -157,7 +157,7 @@ describe('quest log', () => {
   it('wins after snatch then escaping far away long enough', () => {
     const q = new QuestLog(QUESTS);
     q.onEvent('alert');
-    expect(q.onEvent('snatch')).toContainEqual({ type: 'objective', quest: 'icecream', objective: 'snatch' });
+    expect(q.onEvent('snatch:icecream')).toContainEqual({ type: 'objective', quest: 'icecream', objective: 'snatch' });
     tick(q, 2, true, 10); // too close
     expect(ice(q).objectives[1].done).toBe(false);
     const notes = tick(q, tuning.quest.escapeTime.value + 0.5, true, tuning.quest.escapeDistance.value + 5);
@@ -166,7 +166,7 @@ describe('quest log', () => {
   });
   it('escape progress resets when you drop the ice cream or get close again', () => {
     const q = new QuestLog(QUESTS);
-    q.onEvent('snatch');
+    q.onEvent('snatch:icecream');
     tick(q, 2, true, 40);
     expect(ice(q).objectives[1].progress).toBeGreaterThan(1);
     tick(q, 0.1, false, 40);
@@ -197,7 +197,7 @@ describe('quest log', () => {
   });
   it('reset restores everything', () => {
     const q = new QuestLog(QUESTS);
-    q.onEvent('snatch');
+    q.onEvent('snatch:icecream');
     q.reset();
     expect(ice(q).status).toBe('idle');
     expect(ice(q).objectives.every((o) => !o.done)).toBe(true);

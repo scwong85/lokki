@@ -48,6 +48,11 @@ export class Heat {
     return this.set(this.value + this.gain(reason));
   }
 
+  /** Make sure the city is at least this worked up (a quest starting). */
+  raiseTo(v: number): TierChange | null {
+    return v > this.value ? this.set(v) : null;
+  }
+
   /** Lower the heat (e.g. the Warden is humiliated). */
   relieve(amount: number): TierChange | null {
     return this.set(this.value - amount);
