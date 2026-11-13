@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createRng, type Rng } from '../core/rng';
+import type { PropType } from '../data/props';
 import { BODY_HEIGHT, BODY_RADIUS, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn } from './npc';
 import type { GrabCandidate } from './grab';
 import type { HitSphere } from './poop';
@@ -23,8 +24,13 @@ export class NpcManager implements NpcHooks {
   private rng: Rng;
   private nextId = 1;
   private owners: Npc[] = [];
-  /** Each tourist's own ice cream (so reset can hand it back after a snatch). */
-  private ice = new Map<number, Prop>();
+  /** Each tourist's own item in hand (so reset can hand it back after a snatch). */
+  private items = new Map<number, Prop>();
+  /** Who an item was snatched from (quests send the victim somewhere afterwards). */
+  private victimOf = new Map<number, number>();
+  /** Wanted items being eaten: consumed when the timer runs out. */
+  private eating = new Map<number, { prop: Prop; until: number }>();
+  private clock = 0;
   /** Floating ring around each held ice cream: red = guarded, green = available. */
   private rings = new Map<number, THREE.Mesh>();
 
@@ -49,17 +55,19 @@ export class NpcManager implements NpcHooks {
     ring.visible = false;
     this.parent.add(ring);
     this.rings.set(n.id, ring);
-    if (sp.ice) this.giveIceCream(n);
+    const holds = sp.holds ?? (sp.ice ? 'icecream' : undefined);
+    if (holds) this.giveItem(n, holds);
     this.npcs.push(n);
     return n;
   }
 
-  private giveIceCream(n: Npc): void {
+  private giveItem(n: Npc, type: PropType): void {
     const h = handPos(n);
-    const prop = this.props.spawn({ type: 'icecream', x: h.x, y: h.y, z: h.z });
+    const prop = this.props.spawn({ type, x: h.x, y: h.y, z: h.z });
     this.props.attach(prop, n.id);
     n.holding = prop.id;
-    this.ice.set(n.id, prop);
+    n.holdType = type;
+    this.items.set(n.id, prop);
   }
 
   /** A sound the tourists can hear (clatter, crash, tipped bin...). */
@@ -71,8 +79,10 @@ export class NpcManager implements NpcHooks {
   update(dt: number, gull: GullInfo): NpcEvent[] {
     const ev: NpcEvent[] = this.pending.splice(0);
     const ctx = { world: this.world, walkable: this.walkable, rng: this.rng };
+    this.clock += dt;
     for (const n of this.npcs) {
       ev.push(...stepNpc(n, gull, this.noises, dt, ctx));
+      ev.push(...this.wantedItems(n));
       // solid walls, counters and landmarks push the tourist out (horizontal only)
       const p = { x: n.x, y: 0.9, z: n.z };
       this.world.collide(p, BODY_RADIUS);
@@ -95,6 +105,55 @@ export class NpcManager implements NpcHooks {
     }
     this.noises.length = 0;
     return ev;
+  }
+
+  /** A tourist who wants something (sweets) picks it up when it lies close by, eats it, and reacts. */
+  private wantedItems(n: Npc): NpcEvent[] {
+    const ev: NpcEvent[] = [];
+    const eat = this.eating.get(n.id);
+    if (eat && this.clock >= eat.until) {
+      this.eating.delete(n.id);
+      if (n.holding === eat.prop.id) {
+        const type = eat.prop.type;
+        this.props.destroy(eat.prop);
+        n.holding = null;
+        n.holdType = null;
+        if (type === 'salmiakki') ev.push(...startle(n, 'yuck'));
+      }
+    }
+    const free = n.mode === 'idle' || n.mode === 'walk' || n.mode === 'recover';
+    if (!n.wants.length || n.holding !== null || !free) return ev;
+    for (const p of this.props.props) {
+      if (p.broken || p.carried || p.heldBy !== null || p.ignoreGrab > 0 || !n.wants.includes(p.type)) continue;
+      const t = p.body.translation();
+      if (t.y > 1.2 || Math.hypot(t.x - n.x, t.z - n.z) > 1.4) continue;
+      this.props.attach(p, n.id);
+      p.stolen = false;
+      n.holding = p.id;
+      n.holdType = p.type;
+      n.mode = 'eat';
+      n.t = 0;
+      n.nextT = 2.2;
+      n.targetX = n.targetZ = null;
+      this.eating.set(n.id, { prop: p, until: this.clock + 2.2 });
+      ev.push({ type: 'tookItem', npc: n, propType: p.type });
+      break;
+    }
+    return ev;
+  }
+
+  /** Send whoever an item was snatched from to a place (e.g. the wrong ferry). Returns true if there was such a victim. */
+  sendVictimTo(propId: number, x: number, z: number, name: string): boolean {
+    const id = this.victimOf.get(propId);
+    const n = this.npcs.find((o) => o.id === id);
+    if (!n) return false;
+    n.goal = { x, z, name };
+    if (n.mode === 'idle' || n.mode === 'recover' || n.mode === 'eat') {
+      n.mode = 'walk';
+      n.t = 0;
+      n.targetX = n.targetZ = null;
+    }
+    return true;
   }
 
   /** Tourists are solid for the gull: push it out sideways. Returns true if it bumped hard (dive). */
@@ -151,7 +210,10 @@ export class NpcManager implements NpcHooks {
 
   onSnatched(propId: number): void {
     const n = this.npcs.find((x) => x.holding === propId);
-    if (n) this.pending.push(...startle(n, 'snatched'));
+    if (n) {
+      this.victimOf.set(propId, n.id);
+      this.pending.push(...startle(n, 'snatched'));
+    }
   }
 
   poopSpheres(): HitSphere[] {
@@ -175,14 +237,18 @@ export class NpcManager implements NpcHooks {
       const sp = this.spawns.get(n.id)!;
       const fresh = newNpc(n.id, sp);
       Object.assign(n, fresh);
-      const prop = this.ice.get(n.id);
-      if (sp.ice && prop) {
+      const prop = this.items.get(n.id);
+      const holds = sp.holds ?? (sp.ice ? 'icecream' : undefined);
+      if (holds && prop) {
         // Interaction.reset() already put the prop back; hand it to its owner again
         this.props.attach(prop, n.id);
         n.holding = prop.id;
+        n.holdType = holds;
         this.props.setHoldTarget(prop, handPos(n));
       }
     }
+    this.eating.clear();
+    this.victimOf.clear();
     this.pending.length = 0;
   }
 

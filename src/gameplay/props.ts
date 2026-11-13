@@ -13,11 +13,15 @@ export interface PropSpawn {
   y: number;
   z: number;
   rotY?: number;
+  /** Marks a special prop for quests ('statueCap', 'stallBun'). */
+  tag?: string;
 }
 
 export interface Prop {
   id: number;
   type: PropType;
+  /** Quest tag from its spawn. */
+  tag?: string;
   def: PropDef;
   spawn: PropSpawn;
   body: RigidBody;
@@ -77,7 +81,7 @@ export class PropManager {
     mesh.position.set(sp.x, sp.y, sp.z);
     this.parent.add(mesh);
     const prop: Prop = {
-      id: this.nextId++, type: sp.type, def, spawn: sp, body, collider, mesh,
+      id: this.nextId++, type: sp.type, tag: sp.tag, def, spawn: sp, body, collider, mesh,
       carried: false, heldBy: null, stolen: false, broken: false, dirty: 0, tipped: false, impactCd: 0.3, ignoreGrab: 0,
       prev: { p: new THREE.Vector3(sp.x, sp.y, sp.z), q: new THREE.Quaternion() },
       cur: { p: new THREE.Vector3(sp.x, sp.y, sp.z), q: new THREE.Quaternion() },

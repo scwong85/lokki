@@ -142,6 +142,9 @@ export const tuning = {
   },
   quest: {
     timeLimit: p(60, 15, 300, 5), // ice-cream snatch, starts when the first tourist spots you
+    capTime: p(45, 10, 200, 5), // cap heist, starts when you take the cap
+    finaleTime: p(120, 30, 400, 5), // grand finale, starts when you ring the ferry horn
+    retryDelay: p(3, 0, 20, 0.5), // a failed timed quest resets itself after this
     escapeDistance: p(30, 10, 80, 1),
     escapeTime: p(3, 0.5, 15, 0.5),
   },

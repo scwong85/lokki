@@ -1,19 +1,24 @@
 import { tuning } from '../core/tuning';
 import type { Rng } from '../core/rng';
 import type { World } from '../world/collision';
+import type { PropType } from '../data/props';
 
 /**
  * Tourist brain: a small state machine with senses (sight cone, hearing), things it cares about
  * (the ice cream in its hand) and reactions (notice, shield, panic, chase, recover). Pure logic, no rendering.
  */
-export type NpcMode = 'idle' | 'walk' | 'eat' | 'notice' | 'shield' | 'panic' | 'chase' | 'recover';
+export type NpcMode = 'idle' | 'walk' | 'eat' | 'notice' | 'shield' | 'panic' | 'chase' | 'recover' | 'yuck';
 
 export interface NpcSpawn {
   x: number;
   z: number;
   heading?: number;
-  /** Holds an ice cream. */
-  ice: boolean;
+  /** Holds an ice cream (shorthand for holds: 'icecream'). */
+  ice?: boolean;
+  /** Item in hand at the start. */
+  holds?: PropType;
+  /** Items this tourist will pick up and eat if they lie near it (e.g. sweets). */
+  wants?: PropType[];
   /** Jacket colour. */
   color: number;
 }
@@ -47,6 +52,12 @@ export interface Npc {
   seesGull: boolean;
   /** Mode timers for idle/eat cycling. */
   nextT: number;
+  /** Items it picks up when free and on the ground nearby. */
+  wants: PropType[];
+  /** Type of the item in hand. */
+  holdType: PropType | null;
+  /** Forced destination (e.g. the wrong ferry); cleared on arrival. */
+  goal: { x: number; z: number; name: string } | null;
 }
 
 export interface GullInfo {
@@ -63,7 +74,7 @@ export interface Noise {
   loud: number;
 }
 
-export type NpcEvent = { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc };
+export type NpcEvent = { type: 'arrived'; npc: Npc; goal: string } | { type: 'yuck'; npc: Npc } | { type: 'tookItem'; npc: Npc; propType: PropType } | { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc };
 
 export interface NpcCtx {
   world: World;
@@ -84,6 +95,7 @@ export function newNpc(id: number, sp: NpcSpawn): Npc {
     id, x: sp.x, z: sp.z, heading: h, mode: 'idle', t: 0, homeX: sp.x, homeZ: sp.z, targetX: null, targetZ: null,
     holding: null, shieldFrom: h, handAngle: h - Math.PI / 2, distractT: 0, noiseX: 0, noiseZ: 0, lostSightT: 0, noticeCd: 0,
     walkPhase: 0, moving: false, speed: 0, seesGull: false, nextT: 2,
+    wants: sp.wants ?? [], holdType: null, goal: null,
   };
 }
 
@@ -173,6 +185,11 @@ function faceToward(n: Npc, tx: number, tz: number, dt: number): void {
 }
 
 function pickWanderTarget(n: Npc, ctx: NpcCtx): void {
+  if (n.goal) {
+    n.targetX = n.goal.x;
+    n.targetZ = n.goal.z;
+    return;
+  }
   for (let i = 0; i < 8; i++) {
     const a = ctx.rng.range(0, Math.PI * 2);
     const r = ctx.rng.range(3, 10);
@@ -188,10 +205,16 @@ function pickWanderTarget(n: Npc, ctx: NpcCtx): void {
 }
 
 /** Disturbances the NPC reacts to from outside. */
-export function startle(n: Npc, kind: 'pooped' | 'snatched'): NpcEvent[] {
+export function startle(n: Npc, kind: 'pooped' | 'snatched' | 'yuck'): NpcEvent[] {
   const ev: NpcEvent[] = [];
-  if (kind === 'snatched') {
+  if (kind === 'yuck') {
     n.holding = null;
+    n.holdType = null;
+    enter(n, 'yuck');
+    ev.push({ type: 'yuck', npc: n });
+  } else if (kind === 'snatched') {
+    n.holding = null;
+    n.holdType = null;
     enter(n, 'chase');
     ev.push({ type: 'chase', npc: n });
   } else {
@@ -210,6 +233,7 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
   n.distractT = Math.max(0, n.distractT - dt);
   n.speed = 0;
   const calm = n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat';
+  if (n.mode === 'yuck') n.speed = 0;
 
   // ---- senses ----
   n.seesGull = canSee(n, g, ctx.world);
@@ -235,7 +259,7 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
     case 'idle': {
       if (n.distractT > 0) faceToward(n, n.noiseX, n.noiseZ, dt);
       if (n.t >= n.nextT && n.distractT <= 0) {
-        if (n.holding !== null && ctx.rng.next() < 0.5) {
+        if (!n.goal && n.holding !== null && ctx.rng.next() < 0.5) {
           enter(n, 'eat');
           n.nextT = ctx.rng.range(2, 3.5);
         } else {
@@ -260,7 +284,12 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
       if (n.targetX === null || n.targetZ === null) pickWanderTarget(n, ctx);
       const tx = n.targetX!, tz = n.targetZ!;
       n.moving = moveToward(n, tx, tz, t.walkSpeed.value, dt, ctx);
-      if (Math.hypot(tx - n.x, tz - n.z) < 0.6 || n.t > 8) {
+      if (n.goal && Math.hypot(n.goal.x - n.x, n.goal.z - n.z) < 2) {
+        ev.push({ type: 'arrived', npc: n, goal: n.goal.name });
+        n.goal = null;
+        enter(n, 'idle');
+        n.nextT = ctx.rng.range(2, 5);
+      } else if (Math.hypot(tx - n.x, tz - n.z) < 0.6 || n.t > (n.goal ? 40 : 8)) {
         enter(n, 'idle');
         n.nextT = ctx.rng.range(2, 5);
       }
@@ -322,6 +351,14 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
       }
       break;
     }
+    case 'yuck':
+      // spitting out salmiakki: flail in place, then sulk
+      n.handAngle = n.heading - Math.PI / 2;
+      if (n.t >= 3) {
+        enter(n, 'recover');
+        n.noticeCd = 2;
+      }
+      break;
     case 'recover':
       faceToward(n, g.x, g.z, dt);
       if (n.t >= t.recoverTime.value) {

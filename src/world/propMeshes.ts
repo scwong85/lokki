@@ -68,6 +68,24 @@ function buildParts(type: PropType, g: THREE.Group): void {
       g.add(mesh(new THREE.BoxGeometry(0.84, 0.1, 0.84), 0xc99a68, 0, 0.2, 0));
       g.add(mesh(new THREE.BoxGeometry(0.84, 0.1, 0.84), 0xc99a68, 0, -0.2, 0));
       break;
+    case 'candy': {
+      g.add(mesh(new THREE.BoxGeometry(0.2, 0.24, 0.1), 0xff9ec7));
+      g.add(mesh(new THREE.BoxGeometry(0.205, 0.05, 0.105), 0xffffff, 0, 0.02, 0));
+      g.add(mesh(new THREE.BoxGeometry(0.16, 0.05, 0.06), 0xff6fa8, 0, 0.14, 0));
+      break;
+    }
+    case 'salmiakki': {
+      g.add(mesh(new THREE.BoxGeometry(0.2, 0.24, 0.1), 0x2d2f3a));
+      g.add(mesh(new THREE.BoxGeometry(0.1, 0.1, 0.105), 0xffffff, 0, 0.0, 0)).children[1].rotation.z = Math.PI / 4;
+      g.add(mesh(new THREE.BoxGeometry(0.16, 0.05, 0.06), 0x15161c, 0, 0.14, 0));
+      break;
+    }
+    case 'map': {
+      g.add(mesh(new THREE.BoxGeometry(0.36, 0.03, 0.26), 0xfff1d6));
+      g.add(mesh(new THREE.BoxGeometry(0.14, 0.035, 0.1), 0x8fd3e8, -0.08, 0, 0.03));
+      g.add(mesh(new THREE.BoxGeometry(0.05, 0.036, 0.05), 0xe5484d, 0.1, 0, -0.04));
+      break;
+    }
     case 'chair':
       g.add(mesh(new THREE.BoxGeometry(0.5, 0.06, 0.5), 0xc9b8e8, 0, 0, 0));
       g.add(mesh(new THREE.BoxGeometry(0.5, 0.45, 0.05), 0xc9b8e8, 0, 0.25, 0.22));

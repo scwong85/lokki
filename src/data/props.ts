@@ -1,5 +1,5 @@
 /** Data-driven prop definitions (PLAN §4.3). Gameplay reads tags; NPCs will react to them in M5+. */
-export type Tag = 'edible' | 'shiny' | 'noisy' | 'throwable' | 'fragile' | 'heavy' | 'hat' | 'container' | 'stackable';
+export type Tag = 'edible' | 'shiny' | 'noisy' | 'throwable' | 'fragile' | 'heavy' | 'hat' | 'container' | 'stackable' | 'paper';
 
 export type Shape =
   | { kind: 'ball'; r: number }
@@ -7,7 +7,7 @@ export type Shape =
   | { kind: 'cyl'; hh: number; r: number }
   | { kind: 'capsule'; hh: number; r: number };
 
-export type PropType = 'icecream' | 'fish' | 'bun' | 'cap' | 'tophat' | 'bottle' | 'bin' | 'crate' | 'chair';
+export type PropType = 'icecream' | 'fish' | 'bun' | 'cap' | 'tophat' | 'bottle' | 'bin' | 'crate' | 'chair' | 'candy' | 'salmiakki' | 'map';
 
 export interface PropDef {
   name: string;
@@ -28,6 +28,9 @@ export const PROPS: Record<PropType, PropDef> = {
   bottle: { name: 'bottle', tags: ['fragile', 'noisy', 'shiny', 'throwable'], mass: 0.4, shape: { kind: 'capsule', hh: 0.16, r: 0.07 }, radius: 0.25 },
   bin: { name: 'litter bin', tags: ['heavy', 'noisy', 'container'], mass: 30, shape: { kind: 'cyl', hh: 0.5, r: 0.45 }, radius: 0.7 },
   crate: { name: 'crate', tags: ['heavy', 'stackable'], mass: 8, shape: { kind: 'box', hx: 0.4, hy: 0.35, hz: 0.4 }, radius: 0.65 },
+  candy: { name: 'bag of sweets', tags: ['edible', 'throwable'], mass: 0.15, shape: { kind: 'box', hx: 0.1, hy: 0.12, hz: 0.05 }, radius: 0.3 },
+  salmiakki: { name: 'bag of salmiakki', tags: ['edible', 'throwable'], mass: 0.15, shape: { kind: 'box', hx: 0.1, hy: 0.12, hz: 0.05 }, radius: 0.3 },
+  map: { name: 'tourist map', tags: ['paper', 'throwable'], mass: 0.1, shape: { kind: 'box', hx: 0.18, hy: 0.02, hz: 0.13 }, radius: 0.3 },
   chair: { name: 'chair', tags: ['heavy', 'noisy', 'stackable'], mass: 4, shape: { kind: 'box', hx: 0.25, hy: 0.45, hz: 0.25 }, radius: 0.55 },
 };
 
