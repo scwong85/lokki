@@ -189,20 +189,20 @@ function onGags(gags: GagEvent[]): void {
       case 'break': {
         audio.play('crash');
         hud.toast('Crash!', 0.9);
-        const t = g.prop.body.translation();
+        const t = g.prop.cur.p;
         npcs?.addNoise(t.x, t.z, 1);
         if (g.prop.type === 'bottle') notes(quests.onEvent('breakBottle'));
         break;
       }
       case 'clatter': {
         audio.play('clatter');
-        const t = g.prop.body.translation();
+        const t = g.prop.cur.p;
         npcs?.addNoise(t.x, t.z, 1);
         break;
       }
       case 'tipped': {
         hud.toast(`${g.prop.def.name} tipped over!`, 1);
-        const t = g.prop.body.translation();
+        const t = g.prop.cur.p;
         npcs?.addNoise(t.x, t.z, 1);
         if (g.prop.type === 'bin') notes(quests.onEvent('tipBin'));
         break;

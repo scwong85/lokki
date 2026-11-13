@@ -31,12 +31,18 @@ export function startLoop(h: LoopHandlers): () => void {
   const stepper = new FixedStepper(1 / SIM_HZ);
   let last = performance.now();
   let raf = 0;
+  let errors = 0;
   const frame = (now: number) => {
     const dt = (now - last) / 1000;
     last = now;
-    const { steps, alpha } = stepper.advance(dt);
-    for (let i = 0; i < steps; i++) h.update(stepper.step);
-    h.render(alpha, dt);
+    try {
+      const { steps, alpha } = stepper.advance(dt);
+      for (let i = 0; i < steps; i++) h.update(stepper.step);
+      h.render(alpha, dt);
+    } catch (err) {
+      // one bad frame must not freeze the whole game: report (a few times) and carry on
+      if (errors++ < 5) console.error('frame error:', err);
+    }
     raf = requestAnimationFrame(frame);
   };
   raf = requestAnimationFrame(frame);
