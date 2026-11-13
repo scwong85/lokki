@@ -9,7 +9,7 @@ import { World, type Box } from '../../src/world/collision';
 import { newFlightState } from '../../src/gull/flight';
 import * as THREE from 'three';
 import { CityDefense } from '../../src/gameplay/defense';
-import { DEFENSE_ZONE, LINES } from '../../src/data/deterrents';
+import { DEFENSE_ZONE, LINES, NET_Y } from '../../src/data/deterrents';
 
 const DT = 1 / 60;
 const world = new World();
@@ -208,7 +208,9 @@ describe('the Gull Warden', () => {
     expect(umbrellaUp(w)).toBe(true);
     run(w, far, 0.1, [{ x: 20, z: 0, loud: 1 }]); // a clang
     expect(umbrellaUp(w)).toBe(false); // distracted: head exposed
-    run(w, far, tuning.npc.distractTime.value + 0.5);
+    run(w, far, tuning.deter.wardenDistract.value + 0.5); // distraction over...
+    expect(umbrellaUp(w)).toBe(false); // ...but the umbrella takes a moment to come back up (your window)
+    run(w, far, tuning.deter.umbrellaDelay.value + 0.3);
     expect(umbrellaUp(w)).toBe(true);
     wardenPooped(w);
     expect(umbrellaUp(w)).toBe(false);
@@ -249,9 +251,20 @@ describe("the city defends the tourists' square, not just the stalls", () => {
     quiet(d, 4); // let the lines and the net be put up
     const g = newFlightState(0, -16); // on the square, in front of the tourists
     g.mode = 'air';
-    g.y = 2.8; // touches the net (3.1) but is clear of the lines (3.6)
+    g.y = NET_Y - 0.2; // touches the net but is clear of the lines (3.2)
+    g.vy = -4; // coming down
     const ev = d.update(0.1, g, [], false);
     expect(ev.some((e) => e.type === 'hit' && e.hit.kind === 'net')).toBe(true);
+  });
+  it('climbing up out of the net is not blocked (only gulls coming down are caught)', () => {
+    const d = make();
+    d.response.onTier(3);
+    quiet(d, 4);
+    const g = newFlightState(0, -16);
+    g.mode = 'air';
+    g.y = NET_Y - 0.2;
+    g.vy = 4; // flapping up
+    expect(d.update(0.1, g, [], false).some((e) => e.type === 'hit' && e.hit.kind === 'net')).toBe(false);
   });
   it('flying under the net is a clean pass: it counts as a dodge and teaches the gulls', () => {
     const d = make();

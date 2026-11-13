@@ -225,7 +225,8 @@ export class CityDefense {
     }
     if (this.install.nets >= 1 && this.response.deployed.has('nets')) {
       const inFootprint = gull.x >= ZONE.minX && gull.x <= ZONE.maxX && gull.z >= ZONE.minZ && gull.z <= ZONE.maxZ;
-      if (inFootprint && this.hitCd <= 0 && gull.y + GULL_R >= NET_Y && gull.y - GULL_R <= NET_Y + 0.6) {
+      const descending = gull.vy < -0.5 || gull.mode === 'dive'; // the net stops gulls coming down; climbing out through the mesh is fine
+      if (inFootprint && descending && this.hitCd <= 0 && gull.y + GULL_R >= NET_Y && gull.y - GULL_R <= NET_Y + 0.6) {
         ev.push({ type: 'hit', hit: { kind: 'net', dx: 0, dz: 0, strength: this.response.strength('nets') } });
         this.zones.nets.markHit();
         this.hitCd = 1.2;

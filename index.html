@@ -41,6 +41,12 @@
       #heat .hb i { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,.9); }
       #heat .hd { min-height: 14px; font-size: 11px; color: #6a5a4a; } #heat .hd .learned { opacity: .55; text-decoration: line-through; }
       #heat .hh { font-size: 11px; color: #8a8aa0; } #heat .hh.on { color: #e08a1e; font-weight: 700; }
+      #announce { position: fixed; top: 92px; left: 50%; transform: translate(-50%, -30px); min-width: 340px; max-width: 560px; text-align: center; padding: 10px 22px 12px; border-radius: 12px; color: #fff; opacity: 0; pointer-events: none; box-shadow: 0 6px 18px rgba(0,0,0,.25); font-family: system-ui, sans-serif; }
+      #announce.on { opacity: 1; transform: translate(-50%, 0); transition: opacity .25s, transform .25s; }
+      #announce .at { font-size: 24px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+      #announce .as { font-size: 15px; margin-top: 3px; opacity: .95; }
+      #announce.alert { background: #e5484d; } #announce.adapt { background: #e8833a; } #announce.learned { background: #3f9a62; }
+      #heat .hn { font-size: 11px; color: #8a8aa0; }
     </style>
   </head>
   <body>

@@ -19,6 +19,8 @@ export interface Warden {
   wp: number;
   cd: number;
   distractT: number;
+  /** Umbrella stays down while this is above zero (he is exposed, plus a delay after he recovers). */
+  exposedT: number;
   noiseX: number;
   noiseZ: number;
   seesGull: boolean;
@@ -47,12 +49,12 @@ export interface WardenCtx {
 const angleDiff = (a: number, b: number) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
 
 export function newWarden(x: number, z: number): Warden {
-  return { x, z, heading: 0, mode: 'patrol', t: 0, wp: 0, cd: 0, distractT: 0, noiseX: 0, noiseZ: 0, seesGull: false, lostT: 0, moving: false, speed: 0, walkPhase: 0, aimX: 0, aimZ: 0 };
+  return { x, z, heading: 0, mode: 'patrol', t: 0, wp: 0, cd: 0, distractT: 0, exposedT: 0, noiseX: 0, noiseZ: 0, seesGull: false, lostT: 0, moving: false, speed: 0, walkPhase: 0, aimX: 0, aimZ: 0 };
 }
 
 /** Umbrella covers his head from above only while he is paying attention and not mid-swat or sulking. */
 export function umbrellaUp(w: Warden): boolean {
-  return w.distractT <= 0 && w.mode !== 'recover' && w.mode !== 'swat';
+  return w.distractT <= 0 && w.exposedT <= 0 && w.mode !== 'recover' && w.mode !== 'swat';
 }
 
 function walk(w: Warden, tx: number, tz: number, speed: number, dt: number, ctx: WardenCtx): boolean {
@@ -90,7 +92,7 @@ export function stepWarden(w: Warden, g: GullInfo, noises: readonly Noise[], dt:
     if (Math.hypot(s.x - w.x, s.z - w.z) <= tuning.npc.hearRange.value * s.loud) {
       w.noiseX = s.x;
       w.noiseZ = s.z;
-      w.distractT = tuning.npc.distractTime.value;
+      w.distractT = d.wardenDistract.value;
       ev.push({ type: 'distracted' });
     }
   }
@@ -160,6 +162,9 @@ export function stepWarden(w: Warden, g: GullInfo, noises: readonly Noise[], dt:
       }
       break;
   }
+  // exposed while distracted, swatting or sulking, and for a while after: that is the window to poop him
+  if (w.distractT > 0 || w.mode === 'swat' || w.mode === 'recover') w.exposedT = d.umbrellaDelay.value;
+  else w.exposedT = Math.max(0, w.exposedT - dt);
   w.walkPhase += w.speed * dt * 2.2;
   w.moving = w.speed > 0;
   return ev;

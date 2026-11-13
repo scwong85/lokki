@@ -111,7 +111,7 @@ export const tuning = {
     splatSize: p(0.9, 0.3, 3, 0.05),
     maxDecals: p(80, 10, 300, 1),
     assistStrength: p(0.8, 0, 1, 0.05), // 0 = no aim assist toward tourists
-    assistRadius: p(3, 0.5, 8, 0.5), // a tourist this close to the landing spot pulls the poop in
+    assistRadius: p(4, 0.5, 8, 0.5), // a target this close to the landing spot pulls the poop in
   },
   physics: {
     gravity: p(14, 4, 30, 0.5), // props only; the gull has its own flight gravity
@@ -187,6 +187,8 @@ export const tuning = {
     wardenSwatWindup: p(0.5, 0.2, 1.5, 0.05),
     wardenSwatCooldown: p(2, 0.5, 8, 0.5),
     wardenSulk: p(5, 1, 15, 0.5), // after being pooped on
+    wardenDistract: p(5, 1, 12, 0.5), // how long a noise holds his attention (umbrella down)
+    umbrellaDelay: p(1.5, 0, 6, 0.1), // the umbrella stays down this long after he recovers (your window)
     installTime: p(2.5, 0.5, 10, 0.5), // new lines and nets take this long to be put up (harmless meanwhile)
     hawkTime: p(4, 1, 15, 0.5),
     hawkCooldown: p(8, 1, 40, 1),

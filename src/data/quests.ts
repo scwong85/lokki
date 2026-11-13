@@ -42,7 +42,7 @@ export const QUESTS: QuestDef[] = [
       { id: 'poop', text: 'Poop on a tourist', kind: 'event', event: 'poopNpc' },
       { id: 'bin', text: 'Tip over a bin', kind: 'event', event: 'tipBin' },
       { id: 'bottle', text: 'Smash a bottle', kind: 'event', event: 'breakBottle' },
-      { id: 'warden', text: 'Poop on the Gull Warden', kind: 'event', event: 'poopWarden', hint: 'He arrives when the heat is very high. His umbrella blocks poop from above. It tips aside (blue ? over his head) when a noise distracts him: drop or throw a bottle, tip a bin. It is also down while he swats.' },
+      { id: 'warden', text: 'Poop on the Gull Warden', kind: 'event', event: 'poopWarden', hint: 'He arrives when the heat is very high. His umbrella blocks poop from above. It tips aside (blue ? over his head) for about 6 s when a noise distracts him: throw or drop something away from him, or tip a bin. Then poop from above (the reticle turns brown when it is clear).' },
     ],
   },
 ];

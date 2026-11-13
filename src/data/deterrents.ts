@@ -15,7 +15,7 @@ export const VENDOR_SPAWNS: { x: number; z: number; heading: number; color: numb
   { x: 35, z: -17, heading: Math.PI / 2, color: 0xffb36b },
 ];
 
-const LINE_Y = 3.6;
+const LINE_Y = 3.2;
 const ROWS = [-58, -44, -30, -16]; // the last row hangs over the tourists' square
 const COLS = [-36, 0, 36];
 
@@ -32,8 +32,8 @@ export const LINE_POSTS: [number, number][] = [
   [0, DEFENSE_ZONE.maxZ],
 ];
 
-/** A net over the whole area: catches gulls coming down from above, but gulls learn to fly in under it. */
-export const NET_Y = 3.1;
+/** A net over the whole area: catches gulls diving down into it, but gulls learn to fly in under it (and can climb out through it). */
+export const NET_Y = 4.0;
 export const NET_ZONE: Zone = { ...DEFENSE_ZONE, maxY: NET_Y - 0.5 }; // "under the net"
 export const LINE_ZONE: Zone = { ...DEFENSE_ZONE, maxY: 6 };
 

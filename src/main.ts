@@ -33,6 +33,7 @@ import { DETERRENT_NAMES, applyHit } from './gameplay/deterrents';
 import type { HeatReason } from './gameplay/heat';
 import type { Noise } from './gameplay/npc';
 import { HeatMeter } from './ui/heatMeter';
+import { Announce } from './ui/announce';
 
 const app = document.getElementById('app')!;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -81,6 +82,7 @@ if (npcs) {
 // the city's response: heat, vendors, scare lines, nets, the Warden (city only)
 const defense = greybox ? null : new CityDefense(world, scene, walkable);
 const heatMeter = defense ? new HeatMeter(document.body) : null;
+const announce = new Announce(document.body);
 const stepNoises: Noise[] = [];
 if (npcs && defense) {
   let nTourist = 0;
@@ -104,7 +106,7 @@ const marker = new DiveMarker();
 scene.add(gull.mesh, gull.shadow, marker.group);
 const cam = new FollowCamera(innerWidth / innerHeight);
 const input = new Input(renderer.domElement);
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, defense };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, defense, noise, heat };
 const debug = new DebugPanel(document.body);
 const hud = new Hud(document.body);
 const credits = new Credits(document.body);
@@ -168,13 +170,16 @@ function onDefense(evs: DefenseEvent[]): void {
         if (e.up) audio.play('alarm');
         break;
       case 'deployed': {
-        const msg = {
-          vendors: 'The vendors grab their spray bottles!',
-          lines: 'The city is stringing scare lines over the stalls!',
-          nets: 'Nets are going up over the stalls!',
-          warden: 'The Gull Warden has arrived!',
+        const t = tuning.heat;
+        const info = {
+          vendors: ['Vendors on guard', `Heat ${t.tier1.value}: vendors grab spray bottles. Watch the red fan on the ground and dodge it.`],
+          lines: ['Scare lines!', `Heat ${t.tier2.value}: lines hang over the stalls and the square. Fly around them.`],
+          nets: ['Nets going up!', `Heat ${t.tier3.value}: nets catch gulls diving from above. Fly in underneath, or climb out through them.`],
+          warden: ['The Gull Warden!', `Heat ${t.tier4.value}: he hunts you with his umbrella. Distract him with a noise, then poop him from above.`],
         }[e.id];
-        hud.toast(msg, 2.2);
+        if (e.cause === 'learned') announce.show(`The city adapts: ${info[0]}`, 'The gulls beat the last measure, so the city brings in something new.', 'adapt');
+        else announce.show(`City alert: ${info[0]}`, info[1], 'alert');
+        audio.play('alarm');
         break;
       }
       case 'dodged': {
@@ -187,7 +192,7 @@ function onDefense(evs: DefenseEvent[]): void {
         break;
       }
       case 'learned':
-        hud.toast(`The gulls have learned to beat the ${DETERRENT_NAMES[e.id]}! It barely works now.`, 2.6);
+        announce.show(`The gulls learned: ${DETERRENT_NAMES[e.id]}`, 'It barely works on them any more.', 'learned');
         break;
       case 'hit': {
         const dropped = applyHit(gull.state, e.hit);
@@ -329,6 +334,7 @@ startLoop({
       interaction.reset();
       npcs?.reset();
       defense?.reset();
+      announce.clear();
       quests.reset();
     }
     if (input.wasPressed('KeyC')) credits.toggle();
