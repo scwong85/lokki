@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { PropType } from '../data/props';
+import { mergeColored } from '../render/mergeMesh';
 
 const mats = new Map<number, THREE.MeshLambertMaterial>();
 const mat = (c: number) => {
@@ -15,7 +16,15 @@ const mesh = (g: THREE.BufferGeometry, c: number, x = 0, y = 0, z = 0) => {
 
 /** Primitive-built prop visuals, centred on the physics body centre. */
 export function createPropMesh(type: PropType): THREE.Group {
+  const parts = new THREE.Group();
+  buildParts(type, parts);
+  // one draw call per prop; the Group stays so splat blobs can be attached
   const g = new THREE.Group();
+  g.add(mergeColored(parts));
+  return g;
+}
+
+function buildParts(type: PropType, g: THREE.Group): void {
   switch (type) {
     case 'icecream': {
       const cone = mesh(new THREE.ConeGeometry(0.13, 0.3, 8), 0xf2c28b, 0, -0.1, 0);
@@ -65,5 +74,4 @@ export function createPropMesh(type: PropType): THREE.Group {
       for (const [x, z] of [[-0.2, -0.2], [0.2, -0.2], [-0.2, 0.2], [0.2, 0.2]]) g.add(mesh(new THREE.BoxGeometry(0.05, 0.42, 0.05), 0xa896cc, x, -0.23, z));
       break;
   }
-  return g;
 }

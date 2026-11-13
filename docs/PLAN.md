@@ -181,7 +181,7 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M2 The gull
 - [x] M3 Helsinki blockout
 - [x] M4 Interaction core
-- [ ] M5 First NPC + quest — **gate 2**
+- [x] M5 First NPC + quest — **gate 2 passed**
 - [ ] M6 Heat and deterrents
 - [ ] M7 Market Square quest pack
 - [ ] M8 Skills and saving

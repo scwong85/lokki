@@ -143,6 +143,52 @@ export const tuning = {
     escapeDistance: p(30, 10, 80, 1),
     escapeTime: p(3, 0.5, 15, 0.5),
   },
+  heat: {
+    gainNoticed: p(4, 0, 30, 0.5), // a tourist spots you
+    gainSnatch: p(25, 0, 60, 1),
+    gainPoopNpc: p(15, 0, 60, 1),
+    gainBreak: p(8, 0, 40, 1),
+    gainTip: p(8, 0, 40, 1),
+    gainClatter: p(2, 0, 20, 0.5),
+    decay: p(4, 0, 30, 0.5), // per second while nobody sees you
+    decayDelay: p(2, 0, 10, 0.5), // seconds out of sight before it starts to fall
+    tier1: p(20, 5, 100, 1), // vendors wake up
+    tier2: p(40, 5, 100, 1), // scare lines
+    tier3: p(60, 5, 100, 1), // nets
+    tier4: p(80, 5, 100, 1), // the Gull Warden
+    wardenRelief: p(20, 0, 60, 1), // heat drop when you poop on the Warden
+  },
+  deter: {
+    sprayRange: p(7, 2, 15, 0.5),
+    sprayConeDeg: p(70, 20, 180, 5),
+    sprayWindup: p(0.6, 0.2, 2, 0.05), // the vendor aims, then fires: you can dodge
+    sprayCooldown: p(3, 0.5, 10, 0.5),
+    sprayStun: p(0.7, 0, 3, 0.05),
+    sprayKnock: p(7, 0, 20, 0.5),
+    sprayStamina: p(25, 0, 100, 1),
+    lineStun: p(0.9, 0, 3, 0.05),
+    lineKnock: p(4, 0, 15, 0.5),
+    lineStamina: p(30, 0, 100, 1),
+    netStun: p(1.4, 0, 4, 0.05),
+    netStamina: p(20, 0, 100, 1),
+    swatStun: p(0.7, 0, 3, 0.05),
+    swatKnock: p(8, 0, 20, 0.5),
+    swatStamina: p(25, 0, 100, 1),
+    learnVendors: p(4, 1, 20, 1), // dodged sprays before the vendors count as learned
+    learnLines: p(8, 1, 30, 1), // clean passes through the market
+    learnNets: p(3, 1, 20, 1), // flights under the nets (gulls learn fast)
+    learnWarden: p(5, 1, 20, 1),
+    learnedFactor: p(0.2, 0, 1, 0.05), // strength of a learned deterrent
+    wardenPatrolSpeed: p(1.2, 0.5, 3, 0.1),
+    wardenSpeed: p(2.6, 1, 6, 0.1), // hunting
+    wardenSwatRange: p(2.4, 1, 5, 0.1),
+    wardenSwatWindup: p(0.5, 0.2, 1.5, 0.05),
+    wardenSwatCooldown: p(2, 0.5, 8, 0.5),
+    wardenSulk: p(5, 1, 15, 0.5), // after being pooped on
+    installTime: p(2.5, 0.5, 10, 0.5), // new lines and nets take this long to be put up (harmless meanwhile)
+    hawkTime: p(4, 1, 15, 0.5),
+    hawkCooldown: p(8, 1, 40, 1),
+  },
   audio: {
     master: p(0.5, 0, 1, 0.05),
     sfx: p(0.8, 0, 1, 0.05),

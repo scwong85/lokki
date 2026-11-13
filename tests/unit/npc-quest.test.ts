@@ -191,8 +191,9 @@ describe('quest log', () => {
     expect(ex().status).toBe('active');
     q.onEvent('tipBin');
     q.onEvent('poopNpc');
-    expect(ex().status).toBe('active');
-    expect(q.onEvent('breakBottle')).toContainEqual({ type: 'won', quest: 'extras' });
+    q.onEvent('breakBottle');
+    expect(ex().status).toBe('active'); // still the Warden to go
+    expect(q.onEvent('poopWarden')).toContainEqual({ type: 'won', quest: 'extras' });
   });
   it('reset restores everything', () => {
     const q = new QuestLog(QUESTS);

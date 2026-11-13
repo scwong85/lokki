@@ -28,6 +28,11 @@ import { QUESTS } from './data/quests';
 import { TOURIST_SPAWNS } from './data/npcs';
 import type { NpcEvent } from './gameplay/npc';
 import { Todo } from './ui/todo';
+import { CityDefense, type DefenseEvent } from './gameplay/defense';
+import { DETERRENT_NAMES, applyHit } from './gameplay/deterrents';
+import type { HeatReason } from './gameplay/heat';
+import type { Noise } from './gameplay/npc';
+import { HeatMeter } from './ui/heatMeter';
 
 const app = document.getElementById('app')!;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -73,6 +78,24 @@ if (npcs) {
   for (const sp of TOURIST_SPAWNS) npcs.spawn(sp);
   interaction.npcs = npcs;
 }
+// the city's response: heat, vendors, scare lines, nets, the Warden (city only)
+const defense = greybox ? null : new CityDefense(world, scene, walkable);
+const heatMeter = defense ? new HeatMeter(document.body) : null;
+const stepNoises: Noise[] = [];
+if (npcs && defense) {
+  let nTourist = 0;
+  interaction.npcs = {
+    snatchCandidates: (b) => npcs.snatchCandidates(b),
+    onSnatched: (id) => npcs.onSnatched(id),
+    blockedHint: (b) => npcs.blockedHint(b),
+    poopSpheres: () => {
+      const t = npcs.poopSpheres();
+      nTourist = t.length;
+      return [...t, ...defense.poopSpheres()];
+    },
+    onPooped: (i) => (i < nTourist ? npcs.onPooped(i) : defense.onPooped(i - nTourist)),
+  };
+}
 const quests = new QuestLog(greybox ? [] : QUESTS);
 const todo = new Todo(document.body);
 const poopReticle = new Reticle();
@@ -81,7 +104,7 @@ const marker = new DiveMarker();
 scene.add(gull.mesh, gull.shadow, marker.group);
 const cam = new FollowCamera(innerWidth / innerHeight);
 const input = new Input(renderer.domElement);
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, defense };
 const debug = new DebugPanel(document.body);
 const hud = new Hud(document.body);
 const credits = new Credits(document.body);
@@ -127,6 +150,73 @@ function onFlightEvents(evs: FlightEvent[]): void {
   }
 }
 
+/** A sound the tourists and the Warden can hear. */
+function noise(x: number, z: number, loud: number): void {
+  npcs?.addNoise(x, z, loud);
+  stepNoises.push({ x, z, loud });
+}
+
+function heat(reason: HeatReason): void {
+  if (defense) onDefense(defense.addHeat(reason));
+}
+
+function onDefense(evs: DefenseEvent[]): void {
+  for (const e of evs) {
+    switch (e.type) {
+      case 'tier':
+        if (e.up) audio.play('alarm');
+        break;
+      case 'deployed': {
+        const msg = {
+          vendors: 'The vendors grab their spray bottles!',
+          lines: 'The city is stringing scare lines over the stalls!',
+          nets: 'Nets are going up over the stalls!',
+          warden: 'The Gull Warden has arrived!',
+        }[e.id];
+        hud.toast(msg, 2.2);
+        break;
+      }
+      case 'learned':
+        hud.toast(`The gulls have learned to beat the ${DETERRENT_NAMES[e.id]}!`, 2.4);
+        break;
+      case 'hit': {
+        const dropped = applyHit(gull.state, e.hit);
+        if (!dropped) {
+          hud.toast('Slipped through!', 0.8);
+          break;
+        }
+        const lost = interaction.dropCarried(gull.state);
+        const what = { spray: 'Sprayed!', swat: 'Swatted by the Warden!', line: 'Tangled in a scare line!', net: 'Caught in the net!' }[e.hit.kind];
+        hud.toast(lost ? `${what} Dropped the ${lost.def.name}!` : what, 1.4);
+        audio.play(e.hit.kind === 'spray' ? 'splat' : e.hit.kind === 'swat' ? 'bonk' : 'twang');
+        gull.openBeak(0.7);
+        break;
+      }
+      case 'spray':
+        audio.play('hiss');
+        break;
+      case 'noticed':
+        audio.play(e.who === 'warden' ? 'whistle' : 'gasp');
+        if (e.who === 'warden') hud.toast('The Warden spotted you!', 1.2);
+        break;
+      case 'poopVendor':
+        audio.play('splat');
+        hud.toast('Splat! That vendor is out of action for a bit', 1.4);
+        break;
+      case 'poopWarden':
+        audio.play('splat');
+        audio.play('yelp');
+        hud.toast('Splat! The Warden is NOT amused', 1.8);
+        notes(quests.onEvent('poopWarden'));
+        break;
+      case 'umbrella':
+        audio.play('clatter');
+        hud.toast('Plink! The umbrella took it', 1.2);
+        break;
+    }
+  }
+}
+
 /** Quest notifications -> toasts and sounds. */
 function notes(list: QuestNote[]): void {
   for (const n of list) {
@@ -150,6 +240,7 @@ function onNpcEvents(evs: NpcEvent[]): void {
     if (e.type === 'noticed') {
       audio.play('gasp');
       notes(quests.onEvent('alert'));
+      heat('noticed');
     } else if (e.type === 'panic' || e.type === 'chase') audio.play('yelp');
   }
 }
@@ -170,18 +261,20 @@ function onGags(gags: GagEvent[]): void {
         break;
       case 'splat':
         audio.play('splat');
-        npcs?.addNoise(g.x, g.z, 0.4);
+        noise(g.x, g.z, 0.4);
         break;
       case 'snatch':
         audio.play('yelp');
         hud.toast('Snatched!', 1);
         notes(quests.onEvent('snatch'));
+        heat('snatch');
         break;
       case 'poopNpc':
         audio.play('splat');
         audio.play('yelp');
         hud.toast('Splat! Right on a tourist!', 1.1);
         notes(quests.onEvent('poopNpc'));
+        heat('poopNpc');
         break;
       case 'poopProp':
         audio.play('splat');
@@ -191,20 +284,22 @@ function onGags(gags: GagEvent[]): void {
         audio.play('crash');
         hud.toast('Crash!', 0.9);
         const t = g.prop.cur.p;
-        npcs?.addNoise(t.x, t.z, 1);
+        noise(t.x, t.z, 1);
+        heat('break');
         if (g.prop.type === 'bottle') notes(quests.onEvent('breakBottle'));
         break;
       }
       case 'clatter': {
         audio.play('clatter');
-        const t = g.prop.cur.p;
-        npcs?.addNoise(t.x, t.z, 1);
+        noise(g.prop.cur.p.x, g.prop.cur.p.z, 1);
+        heat('clatter');
         break;
       }
       case 'tipped': {
         hud.toast(`${g.prop.def.name} tipped over!`, 1);
         const t = g.prop.cur.p;
-        npcs?.addNoise(t.x, t.z, 1);
+        noise(t.x, t.z, 1);
+        heat('tipped');
         if (g.prop.type === 'bin') notes(quests.onEvent('tipBin'));
         break;
       }
@@ -221,9 +316,11 @@ startLoop({
       gull.reset();
       interaction.reset();
       npcs?.reset();
+      defense?.reset();
       quests.reset();
     }
     if (input.wasPressed('KeyC')) credits.toggle();
+    if (input.wasPressed('KeyH') && defense?.activateHawk()) hud.toast('Hawk-eye!', 0.8);
     if (input.wasPressed('KeyM')) hud.toast(audio.toggleMute() ? 'Sound off' : 'Sound on', 0.8);
     const { x, y } = input.axes();
     const wasDive = gull.state.mode === 'dive';
@@ -257,6 +354,8 @@ startLoop({
       const g = gull.state;
       onNpcEvents(npcs.update(dt, { x: g.x, y: g.y, z: g.z, diving: g.mode === 'dive' }));
       notes(quests.tick({ dt, carryingStolen: interaction.carried?.stolen === true, nearestNpc: npcs.nearestDistance(g) }));
+      if (defense) onDefense(defense.update(dt, g, stepNoises, npcs.npcs.some((n) => n.seesGull)));
+      stepNoises.length = 0;
     }
     if (wasDive) {
       const s = gull.state;
@@ -274,6 +373,8 @@ startLoop({
     gull.applyInterpolation(alpha, frameDt, world);
     interaction.render(alpha);
     npcs?.render(simTime, interaction.beakPos(gull.state), cam.camera.quaternion);
+    defense?.render(simTime, frameDt);
+    if (defense && heatMeter) heatMeter.update(defense.heat, defense.response, defense.hawkReady, defense.hawkActive);
     todo.update(quests.quests, npcs ? npcs.nearestDistance(gull.state) : Infinity, interaction.carried?.stolen === true);
     targets.forEach((t, i) => (targetMeshes[i].visible = t.cooldown === 0));
     const s = gull.state;

@@ -1,5 +1,5 @@
 /** Quest definitions (plain data, PLAN §4.3). The quest log (src/gameplay/quest.ts) runs them. */
-export type QuestEventType = 'alert' | 'snatch' | 'poopNpc' | 'tipBin' | 'breakBottle';
+export type QuestEventType = 'alert' | 'snatch' | 'poopNpc' | 'tipBin' | 'breakBottle' | 'poopWarden';
 
 export interface ObjectiveDef {
   id: string;
@@ -42,6 +42,7 @@ export const QUESTS: QuestDef[] = [
       { id: 'poop', text: 'Poop on a tourist', kind: 'event', event: 'poopNpc' },
       { id: 'bin', text: 'Tip over a bin', kind: 'event', event: 'tipBin' },
       { id: 'bottle', text: 'Smash a bottle', kind: 'event', event: 'breakBottle' },
+      { id: 'warden', text: 'Poop on the Gull Warden', kind: 'event', event: 'poopWarden', hint: 'He arrives when the city is really fed up (high heat).' },
     ],
   },
 ];

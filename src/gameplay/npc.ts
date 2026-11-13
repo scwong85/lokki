@@ -88,7 +88,7 @@ export function newNpc(id: number, sp: NpcSpawn): Npc {
 }
 
 /** Does the tourist see the gull right now? Range, cone, blind spot overhead, line of sight. */
-export function canSee(n: Npc, g: GullInfo, world: World): boolean {
+export function canSee(n: { x: number; z: number; heading: number; mode: string }, g: GullInfo, world: World): boolean {
   const t = tuning.npc;
   const dx = g.x - n.x, dz = g.z - n.z;
   const d2 = Math.hypot(dx, dz);

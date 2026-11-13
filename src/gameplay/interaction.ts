@@ -211,6 +211,16 @@ export class Interaction {
     return ev;
   }
 
+  /** Something knocked the item out of the beak (spray, swat, net...). */
+  dropCarried(s: FlightState): Prop | null {
+    const p = this.carried;
+    if (!p) return null;
+    this.props.release(p, { x: s.vx * 0.3, y: 2, z: s.vz * 0.3 });
+    this.carried = null;
+    this.grabCd = 0.5;
+    return p;
+  }
+
   /** Put every prop back and wipe the splats (R). */
   reset(): void {
     if (this.carried) this.carried = null;

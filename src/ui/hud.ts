@@ -22,7 +22,7 @@ export class Hud {
       <div class="prompt"></div>
       <div class="stam"><div class="bar"></div></div>
       <div class="poop"><div class="pbar"></div></div>
-      <div class="keys">WASD steer · Space hop/flap · Shift dive (aim: mouse) · S flare · E grab/drop · Q toss · F or click poop · R reset · M sound · C credits · F3 tuning</div>`;
+      <div class="keys">WASD steer · Space hop/flap · Shift dive (aim: mouse) · S flare · E grab/drop · Q toss · F or click poop · H hawk-eye · R reset · M sound · C credits · F3 tuning</div>`;
     root.appendChild(this.el);
     this.bar = this.el.querySelector('.bar')!;
     this.info = this.el.querySelector('.info')!;
