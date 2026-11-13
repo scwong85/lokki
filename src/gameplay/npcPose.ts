@@ -7,6 +7,8 @@ export interface NpcPoseInput {
   t: number;
   time: number;
   holding: boolean;
+  /** Looking at a noise instead of the gull. */
+  distracted?: boolean;
 }
 
 export interface NpcPose {
@@ -20,11 +22,18 @@ export interface NpcPose {
   lean: number;
   bob: number;
   /** Floating indicator above the head. */
-  indicator: 'none' | 'notice' | 'alarm';
+  indicator: 'none' | 'notice' | 'alarm' | 'distracted';
 }
 
 /** Pure animation rules for a tourist. */
 export function npcPose(i: NpcPoseInput): NpcPose {
+  const p = basePose(i);
+  // a tourist looking at a noise shows a "?": the ice cream is not being watched
+  if (i.distracted && i.holding && p.indicator !== 'distracted') return { ...p, indicator: 'distracted' };
+  return p;
+}
+
+function basePose(i: NpcPoseInput): NpcPose {
   const stride = i.moving ? 1 : 0;
   switch (i.mode) {
     case 'walk':

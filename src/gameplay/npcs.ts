@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { createRng, type Rng } from '../core/rng';
-import { BODY_HEIGHT, BODY_RADIUS, handPos, newNpc, snatchable, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn } from './npc';
+import { BODY_HEIGHT, BODY_RADIUS, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn } from './npc';
 import type { GrabCandidate } from './grab';
 import type { HitSphere } from './poop';
 import type { NpcHooks } from './interaction';
@@ -10,6 +10,8 @@ import type { FlightState } from '../gull/flight';
 import { NpcModel } from '../world/npcModel';
 
 const NPC_RADIUS_BODY = 0.5;
+const RING_GUARDED = 0xff6b6b;
+const RING_OPEN = 0x6bd66b;
 
 /** Owns all NPCs: brains, models, the ice cream in their hands, world collision and gull bumps. */
 export class NpcManager implements NpcHooks {
@@ -23,6 +25,8 @@ export class NpcManager implements NpcHooks {
   private owners: Npc[] = [];
   /** Each tourist's own ice cream (so reset can hand it back after a snatch). */
   private ice = new Map<number, Prop>();
+  /** Floating ring around each held ice cream: red = guarded, green = available. */
+  private rings = new Map<number, THREE.Mesh>();
 
   constructor(
     private world: World,
@@ -40,6 +44,11 @@ export class NpcManager implements NpcHooks {
     const model = new NpcModel(sp.color, n.id);
     this.parent.add(model.root);
     this.models.set(n.id, model);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.32, 0.46, 28), new THREE.MeshBasicMaterial({ color: RING_OPEN, transparent: true, opacity: 1, depthTest: false, side: THREE.DoubleSide }));
+    ring.renderOrder = 12;
+    ring.visible = false;
+    this.parent.add(ring);
+    this.rings.set(n.id, ring);
     if (sp.ice) this.giveIceCream(n);
     this.npcs.push(n);
     return n;
@@ -110,6 +119,17 @@ export class NpcManager implements NpcHooks {
     return bumped;
   }
 
+  /** Prompt when the beak is close to an ice cream it cannot take: explains why. */
+  blockedHint(beak: { x: number; y: number; z: number }): string | null {
+    for (const n of this.npcs) {
+      const st = snatchState(n, beak);
+      if (st !== 'blocked') continue;
+      const h = handPos(n);
+      if (Math.hypot(beak.x - h.x, beak.y - h.y, beak.z - h.z) < 3.2) return 'Their body is in the way: distract them or come from the other side';
+    }
+    return null;
+  }
+
   nearestDistance(g: { x: number; z: number }): number {
     let best = Infinity;
     for (const n of this.npcs) best = Math.min(best, Math.hypot(g.x - n.x, g.z - n.z));
@@ -166,8 +186,21 @@ export class NpcManager implements NpcHooks {
     this.pending.length = 0;
   }
 
-  render(time: number): void {
-    for (const n of this.npcs) this.models.get(n.id)!.apply(n, time);
+  render(time: number, beak?: { x: number; y: number; z: number }, faceCamera?: THREE.Quaternion): void {
+    for (const n of this.npcs) {
+      this.models.get(n.id)!.apply(n, time);
+      const ring = this.rings.get(n.id)!;
+      const gs = guardState(n);
+      const near = beak ? Math.hypot(beak.x - n.x, beak.z - n.z) < 28 : true;
+      ring.visible = gs !== 'none' && near;
+      if (!ring.visible) continue;
+      const h = handPos(n);
+      ring.position.set(h.x, h.y + 0.1, h.z);
+      if (faceCamera) ring.quaternion.copy(faceCamera); // always a clear circle from the chase camera
+      const pulse = 1 + Math.sin(time * 6) * (gs === 'open' ? 0.18 : 0.06);
+      ring.scale.setScalar(pulse);
+      (ring.material as THREE.MeshBasicMaterial).color.setHex(gs === 'guarded' ? RING_GUARDED : RING_OPEN);
+    }
   }
 }
 

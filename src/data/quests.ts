@@ -10,6 +10,8 @@ export interface ObjectiveDef {
   count?: number;
   /** Only counts once this objective is done. */
   after?: string;
+  /** Short tip shown under the first unfinished objective. */
+  hint?: string;
 }
 
 export interface QuestDef {
@@ -28,8 +30,8 @@ export const QUESTS: QuestDef[] = [
     timed: true,
     startOn: ['alert', 'snatch'],
     objectives: [
-      { id: 'snatch', text: 'Snatch an ice cream from a tourist', kind: 'event', event: 'snatch' },
-      { id: 'escape', text: 'Get away with it', kind: 'escape', after: 'snatch' },
+      { id: 'snatch', text: 'Snatch an ice cream from a tourist', kind: 'event', event: 'snatch', hint: 'Green ring = free to take, red = guarded. Distract them with a noise (bin, bottle) or dive from straight above, then grab from the open side.' },
+      { id: 'escape', text: 'Get away with it', kind: 'escape', after: 'snatch', hint: 'Keep the ice cream and stay far away from every tourist until the bar fills.' },
     ],
   },
   {

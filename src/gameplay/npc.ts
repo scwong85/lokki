@@ -116,18 +116,32 @@ export function handPos(n: Npc): { x: number; y: number; z: number } {
   return { x: n.x - Math.sin(n.handAngle) * r, y: n.mode === 'shield' ? 1.2 : 1.1, z: n.z - Math.cos(n.handAngle) * r };
 }
 
-/** Can a beak at `beak` reach this tourist's ice cream? Blocked when the body is in the way (shielding). */
-export function snatchable(n: Npc, beak: { x: number; y: number; z: number }): boolean {
-  if (n.holding === null) return false;
+export type SnatchState = 'none' | 'far' | 'blocked' | 'ok';
+
+/** Why can / can't this beak take the ice cream: nothing in hand, too far, body in the way, or fine. */
+export function snatchState(n: Npc, beak: { x: number; y: number; z: number }): SnatchState {
+  if (n.holding === null) return 'none';
   const h = handPos(n);
   const d = Math.hypot(beak.x - h.x, beak.y - h.y, beak.z - h.z);
-  if (d > tuning.npc.snatchReach.value) return false;
+  if (d > tuning.npc.snatchReach.value * 2.5) return 'far';
   for (let i = 0; i <= 6; i++) {
-    const f = i / 7; // never test the hand end itself
+    const f = i / 7;
     const x = beak.x + (h.x - beak.x) * f, y = beak.y + (h.y - beak.y) * f, z = beak.z + (h.z - beak.z) * f;
-    if (y < BODY_HEIGHT && Math.hypot(x - n.x, z - n.z) < BODY_RADIUS) return false;
+    if (y < BODY_HEIGHT && Math.hypot(x - n.x, z - n.z) < BODY_RADIUS) return 'blocked';
   }
-  return true;
+  return d > tuning.npc.snatchReach.value ? 'far' : 'ok';
+}
+
+/** Is the ice cream protected right now? (paying attention to the gull) or available (unaware / distracted). */
+export function guardState(n: Npc): 'none' | 'guarded' | 'open' {
+  if (n.holding === null) return 'none';
+  if ((n.mode === 'shield' || n.mode === 'notice') && n.distractT <= 0) return 'guarded';
+  return 'open';
+}
+
+/** Can a beak at `beak` reach this tourist's ice cream? Blocked when the body is in the way (shielding). */
+export function snatchable(n: Npc, beak: { x: number; y: number; z: number }): boolean {
+  return snatchState(n, beak) === 'ok';
 }
 
 function enter(n: Npc, mode: NpcMode): void {

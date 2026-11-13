@@ -139,7 +139,7 @@ export const tuning = {
     loseSightTime: p(2.5, 0.5, 8, 0.1),
   },
   quest: {
-    timeLimit: p(90, 15, 300, 5), // ice-cream snatch, starts when the first tourist spots you
+    timeLimit: p(60, 15, 300, 5), // ice-cream snatch, starts when the first tourist spots you
     escapeDistance: p(30, 10, 80, 1),
     escapeTime: p(3, 0.5, 15, 0.5),
   },

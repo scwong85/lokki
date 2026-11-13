@@ -89,6 +89,7 @@ const audio = new AudioManager();
 for (const ev of ['pointerdown', 'keydown'] as const) addEventListener(ev, () => audio.unlock());
 let simTime = 0;
 let hits = 0;
+let lastBump = -10;
 
 events.on('tuningChanged', () => {
   phys.setGravity(tuning.physics.gravity.value);
@@ -239,7 +240,11 @@ startLoop({
       targets,
     );
     onFlightEvents(evs);
-    npcs?.pushGull(gull.state);
+    if (npcs?.pushGull(gull.state) && simTime - lastBump > 1) {
+      lastBump = simTime;
+      audio.play('bonk');
+      hud.toast('Blocked! They are guarding it', 1.1);
+    }
     onGags(
       interaction.update(
         gull.state,
@@ -268,8 +273,8 @@ startLoop({
   render(alpha, frameDt) {
     gull.applyInterpolation(alpha, frameDt, world);
     interaction.render(alpha);
-    npcs?.render(simTime);
-    todo.update(quests.quests);
+    npcs?.render(simTime, interaction.beakPos(gull.state), cam.camera.quaternion);
+    todo.update(quests.quests, npcs ? npcs.nearestDistance(gull.state) : Infinity, interaction.carried?.stolen === true);
     targets.forEach((t, i) => (targetMeshes[i].visible = t.cooldown === 0));
     const s = gull.state;
     // dive aim aid: where a dive would land, and which target (if any) is on the line

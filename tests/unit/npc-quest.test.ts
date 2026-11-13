@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createRng } from '../../src/core/rng';
 import { World, type Box } from '../../src/world/collision';
-import { bearing, canSee, handPos, newNpc, snatchable, startle, stepNpc, type GullInfo, type Npc, type NpcCtx } from '../../src/gameplay/npc';
+import { bearing, canSee, guardState, handPos, newNpc, snatchState, snatchable, startle, stepNpc, type GullInfo, type Npc, type NpcCtx } from '../../src/gameplay/npc';
 import { QuestLog } from '../../src/gameplay/quest';
 import { QUESTS } from '../../src/data/quests';
 import { tuning } from '../../src/core/tuning';
+import { npcPose } from '../../src/gameplay/npcPose';
 
 const DT = 1 / 60;
 const open: NpcCtx = { world: new World(), walkable: () => true, rng: createRng(1) };
@@ -199,5 +200,41 @@ describe('quest log', () => {
     q.reset();
     expect(ice(q).status).toBe('idle');
     expect(ice(q).objectives.every((o) => !o.done)).toBe(true);
+  });
+});
+
+describe('readable feedback rules', () => {
+  const ahead: GullInfo = { x: 0, y: 1.5, z: -7, diving: false };
+  it('snatchState explains why: far, blocked by the body, ok', () => {
+    const n = tourist();
+    run(n, ahead, 2); // shielding, hand behind
+    expect(snatchState(n, { x: 0, y: 1.2, z: -6 })).toBe('far');
+    expect(snatchState(n, { x: 0, y: 1.2, z: -0.7 })).toBe('blocked');
+    expect(snatchState(n, { x: 0, y: 1.2, z: 1.3 })).toBe('ok');
+    expect(snatchState(tourist(false), { x: 0, y: 1.2, z: 0.5 })).toBe('none');
+    expect(snatchable(n, { x: 0, y: 1.2, z: 1.3 })).toBe(true);
+  });
+  it('guardState: unaware = open, shielding and attentive = guarded, distracted = open again', () => {
+    const n = tourist();
+    expect(guardState(n)).toBe('open');
+    run(n, ahead, 2);
+    expect(n.mode).toBe('shield');
+    expect(guardState(n)).toBe('guarded');
+    run(n, ahead, 0.2, open, [{ x: 20, z: 0, loud: 1 }]);
+    expect(guardState(n)).toBe('open');
+    expect(guardState(tourist(false))).toBe('none');
+  });
+  it('a distracted tourist with an ice cream shows a "?" instead of "!"', () => {
+    const base = { mode: 'shield' as const, moving: false, walkPhase: 0, t: 1, time: 0, holding: true };
+    expect(npcPose({ ...base }).indicator).toBe('alarm');
+    expect(npcPose({ ...base, distracted: true }).indicator).toBe('distracted');
+    expect(npcPose({ ...base, holding: false, distracted: true }).indicator).toBe('alarm');
+  });
+  it('every quest objective that needs explaining has a hint', () => {
+    const snatch = QUESTS.find((q) => q.id === 'icecream')!.objectives;
+    expect(snatch.every((o) => !!o.hint)).toBe(true);
+  });
+  it('the snatch timer defaults to 60 s', () => {
+    expect(tuning.quest.timeLimit.value).toBe(60);
   });
 });

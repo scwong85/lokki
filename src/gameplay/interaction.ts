@@ -12,6 +12,7 @@ import { Debris } from '../render/debris';
 /** What the NPC system offers the interaction layer. */
 export interface NpcHooks {
   snatchCandidates(beak: { x: number; y: number; z: number }): GrabCandidate[];
+  blockedHint(beak: { x: number; y: number; z: number }): string | null;
   onSnatched(propId: number): void;
   poopSpheres(): HitSphere[];
   onPooped(index: number): void;
@@ -91,7 +92,7 @@ export class Interaction {
     const beak = this.beakPos(s);
     const cands = [...this.props.candidates(), ...(this.npcs?.snatchCandidates(beak) ?? [])];
     const pick = pickGrabTarget(beak, s.heading, cands, it.grabRange.value, it.grabConeDeg.value, it.carryMax.value);
-    if (!pick) return '';
+    if (!pick) return this.npcs?.blockedHint(beak) ?? '';
     const p = this.props.byId(pick.id)!;
     return pick.tooHeavy ? `${p.def.name}: too heavy` : `E grab ${p.def.name}`;
   }
