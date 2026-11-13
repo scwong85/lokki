@@ -40,7 +40,7 @@ export interface Prop {
 
 export type PropEvent =
   | { type: 'break'; prop: Prop; speed: number }
-  | { type: 'clatter'; prop: Prop; speed: number }
+  | { type: 'clatter'; prop: Prop; speed: number; quiet: boolean }
   | { type: 'tipped'; prop: Prop };
 
 const yawQuat = (a: number) => ({ x: 0, y: Math.sin(a / 2), z: 0, w: Math.cos(a / 2) });
@@ -99,7 +99,7 @@ export class PropManager {
   candidates(): GrabCandidate[] {
     return this.free().filter((p) => p.ignoreGrab <= 0).map((p) => {
       const t = p.body.translation();
-      return { id: p.id, x: t.x, y: t.y, z: t.z, mass: p.def.mass };
+      return { id: p.id, x: t.x, y: t.y, z: t.z, mass: p.def.mass, r: p.def.radius };
     });
   }
 
@@ -164,7 +164,7 @@ export class PropManager {
   /** Call right after the physics step: read poses, detect impacts / tipping / strays. */
   afterStep(): PropEvent[] {
     const ev: PropEvent[] = [];
-    const { breakSpeed, noiseSpeed } = tuning.physics;
+    const { breakSpeed, noiseSpeed, thumpSpeed } = tuning.physics;
     for (const p of this.props) {
       if (p.broken) continue;
       const t = p.body.translation();
@@ -183,11 +183,11 @@ export class PropManager {
       const dv = Math.hypot(v.x - p.lastVel.x, v.y - p.lastVel.y, v.z - p.lastVel.z);
       p.lastVel.set(v.x, v.y, v.z);
       if (p.impactCd <= 0) {
-        const res = classifyImpact(p.type, dv, breakSpeed.value, noiseSpeed.value);
+        const res = classifyImpact(p.type, dv, breakSpeed.value, noiseSpeed.value, thumpSpeed.value);
         if (res === 'break') ev.push({ type: 'break', prop: p, speed: dv });
-        else if (res === 'noise') {
+        else if (res === 'noise' || res === 'thump') {
           p.impactCd = 0.25;
-          ev.push({ type: 'clatter', prop: p, speed: dv });
+          ev.push({ type: 'clatter', prop: p, speed: dv, quiet: res === 'thump' });
         }
       }
       // tipped over (bins, chairs...): up vector of the body points sideways or down

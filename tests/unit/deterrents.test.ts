@@ -7,6 +7,9 @@ import { inSpray, newVendor, stepVendor, vendorPooped } from '../../src/gameplay
 import { newWarden, stepWarden, umbrellaUp, wardenPooped, type WardenCtx } from '../../src/gameplay/warden';
 import { World, type Box } from '../../src/world/collision';
 import { newFlightState } from '../../src/gull/flight';
+import * as THREE from 'three';
+import { CityDefense } from '../../src/gameplay/defense';
+import { DEFENSE_ZONE, LINES } from '../../src/data/deterrents';
 
 const DT = 1 / 60;
 const world = new World();
@@ -155,7 +158,7 @@ describe('vendor with a spray bottle', () => {
     const v = newVendor(1, 0, 0, Math.PI);
     let ev = run(v, gullAt(0, 4), 0.2); // vendor notices and starts the windup
     // gull darts sideways before the shot
-    ev = [...ev, ...run(v, gullAt(6, 4), 2)];
+    ev = [...ev, ...run(v, gullAt(12, 4), 2)];
     expect(ev.some((e) => e.type === 'dodged')).toBe(true);
     expect(ev.some((e) => e.type === 'spray' && e.hit)).toBe(false);
   });
@@ -223,5 +226,51 @@ describe('the Gull Warden', () => {
     w.heading = Math.PI;
     const ev = run(w, { x: 0, y: 1, z: 8, diving: false }, 3, [], ctx(new World([wall])));
     expect(ev.some((e) => e.type === 'noticed')).toBe(false);
+  });
+});
+
+describe("the city defends the tourists' square, not just the stalls", () => {
+  const make = () => new CityDefense(new World(), new THREE.Group(), () => true);
+  const quiet = (d: CityDefense, secs: number, x = 100, z = 100) => {
+    const g = newFlightState(x, z);
+    g.y = 20;
+    g.mode = 'air';
+    for (let i = 0; i < Math.round(secs / 0.1); i++) d.update(0.1, g, [], false);
+  };
+  it('the defended area, its lines and its vendors include the square where the tourists wander', () => {
+    expect(DEFENSE_ZONE.maxZ).toBeGreaterThan(-12); // tourists live around z -26..-14
+    expect(LINES.some((l) => l.a[2] === -16 && l.b[2] === -16)).toBe(true);
+    const d = make();
+    expect(d.vendors.some((v) => v.z > -26)).toBe(true);
+  });
+  it('a net hangs over the square: a gull flying into it from above is caught', () => {
+    const d = make();
+    d.response.onTier(3);
+    quiet(d, 4); // let the lines and the net be put up
+    const g = newFlightState(0, -16); // on the square, in front of the tourists
+    g.mode = 'air';
+    g.y = 2.8; // touches the net (3.1) but is clear of the lines (3.6)
+    const ev = d.update(0.1, g, [], false);
+    expect(ev.some((e) => e.type === 'hit' && e.hit.kind === 'net')).toBe(true);
+  });
+  it('flying under the net is a clean pass: it counts as a dodge and teaches the gulls', () => {
+    const d = make();
+    d.response.onTier(3);
+    quiet(d, 4);
+    const g = newFlightState(-60, -16);
+    g.mode = 'air';
+    g.y = 1.2;
+    const all = [];
+    for (const x of [-60, -20, 0, 20, 60]) {
+      g.x = x;
+      all.push(...d.update(0.1, g, [], false));
+    }
+    const dodged = all.filter((e) => e.type === 'dodged');
+    expect(dodged.some((e) => e.type === 'dodged' && e.id === 'nets' && e.count === 1)).toBe(true);
+    expect(d.response.learned.nets).toBe(1);
+  });
+  it('the dodge event says how many are needed (for the meter and the toast)', () => {
+    const d = make();
+    expect(d.response.need('nets')).toBe(tuning.deter.learnNets.value);
   });
 });

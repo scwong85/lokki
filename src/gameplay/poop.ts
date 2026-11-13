@@ -21,6 +21,8 @@ export interface PoopHit {
   nz: number;
   /** Index into the `props` list given to stepPoop, when a prop was hit. */
   prop: number | null;
+  /** Tag of the sphere that was hit ('umbrella', 'warden', 'tourist'...). */
+  tag?: string;
 }
 
 export interface HitSphere {
@@ -28,6 +30,8 @@ export interface HitSphere {
   y: number;
   z: number;
   r: number;
+  /** What this sphere is (umbrella blocks, others are targets). */
+  tag?: string;
 }
 
 /** Start state: inherits part of the gull's velocity. */
@@ -103,7 +107,7 @@ export function stepPoop(p: PoopState, dt: number, time: number, world: World, p
       const s = props[j];
       if (Math.hypot(nx - s.x, ny - s.y, nz - s.z) <= s.r + 0.12) {
         p.x = nx; p.y = ny; p.z = nz;
-        return { x: nx, y: ny, z: nz, nx: 0, ny: 1, nz: 0, prop: j };
+        return { x: nx, y: ny, z: nz, nx: 0, ny: 1, nz: 0, prop: j, tag: s.tag };
       }
     }
     if (world.solidAt(nx, ny, nz)) {

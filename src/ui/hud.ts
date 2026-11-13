@@ -10,12 +10,14 @@ export class Hud {
   private toastEl: HTMLElement;
   private toastT = 0;
   private promptEl: HTMLElement;
+  private flashEl: HTMLElement;
   private pbar: HTMLElement;
 
   constructor(root: HTMLElement) {
     this.el = document.createElement('div');
     this.el.id = 'hud';
     this.el.innerHTML = `
+      <div class="flash"></div>
       <div class="info"></div>
       <div class="wind"><span class="arrow">➤</span></div>
       <div class="toast"></div>
@@ -29,6 +31,7 @@ export class Hud {
     this.arrow = this.el.querySelector('.arrow')!;
     this.toastEl = this.el.querySelector('.toast')!;
     this.promptEl = this.el.querySelector('.prompt')!;
+    this.flashEl = this.el.querySelector('.flash')!;
     this.pbar = this.el.querySelector('.pbar')!;
   }
 
@@ -37,6 +40,17 @@ export class Hud {
     this.promptEl.textContent = prompt;
     this.pbar.style.width = `${Math.round(poopReady * 100)}%`;
     this.pbar.style.background = poopReady >= 1 ? '#fbfaf4' : '#c9b8a0';
+  }
+
+  /** Full-screen colour flash when something hits you (spray, swat, net...). */
+  flash(color: string): void {
+    this.flashEl.style.transition = 'none';
+    this.flashEl.style.background = color;
+    this.flashEl.style.opacity = '0.5';
+    requestAnimationFrame(() => {
+      this.flashEl.style.transition = 'opacity 0.5s';
+      this.flashEl.style.opacity = '0';
+    });
   }
 
   toast(msg: string, secs = 1.2): void {

@@ -35,7 +35,7 @@ export type GagEvent =
   | { type: 'splat'; x: number; z: number }
   | { type: 'poopProp'; prop: Prop }
   | { type: 'break'; prop: Prop }
-  | { type: 'clatter'; prop: Prop; speed: number }
+  | { type: 'clatter'; prop: Prop; speed: number; quiet: boolean }
   | { type: 'tipped'; prop: Prop };
 
 interface LivePoop {
@@ -59,10 +59,19 @@ export class Interaction {
   private poops: LivePoop[] = [];
 
   npcs: NpcHooks | null = null;
+  /** Ring around the prop E would grab (so you can see what is in reach). */
+  private ring: THREE.Mesh;
 
   constructor(private phys: PhysicsWorld, private world: World, parent: THREE.Object3D) {
     this.props = new PropManager(phys, this.group);
     this.group.add(this.decals.group, this.debris.group);
+    this.ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.28, 0.4, 24),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95, depthTest: false, side: THREE.DoubleSide }),
+    );
+    this.ring.renderOrder = 12;
+    this.ring.visible = false;
+    this.group.add(this.ring);
     parent.add(this.group);
   }
 
@@ -85,16 +94,23 @@ export class Interaction {
     if (fromNpc) ev.push({ type: 'snatch', prop: p });
   }
 
-  /** Text for the on-screen prompt: what E would do right now. */
-  grabPrompt(s: FlightState): string {
-    if (this.carried) return `E drop · Q toss ${this.carried.def.name}`;
+  /** What the beak would take right now (props on the ground and ice creams in reach), with the same rules for the prompt and for E. */
+  private pick(s: FlightState): { prop: Prop; tooHeavy: boolean } | null {
     const it = tuning.interaction;
     const beak = this.beakPos(s);
     const cands = [...this.props.candidates(), ...(this.npcs?.snatchCandidates(beak) ?? [])];
-    const pick = pickGrabTarget(beak, s.heading, cands, it.grabRange.value, it.grabConeDeg.value, it.carryMax.value);
-    if (!pick) return this.npcs?.blockedHint(beak) ?? '';
-    const p = this.props.byId(pick.id)!;
-    return pick.tooHeavy ? `${p.def.name}: too heavy` : `E grab ${p.def.name}`;
+    const pick = pickGrabTarget(beak, s.heading, cands, it.grabRange.value, it.grabConeDeg.value, it.carryMax.value, it.closeRange.value, { x: s.x, y: s.y, z: s.z });
+    if (!pick) return null;
+    const prop = this.props.byId(pick.id);
+    return prop ? { prop, tooHeavy: pick.tooHeavy } : null;
+  }
+
+  /** Text for the on-screen prompt: what E would do right now. */
+  grabPrompt(s: FlightState): string {
+    if (this.carried) return `E drop · Q toss ${this.carried.def.name}`;
+    const pick = this.pick(s);
+    if (!pick) return this.npcs?.blockedHint(this.beakPos(s)) ?? '';
+    return pick.tooHeavy ? `${pick.prop.def.name}: too heavy` : `E grab ${pick.prop.def.name}`;
   }
 
   /** Landing spot of a poop dropped right now (aim reticle). */
@@ -102,7 +118,7 @@ export class Interaction {
     const { spheres: ps } = this.props.hitSpheres();
     const npcSpheres = this.npcs?.poopSpheres() ?? [];
     const spheres = [...ps, ...npcSpheres];
-    return predictPoop({ x: s.x, y: s.y, z: s.z }, { x: s.vx, y: s.vy, z: s.vz }, time, this.world, spheres, npcSpheres);
+    return predictPoop({ x: s.x, y: s.y, z: s.z }, { x: s.vx, y: s.vy, z: s.vz }, time, this.world, spheres, npcSpheres.filter((n) => n.tag !== 'umbrella'));
   }
 
   update(s: FlightState, inp: InteractionInput, dt: number, time: number): GagEvent[] {
@@ -123,15 +139,10 @@ export class Interaction {
           this.grabCd = it.grabCooldown.value;
           ev.push({ type: 'drop', prop: p });
         } else {
-          const beak = this.beakPos(s);
-          const cands = [...this.props.candidates(), ...(this.npcs?.snatchCandidates(beak) ?? [])];
-          const pick = pickGrabTarget(beak, s.heading, cands, it.grabRange.value, it.grabConeDeg.value, it.carryMax.value);
+          const pick = this.pick(s);
           if (pick) {
-            const p = this.props.byId(pick.id)!;
-            if (pick.tooHeavy) ev.push({ type: 'heavy', prop: p });
-            else {
-              this.takeInBeak(p, ev);
-            }
+            if (pick.tooHeavy) ev.push({ type: 'heavy', prop: pick.prop });
+            else this.takeInBeak(pick.prop, ev);
           }
         }
       } else if (!this.carried && s.mode === 'dive') {
@@ -157,7 +168,7 @@ export class Interaction {
       this.poopCd = tuning.poop.cooldown.value;
       const { spheres: pSpheres } = this.props.hitSpheres();
       const nSpheres = this.npcs?.poopSpheres() ?? [];
-      const state = spawnPoopAssisted({ x: s.x, y: s.y, z: s.z }, { x: s.vx, y: s.vy, z: s.vz }, time, this.world, [...pSpheres, ...nSpheres], nSpheres);
+      const state = spawnPoopAssisted({ x: s.x, y: s.y, z: s.z }, { x: s.vx, y: s.vy, z: s.vz }, time, this.world, [...pSpheres, ...nSpheres], nSpheres.filter((n) => n.tag !== 'umbrella'));
       const mesh = new THREE.Mesh(poopGeo, poopMat);
       mesh.position.set(state.x, state.y, state.z);
       this.group.add(mesh);
@@ -204,7 +215,7 @@ export class Interaction {
         this.props.destroy(e.prop);
         if (this.carried === e.prop) this.carried = null;
         ev.push({ type: 'break', prop: e.prop });
-      } else if (e.type === 'clatter') ev.push({ type: 'clatter', prop: e.prop, speed: e.speed });
+      } else if (e.type === 'clatter') ev.push({ type: 'clatter', prop: e.prop, speed: e.speed, quiet: e.quiet });
       else ev.push({ type: 'tipped', prop: e.prop });
     }
     this.debris.update(dt);
@@ -230,8 +241,16 @@ export class Interaction {
     this.poops = [];
   }
 
-  render(alpha: number): void {
+  render(alpha: number, s?: FlightState, time = 0, faceCamera?: THREE.Quaternion): void {
     this.props.syncVisuals(alpha);
+    const pick = s && !this.carried && s.stunT === 0 ? this.pick(s) : null;
+    this.ring.visible = !!pick && !pick.tooHeavy && pick.prop.heldBy === null;
+    if (this.ring.visible && pick) {
+      const t = pick.prop.mesh.position;
+      this.ring.position.set(t.x, t.y + 0.05, t.z);
+      if (faceCamera) this.ring.quaternion.copy(faceCamera);
+      this.ring.scale.setScalar(Math.max(0.6, pick.prop.def.radius * 2.2) * (1 + Math.sin(time * 7) * 0.1));
+    }
   }
 }
 

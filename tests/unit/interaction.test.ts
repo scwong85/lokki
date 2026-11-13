@@ -25,12 +25,35 @@ describe('prop data', () => {
     expect(PROPS.bin.mass).toBeGreaterThan(max);
     expect(hasTag('bin', 'container')).toBe(true);
   });
+  it('anything thrown hard enough thumps (so tossing a prop can distract someone)', () => {
+    expect(classifyImpact('icecream', 6, 6, 2.5, 4.5)).toBe('thump');
+    expect(classifyImpact('icecream', 3, 6, 2.5, 4.5)).toBeNull();
+    expect(classifyImpact('bin', 6, 6, 2.5, 4.5)).toBe('noise'); // noisy beats thump
+  });
   it('fragile props break on a hard hit, noisy ones clatter, soft hits do nothing', () => {
     expect(classifyImpact('bottle', 8, 6, 2.5)).toBe('break');
     expect(classifyImpact('bottle', 3, 6, 2.5)).toBe('noise');
     expect(classifyImpact('bottle', 1, 6, 2.5)).toBeNull();
     expect(classifyImpact('bin', 20, 6, 2.5)).toBe('noise'); // not fragile
     expect(classifyImpact('icecream', 20, 6, 2.5)).toBeNull();
+  });
+});
+
+describe('pickGrabTarget (small things like bottles)', () => {
+  const beak = { x: 0, y: 0.55, z: 0 };
+  const body = { x: 0, y: 0.5, z: 0.85 }; // gull centre, 0.85 behind the beak
+  it('a bottle beside the gull, outside the cone, is still grabbed when it is close', () => {
+    const bottle = { id: 7, x: 1.1, y: 0.23, z: 0.4, mass: 0.4, r: 0.25 };
+    expect(pickGrabTarget(beak, 0, [bottle], 2.2, 120, 1)).toBeNull(); // old rules: beside the beak, not in the cone
+    expect(pickGrabTarget(beak, 0, [bottle], 2.2, 120, 1, 1.4, body)).toEqual({ id: 7, tooHeavy: false });
+  });
+  it('the prop radius counts: the beak only has to reach its edge', () => {
+    const far = { id: 1, x: 0, y: 0.55, z: -2.55, mass: 0.2, r: 0.4 };
+    expect(pickGrabTarget(beak, 0, [{ ...far, r: 0 }], 2.2, 120, 1)).toBeNull();
+    expect(pickGrabTarget(beak, 0, [far], 2.2, 120, 1)).toEqual({ id: 1, tooHeavy: false });
+  });
+  it('far-away and behind things are still ignored', () => {
+    expect(pickGrabTarget(beak, 0, [{ id: 1, x: 0, y: 0.3, z: 5, mass: 0.2, r: 0.25 }], 2.2, 120, 1, 1.4, body)).toBeNull();
   });
 });
 
@@ -92,6 +115,10 @@ describe('poop', () => {
     for (let i = 0; i < 120 && !hit; i++) hit = stepPoop(p, 1 / 60, 0, w);
     expect(hit).not.toBeNull();
     expect(hit!.nx).toBe(-1);
+  });
+  it('reports the tag of the sphere it hit (the umbrella blocks)', () => {
+    const hit = predictPoop({ x: 0, y: 10, z: 0 }, { x: 0, y: 0, z: 0 }, 0, floor, [{ x: 0, y: 3, z: 0, r: 0.9, tag: 'umbrella' }, { x: 0, y: 1, z: 0, r: 0.5, tag: 'warden' }])!;
+    expect(hit.tag).toBe('umbrella');
   });
   it('hits a prop sphere on the way down', () => {
     const hit = predictPoop({ x: 0, y: 10, z: 0 }, { x: 0, y: 0, z: 0 }, 0, floor, [{ x: 0, y: 3, z: 0, r: 0.5 }])!;

@@ -43,12 +43,13 @@ export function halfHeight(s: Shape): number {
   }
 }
 
-export type ImpactResult = 'break' | 'noise' | null;
+export type ImpactResult = 'break' | 'noise' | 'thump' | null;
 
 /** What a hit at `speed` (m/s change of velocity) does to a prop. Pure rule, used by the prop manager. */
-export function classifyImpact(type: PropType, speed: number, breakSpeed: number, noiseSpeed: number): ImpactResult {
+export function classifyImpact(type: PropType, speed: number, breakSpeed: number, noiseSpeed: number, thumpSpeed = Infinity): ImpactResult {
   if (hasTag(type, 'fragile') && speed >= breakSpeed) return 'break';
   if (hasTag(type, 'noisy') && speed >= noiseSpeed) return 'noise';
+  if (speed >= thumpSpeed) return 'thump'; // anything thrown hard enough is heard
   return null;
 }
 

@@ -93,8 +93,9 @@ export const tuning = {
     targetRespawn: p(8, 1, 60, 0.5),
   },
   interaction: {
-    grabRange: p(1.8, 0.5, 5, 0.1), // m from the beak
-    grabConeDeg: p(80, 20, 180, 5), // props inside this cone ahead of the gull can be grabbed
+    grabRange: p(2.2, 0.5, 5, 0.1), // m from the beak (counted to the edge of the prop)
+    grabConeDeg: p(120, 20, 360, 5), // props inside this cone ahead of the gull can be grabbed
+    closeRange: p(1.4, 0, 4, 0.1), // props this close are grabbed whichever way the gull faces
     carryMax: p(1, 0.1, 50, 0.1), // kg the gull can lift (Fat bird skill raises this later)
     carryPenalty: p(0.8, 0, 5, 0.05), // flap strength is divided by (1 + carried kg * this)
     tossSpeed: p(10, 2, 30, 0.5),
@@ -118,6 +119,7 @@ export const tuning = {
     restitution: p(0.3, 0, 1, 0.05),
     breakSpeed: p(6, 1, 30, 0.5), // impact speed that shatters fragile props
     noiseSpeed: p(2.5, 0.5, 20, 0.5), // impact speed that makes a noisy prop clatter
+    thumpSpeed: p(4.5, 1, 20, 0.5), // any prop landing this hard makes a quiet thump people can hear (tossing things distracts)
   },
   npc: {
     walkSpeed: p(1.4, 0.5, 4, 0.1),
@@ -159,7 +161,7 @@ export const tuning = {
     wardenRelief: p(20, 0, 60, 1), // heat drop when you poop on the Warden
   },
   deter: {
-    sprayRange: p(7, 2, 15, 0.5),
+    sprayRange: p(9, 2, 15, 0.5),
     sprayConeDeg: p(70, 20, 180, 5),
     sprayWindup: p(0.6, 0.2, 2, 0.05), // the vendor aims, then fires: you can dodge
     sprayCooldown: p(3, 0.5, 10, 0.5),

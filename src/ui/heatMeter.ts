@@ -39,7 +39,8 @@ export class HeatMeter {
     this.label.textContent = TIER_NAMES[heat.tier];
     const items = ORDER.filter((id) => response.deployed.has(id)).map((id: DeterrentId) => {
       const learned = response.isLearned(id);
-      return `<span class="${learned ? 'learned' : ''}">${DETERRENT_NAMES[id]}${learned ? ' (learned)' : ''}</span>`;
+      const prog = learned ? 'learned' : `${response.learned[id]}/${response.need(id)}`;
+      return `<span class="${learned ? 'learned' : ''}">${DETERRENT_NAMES[id]} <small>${prog}</small></span>`;
     });
     const html = items.join(' · ');
     if (html !== this.lastList) {

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { createRng, type Rng } from '../core/rng';
 import { tuning } from '../core/tuning';
-import { LINES, LINE_POSTS, LINE_ZONE, NET_Y, NET_ZONE, STALL_ZONE, VENDOR_SPAWNS, WARDEN_PATROL, WARDEN_SPAWN } from '../data/deterrents';
+import { DEFENSE_ZONE as ZONE, LINES, LINE_POSTS, LINE_ZONE, NET_Y, NET_ZONE, VENDOR_SPAWNS, WARDEN_PATROL, WARDEN_SPAWN } from '../data/deterrents';
 import { CityResponse, ZoneTracker, segmentHit, type DeterrentId, type GullHit } from './deterrents';
 import { Heat, type HeatReason, type TierChange } from './heat';
 import { newVendor, stepVendor, vendorPooped, type Vendor } from './vendor';
@@ -16,6 +16,7 @@ export type DefenseEvent =
   | { type: 'tier'; tier: number; up: boolean }
   | { type: 'deployed'; id: DeterrentId; cause: 'heat' | 'learned' }
   | { type: 'learned'; id: DeterrentId }
+  | { type: 'dodged'; id: DeterrentId; count: number; need: number }
   | { type: 'hit'; hit: GullHit }
   | { type: 'noticed'; who: 'vendor' | 'warden' }
   | { type: 'spray' }
@@ -53,6 +54,9 @@ export class CityDefense {
   private owners: Owner[] = [];
   private rng: Rng;
   private sprayFx: { mesh: THREE.Mesh; vel: THREE.Vector3; life: number }[] = [];
+  /** Red fan on the ground while a vendor aims: that is where the spray will land. */
+  private cones: { mesh: THREE.Mesh; deg: number }[] = [];
+  private swatRing: THREE.Mesh;
 
   constructor(private world: World, parent: THREE.Object3D, private walkable: (x: number, z: number) => boolean, private seed = 77) {
     this.rng = createRng(seed);
@@ -92,25 +96,37 @@ export class CityDefense {
     }
 
     // net: translucent sheet with a grid
-    const w = STALL_ZONE.maxX - STALL_ZONE.minX, d = STALL_ZONE.maxZ - STALL_ZONE.minZ;
+    const w = ZONE.maxX - ZONE.minX, d = ZONE.maxZ - ZONE.minZ;
     this.netMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.12, side: THREE.DoubleSide, depthWrite: false });
     const sheet = new THREE.Mesh(new THREE.PlaneGeometry(w, d), this.netMat);
     sheet.rotation.x = -Math.PI / 2;
     const pts: number[] = [];
-    for (let x = STALL_ZONE.minX; x <= STALL_ZONE.maxX + 0.01; x += 2) pts.push(x, 0, STALL_ZONE.minZ, x, 0, STALL_ZONE.maxZ);
-    for (let z = STALL_ZONE.minZ; z <= STALL_ZONE.maxZ + 0.01; z += 2) pts.push(STALL_ZONE.minX, 0, z, STALL_ZONE.maxX, 0, z);
+    for (let x = ZONE.minX; x <= ZONE.maxX + 0.01; x += 2) pts.push(x, 0, ZONE.minZ, x, 0, ZONE.maxZ);
+    for (let z = ZONE.minZ; z <= ZONE.maxZ + 0.01; z += 2) pts.push(ZONE.minX, 0, z, ZONE.maxX, 0, z);
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
     this.netLines = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }));
     this.netGroup.add(sheet, this.netLines);
-    this.netGroup.position.set((STALL_ZONE.minX + STALL_ZONE.maxX) / 2, NET_Y, (STALL_ZONE.minZ + STALL_ZONE.maxZ) / 2);
-    this.netLines.position.set(-(STALL_ZONE.minX + STALL_ZONE.maxX) / 2, 0, -(STALL_ZONE.minZ + STALL_ZONE.maxZ) / 2);
+    this.netGroup.position.set((ZONE.minX + ZONE.maxX) / 2, NET_Y, (ZONE.minZ + ZONE.maxZ) / 2);
+    this.netLines.position.set(-(ZONE.minX + ZONE.maxX) / 2, 0, -(ZONE.minZ + ZONE.maxZ) / 2);
     this.netGroup.visible = false;
     this.group.add(this.netGroup);
 
-    const fxGeo = new THREE.SphereGeometry(0.07, 5, 4);
+    const telegraphMat = () => new THREE.MeshBasicMaterial({ color: 0xff4d4d, transparent: true, opacity: 0.4, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -8 });
+    VENDOR_SPAWNS.forEach(() => {
+      const mesh = new THREE.Mesh(new THREE.BufferGeometry(), telegraphMat());
+      mesh.visible = false;
+      this.group.add(mesh);
+      this.cones.push({ mesh, deg: -1 });
+    });
+    this.swatRing = new THREE.Mesh(new THREE.CircleGeometry(1.6, 24), telegraphMat());
+    this.swatRing.rotation.x = -Math.PI / 2;
+    this.swatRing.visible = false;
+    this.group.add(this.swatRing);
+
+    const fxGeo = new THREE.SphereGeometry(0.13, 6, 5);
     const fxMat = new THREE.MeshBasicMaterial({ color: 0xa9dcff });
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < 24; i++) {
       const mesh = new THREE.Mesh(fxGeo, fxMat);
       mesh.visible = false;
       this.group.add(mesh);
@@ -145,6 +161,7 @@ export class CityDefense {
 
   private bypass(id: DeterrentId, ev: DefenseEvent[]): void {
     const r = this.response.onBypass(id);
+    ev.push({ type: 'dodged', id, count: this.response.learned[id], need: this.response.need(id) });
     if (r.learnedNow) ev.push({ type: 'learned', id });
     if (r.deployed) ev.push(...this.deployed(r.deployed, 'learned'));
   }
@@ -207,7 +224,7 @@ export class CityDefense {
       if (this.zones.lines.update(gull.x, gull.y, gull.z) === 'bypass') this.bypass('lines', ev);
     }
     if (this.install.nets >= 1 && this.response.deployed.has('nets')) {
-      const inFootprint = gull.x >= STALL_ZONE.minX && gull.x <= STALL_ZONE.maxX && gull.z >= STALL_ZONE.minZ && gull.z <= STALL_ZONE.maxZ;
+      const inFootprint = gull.x >= ZONE.minX && gull.x <= ZONE.maxX && gull.z >= ZONE.minZ && gull.z <= ZONE.maxZ;
       if (inFootprint && this.hitCd <= 0 && gull.y + GULL_R >= NET_Y && gull.y - GULL_R <= NET_Y + 0.6) {
         ev.push({ type: 'hit', hit: { kind: 'net', dx: 0, dz: 0, strength: this.response.strength('nets') } });
         this.zones.nets.markHit();
@@ -227,11 +244,11 @@ export class CityDefense {
     const dirx = -Math.sin(v.heading), dirz = -Math.cos(v.heading);
     for (const f of this.sprayFx) {
       if (f.life > 0) continue;
-      f.life = 0.45;
+      f.life = 0.7;
       f.mesh.position.set(v.x + dirx * 0.8, 1.3, v.z + dirz * 0.8);
       f.vel.set(dirx * 9 + (Math.random() - 0.5) * 2, (Math.random() - 0.3) * 1.5, dirz * 9 + (Math.random() - 0.5) * 2);
       f.mesh.visible = true;
-      if (++n >= 12) break;
+      if (++n >= 20) break;
     }
   }
 
@@ -257,7 +274,7 @@ export class CityDefense {
     const out: HitSphere[] = [];
     if (this.response.deployed.has('vendors')) {
       for (const v of this.vendors) {
-        out.push({ x: v.x, y: 1.0, z: v.z, r: 0.5 }, { x: v.x, y: 1.75, z: v.z, r: 0.3 });
+        out.push({ x: v.x, y: 1.0, z: v.z, r: 0.5, tag: 'vendor' }, { x: v.x, y: 1.75, z: v.z, r: 0.3, tag: 'vendor' });
         this.owners.push({ kind: 'vendor', v }, { kind: 'vendor', v });
       }
     }
@@ -265,10 +282,10 @@ export class CityDefense {
     if (w) {
       // listed first so a poop falling from above meets the umbrella before his head
       if (umbrellaUp(w)) {
-        out.push({ x: w.x, y: 2.45, z: w.z, r: 0.95 });
+        out.push({ x: w.x, y: 2.45, z: w.z, r: 0.95, tag: 'umbrella' });
         this.owners.push({ kind: 'umbrella' });
       }
-      out.push({ x: w.x, y: 1.0, z: w.z, r: 0.5 }, { x: w.x, y: 1.75, z: w.z, r: 0.3 });
+      out.push({ x: w.x, y: 1.0, z: w.z, r: 0.5, tag: 'warden' }, { x: w.x, y: 1.75, z: w.z, r: 0.3, tag: 'warden' });
       this.owners.push({ kind: 'warden' }, { kind: 'warden' });
     }
     return out;
@@ -307,12 +324,49 @@ export class CityDefense {
       m.applyView(view, time);
     });
 
+    // telegraph: the spray fan while a vendor aims, the swat circle while the Warden winds up
+    const range = tuning.deter.sprayRange.value;
+    const deg = tuning.deter.sprayConeDeg.value;
+    this.vendors.forEach((v, i) => {
+      const c = this.cones[i];
+      const on = vend && v.mode === 'windup';
+      c.mesh.visible = on;
+      if (!on) return;
+      if (c.deg !== deg) {
+        const half = (deg * Math.PI) / 360;
+        const pts: number[] = [0, 0.12, 0];
+        const n = 14;
+        for (let k = 0; k <= n; k++) {
+          const a = -half + (2 * half * k) / n;
+          pts.push(Math.sin(a) * range, 0.12, -Math.cos(a) * range);
+        }
+        const idx: number[] = [];
+        for (let k = 1; k <= n; k++) idx.push(0, k, k + 1);
+        c.mesh.geometry.dispose();
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+        g.setIndex(idx);
+        c.mesh.geometry = g;
+        c.deg = deg;
+      }
+      c.mesh.position.set(v.x, 0, v.z);
+      c.mesh.rotation.y = Math.atan2(-(v.aimX - v.x), -(v.aimZ - v.z)); // forward = (-sin h, -cos h)
+      (c.mesh.material as THREE.MeshBasicMaterial).opacity = 0.25 + 0.2 * Math.abs(Math.sin(time * 14));
+    });
+    const sw = this.warden;
+    const swinging = !!sw && sw.mode === 'swat';
+    this.swatRing.visible = swinging;
+    if (swinging && sw) {
+      this.swatRing.position.set(sw.aimX, 0.13, sw.aimZ);
+      (this.swatRing.material as THREE.MeshBasicMaterial).opacity = 0.25 + 0.2 * Math.abs(Math.sin(time * 14));
+    }
+
     const w = this.warden;
     this.wardenModel.root.visible = !!w;
     if (w) {
       this.wardenModel.applyView(
         {
-          x: w.x, z: w.z, heading: w.heading, moving: w.moving, walkPhase: w.walkPhase, t: w.t, holding: false, distracted: w.distractT > 0,
+          x: w.x, z: w.z, heading: w.heading, moving: w.moving, walkPhase: w.walkPhase, t: w.t, holding: w.distractT > 0, distracted: w.distractT > 0,
           mode: w.mode === 'patrol' ? (w.moving ? 'walk' : 'idle') : w.mode === 'alert' ? 'notice' : w.mode === 'hunt' ? 'walk' : w.mode === 'swat' ? 'shield' : 'recover',
           hand: w.mode === 'swat' ? { x: w.x - Math.sin(w.heading) * 1.4, y: 1.8, z: w.z - Math.cos(w.heading) * 1.4 } : undefined,
         },

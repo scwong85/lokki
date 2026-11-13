@@ -113,6 +113,7 @@ for (const ev of ['pointerdown', 'keydown'] as const) addEventListener(ev, () =>
 let simTime = 0;
 let hits = 0;
 let lastBump = -10;
+let explainedLearning = false;
 
 events.on('tuningChanged', () => {
   phys.setGravity(tuning.physics.gravity.value);
@@ -176,8 +177,17 @@ function onDefense(evs: DefenseEvent[]): void {
         hud.toast(msg, 2.2);
         break;
       }
+      case 'dodged': {
+        const what = { vendors: 'Dodged the spray!', warden: 'Dodged the swat!', lines: 'Slipped past the scare lines!', nets: 'Flew under the net!' }[e.id];
+        hud.toast(`${what} (gulls learning ${e.count}/${e.need})`, 1.6);
+        if (!explainedLearning) {
+          explainedLearning = true;
+          setTimeout(() => hud.toast('Every clean dodge teaches the gulls. A learned deterrent barely hurts any more, but the city brings in something new.', 4.5), 1700);
+        }
+        break;
+      }
       case 'learned':
-        hud.toast(`The gulls have learned to beat the ${DETERRENT_NAMES[e.id]}!`, 2.4);
+        hud.toast(`The gulls have learned to beat the ${DETERRENT_NAMES[e.id]}! It barely works now.`, 2.6);
         break;
       case 'hit': {
         const dropped = applyHit(gull.state, e.hit);
@@ -186,9 +196,10 @@ function onDefense(evs: DefenseEvent[]): void {
           break;
         }
         const lost = interaction.dropCarried(gull.state);
-        const what = { spray: 'Sprayed!', swat: 'Swatted by the Warden!', line: 'Tangled in a scare line!', net: 'Caught in the net!' }[e.hit.kind];
+        const what = { spray: 'Sprayed by a vendor!', swat: 'Swatted by the Warden!', line: 'Tangled in a scare line!', net: 'Caught in the net!' }[e.hit.kind];
         hud.toast(lost ? `${what} Dropped the ${lost.def.name}!` : what, 1.4);
         audio.play(e.hit.kind === 'spray' ? 'splat' : e.hit.kind === 'swat' ? 'bonk' : 'twang');
+        hud.flash({ spray: '#7ec8ff', swat: '#ffb347', line: '#ffffff', net: '#ffffff' }[e.hit.kind]);
         gull.openBeak(0.7);
         break;
       }
@@ -290,9 +301,10 @@ function onGags(gags: GagEvent[]): void {
         break;
       }
       case 'clatter': {
-        audio.play('clatter');
-        noise(g.prop.cur.p.x, g.prop.cur.p.z, 1);
-        heat('clatter');
+        // a noisy prop clangs (loud, adds heat); anything else thrown hard just thumps (quieter, but still distracts)
+        audio.play(g.quiet ? 'thud' : 'clatter');
+        noise(g.prop.cur.p.x, g.prop.cur.p.z, g.quiet ? 0.6 : 1);
+        if (!g.quiet) heat('clatter');
         break;
       }
       case 'tipped': {
@@ -371,7 +383,7 @@ startLoop({
   },
   render(alpha, frameDt) {
     gull.applyInterpolation(alpha, frameDt, world);
-    interaction.render(alpha);
+    interaction.render(alpha, gull.state, simTime, cam.camera.quaternion);
     npcs?.render(simTime, interaction.beakPos(gull.state), cam.camera.quaternion);
     defense?.render(simTime, frameDt);
     if (defense && heatMeter) heatMeter.update(defense.heat, defense.response, defense.hawkReady, defense.hawkActive);
@@ -394,8 +406,10 @@ startLoop({
     // poop aim reticle + context prompt
     const poopReady = 1 - Math.min(1, interaction.poopCd / tuning.poop.cooldown.value);
     const aimPoop = s.mode !== 'ground' && s.stunT === 0 && interaction.poopCd <= 0;
-    poopReticle.update(aimPoop ? interaction.poopPrediction(s, simTime) : null);
-    hud.setInteraction(interaction.grabPrompt(s), poopReady);
+    const poopHit = aimPoop ? interaction.poopPrediction(s, simTime) : null;
+    const blocked = poopHit?.tag === 'umbrella';
+    poopReticle.update(poopHit, blocked);
+    hud.setInteraction(blocked ? 'Umbrella blocks it! Distract the Warden with a noise first (drop or throw a bottle)' : interaction.grabPrompt(s), poopReady);
     cam.update(gull.position, frameDt, { vx: s.vx, vy: s.vy, vz: s.vz, diving: s.mode === 'dive', turnRate: s.turnRate });
     audio.setAir(Math.hypot(s.vx, s.vy, s.vz) / tuning.dive.speed.value, s.mode !== 'ground');
     renderer.render(scene, cam.camera);

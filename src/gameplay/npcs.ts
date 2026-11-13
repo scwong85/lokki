@@ -158,7 +158,7 @@ export class NpcManager implements NpcHooks {
     this.owners = [];
     const out: HitSphere[] = [];
     for (const n of this.npcs) {
-      out.push({ x: n.x, y: 1.0, z: n.z, r: NPC_RADIUS_BODY }, { x: n.x, y: 1.75, z: n.z, r: 0.3 });
+      out.push({ x: n.x, y: 1.0, z: n.z, r: NPC_RADIUS_BODY, tag: 'tourist' }, { x: n.x, y: 1.75, z: n.z, r: 0.3, tag: 'tourist' });
       this.owners.push(n, n);
     }
     return out;

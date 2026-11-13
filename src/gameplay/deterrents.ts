@@ -49,6 +49,11 @@ export class CityResponse {
     return true;
   }
 
+  /** Clean bypasses needed before this deterrent counts as learned. */
+  need(id: DeterrentId): number {
+    return learnAfter(id);
+  }
+
   isLearned(id: DeterrentId): boolean {
     return this.learned[id] >= learnAfter(id);
   }
