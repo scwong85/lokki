@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { createRng, type Rng } from '../core/rng';
 import type { PropType } from '../data/props';
+import type { Target } from './targets';
 import { BODY_HEIGHT, BODY_RADIUS, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn } from './npc';
 import type { GrabCandidate } from './grab';
 import type { HitSphere } from './poop';
@@ -31,6 +32,7 @@ export class NpcManager implements NpcHooks {
   /** Wanted items being eaten: consumed when the timer runs out. */
   private eating = new Map<number, { prop: Prop; until: number }>();
   private clock = 0;
+  private handTargetCache = new Map<number, Target>();
   /** Floating ring around each held ice cream: red = guarded, green = available. */
   private rings = new Map<number, THREE.Mesh>();
 
@@ -48,6 +50,7 @@ export class NpcManager implements NpcHooks {
     const n = newNpc(this.nextId++, sp);
     this.spawns.set(n.id, sp);
     const model = new NpcModel(sp.color, n.id);
+    model.root.scale.setScalar(sp.scale ?? 1);
     this.parent.add(model.root);
     this.models.set(n.id, model);
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.32, 0.46, 28), new THREE.MeshBasicMaterial({ color: RING_OPEN, transparent: true, opacity: 1, depthTest: false, side: THREE.DoubleSide }));
@@ -126,17 +129,21 @@ export class NpcManager implements NpcHooks {
     for (const p of this.props.props) {
       if (p.broken || p.carried || p.heldBy !== null || p.ignoreGrab > 0 || !n.wants.includes(p.type)) continue;
       const t = p.body.translation();
-      if (t.y > 1.2 || Math.hypot(t.x - n.x, t.z - n.z) > 1.4) continue;
+      if (t.y > 1.2 || Math.hypot(t.x - n.x, t.z - n.z) > 2.0) continue;
       this.props.attach(p, n.id);
       p.stolen = false;
       n.holding = p.id;
       n.holdType = p.type;
-      n.mode = 'eat';
-      n.t = 0;
-      n.nextT = 2.2;
       n.targetX = n.targetZ = null;
-      this.eating.set(n.id, { prop: p, until: this.clock + 2.2 });
       ev.push({ type: 'tookItem', npc: n, propType: p.type });
+      if (p.type === 'toy') {
+        ev.push(...startle(n, 'cheer')); // the child hugs the teddy and keeps it
+      } else {
+        n.mode = 'eat';
+        n.t = 0;
+        n.nextT = 2.2;
+        this.eating.set(n.id, { prop: p, until: this.clock + 2.2 });
+      }
       break;
     }
     return ev;
@@ -226,9 +233,44 @@ export class NpcManager implements NpcHooks {
     return out;
   }
 
-  onPooped(index: number): void {
+  /** Returns the role of whoever was hit (for quests like the blind date). */
+  onPooped(index: number): string | undefined {
     const n = this.owners[index];
-    if (n) this.pending.push(...startle(n, 'pooped'));
+    if (!n) return undefined;
+    this.pending.push(...startle(n, 'pooped'));
+    return n.role;
+  }
+
+  /** Send everyone with this role off to places (the ruined date storms off in opposite directions). */
+  sendRole(role: string, goals: { x: number; z: number; name: string }[]): void {
+    let i = 0;
+    for (const n of this.npcs) {
+      if (n.role !== role) continue;
+      const g = goals[i++ % goals.length];
+      n.goal = { ...g };
+      n.stationary = false;
+      if (n.mode === 'idle' || n.mode === 'recover' || n.mode === 'eat') {
+        n.mode = 'walk';
+        n.t = 0;
+        n.targetX = n.targetZ = null;
+      }
+    }
+  }
+
+  /** Held items as dive-assist targets: diving at a tourist's ice cream (or map, or sweets) curves toward it. */
+  handTargets(): Target[] {
+    const out: Target[] = [];
+    for (const n of this.npcs) {
+      if (n.holding === null) continue;
+      const h = handPos(n);
+      let t = this.handTargetCache.get(n.id);
+      if (!t) this.handTargetCache.set(n.id, (t = { x: 0, y: 0, z: 0, radius: 0.6, cooldown: 0 }));
+      t.x = h.x;
+      t.y = h.y;
+      t.z = h.z;
+      out.push(t);
+    }
+    return out;
   }
 
   reset(): void {

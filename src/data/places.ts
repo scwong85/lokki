@@ -12,9 +12,17 @@ const lm = (id: string) => {
 export const STATUE = lm('havis-amanda');
 export const FERRY = lm('ferry');
 export const SANDBOX = lm('sandbox');
+export const CLOCK = lm('clock');
+export const TOY_SPOT = lm('lost-toy');
+/** The child who lost the teddy waits on the quay. */
+export const CHILD_SPOT = { x: 22, z: -9 };
 
 /** Roof of the ferry's upper cabin (9 m up): where the stolen cap goes. Geometry mirrors world/landmarks.ts (ferry). */
 export const FERRY_ROOF = { minX: FERRY.x - 12, maxX: FERRY.x + 2, minZ: FERRY.z - 2.6, maxZ: FERRY.z + 2.6, minY: 8.6 };
+/** Anywhere on the ferry (deck or roofs): a prop dropped here counts as delivered. */
+export const FERRY_DECK = { minX: FERRY.x - 19, maxX: FERRY.x + 19, minZ: FERRY.z - 4.5, maxZ: FERRY.z + 4.5, minY: 3.0 };
+/** The cabin roofs (6.6 m and 9 m up): land anywhere here to ring the ferry horn. */
+export const FERRY_CABIN_ROOFS = { minX: FERRY.x - 14, maxX: FERRY.x + 4, minZ: FERRY.z - 3.5, maxZ: FERRY.z + 3.5, minY: 6.4 };
 /** Top of the ferry funnel (12.5 m): land here to ring the ferry horn and start the finale. */
 export const FERRY_FUNNEL = { x: FERRY.x - 8, z: FERRY.z };
 export const FUNNEL_ZONE = { minX: FERRY_FUNNEL.x - 2, maxX: FERRY_FUNNEL.x + 2, minZ: FERRY_FUNNEL.z - 2, maxZ: FERRY_FUNNEL.z + 2, minY: 12 };

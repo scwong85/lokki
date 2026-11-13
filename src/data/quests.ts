@@ -1,5 +1,5 @@
 /** Quest definitions (plain data, PLAN §4.3). The quest log (src/gameplay/quest.ts) runs them. */
-import { BUN_CHECKPOINTS, FERRY_FUNNEL, FERRY_ROOF, SANDBOX, STATUE, WRONG_FERRY } from './places';
+import { BUN_CHECKPOINTS, CHILD_SPOT, CLOCK, FERRY, FERRY_CABIN_ROOFS, FERRY_DECK, SANDBOX, STATUE, TOY_SPOT, WRONG_FERRY } from './places';
 
 /** Quest events are plain strings emitted by the game ('snatch:icecream', 'grab:statueCap', 'tipChair', ...). */
 export type QuestEventType = string;
@@ -49,7 +49,9 @@ export interface QuestDef {
   objectives: ObjectiveDef[];
 }
 
-const MAIN = ['icecream', 'swap', 'cap', 'bun', 'map'];
+const MAIN = ['icecream', 'swap', 'cap', 'bun', 'map', 'date', 'toy'];
+
+const STEAL_TIP = 'A red ring means guarded. Dive at it from straight above (they cannot see you there), or make a noise to distract them and grab it with E from the open side.';
 
 export const QUESTS: QuestDef[] = [
   {
@@ -59,7 +61,7 @@ export const QUESTS: QuestDef[] = [
     timed: true,
     startOn: ['alert', 'snatch:icecream'],
     objectives: [
-      { id: 'snatch', text: 'Snatch an ice cream from a tourist', kind: 'event', event: 'snatch:icecream', hint: 'Green ring = free to take, red = guarded. Distract them with a noise (bin, bottle) or dive from straight above, then grab from the open side.' },
+      { id: 'snatch', text: 'Snatch an ice cream from a tourist', kind: 'event', event: 'snatch:icecream', hint: STEAL_TIP },
       { id: 'escape', text: 'Get away with it', kind: 'escape', after: 'snatch', hint: 'Keep the ice cream and stay far away from every tourist until the bar fills.' },
     ],
   },
@@ -70,7 +72,7 @@ export const QUESTS: QuestDef[] = [
     timed: false,
     startOn: ['snatch:candy'],
     objectives: [
-      { id: 'steal', text: 'Steal the sweets from the lilac tourist', kind: 'event', event: 'snatch:candy', hint: 'Same rules as the ice cream: wait for her to look away.' },
+      { id: 'steal', text: 'Steal the sweets from the lilac tourist', kind: 'event', event: 'snatch:candy', hint: STEAL_TIP },
       {
         id: 'swap', text: 'Leave her a bag of salmiakki', kind: 'event', event: 'tookItem:salmiakki', after: 'steal',
         hint: 'Salmiakki bags (black) are in the sandbox. Drop one near her and let her pick it up.',
@@ -82,14 +84,14 @@ export const QUESTS: QuestDef[] = [
   {
     id: 'cap',
     title: 'Cap heist',
-    teaser: 'Steal the student cap off the Havis Amanda statue and get it to the ferry roof.',
+    teaser: 'Steal the student cap off the Havis Amanda statue and drop it on the ferry.',
     timed: true,
     timeKey: 'capTime',
     startOn: ['grab:statueCap'],
     startHeat: 25,
     objectives: [
-      { id: 'take', text: 'Take the student cap from the statue', kind: 'event', event: 'grab:statueCap', hint: 'Land on the statue (it is a perch) and grab it. The clock starts when you take it.', markers: [{ x: STATUE.x, z: STATUE.z, r: 3, y: 5 }] },
-      { id: 'deliver', text: 'Get it onto the ferry roof before the crowd arrives', kind: 'event', event: 'capDelivered', after: 'take', hint: 'Drop it on the upper cabin of the ferry.', markers: [{ x: (FERRY_ROOF.minX + FERRY_ROOF.maxX) / 2, z: (FERRY_ROOF.minZ + FERRY_ROOF.maxZ) / 2, r: 4, y: FERRY_ROOF.minY }] },
+      { id: 'take', text: 'Take the student cap from the statue', kind: 'event', event: 'grab:statueCap', hint: 'It lies on the statue\'s plinth (a wide perch). Land next to it and press E. The clock starts when you take it.', markers: [{ x: STATUE.x, z: STATUE.z, r: 3, y: 3 }] },
+      { id: 'deliver', text: 'Get it onto the ferry before the crowd arrives', kind: 'event', event: 'capDelivered', after: 'take', hint: 'Fly over the ferry and let go (E): anywhere on its deck or roofs counts.', markers: [{ x: FERRY.x, z: FERRY.z, r: 7, y: FERRY_DECK.minY }] },
     ],
   },
   {
@@ -112,24 +114,47 @@ export const QUESTS: QuestDef[] = [
     timed: false,
     startOn: ['snatch:map'],
     objectives: [
-      { id: 'steal', text: 'Steal the map from the tourist at the east side', kind: 'event', event: 'snatch:map' },
+      { id: 'steal', text: 'Steal the map from the pink tourist at the east side', kind: 'event', event: 'snatch:map', hint: STEAL_TIP },
       { id: 'sea', text: 'Drop it in the harbour', kind: 'event', event: 'mapInSea', after: 'steal', hint: 'Fly out over the water and let go (E).' },
       { id: 'ferry', text: 'Watch them head for the wrong ferry', kind: 'event', event: 'wrongFerry', after: 'sea', markers: [{ x: WRONG_FERRY.x, z: WRONG_FERRY.z, r: 4 }] },
     ],
   },
   {
+    id: 'date',
+    title: 'Blind-date wrecker',
+    teaser: 'Ruin the blind date at the clock: swipe the bouquet and splat the date.',
+    timed: false,
+    startOn: ['snatch:flowers'],
+    objectives: [
+      { id: 'steal', text: 'Swipe the bouquet from the man at the clock', kind: 'event', event: 'snatch:flowers', hint: STEAL_TIP, markers: [{ x: CLOCK.x, z: CLOCK.z, r: 4 }] },
+      { id: 'splat', text: 'Poop on one of the dates', kind: 'event', event: 'poopNpc:dater', after: 'steal', hint: 'Poop from above: the reticle shows where it lands.' },
+      { id: 'over', text: 'Watch them storm off', kind: 'event', event: 'dateOver', after: 'splat' },
+    ],
+  },
+  {
+    id: 'toy',
+    title: 'Lost teddy',
+    teaser: 'A child on the quay lost a teddy bear far to the west. Be a good bird and bring it back.',
+    timed: false,
+    startOn: ['grab:toy'],
+    objectives: [
+      { id: 'find', text: 'Find the teddy bear in the Esplanadi park', kind: 'event', event: 'grab:toy', hint: 'Follow the yellow pillar west, about 330 m.', markers: [{ x: TOY_SPOT.x, z: TOY_SPOT.z, r: 4 }] },
+      { id: 'return', text: 'Bring it to the child on the quay', kind: 'event', event: 'tookItem:toy', after: 'find', hint: 'Drop it (E) next to the child and they will pick it up.', markers: [{ x: CHILD_SPOT.x, z: CHILD_SPOT.z, r: 3 }] },
+    ],
+  },
+  {
     id: 'finale',
     title: 'Grand finale: market mayhem',
-    teaser: 'Ring the ferry horn (land on the funnel), then wreck the market before time runs out.',
+    teaser: 'Ring the ferry horn (land on the ferry cabin roof), then wreck the market before time runs out.',
     timed: true,
     timeKey: 'finaleTime',
     requires: MAIN,
     startOn: ['finaleStart'],
     startHeat: 80,
-    startMarkers: [{ x: FERRY_FUNNEL.x, z: FERRY_FUNNEL.z, r: 3, y: 12.5 }],
+    startMarkers: [{ x: FERRY.x - 5, z: FERRY.z, r: 5, y: FERRY_CABIN_ROOFS.minY + 2.2 }],
     objectives: [
       { id: 'chairs', text: 'Collapse the chair stack', kind: 'event', event: 'tipChair', count: 3, hint: 'Dive into the stack in the sandbox.' },
-      { id: 'pastry', text: 'Swipe the pastry from the stall counter', kind: 'event', event: 'grab:stallBun', hint: 'It sits on a counter of the south row, right in front of a vendor.', markers: [{ x: 8, z: -30, r: 3 }] },
+      { id: 'pastry', text: 'Swipe the pastry from the stall counter', kind: 'event', event: 'grab:stallBun', hint: 'It sits on a counter of the south row of stalls (follow the yellow pillar), right in front of a vendor.', markers: [{ x: 8, z: -30, r: 3 }] },
       { id: 'warden', text: 'Poop on the Gull Warden', kind: 'event', event: 'poopWarden', hint: 'Distract him with a noise first so the umbrella tips aside.' },
     ],
   },

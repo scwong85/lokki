@@ -3,7 +3,7 @@ import { LevelStats, formatTime } from '../../src/gameplay/levelStats';
 import { activeMarkers } from '../../src/gameplay/questMarkers';
 import { QuestLog } from '../../src/gameplay/quest';
 import { QUESTS } from '../../src/data/quests';
-import { BUN_CHECKPOINTS, FERRY_FUNNEL, STATUE } from '../../src/data/places';
+import { BUN_CHECKPOINTS, CLOCK, FERRY, STATUE, TOY_SPOT } from '../../src/data/places';
 
 describe('level stats', () => {
   it('counts what happened, tracks the peak heat and the time', () => {
@@ -27,15 +27,19 @@ describe('level stats', () => {
 });
 
 describe('quest markers', () => {
-  it('points at the statue before the cap heist starts, then at the ferry roof', () => {
+  it('before anything starts, quests whose first step is their start point at it: the statue, the clock, the toy', () => {
     const q = new QuestLog(QUESTS);
-    const idle = activeMarkers(QUESTS, q.quests);
-    expect(idle).toHaveLength(1); // the cap quest starts by taking the cap; the other idle quests have no start spot
-    expect(idle[0]).toMatchObject({ x: STATUE.x, z: STATUE.z });
+    const m = activeMarkers(QUESTS, q.quests);
+    const at = (p: { x: number; z: number }) => m.some((k) => k.x === p.x && k.z === p.z);
+    expect([at(STATUE), at(CLOCK), at(TOY_SPOT)]).toEqual([true, true, true]);
+    expect(m).toHaveLength(3);
+  });
+  it('after taking the cap the statue marker is replaced by the ferry', () => {
+    const q = new QuestLog(QUESTS);
     q.onEvent('grab:statueCap'); // starting the quest also takes the cap
     const m = activeMarkers(QUESTS, q.quests);
-    expect(m).toHaveLength(1);
-    expect(m[0].y).toBeGreaterThan(5); // the ferry roof
+    expect(m.some((k) => k.x === STATUE.x && k.z === STATUE.z)).toBe(false);
+    expect(m.some((k) => k.x === FERRY.x && k.z === FERRY.z)).toBe(true);
   });
   it('bun ring shows one checkpoint at a time, in order', () => {
     const q = new QuestLog(QUESTS);
@@ -46,14 +50,16 @@ describe('quest markers', () => {
     q.onEvent('bun1');
     expect([has(0), has(1), has(2)]).toEqual([false, true, false]);
   });
-  it('the unlocked finale points at the ferry funnel until it starts', () => {
+  it('the unlocked finale points at the ferry cabin roof until it starts, then shows ALL its open objectives (parallel)', () => {
     const q = new QuestLog(QUESTS);
-    const locked = activeMarkers(QUESTS, q.quests);
-    expect(locked.some((m) => m.x === FERRY_FUNNEL.x)).toBe(false);
-    for (const e of ['alert', 'snatch:icecream', 'snatch:candy', 'tookItem:salmiakki', 'yuck', 'grab:statueCap', 'capDelivered', 'grab:bun', 'bun1', 'bun2', 'bun3', 'snatch:map', 'mapInSea', 'wrongFerry']) q.onEvent(e);
+    const roof = (m: { x: number }) => m.x === FERRY.x - 5;
+    expect(activeMarkers(QUESTS, q.quests).some(roof)).toBe(false);
+    for (const e of ['alert', 'snatch:icecream', 'snatch:candy', 'tookItem:salmiakki', 'yuck', 'grab:statueCap', 'capDelivered', 'grab:bun', 'bun1', 'bun2', 'bun3', 'snatch:map', 'mapInSea', 'wrongFerry', 'snatch:flowers', 'poopNpc:dater', 'dateOver', 'grab:toy', 'tookItem:toy']) q.onEvent(e);
     for (let i = 0; i < 400; i++) q.tick({ dt: 1 / 60, carryingStolen: true, nearestNpc: 99 });
-    expect(activeMarkers(QUESTS, q.quests).some((m) => m.x === FERRY_FUNNEL.x)).toBe(true);
+    expect(activeMarkers(QUESTS, q.quests).some(roof)).toBe(true);
     q.onEvent('finaleStart');
-    expect(activeMarkers(QUESTS, q.quests).some((m) => m.x === FERRY_FUNNEL.x)).toBe(false);
+    const m = activeMarkers(QUESTS, q.quests);
+    expect(m.some(roof)).toBe(false);
+    expect(m.some((k) => k.x === 8 && k.z === -30)).toBe(true); // the pastry is marked even though the chairs come first
   });
 });

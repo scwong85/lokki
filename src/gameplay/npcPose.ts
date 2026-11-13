@@ -48,6 +48,8 @@ function basePose(i: NpcPoseInput): NpcPose {
       return { legSwing: 0.9 * stride, armSwing: 0, armRaise: 1, lean: 0.1, bob: Math.abs(Math.sin(i.walkPhase)) * 0.05 * stride, indicator: 'alarm' };
     case 'chase':
       return { legSwing: 0.9 * stride, armSwing: 0, armRaise: 0.8 + Math.sin(i.time * 14) * 0.2, lean: 0.2, bob: Math.abs(Math.sin(i.walkPhase)) * 0.04 * stride, indicator: 'alarm' };
+    case 'cheer':
+      return { legSwing: 0, armSwing: 0, armRaise: 1, lean: 0, bob: Math.abs(Math.sin(i.time * 9)) * 0.14, indicator: 'none' };
     case 'yuck':
       return { legSwing: 0, armSwing: 0, armRaise: 0.7 + Math.sin(i.time * 18) * 0.3, lean: -0.25 + Math.sin(i.time * 12) * 0.1, bob: Math.abs(Math.sin(i.time * 10)) * 0.03, indicator: 'alarm' };
     case 'recover':

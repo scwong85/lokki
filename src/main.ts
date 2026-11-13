@@ -103,7 +103,11 @@ if (npcs && defense) {
       nTourist = t.length;
       return [...t, ...defense.poopSpheres()];
     },
-    onPooped: (i) => (i < nTourist ? npcs.onPooped(i) : defense.onPooped(i - nTourist)),
+    onPooped: (i) => {
+      if (i < nTourist) return npcs.onPooped(i);
+      defense.onPooped(i - nTourist);
+      return undefined;
+    },
   };
 }
 const quests = new QuestLog(greybox ? [] : QUESTS);
@@ -129,6 +133,7 @@ let simTime = 0;
 let hits = 0;
 let lastBump = -10;
 let explainedLearning = false;
+let stealTipShown = false;
 
 events.on('tuningChanged', () => {
   phys.setGravity(tuning.physics.gravity.value);
@@ -256,10 +261,16 @@ function notes(list: QuestNote[]): void {
     const def = QUESTS.find((d) => d.id === n.quest)!;
     if (n.type === 'started') {
       hud.toast(q.timed ? `${q.title}: ${Math.round(q.timeLeft)} seconds!` : `Quest started: ${q.title}`, 1.6);
+      if (n.quest === 'finale') announce.show('The ferry horn blows!', 'Chairs in the sandbox, the pastry on the south stall (yellow pillar), and the Warden. The city is on full alert.', 'alert');
       if (def.startHeat && defense) onDefense(defense.ensureHeat(def.startHeat));
     } else if (n.type === 'objective') {
       const text = q.objectives.find((o) => o.id === n.objective)!.text;
       hud.toast(`✓ ${text}`, 1.6);
+      if (n.quest === 'date' && n.objective === 'splat') {
+        // the ruined date storms off in opposite directions
+        npcs?.sendRole('dater', [{ x: 36, z: -9, name: 'stormoff' }, { x: -37, z: -9, name: 'stormoff' }]);
+        hud.toast('The date is ruined! They storm off...', 2);
+      }
     } else if (n.type === 'won') {
       audio.play('win');
       hud.toast(n.quest === 'extras' ? 'All extras done!' : `Quest complete: ${q.title}!`, 2.4);
@@ -284,6 +295,10 @@ function onNpcEvents(evs: NpcEvent[]): void {
       audio.play('gasp');
       notes(quests.onEvent('alert'));
       heat('noticed');
+      if (!stealTipShown && e.npc.holding !== null) {
+        stealTipShown = true;
+        announce.show('Tip: guarded items', 'A red ring means they are guarding it. Dive at it from straight above, or make a noise to distract them and grab it with E from the open side.', 'learned');
+      }
     } else if (e.type === 'panic' || e.type === 'chase') audio.play('yelp');
     else if (e.type === 'tookItem') {
       audio.play('pop');
@@ -292,6 +307,11 @@ function onNpcEvents(evs: NpcEvent[]): void {
       audio.play('yelp');
       hud.toast('Yuck! Salmiakki!', 1.6);
       notes(quests.onEvent('yuck'));
+    } else if (e.type === 'cheer') {
+      audio.play('chime');
+      hud.toast('The child hugs the teddy!', 2);
+    } else if (e.type === 'arrived' && e.goal === 'stormoff') {
+      notes(quests.onEvent('dateOver'));
     } else if (e.type === 'arrived' && e.goal === 'ferry') {
       hud.toast('They are waiting at the wrong ferry...', 1.8);
       notes(quests.onEvent('wrongFerry'));
@@ -331,6 +351,7 @@ function onGags(gags: GagEvent[]): void {
         audio.play('yelp');
         hud.toast('Splat! Right on a tourist!', 1.1);
         notes(quests.onEvent('poopNpc'));
+        if (g.role) notes(quests.onEvent(`poopNpc:${g.role}`));
         stats.add('poopPerson');
         heat('poopNpc');
         break;
@@ -401,7 +422,7 @@ startLoop({
       dt,
       world,
       simTime,
-      targets,
+      npcs ? [...targets, ...npcs.handTargets()] : targets,
     );
     onFlightEvents(evs);
     if (npcs?.pushGull(gull.state) && simTime - lastBump > 1) {
@@ -475,7 +496,7 @@ startLoop({
     if (diving || canDive) {
       const heading = diving ? s.heading : cam.yaw;
       const angle = diving ? s.diveAngle : aimDiveAngle(cam.pitch);
-      aimTarget = bestAimTarget(targets, s, heading, angle);
+      aimTarget = bestAimTarget(npcs ? [...targets, ...npcs.handTargets()] : targets, s, heading, angle);
       marker.update(gull.position, divePreview(s, heading, angle, world), aimTarget !== null, diving);
     } else {
       marker.update(null, null, false, false);

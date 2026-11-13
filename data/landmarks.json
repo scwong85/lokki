@@ -1,11 +1,64 @@
 {
   "_comment": "Hand-placed landmarks. lon/lat (WGS84) or local metres x,z (east, south; origin = Kauppatori). Converted by scripts/build-world.ts. Positions are approximate; nudge after looking at the map.",
   "landmarks": [
-    { "id": "cathedral", "type": "cathedral", "lon": 24.95224, "lat": 60.17045, "height": 22 },
-    { "id": "havis-amanda", "type": "statue", "lon": 24.9527, "lat": 60.16745 },
-    { "id": "market-tents", "type": "tents", "x": 0, "z": -44, "cols": 9, "rows": 3, "dx": 8, "dz": 14 },
-    { "id": "ferry", "type": "ferry", "x": 0, "z": 7, "rotationDeg": 0 },
-    { "id": "sandbox", "type": "sandbox", "x": 0, "z": -82 },
-    { "id": "quay-lamps", "type": "lamps", "line": [-36, -10, 36, -10], "count": 7 }
+    {
+      "id": "cathedral",
+      "type": "cathedral",
+      "lon": 24.95224,
+      "lat": 60.17045,
+      "height": 22
+    },
+    {
+      "id": "havis-amanda",
+      "type": "statue",
+      "lon": 24.9527,
+      "lat": 60.16745
+    },
+    {
+      "id": "market-tents",
+      "type": "tents",
+      "x": 0,
+      "z": -44,
+      "cols": 9,
+      "rows": 3,
+      "dx": 8,
+      "dz": 14
+    },
+    {
+      "id": "ferry",
+      "type": "ferry",
+      "x": 0,
+      "z": 7,
+      "rotationDeg": 0
+    },
+    {
+      "id": "sandbox",
+      "type": "sandbox",
+      "x": 0,
+      "z": -82
+    },
+    {
+      "id": "quay-lamps",
+      "type": "lamps",
+      "line": [
+        -36,
+        -10,
+        36,
+        -10
+      ],
+      "count": 7
+    },
+    {
+      "id": "clock",
+      "type": "clock",
+      "x": -26,
+      "z": -9
+    },
+    {
+      "id": "lost-toy",
+      "type": "toy",
+      "x": -320,
+      "z": -80
+    }
   ]
 }

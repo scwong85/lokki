@@ -1,4 +1,5 @@
 import type { NpcSpawn } from '../gameplay/npc';
+import { CHILD_SPOT, CLOCK } from './places';
 
 /** Tourists on the market square (local metres; north = -Z). Four of them hold an ice cream. */
 export const TOURIST_SPAWNS: NpcSpawn[] = [
@@ -10,6 +11,11 @@ export const TOURIST_SPAWNS: NpcSpawn[] = [
   { x: -30, z: -14, heading: 0.2, holds: 'candy', wants: ['candy', 'salmiakki'], color: 0xc9a7f0 },
   // the pink tourist at the east side is holding a map (map sabotage)
   { x: 36, z: -24, heading: 2.2, holds: 'map', color: 0xf7a1c4 },
+  // the blind date at the clock: he holds the bouquet, they wait in place, facing each other
+  { x: CLOCK.x + 1.4, z: CLOCK.z, heading: Math.PI / 2, holds: 'flowers', role: 'dater', stationary: true, color: 0x4a5a8a },
+  { x: CLOCK.x - 1.4, z: CLOCK.z + 0.2, heading: -Math.PI / 2, role: 'dater', stationary: true, color: 0xe0607e },
+  // the child who lost the teddy waits on the quay; bring it back and they pick it up
+  { x: CHILD_SPOT.x, z: CHILD_SPOT.z, heading: 0, role: 'child', stationary: true, wants: ['toy'], scale: 0.65, color: 0x7ec8ff },
 ];
 
 /** Reaction table of a tourist, documented as data (what it cares about and how it reacts). */

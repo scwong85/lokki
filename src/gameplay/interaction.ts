@@ -15,7 +15,7 @@ export interface NpcHooks {
   blockedHint(beak: { x: number; y: number; z: number }): string | null;
   onSnatched(propId: number): void;
   poopSpheres(): HitSphere[];
-  onPooped(index: number): void;
+  onPooped(index: number): string | undefined;
 }
 
 export interface InteractionInput {
@@ -27,7 +27,7 @@ export interface InteractionInput {
 export type GagEvent =
   | { type: 'grab'; prop: Prop }
   | { type: 'snatch'; prop: Prop }
-  | { type: 'poopNpc' }
+  | { type: 'poopNpc'; role?: string }
   | { type: 'drop'; prop: Prop }
   | { type: 'toss'; prop: Prop }
   | { type: 'heavy'; prop: Prop }
@@ -186,9 +186,9 @@ export class Interaction {
       this.group.remove(lp.mesh);
       this.poops.splice(i, 1);
       if (hit.prop !== null && hit.prop >= propSpheres.length) {
-        this.npcs?.onPooped(hit.prop - propSpheres.length);
+        const role = this.npcs?.onPooped(hit.prop - propSpheres.length);
         this.decals.add({ x: hit.x, y: 0, z: hit.z }, { x: 0, y: 1, z: 0 }, 0.5);
-        ev.push({ type: 'poopNpc' });
+        ev.push({ type: 'poopNpc', role });
       } else if (hit.prop !== null) {
         const p = props[hit.prop];
         p.dirty++;

@@ -22,7 +22,7 @@ async function boot(page: import('@playwright/test').Page) {
   return errors;
 }
 
-test('cap heist: take the statue cap and drop it on the ferry roof', async ({ page }) => {
+test('cap heist: take the statue cap and drop it on the ferry', async ({ page }) => {
   const errors = await boot(page);
   const cap = await page.evaluate(() => { const c = L().interaction.props.props.find((p) => p.tag === 'statueCap')!; return c.body.translation(); });
   // stand next to the cap on the statue and take it (E), retrying until the quest starts
@@ -54,12 +54,12 @@ test('cap heist: take the statue cap and drop it on the ferry roof', async ({ pa
   expect(errors).toEqual([]);
 });
 
-test('the finale unlocks after the five quests, starts on the ferry funnel, and ends with the level-complete screen', async ({ page }) => {
+test('the finale unlocks after the seven quests, starts on the ferry cabin roof, and ends with the level-complete screen', async ({ page }) => {
   const errors = await boot(page);
   expect(await page.evaluate(() => L().quests.quests.find((q) => q.id === 'finale')!.status)).toBe('locked');
   await page.evaluate(() => {
     const { quests, notes } = L();
-    const events = ['alert', 'snatch:icecream', 'snatch:candy', 'tookItem:salmiakki', 'yuck', 'grab:statueCap', 'capDelivered', 'grab:bun', 'bun1', 'bun2', 'bun3', 'snatch:map', 'mapInSea', 'wrongFerry'];
+    const events = ['alert', 'snatch:icecream', 'snatch:candy', 'tookItem:salmiakki', 'yuck', 'grab:statueCap', 'capDelivered', 'grab:bun', 'bun1', 'bun2', 'bun3', 'snatch:map', 'mapInSea', 'wrongFerry', 'snatch:flowers', 'poopNpc:dater', 'dateOver', 'grab:toy', 'tookItem:toy'];
     for (const e of events) notes(quests.onEvent(e));
   });
   // the ice-cream escape needs time: run its tick through the quest log
@@ -68,12 +68,12 @@ test('the finale unlocks after the five quests, starts on the ferry funnel, and 
     for (let i = 0; i < 400; i++) w.__lokki.notes(w.__lokki.quests.tick({ dt: 1 / 60, carryingStolen: true, nearestNpc: 99 }));
   });
   expect(await page.evaluate(() => L().quests.quests.find((q) => q.id === 'finale')!.status)).toBe('idle');
-  // land on the funnel top: the ferry horn starts the finale
+  // land on the ferry cabin roof: the horn starts the finale
   await page.waitForFunction(
     () => {
       const { gull, quests } = L();
       if (quests.quests.find((q) => q.id === 'finale')!.status === 'active') return true;
-      Object.assign(gull.state, { x: -8, y: 13.1, z: 7, vx: 0, vy: 0, vz: 0, heading: 0, mode: 'ground', stunT: 0 });
+      Object.assign(gull.state, { x: -5, y: 9.6, z: 7, vx: 0, vy: 0, vz: 0, heading: 0, mode: 'ground', stunT: 0 });
       return false;
     },
     null,

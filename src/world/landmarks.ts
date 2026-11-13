@@ -88,13 +88,32 @@ function statue(l: LandmarkSrc): LandmarkOut {
   return {
     prisms: [
       prism(ngon(x, z, 4.5, 12), 0, 0.5, 0xe8e2d6, 0x9fd8ea),
-      prism(ngon(x, z, 1.3), 0.5, 3, 0xe8e2d6, 0xe8e2d6),
+      // a wide plinth (a perch you can actually land on) with the figure on top
+      prism(ngon(x, z, 1.9, 10), 0.5, 3, 0xe8e2d6, 0xe8e2d6, 'perch'),
       prism(ngon(x, z, 0.55), 3, 5.2, 0x8fbfa8, 0x8fbfa8, 'perch'),
     ],
     targets: [],
-    // the student cap on the statue's head (cap heist)
-    props: [{ type: 'cap', x, y: restY('cap', 5.2), z, tag: 'statueCap' }],
+    // the student cap lies on the plinth beside the figure (cap heist)
+    props: [{ type: 'cap', x: x + 1.1, y: restY('cap', 3.0), z, tag: 'statueCap' }],
   };
+}
+
+/** A clock on a pole where the blind date meets. */
+function clock(l: LandmarkSrc): LandmarkOut {
+  const { x, z } = l;
+  return {
+    prisms: [
+      prism(ngon(x, z, 0.22, 6), 0, 4.4, 0x8a8fa0, 0x8a8fa0),
+      prism(ngon(x, z, 1.0, 14), 4.4, 5.6, 0xfdfaf2, 0xfdfaf2),
+      prism(ngon(x, z, 0.4, 6), 5.6, 6.1, GOLD, GOLD, 'perch'),
+    ],
+    targets: [],
+  };
+}
+
+/** A lost teddy bear far away from the child who owns it (good-bird quest). */
+function toy(l: LandmarkSrc): LandmarkOut {
+  return { prisms: [], targets: [], props: [{ type: 'toy', x: l.x, y: restY('toy'), z: l.z }] };
 }
 
 function tents(l: LandmarkSrc): LandmarkOut {
@@ -191,7 +210,7 @@ function sandbox(l: LandmarkSrc): LandmarkOut {
   return { prisms: [], targets: [], props, mats: [{ rings: [rect(x, z, 28, 18)], color: 0xfff3b8 }] };
 }
 
-const BUILDERS: Record<string, (l: LandmarkSrc) => LandmarkOut> = { cathedral, statue, tents, ferry, lamps, sandbox };
+const BUILDERS: Record<string, (l: LandmarkSrc) => LandmarkOut> = { cathedral, statue, tents, ferry, lamps, sandbox, clock, toy };
 
 export function buildLandmarks(list: readonly LandmarkSrc[]): Required<LandmarkOut> {
   const out: Required<LandmarkOut> = { prisms: [], targets: [], props: [], mats: [] };

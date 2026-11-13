@@ -7,7 +7,7 @@ import type { PropType } from '../data/props';
  * Tourist brain: a small state machine with senses (sight cone, hearing), things it cares about
  * (the ice cream in its hand) and reactions (notice, shield, panic, chase, recover). Pure logic, no rendering.
  */
-export type NpcMode = 'idle' | 'walk' | 'eat' | 'notice' | 'shield' | 'panic' | 'chase' | 'recover' | 'yuck';
+export type NpcMode = 'idle' | 'walk' | 'eat' | 'notice' | 'shield' | 'panic' | 'chase' | 'recover' | 'yuck' | 'cheer';
 
 export interface NpcSpawn {
   x: number;
@@ -21,6 +21,12 @@ export interface NpcSpawn {
   wants?: PropType[];
   /** Jacket colour. */
   color: number;
+  /** Who this is for quests ('dater', 'child'). */
+  role?: string;
+  /** Stays where it is (a couple waiting at the clock) unless sent somewhere. */
+  stationary?: boolean;
+  /** Body scale (children are small). */
+  scale?: number;
 }
 
 export interface Npc {
@@ -58,6 +64,8 @@ export interface Npc {
   holdType: PropType | null;
   /** Forced destination (e.g. the wrong ferry); cleared on arrival. */
   goal: { x: number; z: number; name: string } | null;
+  role: string;
+  stationary: boolean;
 }
 
 export interface GullInfo {
@@ -74,7 +82,7 @@ export interface Noise {
   loud: number;
 }
 
-export type NpcEvent = { type: 'arrived'; npc: Npc; goal: string } | { type: 'yuck'; npc: Npc } | { type: 'tookItem'; npc: Npc; propType: PropType } | { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc };
+export type NpcEvent = { type: 'cheer'; npc: Npc } | { type: 'arrived'; npc: Npc; goal: string } | { type: 'yuck'; npc: Npc } | { type: 'tookItem'; npc: Npc; propType: PropType } | { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc };
 
 export interface NpcCtx {
   world: World;
@@ -95,7 +103,7 @@ export function newNpc(id: number, sp: NpcSpawn): Npc {
     id, x: sp.x, z: sp.z, heading: h, mode: 'idle', t: 0, homeX: sp.x, homeZ: sp.z, targetX: null, targetZ: null,
     holding: null, shieldFrom: h, handAngle: h - Math.PI / 2, distractT: 0, noiseX: 0, noiseZ: 0, lostSightT: 0, noticeCd: 0,
     walkPhase: 0, moving: false, speed: 0, seesGull: false, nextT: 2,
-    wants: sp.wants ?? [], holdType: null, goal: null,
+    wants: sp.wants ?? [], holdType: null, goal: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false,
   };
 }
 
@@ -205,9 +213,12 @@ function pickWanderTarget(n: Npc, ctx: NpcCtx): void {
 }
 
 /** Disturbances the NPC reacts to from outside. */
-export function startle(n: Npc, kind: 'pooped' | 'snatched' | 'yuck'): NpcEvent[] {
+export function startle(n: Npc, kind: 'pooped' | 'snatched' | 'yuck' | 'cheer'): NpcEvent[] {
   const ev: NpcEvent[] = [];
-  if (kind === 'yuck') {
+  if (kind === 'cheer') {
+    enter(n, 'cheer');
+    ev.push({ type: 'cheer', npc: n });
+  } else if (kind === 'yuck') {
     n.holding = null;
     n.holdType = null;
     enter(n, 'yuck');
@@ -258,6 +269,10 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
   switch (n.mode) {
     case 'idle': {
       if (n.distractT > 0) faceToward(n, n.noiseX, n.noiseZ, dt);
+      if (n.stationary && !n.goal) {
+        n.t = 0; // waiting in place
+        break;
+      }
       if (n.t >= n.nextT && n.distractT <= 0) {
         if (!n.goal && n.holding !== null && ctx.rng.next() < 0.5) {
           enter(n, 'eat');
@@ -351,6 +366,13 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
       }
       break;
     }
+    case 'cheer':
+      n.handAngle = n.heading - Math.PI / 2;
+      if (n.t >= 3.5) {
+        enter(n, 'idle');
+        n.nextT = 2;
+      }
+      break;
     case 'yuck':
       // spitting out salmiakki: flail in place, then sulk
       n.handAngle = n.heading - Math.PI / 2;

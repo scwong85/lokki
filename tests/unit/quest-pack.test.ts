@@ -3,7 +3,7 @@ import { QuestLog } from '../../src/gameplay/quest';
 import { QUESTS } from '../../src/data/quests';
 import { TriggerSystem, type PropView, type TriggerCtx } from '../../src/gameplay/triggers';
 import { TRIGGERS } from '../../src/data/triggers';
-import { BUN_CHECKPOINTS, FERRY_ROOF, FUNNEL_ZONE, STATUE } from '../../src/data/places';
+import { BUN_CHECKPOINTS, FERRY_CABIN_ROOFS, FERRY_DECK, STATUE } from '../../src/data/places';
 import { tuning } from '../../src/core/tuning';
 import { createRng } from '../../src/core/rng';
 import { World } from '../../src/world/collision';
@@ -22,14 +22,16 @@ const MAIN_WINS: Record<string, string[]> = {
   cap: ['grab:statueCap', 'capDelivered'],
   bun: ['grab:bun', 'bun1', 'bun2', 'bun3'],
   map: ['snatch:map', 'mapInSea', 'wrongFerry'],
+  date: ['snatch:flowers', 'poopNpc:dater', 'dateOver'],
+  toy: ['grab:toy', 'tookItem:toy'],
 };
 
 describe('the quest pack', () => {
-  it('has the six quests plus extras, each with its own objectives', () => {
-    expect(QUESTS.map((q) => q.id)).toEqual(['icecream', 'swap', 'cap', 'bun', 'map', 'finale', 'extras']);
+  it('has the seven quests, the finale and the extras, each with its own objectives', () => {
+    expect(QUESTS.map((q) => q.id)).toEqual(['icecream', 'swap', 'cap', 'bun', 'map', 'date', 'toy', 'finale', 'extras']);
     for (const q of QUESTS) expect(q.objectives.length).toBeGreaterThan(0);
   });
-  it('the finale is locked until the five main quests are won, then unlocks with a note', () => {
+  it('the finale is locked until the seven main quests are won, then unlocks with a note', () => {
     const q = new QuestLog(QUESTS);
     expect(get(q, 'finale').status).toBe('locked');
     q.onEvent('finaleStart');
@@ -40,7 +42,7 @@ describe('the quest pack', () => {
     // finish ice cream: escape far away while carrying
     for (let i = 0; i < 400; i++) q.tick({ dt: DT, carryingStolen: true, nearestNpc: 99 });
     expect(get(q, 'icecream').status).toBe('won');
-    for (const id of ['swap', 'cap', 'bun']) win(q, MAIN_WINS[id]);
+    for (const id of ['swap', 'cap', 'bun', 'date', 'toy']) win(q, MAIN_WINS[id]);
     expect(get(q, 'finale').status).toBe('locked');
     const notes = [...q.onEvent('snatch:map'), ...q.onEvent('mapInSea'), ...q.onEvent('wrongFerry')];
     expect(notes).toContainEqual({ type: 'unlocked', quest: 'finale' });
@@ -50,7 +52,7 @@ describe('the quest pack', () => {
     const q = new QuestLog(QUESTS);
     for (const e of ['alert', 'snatch:icecream']) q.onEvent(e);
     for (let i = 0; i < 400; i++) q.tick({ dt: DT, carryingStolen: true, nearestNpc: 99 });
-    for (const id of ['swap', 'cap', 'bun', 'map']) win(q, MAIN_WINS[id]);
+    for (const id of ['swap', 'cap', 'bun', 'map', 'date', 'toy']) win(q, MAIN_WINS[id]);
     expect(q.onEvent('finaleStart')).toContainEqual({ type: 'started', quest: 'finale' });
     win(q, ['tipChair', 'tipChair']);
     expect(get(q, 'finale').objectives[0].done).toBe(false); // needs three chairs
@@ -105,11 +107,11 @@ describe('world triggers', () => {
   const ctx = (o: Partial<TriggerCtx> = {}): TriggerCtx => ({
     props: [], gull: { x: 0, y: 5, z: 0, grounded: false }, carried: null, isLand: (x) => x < 100, ...o,
   });
-  const roofMid = { x: (FERRY_ROOF.minX + FERRY_ROOF.maxX) / 2, z: (FERRY_ROOF.minZ + FERRY_ROOF.maxZ) / 2 };
+  const roofMid = { x: (FERRY_DECK.minX + FERRY_DECK.maxX) / 2, z: (FERRY_DECK.minZ + FERRY_DECK.maxZ) / 2 };
 
-  it('the statue cap on the ferry roof fires capDelivered once, only when wanted', () => {
+  it('the statue cap anywhere on the ferry fires capDelivered once, only when wanted', () => {
     const t = new TriggerSystem(TRIGGERS);
-    const c = ctx({ props: [prop({ tag: 'statueCap', x: roofMid.x, y: 9.1, z: roofMid.z })] });
+    const c = ctx({ props: [prop({ tag: 'statueCap', x: roofMid.x, y: 3.4, z: roofMid.z })] });
     expect(t.update(c, new Set())).toEqual([]); // nobody wants it yet: not consumed
     expect(t.update(c, new Set(['capDelivered']))).toEqual(['capDelivered']);
     expect(t.update(c, new Set(['capDelivered']))).toEqual([]); // once
@@ -120,17 +122,17 @@ describe('world triggers', () => {
     const t = new TriggerSystem(TRIGGERS);
     const w = new Set(['capDelivered']);
     expect(t.update(ctx({ props: [prop({ tag: 'statueCap', x: roofMid.x, y: 0.2, z: roofMid.z })] }), w)).toEqual([]);
-    expect(t.update(ctx({ props: [prop({ tag: 'statueCap', x: roofMid.x, y: 9.1, z: roofMid.z, free: false })] }), w)).toEqual([]);
-    expect(t.update(ctx({ props: [prop({ tag: 'other', x: roofMid.x, y: 9.1, z: roofMid.z })] }), w)).toEqual([]);
+    expect(t.update(ctx({ props: [prop({ tag: 'statueCap', x: roofMid.x, y: 3.4, z: roofMid.z, free: false })] }), w)).toEqual([]);
+    expect(t.update(ctx({ props: [prop({ tag: 'other', x: roofMid.x, y: 3.4, z: roofMid.z })] }), w)).toEqual([]);
   });
   it('a map floating in the sea fires mapInSea, a map on land does not', () => {
     const w = new Set(['mapInSea']);
     expect(new TriggerSystem(TRIGGERS).update(ctx({ props: [prop({ type: 'map', x: 50, y: 0.1 })] }), w)).toEqual([]);
     expect(new TriggerSystem(TRIGGERS).update(ctx({ props: [prop({ type: 'map', x: 150, y: 0.1 })] }), w)).toEqual(['mapInSea']);
   });
-  it('landing on the ferry funnel rings the horn (the finale), flying past does not', () => {
+  it('landing on the ferry cabin roof rings the horn (the finale), flying past does not', () => {
     const w = new Set(['finaleStart']);
-    const at = { x: (FUNNEL_ZONE.minX + FUNNEL_ZONE.maxX) / 2, y: 13, z: (FUNNEL_ZONE.minZ + FUNNEL_ZONE.maxZ) / 2 };
+    const at = { x: (FERRY_CABIN_ROOFS.minX + FERRY_CABIN_ROOFS.maxX) / 2, y: 9.6, z: (FERRY_CABIN_ROOFS.minZ + FERRY_CABIN_ROOFS.maxZ) / 2 };
     expect(new TriggerSystem(TRIGGERS).update(ctx({ gull: { ...at, grounded: false } }), w)).toEqual([]);
     expect(new TriggerSystem(TRIGGERS).update(ctx({ gull: { ...at, grounded: true } }), w)).toEqual(['finaleStart']);
   });
@@ -151,9 +153,10 @@ describe('world triggers', () => {
     expect(t.update(ctx({ carried: null, gull: g }), new Set(['bun1']))).toEqual([]);
     expect(t.update(ctx({ carried: prop({ type: 'fish', free: false }), gull: g }), new Set(['bun1']))).toEqual([]);
   });
-  it('the statue is somewhere on the map and the ferry roof is above ground level', () => {
+  it('the statue is somewhere on the map and the ferry deck is above the water', () => {
     expect(Number.isFinite(STATUE.x + STATUE.z)).toBe(true);
-    expect(FERRY_ROOF.minY).toBeGreaterThan(5);
+    expect(FERRY_DECK.minY).toBeGreaterThan(2);
+    expect(FERRY_CABIN_ROOFS.minY).toBeGreaterThan(FERRY_DECK.minY);
   });
 });
 

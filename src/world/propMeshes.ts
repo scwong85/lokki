@@ -86,6 +86,20 @@ function buildParts(type: PropType, g: THREE.Group): void {
       g.add(mesh(new THREE.BoxGeometry(0.05, 0.036, 0.05), 0xe5484d, 0.1, 0, -0.04));
       break;
     }
+    case 'toy': {
+      g.add(mesh(new THREE.SphereGeometry(0.16, 8, 6), 0xc58b5a, 0, -0.03, 0)); // body
+      g.add(mesh(new THREE.SphereGeometry(0.12, 8, 6), 0xc58b5a, 0, 0.16, 0)); // head
+      g.add(mesh(new THREE.SphereGeometry(0.05, 6, 5), 0xc58b5a, -0.09, 0.26, 0));
+      g.add(mesh(new THREE.SphereGeometry(0.05, 6, 5), 0xc58b5a, 0.09, 0.26, 0));
+      g.add(mesh(new THREE.SphereGeometry(0.05, 6, 5), 0xf2d3a8, 0, 0.14, -0.1)); // snout
+      g.add(mesh(new THREE.BoxGeometry(0.2, 0.05, 0.03), 0xe5484d, 0, 0.07, -0.1)); // bow tie
+      break;
+    }
+    case 'flowers': {
+      g.add(mesh(new THREE.ConeGeometry(0.1, 0.22, 8), 0xfff1d6, 0, -0.1, 0)); // paper cone
+      for (const [x, z, c] of [[0, 0, 0xff6fa8], [-0.07, 0.03, 0xffd23f], [0.07, 0.03, 0xff9ec7], [0, -0.07, 0xc9a7f0]] as [number, number, number][]) g.add(mesh(new THREE.SphereGeometry(0.07, 6, 5), c, x, 0.1, z));
+      break;
+    }
     case 'chair':
       g.add(mesh(new THREE.BoxGeometry(0.5, 0.06, 0.5), 0xc9b8e8, 0, 0, 0));
       g.add(mesh(new THREE.BoxGeometry(0.5, 0.45, 0.05), 0xc9b8e8, 0, 0.25, 0.22));
