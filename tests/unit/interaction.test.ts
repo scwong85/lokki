@@ -145,3 +145,22 @@ describe('poop', () => {
     tuning.poop.assistStrength.value = 0.8;
   });
 });
+
+describe('market goods replace the sandbox', () => {
+  it('the quest items lie around the market and the square, not in a test area', async () => {
+    const { buildLandmarks } = await import('../../src/world/landmarks');
+    const city = (await import('../../data/generated/kauppatori.json')).default as unknown as { landmarks: Parameters<typeof buildLandmarks>[0] };
+    const out = buildLandmarks(city.landmarks);
+    const count = (t: string) => out.props.filter((p) => p.type === t).length;
+    expect(city.landmarks.some((l) => l.type === 'sandbox')).toBe(false);
+    expect(count('salmiakki')).toBeGreaterThanOrEqual(2); // the swap quest
+    expect(count('bun')).toBeGreaterThanOrEqual(5); // bun ring + the stall pastry
+    expect(count('chair')).toBe(4); // the finale's chair stack
+    expect(count('toy')).toBe(1);
+    expect(out.props.filter((p) => p.type === 'bin').length).toBeGreaterThanOrEqual(3);
+    // goods sit on counters (about 1 m up), the toy is near the market, not across the map
+    expect(out.props.filter((p) => p.type === 'salmiakki').every((p) => p.y > 1.0 && p.y < 1.5)).toBe(true);
+    const toy = out.props.find((p) => p.type === 'toy')!;
+    expect(Math.hypot(toy.x, toy.z)).toBeLessThan(120);
+  });
+});

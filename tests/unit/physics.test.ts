@@ -134,4 +134,22 @@ describe('props and physics', () => {
     expect(b.filter((e) => e.type === 'poopDrop')).toHaveLength(0);
     expect(it.poopCd).toBeGreaterThan(0);
   });
+  it('an item knocked out of the beak is marked lost until it is picked up again', () => {
+    const { it, gull, run } = setup();
+    const p = it.props.spawn({ type: 'bun', x: 0, y: restY('bun'), z: -1 });
+    run(0.3);
+    run(DT, { ...none, grab: true });
+    expect(it.carried).toBe(p);
+    expect(p.lost).toBe(false);
+    expect(it.dropCarried(gull)).toBe(p); // sprayed, swatted or netted
+    expect(p.lost).toBe(true);
+    expect(it.carried).toBeNull();
+    // put it back in front of the gull and take it again: no longer lost
+    p.ignoreGrab = 0;
+    p.body.setTranslation({ x: 0, y: restY('bun'), z: -1 }, true);
+    run(0.8);
+    run(DT, { ...none, grab: true });
+    expect(it.carried).toBe(p);
+    expect(p.lost).toBe(false);
+  });
 });

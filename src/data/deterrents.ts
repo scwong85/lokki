@@ -25,6 +25,13 @@ export const LINES: Seg[] = [
   ...COLS.map((x): Seg => ({ a: [x, LINE_Y, DEFENSE_ZONE.minZ], b: [x, LINE_Y, DEFENSE_ZONE.maxZ] })),
 ];
 
+/** Tall poles the net hangs from. */
+export const NET_POSTS: [number, number][] = [
+  [DEFENSE_ZONE.minX, DEFENSE_ZONE.minZ], [DEFENSE_ZONE.maxX, DEFENSE_ZONE.minZ],
+  [DEFENSE_ZONE.minX, DEFENSE_ZONE.maxZ], [DEFENSE_ZONE.maxX, DEFENSE_ZONE.maxZ],
+  [0, DEFENSE_ZONE.minZ], [0, DEFENSE_ZONE.maxZ],
+];
+
 /** Poles the lines hang from. */
 export const LINE_POSTS: [number, number][] = [
   ...ROWS.flatMap((z): [number, number][] => [[DEFENSE_ZONE.minX, z], [DEFENSE_ZONE.maxX, z]]),
@@ -33,7 +40,7 @@ export const LINE_POSTS: [number, number][] = [
 ];
 
 /** A net over the whole area: catches gulls diving down into it, but gulls learn to fly in under it (and can climb out through it). */
-export const NET_Y = 5.0; // high enough that a gull flying under it can still start a dive (needs dive.minHeight of clearance)
+export const NET_Y = 8.0; // high: plenty of room to fly and dive under it (it is meant to stop dives from above, not flying)
 export const NET_ZONE: Zone = { ...DEFENSE_ZONE, maxY: NET_Y - 0.5 }; // "under the net"
 export const LINE_ZONE: Zone = { ...DEFENSE_ZONE, maxY: 6 };
 

@@ -3,7 +3,10 @@ import { expect, test } from '@playwright/test';
 type Lokki = {
   gull: { state: { x: number; y: number; z: number; vx: number; vy: number; vz: number; heading: number; mode: string } };
   cam: { yaw: number; pitch: number };
-  interaction: { carried: { def: { name: string } } | null };
+  interaction: {
+    carried: { def: { name: string } } | null;
+    props: { props: { type: string; body: { translation: () => { x: number; y: number; z: number } } }[] };
+  };
   quests: { quests: { id: string; objectives: { id: string; done: boolean }[] }[] };
 };
 
@@ -31,20 +34,22 @@ test('smashing a bottle does not crash or freeze the game (regression: removed R
     }, [x, y, z]);
   const frames = () => page.evaluate(() => (window as unknown as { __raf: () => number }).__raf());
 
-  await place(0, 0.5, -75.6); // in front of the sandbox bottles
+  // stand in front of a bottle on a stall counter and take it
+  const bottle = await page.evaluate(() => (window as unknown as { __lokki: Lokki }).__lokki.interaction.props.props.find((p) => p.type === 'bottle')!.body.translation());
+  await place(bottle.x, 0.5, bottle.z + 1.8);
   await page.waitForTimeout(800);
   await page.keyboard.press('KeyE');
   await page.waitForTimeout(400);
   expect(await page.evaluate(() => (window as unknown as { __lokki: Lokki }).__lokki.interaction.carried?.def.name)).toBe('bottle');
 
-  await place(0, 9, -75.6);
+  await place(60, 9, 60); // up in the air over the open harbour: nothing to land on but the ground, whatever the timing
   await page.waitForTimeout(100);
   await page.keyboard.press('KeyE'); // drop it from 9 m
   // wait for the bottle to land and shatter (the headless renderer is slow, so wait on the condition, not on a fixed time)
   await page.waitForFunction(
     () => (window as unknown as { __lokki: Lokki }).__lokki.quests.quests.find((q) => q.id === 'extras')!.objectives.find((o) => o.id === 'bottle')!.done,
     null,
-    { timeout: 20_000 },
+    { timeout: 40_000 },
   );
   const a = await frames();
   await page.waitForTimeout(1000);

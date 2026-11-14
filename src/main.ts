@@ -40,6 +40,7 @@ import { WRONG_FERRY } from './data/places';
 import { LevelStats } from './gameplay/levelStats';
 import { LevelComplete } from './ui/levelComplete';
 import { activeMarkers } from './gameplay/questMarkers';
+import type { Marker } from './data/quests';
 import { MarkerPool } from './render/markers';
 import { Waypoints } from './ui/waypoints';
 
@@ -309,6 +310,9 @@ function onNpcEvents(evs: NpcEvent[]): void {
       audio.play('yelp');
       hud.toast('Yuck! Salmiakki!', 1.6);
       notes(quests.onEvent('yuck'));
+    } else if (e.type === 'reclaimed') {
+      audio.play('pop');
+      hud.toast('They took it back!', 1.4);
     } else if (e.type === 'cheer') {
       audio.play('chime');
       hud.toast('The child hugs the teddy!', 2);
@@ -487,7 +491,12 @@ startLoop({
     npcs?.render(simTime, interaction.beakPos(gull.state), cam.camera.quaternion);
     defense?.render(simTime, frameDt);
     if (defense && heatMeter) heatMeter.update(defense.heat, defense.response, defense.hawkReady, defense.hawkActive);
-    const markers = greybox ? [] : activeMarkers(QUESTS, quests.quests);
+    // quest spots, plus a marker on any item that was knocked out of the beak (so it can never be lost)
+    const markers: Marker[] = greybox ? [] : activeMarkers(QUESTS, quests.quests);
+    for (const p of interaction.props.props) {
+      if (!p.lost || p.broken || p.carried || p.heldBy !== null || markers.length >= 8) continue;
+      markers.push({ x: p.cur.p.x, z: p.cur.p.z, r: 1.6, y: Math.max(0, p.cur.p.y - 0.3), label: `Dropped ${p.def.name}` });
+    }
     markerPool.update(markers, simTime);
     waypoints.update(markers, cam.camera, gull.position, innerWidth, innerHeight);
     todo.update(quests.quests, npcs ? npcs.nearestDistance(gull.state) : Infinity, interaction.carried?.stolen === true);

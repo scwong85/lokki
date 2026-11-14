@@ -1,5 +1,5 @@
 /** Quest definitions (plain data, PLAN §4.3). The quest log (src/gameplay/quest.ts) runs them. */
-import { BUN_CHECKPOINTS, CHILD_SPOT, CLOCK, FERRY, FERRY_CABIN_ROOFS, FERRY_DECK, SANDBOX, STATUE, TOY_SPOT, WRONG_FERRY } from './places';
+import { BUN_CHECKPOINTS, CAFE, CHILD_SPOT, CLOCK, FERRY, FERRY_CABIN_ROOFS, FERRY_DECK, STATUE, TOY_SPOT, WRONG_FERRY, counter } from './places';
 
 /** Quest events are plain strings emitted by the game ('snatch:icecream', 'grab:statueCap', 'tipChair', ...). */
 export type QuestEventType = string;
@@ -77,8 +77,8 @@ export const QUESTS: QuestDef[] = [
       { id: 'steal', text: 'Steal the sweets from the lilac tourist', kind: 'event', event: 'snatch:candy', hint: STEAL_TIP },
       {
         id: 'swap', text: 'Leave her a bag of salmiakki', kind: 'event', event: 'tookItem:salmiakki', after: 'steal',
-        hint: 'Salmiakki bags (black) are in the sandbox. Drop one near her and let her pick it up.',
-        markers: [{ x: SANDBOX.x, z: SANDBOX.z + 5, r: 3, label: 'Salmiakki bags' }],
+        hint: 'Black salmiakki bags lie on the candy-stall counters at the north row of the market. Drop one near her and she will pick it up.',
+        markers: [{ ...counter(2, 0), r: 3, label: 'Salmiakki stall' }],
       },
       { id: 'watch', text: 'Watch her face', kind: 'event', event: 'yuck', after: 'swap' },
     ],
@@ -103,8 +103,9 @@ export const QUESTS: QuestDef[] = [
     timed: false,
     startOn: ['grab:bun'],
     startHeat: 20,
+    startMarkers: [{ ...counter(3, 1), r: 3, label: 'Cinnamon buns' }],
     objectives: [
-      { id: 'bun1', text: 'Carry a bun past the first vendor', kind: 'event', event: 'bun1', hint: 'Buns are in the sandbox. The vendors will spray you: dodge the red fan.', markers: [{ ...BUN_CHECKPOINTS[0], label: 'Vendor 1' }] },
+      { id: 'bun1', text: 'Carry a bun past the first vendor', kind: 'event', event: 'bun1', hint: 'Buns lie on the middle-row counters. Vendors only spray below 4.5 m: fly past above that, or dodge the red fans.', markers: [{ ...BUN_CHECKPOINTS[0], label: 'Vendor 1' }] },
       { id: 'bun2', text: '...the second vendor', kind: 'event', event: 'bun2', after: 'bun1', markers: [{ ...BUN_CHECKPOINTS[1], label: 'Vendor 2' }] },
       { id: 'bun3', text: '...and the third', kind: 'event', event: 'bun3', after: 'bun2', markers: [{ ...BUN_CHECKPOINTS[2], label: 'Vendor 3' }] },
     ],
@@ -136,11 +137,11 @@ export const QUESTS: QuestDef[] = [
   {
     id: 'toy',
     title: 'Lost teddy',
-    teaser: 'A child on the quay lost a teddy bear far to the west. Be a good bird and bring it back.',
+    teaser: 'A child on the quay lost a teddy bear behind the market stalls. Be a good bird and bring it back.',
     timed: false,
     startOn: ['grab:toy'],
     objectives: [
-      { id: 'find', text: 'Find the teddy bear in the Esplanadi park', kind: 'event', event: 'grab:toy', hint: 'Follow the yellow pillar west, about 330 m.', markers: [{ x: TOY_SPOT.x, z: TOY_SPOT.z, r: 4, label: 'Teddy bear' }] },
+      { id: 'find', text: 'Find the teddy bear behind the market stalls', kind: 'event', event: 'grab:toy', hint: 'Follow the yellow pillar to the north of the stalls.', markers: [{ x: TOY_SPOT.x, z: TOY_SPOT.z, r: 4, label: 'Teddy bear' }] },
       { id: 'return', text: 'Bring it to the child on the quay', kind: 'event', event: 'tookItem:toy', after: 'find', hint: 'Drop it (E) next to the child and they will pick it up.', markers: [{ x: CHILD_SPOT.x, z: CHILD_SPOT.z, r: 3, label: 'Child' }] },
     ],
   },
@@ -155,7 +156,7 @@ export const QUESTS: QuestDef[] = [
     startHeat: 80,
     startMarkers: [{ x: FERRY.x - 5, z: FERRY.z, r: 5, y: FERRY_CABIN_ROOFS.minY + 2.2, label: 'Ferry horn' }],
     objectives: [
-      { id: 'chairs', text: 'Collapse the chair stack', kind: 'event', event: 'tipChair', count: 3, hint: 'Dive into the stack in the sandbox.' },
+      { id: 'chairs', text: 'Collapse the chair stack', kind: 'event', event: 'tipChair', count: 3, hint: 'Dive into the café chair stack at the west edge of the square.', markers: [{ ...CAFE, r: 3, label: 'Chair stack' }] },
       { id: 'pastry', text: 'Swipe the pastry from the stall counter', kind: 'event', event: 'grab:stallBun', hint: 'It sits on a counter of the south row of stalls (follow the yellow pillar), right in front of a vendor.', markers: [{ x: 8, z: -30, r: 3, label: 'Pastry' }] },
       { id: 'warden', text: 'Poop on the Gull Warden', kind: 'event', event: 'poopWarden', hint: 'Distract him with a noise first so the umbrella tips aside.' },
     ],

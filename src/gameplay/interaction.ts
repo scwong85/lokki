@@ -227,6 +227,7 @@ export class Interaction {
     const p = this.carried;
     if (!p) return null;
     this.props.release(p, { x: s.vx * 0.3, y: 2, z: s.vz * 0.3 });
+    p.lost = true; // knocked out of the beak: mark it so it cannot be lost
     this.carried = null;
     this.grabCd = 0.5;
     return p;

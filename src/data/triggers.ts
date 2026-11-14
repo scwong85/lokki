@@ -10,5 +10,5 @@ export const TRIGGERS: TriggerDef[] = [
   // finale: land on the ferry's cabin roof to ring the horn
   { id: 'finaleStart', kind: 'gullInZone', event: 'finaleStart', zone: FERRY_CABIN_ROOFS, grounded: true },
   // bun ring: a bun past each of the three vendors, in order
-  { id: 'bunRing', kind: 'carryCheckpoints', propType: 'bun', points: BUN_CHECKPOINTS, events: ['bun1', 'bun2', 'bun3'], maxY: 5 },
+  { id: 'bunRing', kind: 'carryCheckpoints', propType: 'bun', points: BUN_CHECKPOINTS, events: ['bun1', 'bun2', 'bun3'], maxY: 6 },
 ];

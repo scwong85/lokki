@@ -27,12 +27,13 @@ describe('level stats', () => {
 });
 
 describe('quest markers', () => {
-  it('before anything starts, quests whose first step is their start point at it: the statue, the clock, the toy', () => {
+  it('before anything starts, quests point at where to begin: the statue, the clock, the toy and the bun counter', () => {
     const q = new QuestLog(QUESTS);
     const m = activeMarkers(QUESTS, q.quests);
     const at = (p: { x: number; z: number }) => m.some((k) => k.x === p.x && k.z === p.z);
     expect([at(STATUE), at(CLOCK), at(TOY_SPOT)]).toEqual([true, true, true]);
-    expect(m).toHaveLength(3);
+    expect(m.map((k) => k.label)).toContain('Cinnamon buns');
+    expect(m).toHaveLength(4);
   });
   it('after taking the cap the statue marker is replaced by the ferry', () => {
     const q = new QuestLog(QUESTS);

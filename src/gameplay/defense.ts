@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { createRng, type Rng } from '../core/rng';
 import { tuning } from '../core/tuning';
-import { DEFENSE_ZONE as ZONE, LINES, LINE_POSTS, LINE_ZONE, NET_Y, NET_ZONE, VENDOR_SPAWNS, WARDEN_PATROL, WARDEN_SPAWN } from '../data/deterrents';
+import { DEFENSE_ZONE as ZONE, LINES, LINE_POSTS, LINE_ZONE, NET_POSTS, NET_Y, NET_ZONE, VENDOR_SPAWNS, WARDEN_PATROL, WARDEN_SPAWN } from '../data/deterrents';
 import { CityResponse, ZoneTracker, segmentHit, type DeterrentId, type GullHit } from './deterrents';
 import { Heat, type HeatReason, type TierChange } from './heat';
 import { newVendor, stepVendor, vendorPooped, type Vendor } from './vendor';
@@ -44,6 +44,7 @@ export class CityDefense {
   private netGroup = new THREE.Group();
   private netMat: THREE.MeshBasicMaterial;
   private netLines: THREE.LineSegments;
+  private netPosts: THREE.Mesh[] = [];
   private lineMat: THREE.MeshBasicMaterial;
   private install: { lines: number; nets: number } = { lines: 0, nets: 0 };
   private zones = { lines: new ZoneTracker(LINE_ZONE), nets: new ZoneTracker(NET_ZONE) };
@@ -111,6 +112,13 @@ export class CityDefense {
     this.netLines.position.set(-(ZONE.minX + ZONE.maxX) / 2, 0, -(ZONE.minZ + ZONE.maxZ) / 2);
     this.netGroup.visible = false;
     this.group.add(this.netGroup);
+    for (const [x, z] of NET_POSTS) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, NET_Y, 6), new THREE.MeshLambertMaterial({ color: 0x8a8fa0 }));
+      post.position.set(x, NET_Y / 2, z);
+      post.visible = false;
+      this.group.add(post);
+      this.netPosts.push(post);
+    }
 
     const telegraphMat = () => new THREE.MeshBasicMaterial({ color: 0xff4d4d, transparent: true, opacity: 0.4, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -8 });
     VENDOR_SPAWNS.forEach(() => {
@@ -394,6 +402,7 @@ export class CityDefense {
 
     const nets = this.response.deployed.has('nets');
     this.netGroup.visible = nets;
+    for (const p of this.netPosts) p.visible = nets;
     const nf = this.install.nets;
     this.netMat.opacity = (hawk ? 0.4 : 0.1) * nf;
     this.netMat.color.setHex(hawk ? HAWK_COLOR : 0xffffff);

@@ -2,7 +2,8 @@ import cityJson from '../../data/generated/kauppatori.json';
 import { VENDOR_SPAWNS } from './deterrents';
 
 /** Named places on the map, read from the generated landmark list so quests and landmarks never drift apart. */
-const landmarks = (cityJson as unknown as { landmarks: { id: string; x: number; z: number }[] }).landmarks;
+type Landmark = { id: string; x: number; z: number; cols?: number; rows?: number; dx?: number; dz?: number };
+const landmarks = (cityJson as unknown as { landmarks: Landmark[] }).landmarks;
 const lm = (id: string) => {
   const l = landmarks.find((x) => x.id === id);
   if (!l) throw new Error(`landmark ${id} missing from data/generated/kauppatori.json (run npm run data:build)`);
@@ -11,8 +12,15 @@ const lm = (id: string) => {
 
 export const STATUE = lm('havis-amanda');
 export const FERRY = lm('ferry');
-export const SANDBOX = lm('sandbox');
+export const CAFE = lm('cafe');
 export const CLOCK = lm('clock');
+
+/** A stall counter of the market (column c 0..8 west to east, row r 0..2 north to south), read from the landmark so quests never drift. */
+const tents = landmarks.find((l) => l.id === 'market-tents')!;
+export const counter = (c: number, r: number): { x: number; z: number } => {
+  const cols = tents.cols ?? 9, rows = tents.rows ?? 3, dx = tents.dx ?? 8, dz = tents.dz ?? 14;
+  return { x: tents.x + (c - (cols - 1) / 2) * dx, z: tents.z + (r - (rows - 1) / 2) * dz };
+};
 export const TOY_SPOT = lm('lost-toy');
 /** The child who lost the teddy waits on the quay. */
 export const CHILD_SPOT = { x: 22, z: -9 };
@@ -29,4 +37,5 @@ export const FUNNEL_ZONE = { minX: FERRY_FUNNEL.x - 2, maxX: FERRY_FUNNEL.x + 2,
 /** Where the tourist whose map ended up in the sea walks to: the quay in front of the wrong ferry. */
 export const WRONG_FERRY = { x: FERRY.x, z: -6 };
 /** The three vendors a bun must get past (south row, in front of their counters). */
-export const BUN_CHECKPOINTS = VENDOR_SPAWNS.slice(0, 3).map((v) => ({ x: v.x, z: v.z + 4.2, r: 3.2 }));
+/** Wide, so you can fly past (above the spray's 4.5 m reach) as well as walk. */
+export const BUN_CHECKPOINTS = VENDOR_SPAWNS.slice(0, 3).map((v) => ({ x: v.x, z: v.z + 4.2, r: 5 }));

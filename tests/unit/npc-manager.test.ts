@@ -87,4 +87,28 @@ describe('NpcManager: items, roles and goals', () => {
     npcs.poopSpheres();
     expect(npcs.onPooped(0)).toBe('dater');
   });
+
+  it('a tourist takes their own stolen item back when it is dropped in front of them', () => {
+    const { props, npcs, run } = setup([{ x: 0, z: 0, heading: 0, holds: 'map', color: 0 }]);
+    const map = props.byId(npcs.npcs[0].holding!)!;
+    // the gull snatches it (as Interaction does) ...
+    npcs.onSnatched(map.id);
+    props.grab(map);
+    expect(npcs.npcs[0].holding).toBeNull();
+    // ... and later drops it 1.2 m in front of the owner, once the owner has calmed down
+    props.release(map, { x: 0, y: 0, z: 0 });
+    map.body.setTranslation({ x: 0.5, y: 0.3, z: -1.0 }, true);
+    const ev = run(10);
+    expect(ev.some((e) => e.type === 'reclaimed' && e.propType === 'map')).toBe(true);
+    expect(npcs.npcs[0].holding).toBe(map.id);
+  });
+  it('they do not take back something that is far away (the map in the sea)', () => {
+    const { props, npcs, run } = setup([{ x: 0, z: 0, heading: 0, holds: 'map', color: 0 }]);
+    const map = props.byId(npcs.npcs[0].holding!)!;
+    npcs.onSnatched(map.id);
+    props.grab(map);
+    props.release(map, { x: 0, y: 0, z: 0 });
+    map.body.setTranslation({ x: 30, y: 0.3, z: 30 }, true);
+    expect(run(8).some((e) => e.type === 'reclaimed')).toBe(false);
+  });
 });

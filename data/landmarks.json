@@ -32,12 +32,6 @@
       "rotationDeg": 0
     },
     {
-      "id": "sandbox",
-      "type": "sandbox",
-      "x": 0,
-      "z": -82
-    },
-    {
       "id": "quay-lamps",
       "type": "lamps",
       "line": [
@@ -55,10 +49,38 @@
       "z": -9
     },
     {
+      "id": "market-goods",
+      "type": "goods",
+      "x": 0,
+      "z": -44,
+      "cols": 9,
+      "rows": 3,
+      "dx": 8,
+      "dz": 14
+    },
+    {
+      "id": "street-bins",
+      "type": "bins",
+      "line": [
+        -12,
+        -12,
+        18,
+        -8,
+        30,
+        -13
+      ]
+    },
+    {
+      "id": "cafe",
+      "type": "cafe",
+      "x": -33,
+      "z": -24
+    },
+    {
       "id": "lost-toy",
       "type": "toy",
-      "x": -320,
-      "z": -80
+      "x": -8,
+      "z": -78
     }
   ]
 }

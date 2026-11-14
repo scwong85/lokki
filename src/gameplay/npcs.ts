@@ -86,6 +86,7 @@ export class NpcManager implements NpcHooks {
     for (const n of this.npcs) {
       ev.push(...stepNpc(n, gull, this.noises, dt, ctx));
       ev.push(...this.wantedItems(n));
+      ev.push(...this.reclaim(n));
       // solid walls, counters and landmarks push the tourist out (horizontal only)
       const p = { x: n.x, y: 0.9, z: n.z };
       this.world.collide(p, BODY_RADIUS);
@@ -239,6 +240,25 @@ export class NpcManager implements NpcHooks {
     if (!n) return undefined;
     this.pending.push(...startle(n, 'pooped'));
     return n.role;
+  }
+
+  /** A tourist takes back their own stolen item if it lies close by (dropped in front of them) and they are calm. */
+  private reclaim(n: Npc): NpcEvent[] {
+    if (n.holding !== null || !(n.mode === 'idle' || n.mode === 'walk' || n.mode === 'recover')) return [];
+    for (const [propId, owner] of this.victimOf) {
+      if (owner !== n.id) continue;
+      const p = this.props.byId(propId);
+      if (!p || p.broken || p.carried || p.heldBy !== null || p.ignoreGrab > 0) continue;
+      const t = p.body.translation();
+      if (t.y > 1.2 || Math.hypot(t.x - n.x, t.z - n.z) > 2.2) continue;
+      this.props.attach(p, n.id);
+      p.stolen = false;
+      p.lost = false;
+      n.holding = p.id;
+      n.holdType = p.type;
+      return [{ type: 'reclaimed', npc: n, propType: p.type }];
+    }
+    return [];
   }
 
   /** Send everyone with this role off to places (the ruined date storms off in opposite directions). */
