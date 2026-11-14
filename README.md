@@ -39,7 +39,7 @@ npm run data:fetch # re-download the raw snapshot from Helsinki open data (needs
 | V / G / B | skills: crow call (Mimic), flock call, pigeon disguise (once earned) |
 | K | skills panel |
 | X / Z | extra objectives on/off, start a speedrun (after clearing the finale) |
-| M | mute / unmute |
+| M | mute / unmute (sound and music) |
 | C | credits |
 | F3 | debug panel: live tuning, "Copy tuning as JSON" |
 
@@ -51,7 +51,7 @@ Sound effects are synthesised at runtime with WebAudio. Music is public-domain /
 
 - **Buildings, streets, parks, coastline:** City of Helsinki open data (Helsingin kaupunki), licence [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), © City of Helsinki. Layers and processing are recorded in [`data/raw/SOURCES.md`](data/raw/SOURCES.md).
 - **Sound effects:** synthesised at runtime, no sample files.
-- **Music** (public domain / CC0 recordings from Wikimedia Commons; details in [`data/raw/SOURCES.md`](data/raw/SOURCES.md)): Mendelssohn, *The Hebrides* Overture (Musopen Symphony Orchestra); Satie, *Gymnopédie* no. 1 (Robin Alciatore); Joplin, "Maple Leaf Rag" (US Air Force Band Strolling Strings); Offenbach, "Galop infernal" (Gnissah); Rimsky-Korsakov, "Flight of the Bumblebee" (Jaan Patterson, CC0).
+- **Music** (public domain / CC0 recordings from Wikimedia Commons; details in [`data/raw/SOURCES.md`](data/raw/SOURCES.md)): Mendelssohn, *The Hebrides* Overture (Musopen Symphony Orchestra); Satie, *Gymnopédie* no. 1 (Robin Alciatore); Joplin, "Maple Leaf Rag" (US Air Force Band Strolling Strings); Offenbach, "Galop infernal" (Gnissah).
 - Landmarks (cathedral, tents, ferry, statue) are original stylised props.
 
 ## Licence

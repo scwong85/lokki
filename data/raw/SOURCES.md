@@ -34,6 +34,5 @@ Public-domain / CC0 recordings from Wikimedia Commons, re-encoded to Ogg Vorbis 
 | `calm-gymnopedie.ogg` | Satie, *Gymnopédie* no. 1, Robin Alciatore (via Musopen) | `Erik Satie - gymnopedies - la 1 ere. lent et douloureux.ogg` | Public domain | none |
 | `playful-maple-leaf-rag.ogg` | Joplin, "Maple Leaf Rag", US Air Force Band "Strolling Strings" | `Maple Leaf Rag - Strolling Strings - United States Air Force Band.mp3` | Public domain (US federal government work) | none |
 | `chaos-galop-infernal.ogg` | Offenbach, "Galop infernal" (*Orpheus in the Underworld*), by Gnissah | `Jacques Offenbach - Galop Infernal from Orpheus in the Underworld (Can Can) (1858).ogg` | Public domain (own work) | none |
-| `chaos-bumblebee.ogg` | Rimsky-Korsakov, "Flight of the Bumblebee", Jaan Patterson | `Jaan Patterson - 02 - The Flight of the Bumblebee Nikolai Andrejewitsch Rimski-Korsakow.ogg` | CC0 | none |
 
 The compositions are all long out of copyright. Known caveat: the Joplin recording's ID3 tag lists ASCAP/BMI (publishing metadata); Commons classifies it as a US government work.

@@ -211,6 +211,9 @@ export const tuning = {
     master: p(0.5, 0, 1, 0.05),
     sfx: p(0.8, 0, 1, 0.05),
     wind: p(0.5, 0, 1, 0.05), // air-rush loudness
+    music: p(0.5, 0, 1, 0.05), // music loudness (times master)
+    musicFade: p(3, 0.5, 10, 0.5), // seconds to crossfade between music tiers
+    musicDownDelay: p(12, 0, 60, 1), // seconds the heat must stay lower before the music calms down
   },
   render: {
     fogNear: p(150, 0, 400, 1),

@@ -49,6 +49,8 @@ import { SkillSet } from './gameplay/skills';
 import { Abilities, aheadOf } from './gameplay/abilities';
 import { FlockSystem, PingFx } from './render/flock';
 import { RunTimer, isBest } from './gameplay/runTimer';
+import { MusicPlayer } from './core/music';
+import { MusicDirector } from './gameplay/musicDirector';
 import { SkillsPanel } from './ui/skillsPanel';
 import { RunHud } from './ui/runHud';
 
@@ -128,6 +130,9 @@ const skills = new SkillSet();
 skills.restore(save.skills);
 const abilities = new Abilities();
 const runTimer = new RunTimer();
+const music = new MusicPlayer();
+const musicDirector = new MusicDirector();
+music.muted = save.muted;
 // restore progress from the save (silent)
 if (save.replayUnlocked && save.extrasOn) quests.setFlag('replay', true);
 quests.restoreWon(save.questsWon);
@@ -148,7 +153,7 @@ const marker = new DiveMarker();
 scene.add(gull.mesh, gull.shadow, marker.group);
 const cam = new FollowCamera(innerWidth / innerHeight);
 const input = new Input(renderer.domElement);
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, defense, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, store, saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, defense, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -158,7 +163,7 @@ const hud = new Hud(document.body);
 const credits = new Credits(document.body);
 const audio = new AudioManager();
 audio.muted = save.muted;
-for (const ev of ['pointerdown', 'keydown'] as const) addEventListener(ev, () => audio.unlock());
+for (const ev of ['pointerdown', 'keydown'] as const) addEventListener(ev, () => { audio.unlock(); music.start(); });
 let simTime = 0;
 let hits = 0;
 let lastBump = -10;
@@ -221,6 +226,7 @@ function restartLevel(mode: 'normal' | 'speedrun'): void {
   levelComplete.hide();
   abilities.reset();
   flock.clear();
+  musicDirector.reset();
   if (mode === 'speedrun') runTimer.startSpeedrun();
   else runTimer.setNormal();
   persist();
@@ -471,6 +477,8 @@ function onGags(gags: GagEvent[]): void {
 startLoop({
   update(dt) {
     simTime += dt;
+    music.setTier(musicDirector.update(dt, defense?.heat.tier ?? 0, quests.quests.some((q) => q.id === 'finale' && q.status === 'active')));
+    music.update(dt);
     const m = input.consumeMouse();
     if (!skillsPanel.visible) cam.rotate(m.dx, m.dy);
     if (input.wasPressed('KeyR')) restartLevel('normal');
@@ -495,6 +503,7 @@ startLoop({
     if (input.wasPressed('KeyH') && defense?.activateHawk()) hud.toast('Hawk-eye!', 0.8);
     if (input.wasPressed('KeyM')) {
       hud.toast(audio.toggleMute() ? 'Sound off' : 'Sound on', 0.8);
+      music.muted = audio.muted;
       persist();
     }
     if (skillsPanel.visible) {
