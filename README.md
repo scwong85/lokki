@@ -78,7 +78,7 @@ tests/        unit (Vitest) and browser smoke tests (Playwright)
 
 ## Deploy
 
-`.github/workflows/deploy.yml` builds and publishes `dist/` to GitHub Pages whenever `main` changes (enable it once under Settings -> Pages -> Source: GitHub Actions). Any other static host works too: upload the contents of `dist/`.
+`.github/workflows/deploy.yml` builds and publishes `dist/` to GitHub Pages whenever the default branch changes (enable it once under Settings -> Pages -> Source: GitHub Actions). Any other static host works too: upload the contents of `dist/`.
 
 ## Audio
 

@@ -1,10 +1,10 @@
-# Builds the static game and publishes dist/ to GitHub Pages when main changes.
+# Builds the static game and publishes dist/ to GitHub Pages when the default branch changes (or on demand).
 # One-time setup: repo Settings -> Pages -> Source: "GitHub Actions".
 name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, claude/pensive-brown-k9ioja]
   workflow_dispatch:
 
 permissions:
