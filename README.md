@@ -39,9 +39,36 @@ npm run data:fetch # re-download the raw snapshot from Helsinki open data (needs
 | V / G / B | skills: crow call (Mimic), flock call, pigeon disguise (once earned) |
 | K | skills panel |
 | X / Z | extra objectives on/off, start a speedrun (after clearing the finale) |
+| O | options (volumes, mouse look, screen shake) |
+| T | skip the first-flight tips |
 | M | mute / unmute (sound and music) |
 | C | credits |
 | F3 | debug panel: live tuning, "Copy tuning as JSON" |
+
+## How it is built
+
+- **Static and offline.** `npm run build` makes a self-contained `dist/` (relative paths, so it works under any sub-path). Nothing is fetched from third-party servers at runtime; the city is baked from a committed data snapshot, music is bundled, sound effects are synthesised.
+- **Fixed-timestep simulation** (60 Hz) with render interpolation (`src/core/loop.ts`). Gameplay never depends on the frame rate; randomness is seeded.
+- **Data-driven content.** Quests, skills, deterrents, props, NPC roles, triggers and music are plain typed data in `src/data/`; the logic in `src/gameplay/` reads them.
+- **Pure logic, thin rendering.** Flight, heat, NPC brains, quests, skills, saving, abilities, music direction and the tutorial are pure TypeScript with Vitest tests; rendering code only mirrors state.
+- **One tuning object.** Every feel parameter lives in `src/core/tuning.ts` and shows up in the F3 debug panel ("Copy tuning as JSON").
+- **World pipeline.** `npm run data:build` turns the raw Helsinki open-data snapshot (`data/raw/`) into `data/generated/kauppatori.json`; buildings are chunk-merged meshes, static collision comes from the same data, and Rapier only simulates loose props.
+- **The city fights back.** Heat tiers deploy vendors, scare lines, nets and the Gull Warden; each deterrent has a "learned" counter, so repeated dodges weaken it and the city brings in something new.
+
+```
+src/core      loop, input, tuning, audio, music, save/options
+src/gull      flight state machine, procedural model and animation
+src/world     city chunks, landmarks, collision
+src/gameplay  props, interaction, NPC brains, heat, deterrents, quests, skills
+src/render    camera, markers, decals, debris, flocks
+src/ui        HUD, to-do note, menus, panels
+src/data      quests, skills, props, music, tutorial (plain data)
+tests/        unit (Vitest) and browser smoke tests (Playwright)
+```
+
+## Deploy
+
+`.github/workflows/deploy.yml` builds and publishes `dist/` to GitHub Pages whenever `main` changes (enable it once under Settings -> Pages -> Source: GitHub Actions). Any other static host works too: upload the contents of `dist/`.
 
 ## Audio
 

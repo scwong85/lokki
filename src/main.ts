@@ -51,6 +51,10 @@ import { FlockSystem, PingFx } from './render/flock';
 import { RunTimer, isBest } from './gameplay/runTimer';
 import { MusicPlayer } from './core/music';
 import { MusicDirector } from './gameplay/musicDirector';
+import { OptionsStore, applyOptions } from './core/options';
+import { OptionsPanel, TitleScreen } from './ui/menus';
+import { Tutorial } from './gameplay/tutorial';
+import { SKILLS } from './data/skills';
 import { SkillsPanel } from './ui/skillsPanel';
 import { RunHud } from './ui/runHud';
 
@@ -161,6 +165,29 @@ debug.addButton('Reset saved progress', () => {
 });
 const hud = new Hud(document.body);
 const credits = new Credits(document.body);
+const optStore = new OptionsStore();
+const options = optStore.load();
+applyOptions(options);
+const optionsPanel = new OptionsPanel(document.body, options, (o) => {
+  applyOptions(o);
+  optStore.save(o);
+});
+// automated browser tests skip the title screen and the tips (add ?title to see them)
+const interactive = !navigator.webdriver || new URLSearchParams(location.search).has('title');
+const tutorial = new Tutorial(interactive && !options.tutorialDone);
+const tipEl = document.createElement('div');
+tipEl.id = 'tip';
+tipEl.hidden = true;
+document.body.appendChild(tipEl);
+function startPlaying(): void {
+  title.hide();
+  audio.unlock();
+  music.start();
+}
+const fmtClear = (t: number | null): string => (t === null ? '' : `${Math.floor(t / 60)}:${String(Math.round(t % 60)).padStart(2, '0')}`);
+const title = new TitleScreen(document.body, { onPlay: startPlaying, onOptions: () => optionsPanel.show(), onCredits: () => credits.toggle() }, { best: fmtClear(save.bestTime), skills: skills.ids.length, total: SKILLS.length });
+if (interactive) title.show();
+const menuOpen = (): boolean => title.visible || optionsPanel.visible || skillsPanel.visible || credits.visible;
 const audio = new AudioManager();
 audio.muted = save.muted;
 for (const ev of ['pointerdown', 'keydown'] as const) addEventListener(ev, () => { audio.unlock(); music.start(); });
@@ -184,22 +211,29 @@ addEventListener('resize', () => {
 
 function onFlightEvents(evs: FlightEvent[]): void {
   for (const e of evs) {
-    if (e.type === 'flap') audio.play('flap');
+    if (e.type === 'flap') {
+      audio.play('flap');
+      tutorial.event('flap');
+    }
     else if (e.type === 'hop') audio.play('hop');
     else if (e.type === 'diveStart') {
+      tutorial.event('dive');
       audio.play('screech');
       gull.openBeak(0.5);
     } else if (e.type === 'exhausted') hud.toast('Out of breath!', 0.6);
     else if (e.type === 'land' && e.quality === 'hard') {
       hud.toast('Oof!');
+      cam.shake(0.7);
       audio.play('thud');
       gull.openBeak(0.8);
     } else if (e.type === 'land' && e.quality === 'rough') {
       hud.toast('Rough landing', 0.6);
+      cam.shake(0.3);
       audio.play('thud');
     } else if (e.type === 'land' && e.perch) hud.toast('Perched', 0.8);
     else if (e.type === 'bonk') {
       hud.toast('Bonk!');
+      cam.shake(0.5);
       audio.play('bonk');
       gull.openBeak(0.8);
     }
@@ -286,6 +320,7 @@ function onDefense(evs: DefenseEvent[]): void {
         const what = { spray: 'Sprayed by a vendor!', swat: 'Swatted by the Warden!', line: 'Tangled in a scare line!', net: 'Caught in the net!' }[e.hit.kind];
         hud.toast(lost ? `${what} Dropped the ${lost.def.name}!` : what, 1.4);
         audio.play(e.hit.kind === 'spray' ? 'splat' : e.hit.kind === 'swat' ? 'bonk' : 'twang');
+        cam.shake(e.hit.kind === 'swat' ? 0.7 : 0.45);
         hud.flash({ spray: '#7ec8ff', swat: '#ffb347', line: '#ffffff', net: '#ffffff' }[e.hit.kind]);
         gull.openBeak(0.7);
         break;
@@ -405,7 +440,11 @@ function onNpcEvents(evs: NpcEvent[]): void {
 function onGags(gags: GagEvent[]): void {
   for (const g of gags) {
     switch (g.type) {
+      case 'poopDrop':
+        tutorial.event('poop');
+        break;
       case 'grab':
+        tutorial.event('grab');
         audio.play('pop');
         gull.openBeak(0.25);
         hud.toast(`Got the ${g.prop.def.name}!`, 0.7);
@@ -445,6 +484,7 @@ function onGags(gags: GagEvent[]): void {
         break;
       case 'break': {
         audio.play('crash');
+        cam.shake(0.45);
         hud.toast('Crash!', 0.9);
         const t = g.prop.cur.p;
         noise(t.x, t.z, 1);
@@ -480,7 +520,19 @@ startLoop({
     music.setTier(musicDirector.update(dt, defense?.heat.tier ?? 0, quests.quests.some((q) => q.id === 'finale' && q.status === 'active')));
     music.update(dt);
     const m = input.consumeMouse();
-    if (!skillsPanel.visible) cam.rotate(m.dx, m.dy);
+    if (title.visible) {
+      cam.yaw += dt * 0.12; // slow drift behind the title
+      if (input.wasPressed('Enter')) startPlaying();
+      input.endStep();
+      return;
+    }
+    if (input.wasPressed('KeyO')) optionsPanel.toggle();
+    if (input.wasPressed('KeyT') && tutorial.running) {
+      tutorial.skip();
+      options.tutorialDone = true;
+      optStore.save(options);
+    }
+    if (!menuOpen()) cam.rotate(m.dx, m.dy);
     if (input.wasPressed('KeyR')) restartLevel('normal');
     if (input.wasPressed('KeyZ')) {
       if (save.replayUnlocked) {
@@ -506,8 +558,8 @@ startLoop({
       music.muted = audio.muted;
       persist();
     }
-    if (skillsPanel.visible) {
-      input.endStep(); // the skills panel pauses the game
+    if (menuOpen()) {
+      input.endStep(); // any open panel pauses the game
       return;
     }
     // active skills
@@ -543,6 +595,11 @@ startLoop({
     if (runTimer.mode === 'speedrun' && !runTimer.running && !runTimer.finished && (input.axes().x !== 0 || input.axes().y !== 0 || input.isDown('Space'))) runTimer.begin();
     runTimer.tick(dt);
     const { x, y } = input.axes();
+    if (x !== 0 || y !== 0) tutorial.event('move');
+    if (tutorial.tick(dt)) {
+      options.tutorialDone = true;
+      optStore.save(options);
+    }
     const wasDive = gull.state.mode === 'dive';
     const evs = gull.update(
       { ax: x, ay: y, flap: input.isDown('Space'),
@@ -654,9 +711,15 @@ startLoop({
     audio.setAir(Math.hypot(s.vx, s.vy, s.vz) / tuning.dive.speed.value, s.mode !== 'ground');
     renderer.render(scene, cam.camera);
     debug.frame(frameDt, `${renderer.info.render.calls} calls · ${(renderer.info.render.triangles / 1000).toFixed(0)}k tris`);
+    const tip = tutorial.current;
+    tipEl.hidden = !(tip || tutorial.outroShowing) || menuOpen();
+    if (!tipEl.hidden) tipEl.innerHTML = tip ? `${tip.text} <small>${tip.keys} · T skips tips</small>` : 'That is the whole trick. The to-do list (top left) has the rest. Go be a menace!';
     hud.update(s, staminaMax(), windAt(simTime), cam.yaw, hits, targets.length, frameDt);
   },
 });
 
 (window as unknown as { __lokkiReady: boolean }).__lokkiReady = true;
+const boot = document.getElementById('boot');
+boot?.classList.add('gone');
+setTimeout(() => boot?.remove(), 700);
 events.emit('ready', undefined);

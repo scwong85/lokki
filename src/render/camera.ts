@@ -18,9 +18,16 @@ export class FollowCamera {
   private look = new THREE.Vector3();
   private fovKick = 0;
   private roll = 0;
+  private shakeT = 0;
+  private time = 0;
 
   constructor(aspect: number) {
     this.camera = new THREE.PerspectiveCamera(tuning.camera.fov.value, aspect, 0.3, 1500);
+  }
+
+  /** Kick the camera (0..1). Strength decays on its own; the options slider scales or disables it. */
+  shake(strength: number): void {
+    this.shakeT = Math.min(1, Math.max(this.shakeT, strength));
   }
 
   rotate(dx: number, dy: number): void {
@@ -48,7 +55,11 @@ export class FollowCamera {
     const rollTarget = Math.max(-0.35, Math.min(0.35, -info.turnRate * t.rollAmount.value));
     this.roll += (rollTarget - this.roll) * (1 - Math.exp(-t.rollSmooth.value * frameDt));
 
+    this.time += frameDt;
+    this.shakeT = Math.max(0, this.shakeT - frameDt * tuning.juice.shakeDecay.value * this.shakeT - frameDt * 0.05);
+    const amp = this.shakeT * this.shakeT * tuning.juice.shake.value * tuning.juice.shakeAmount.value;
     this.camera.position.copy(this.pos);
+    if (amp > 0.0005) this.camera.position.add(new THREE.Vector3(Math.sin(this.time * 61) * amp, Math.sin(this.time * 47 + 1) * amp, Math.sin(this.time * 53 + 2) * amp));
     this.camera.lookAt(this.look);
     this.camera.rotateZ(this.roll);
     const fov = t.fov.value + this.fovKick;

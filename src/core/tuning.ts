@@ -89,6 +89,11 @@ export const tuning = {
     lookAhead: p(0.2, 0, 1, 0.01), // seconds of velocity the camera looks ahead
     minHeight: p(0.6, 0, 3, 0.1),
   },
+  juice: {
+    shake: p(1, 0, 1, 0.1), // screen shake strength (0 = off)
+    shakeDecay: p(5, 1, 20, 0.5), // how fast a shake dies down
+    shakeAmount: p(0.35, 0, 1.5, 0.05), // metres of camera offset at full strength
+  },
   course: {
     targetRespawn: p(8, 1, 60, 0.5),
   },
