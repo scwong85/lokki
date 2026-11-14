@@ -183,7 +183,7 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M4 Interaction core
 - [x] M5 First NPC + quest — **gate 2 passed**
 - [x] M6 Heat and deterrents
-- [ ] M7 Market Square quest pack
+- [x] M7 Market Square quest pack
 - [ ] M8 Skills and saving
 - [ ] M9 Portfolio polish
 
