@@ -184,7 +184,7 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M5 First NPC + quest — **gate 2 passed**
 - [x] M6 Heat and deterrents
 - [x] M7 Market Square quest pack
-- [ ] M8 Skills and saving
+- [x] M8 Skills and saving
 - [ ] M9 Portfolio polish
 
 ### M0 — Foundations (S)
