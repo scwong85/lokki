@@ -86,9 +86,8 @@ Theme of the district: **"Lazy summer, sneaky gull."** The market is about steal
 | Kalle, the rival gull AI (first introduced at the market) | M (shared) |
 | Skills: Cloud Glide, Air Snatch | S each |
 
-## 8. Questions for you
-
-1. Is **"Lazy summer, sneaky gull"** (stealth and chain reactions) the right flavour for Espa?
-2. Keep **both new skills** (Cloud Glide and Air Snatch)?
-3. Is the **department store** level (E9) a good fit, or should Espa stay all park?
-4. Should **Kalle** be a rival here and become a friend at the end, as written?
+## 8. Decisions so far
+- "Lazy summer, sneaky gull" (stealth and chain reactions) is the district's flavour.
+- Both new skills stay: **Cloud Glide** and **Air Snatch**.
+- The department store level (E9) stays.
+- **Kalle** is a rival here and becomes a friend at the end of the district.
