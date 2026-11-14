@@ -23,3 +23,17 @@ Changes made to the WFS responses (nothing else): properties not needed were dro
 - The planned `kartta.hel.fi/3d/citydb-wfs/wfs` endpoint returns 404, and `3d.hel.ninja/data/citygml/` only offers a Kalasatama tile, not Kauppatori. Building heights therefore come from **registry floor counts** (floors × 3.2 m + 0.8 m) instead of CityGML LoD1 heights.
 - OpenStreetMap / Overpass was unreachable from the build sandbox, and the City's own layers cover roads, parks and coastline, so **OSM is not used** (no ODbL data in the repo).
 - Hand-placed landmarks (`data/landmarks.json`) are original stylised props: no third-party data.
+
+## Music (added in M9)
+
+Public-domain / CC0 recordings from Wikimedia Commons, re-encoded to Ogg Vorbis (quality 2, metadata stripped) into `public/audio/music/`. Licence labels are those shown by the Commons file pages (read via the Commons API on 2026-11-14); the originals were downloaded by the project owner. Page URLs are `https://commons.wikimedia.org/wiki/File:<original file name>`.
+
+| Game file | Piece / recording | Original Commons file | Licence on Commons | Edits |
+|---|---|---|---|---|
+| `calm-hebrides.ogg` | Mendelssohn, *The Hebrides* (Fingal's Cave) Overture, Musopen Symphony Orchestra | `Mendelssohn - Hebrides Overture Fingal's Cave.ogg` | Public Domain Mark (owner-released, from Musopen) | first 4:00 only, 8 s fade-out |
+| `calm-gymnopedie.ogg` | Satie, *Gymnopédie* no. 1, Robin Alciatore (via Musopen) | `Erik Satie - gymnopedies - la 1 ere. lent et douloureux.ogg` | Public domain | none |
+| `playful-maple-leaf-rag.ogg` | Joplin, "Maple Leaf Rag", US Air Force Band "Strolling Strings" | `Maple Leaf Rag - Strolling Strings - United States Air Force Band.mp3` | Public domain (US federal government work) | none |
+| `chaos-galop-infernal.ogg` | Offenbach, "Galop infernal" (*Orpheus in the Underworld*), by Gnissah | `Jacques Offenbach - Galop Infernal from Orpheus in the Underworld (Can Can) (1858).ogg` | Public domain (own work) | none |
+| `chaos-bumblebee.ogg` | Rimsky-Korsakov, "Flight of the Bumblebee", Jaan Patterson | `Jaan Patterson - 02 - The Flight of the Bumblebee Nikolai Andrejewitsch Rimski-Korsakow.ogg` | CC0 | none |
+
+The compositions are all long out of copyright. Known caveat: the Joplin recording's ID3 tag lists ASCAP/BMI (publishing metadata); Commons classifies it as a US government work.

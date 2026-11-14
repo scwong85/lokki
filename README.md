@@ -45,12 +45,13 @@ npm run data:fetch # re-download the raw snapshot from Helsinki open data (needs
 
 ## Audio
 
-All sounds so far are synthesised at runtime with WebAudio (no sample files, nothing to credit).
+Sound effects are synthesised at runtime with WebAudio. Music is public-domain / CC0 classical and ragtime recordings (see credits below and `data/raw/SOURCES.md`).
 
 ## Data credits
 
 - **Buildings, streets, parks, coastline:** City of Helsinki open data (Helsingin kaupunki), licence [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), © City of Helsinki. Layers and processing are recorded in [`data/raw/SOURCES.md`](data/raw/SOURCES.md).
-- **Sounds:** synthesised at runtime, no sample files.
+- **Sound effects:** synthesised at runtime, no sample files.
+- **Music** (public domain / CC0 recordings from Wikimedia Commons; details in [`data/raw/SOURCES.md`](data/raw/SOURCES.md)): Mendelssohn, *The Hebrides* Overture (Musopen Symphony Orchestra); Satie, *Gymnopédie* no. 1 (Robin Alciatore); Joplin, "Maple Leaf Rag" (US Air Force Band Strolling Strings); Offenbach, "Galop infernal" (Gnissah); Rimsky-Korsakov, "Flight of the Bumblebee" (Jaan Patterson, CC0).
 - Landmarks (cathedral, tents, ferry, statue) are original stylised props.
 
 ## Licence
