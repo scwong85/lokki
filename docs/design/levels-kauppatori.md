@@ -6,7 +6,7 @@ Status: **brainstorm / proposal**. Nothing here is built. Pick, cut and reorder 
 
 Today the Market Square is **one big level**: eight quests on one to-do list, skills unlocked per quest. This proposal turns it into **a run of short levels ("days at the market")**:
 
-- Each level is one visit of **5–12 minutes** with its own to-do list, cast, props, deterrents and time of day.
+- Each level is one visit of **about 5 minutes** (target 4–6 for a first play) with its own to-do list, cast, props, deterrents and time of day.
 - The first levels each **teach one mechanic** through a small, funny puzzle. Later levels **mix** everything.
 - **Skills unlock when you finish a level** (not per quest), and the next level is built to show the new skill off.
 - Every level has **one headline puzzle** (the thing you'll remember) plus a few smaller tasks, so it never feels like a list of fetch quests.
@@ -15,7 +15,7 @@ Today the Market Square is **one big level**: eight quests on one to-do list, sk
 ## 2. Design rules for every level
 
 1. **One headline puzzle** with a funny payoff, solved with the mechanics you have. It should have an "aha", not just "go there, bring that".
-2. **3–5 to-dos**, mixing kinds: the headline puzzle, one or two small tasks, one sandbox gag ("make three people open umbrellas") and **one hidden to-do** that shows as `???` until you discover it (the Untitled Goose Game trick that rewards curiosity).
+2. **2–4 to-dos** (to fit 5 minutes), mixing kinds: the headline puzzle, one small task or sandbox gag ("make three people open umbrellas") and **one hidden to-do** that shows as `???` until you discover it (the Untitled Goose Game trick that rewards curiosity).
 3. **Introduce, then twist.** A new mechanic is first safe and obvious, then used in a surprising way inside the same level.
 4. **Ban plain fetch quests.** If a task is "take X to Y", something must stand in the way: a person who wants it, a guard, a timer, a physics problem, a trick.
 5. **Systemic first.** Puzzles are built from the existing systems (NPC senses and wants, noise, heat, physics props, poop, triggers), so players can solve them in more than one way and invent their own gags.
@@ -74,7 +74,7 @@ All mechanics are available. Each day changes the dressing, the cast and the rul
 | 15 | **Vappu Eve** (30 April) | Huge crowd in student caps; balloons; the 18:00 capping of Havis Amanda | **"Cap Race"**: the students' crane lifts a cap onto the statue at 18:00. Get there first… and put the cap on the **Warden** instead. Balloons can be popped by poop for distraction |
 | 16 | **Herring Market** (autumn) | Fishermen's boats moored along the quay; jars everywhere | **"Grandma Wins"**: the herring contest jury tastes jars blind. Swap jars so the sweet grandma beats the arrogant champion. Hidden: swap in a jar of salmiakki and watch the jury's faces |
 | 17 | **Wedding Bells** | A wedding party on the Uspenski steps; photographer | **"Something Borrowed"**: the ring bearer (a toddler) lost the ring box. Find it (it's shiny: crows… gulls love shiny), deliver it to the altar steps. Good-bird level with chaos options: catch the bouquet mid-air |
-| 18 | **Christmas Market** (winter) | Snow: **footprints give you away** (people follow your tracks); slippery ice; glögi steam | **"Santa's Little Helper"**: the market Santa's sack of gifts. Swap the cheap gifts with the good ones so the kids get the best toys, while vendors in hats track your footprints. Option: walk only on the shovelled paths |
+| 18 | **Frozen Harbour** (winter) | Snow: **footprints give you away** (people follow your tracks); the harbour edge freezes, so you can walk on the ice; the winter swimmers' sauna steam | **"Polar Plunge"**: the winter swimmers leave their warm munkki doughnuts by the ice hole. Get them while they're in the water, using the sauna steam as cover. (The Christmas market itself moves to Senate Square, where it really is held.) |
 | 19 | **The Rival** | **Kalle**, a rival gull (new AI) who competes for the same snacks | **"Snack Duel"**: first to three snacks wins. Frame Kalle: lead the vendor's spray onto him, or make him fly into a net. Ends with a truce (he joins your flock) |
 | 20 | **Night Market** | Dusk lighting, lanterns, fewer tourists but sleepy vendors | **"Midnight Snack"**: stealth level. Sleeping vendors wake at loud noises; snores show how deep they sleep. Unhinged option: knock the lantern string so all the lights go out |
 | 21 | **The Drone** | The plan's final deterrent: a gull-hunting drone | **"Battery Low"**: the drone follows you. Lead it under the nets, into the fountain spray, or make it chase Kalle. Steal its battery when it lands to recharge |
@@ -116,22 +116,49 @@ All mechanics are available. Each day changes the dressing, the cast and the rul
 | **Stacking puzzles** (chair tower) | Physics yes; perch-on-stack needs testing | S |
 | **Pigeon "act natural" rules** for Disguise | Disguise exists; behaviour rules new | S |
 
+Note on length: the act tables list 3–4 to-dos per level; when we build each level we keep the ones that fit 5 minutes and move the rest to the post-clear extras.
+
 Suggested build order once agreed: **level framework + level select + Act 1 levels 1–4**, then Act 1 levels 5–8, then Act 2, then the themed days. Each would be its own milestone with a playtest gate.
 
-## 8. Beyond the Market Square (later districts, one-liners)
+## 8. Is the game precise enough? (control budget)
+
+The engine (fixed 60 Hz simulation, Rapier physics, triggers) is precise; the risk is **the player's control** of a flying bird, especially on a phone. So every puzzle gets a **precision rating** and the forgiving tools below. A puzzle that needs more than "medium" precision is redesigned, not shipped.
+
+| Rating | Means | Examples |
+|---|---|---|
+| Low | Big zones, no timing | Splat the sign (aim assist already helps), carry the teddy, swap the soup |
+| Medium | A timing window of about 1.5 s or more, or a landing on a perch | "Say cheese!" (the countdown is long and telegraphed), Lunch Break bell, snatching on a dive |
+| High (redesign) | Frame-tight timing, threading a gap, stacking by hand | Laser heist, chair tower, bottle timing to the ferry |
+
+**Forgiving tools** (most exist or are small to add):
+- **Generous zones** for triggers and drop spots, shown with the existing markers; snatches already have a magnet radius and poop has aim assist.
+- **Long, telegraphed timings**: countdowns, wind-ups, sounds, a visible clock; never a single-frame window.
+- **Snap and guide rails** for physics puzzles: stacked chairs snap into a column; a rolling item follows a groove.
+- **Slow-motion "focus"** for one second when you start a dive near a target (optional, also helps on touch).
+- **Instant retry**: a failed step resets in place within a few seconds (the M7 quest reset already does this).
+- **Touch assist**: bigger zones and stronger aim assist when playing with the touch controls.
+
+How the "high" puzzles would be softened:
+- **Laser heist**: lines are wide ribbons with clear gaps, hawk-eye shows them for 6 s, touching one costs time, not the level.
+- **Chair tower**: chairs snap onto a stacking spot marked on the ground; three chairs, not ten.
+- **Message in a bottle**: the current carries anything dropped inside a big marked zone during a long "ferry boarding" window.
+
+Before building lots of levels, prototype the two riskiest mechanics (**stacking** and **moving platforms** such as the ferry and trams) and playtest them on PC and phone.
+
+## 9. Beyond the Market Square (later districts, one-liners)
 
 | District | New mechanic | New skill | Signature puzzle |
 |---|---|---|---|
-| Senate Square / Cathedral | Big open steps, wedding and graduation photos | **Photobomb pose** (strike a pose in photos for points) | Poop-on-statue puzzles; ruin the perfect wedding photo |
+| Senate Square / Cathedral | See `docs/design/levels-senaatintori.md` | Photobomb pose, Pigeon diplomacy | Full plan in its own doc |
 | Esplanadi park | Café terraces, buskers, fountains | **Sneaky waddle** (crowd stealth) | Steal the busker's hat of coins and fund your own "busking" |
 | Katajanokka harbour | Icebreakers, cruise ship decks, cranes | **Dive-swim** (underwater grab) | Fish theft from the cruise ship buffet |
 | Railway station | The stone lamp-bearers, trains | **Hitch a ride** (trains as moving platforms) | Perch puzzles on the giant statues |
 | Suomenlinna | Fortress walls, cannons, tour groups | **Long glide** (sea crossing) | Tour-guide chaos; fire the (confetti) cannon |
 
-## 9. Questions for you
-
-1. Is the **Act 1 order** right (snatch → poop → senses → carry → arms race → nets/owl → Warden → harbour)?
-2. Which **headline puzzles** do you love, and which should go?
-3. How **unhinged** should it get (the gag list in section 5 is the tone ceiling I'd go to)?
-4. Should today's eight-quest level stay as a "free play" sandbox once levels exist?
-5. Do you like **Kalle the rival gull** and the **drone** as late-game antagonists?
+## 10. Decisions so far
+- Act 1 order: agreed. Headline puzzles: all kept for now.
+- Levels about **5 minutes** each.
+- Today's eight-quest level stays as a **free-play sandbox**.
+- **Kalle** (rival gull) and the **drone** are in as late-game antagonists.
+- Tone: the section 5 gag list is the ceiling.
+- Next: Senate Square plan (`docs/design/levels-senaatintori.md`); nothing is built until the plan is agreed.
