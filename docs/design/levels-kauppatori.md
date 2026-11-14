@@ -151,7 +151,7 @@ Before building lots of levels, prototype the two riskiest mechanics (**stacking
 |---|---|---|---|
 | Senate Square / Cathedral | See `docs/design/levels-senaatintori.md` | Photobomb pose, Pigeon diplomacy | Full plan in its own doc |
 | Esplanadi park | See `docs/design/levels-esplanadi.md` | Cloud Glide, Air Snatch | Full plan in its own doc |
-| Katajanokka harbour | Icebreakers, cruise ship decks, cranes | **Dive-swim** (underwater grab) | Fish theft from the cruise ship buffet |
+| Katajanokka harbour | See `docs/design/levels-katajanokka.md` | Plunge, Gust Rider | Full plan in its own doc |
 | Railway station | The stone lamp-bearers, trains | **Hitch a ride** (trains as moving platforms) | Perch puzzles on the giant statues |
 | Suomenlinna | Fortress walls, cannons, tour groups | **Long glide** (sea crossing) | Tour-guide chaos; fire the (confetti) cannon |
 
