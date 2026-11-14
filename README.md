@@ -2,9 +2,11 @@
 
 *Lokki* ("gull" in Finnish) is a browser-based 3D game: you are a seagull causing gentle slapstick havoc in downtown Helsinki. Low-poly, pastel, mouse + keyboard. See [`docs/PLAN.md`](docs/PLAN.md) for the full plan.
 
-Status: **M10 – Visual detail** in progress. M0–M9 done.
+Status: **M10 – Visual detail** (shadows, facades, roofs, landmarks, set dressing, rigged people), awaiting playtest. M0–M9 done.
 
 ![Lokki flight](docs/media/lokki-flight.gif)
+
+![Before and after M10](docs/media/m10-before-after.jpg)
 
 ## Run
 
@@ -41,7 +43,7 @@ npm run data:fetch # re-download the raw snapshot from Helsinki open data (needs
 | V / G / B | skills: crow call (Mimic), flock call, pigeon disguise (once earned) |
 | K | skills panel |
 | X / Z | extra objectives on/off, start a speedrun (after clearing the finale) |
-| O | options (volumes, mouse look, screen shake) |
+| O | options (volumes, mouse look, screen shake, graphics quality) |
 | T | skip the first-flight tips |
 | M | mute / unmute (sound and music) |
 | C | credits |
@@ -54,6 +56,7 @@ npm run data:fetch # re-download the raw snapshot from Helsinki open data (needs
 - **Data-driven content.** Quests, skills, deterrents, props, NPC roles, triggers and music are plain typed data in `src/data/`; the logic in `src/gameplay/` reads them.
 - **Pure logic, thin rendering.** Flight, heat, NPC brains, quests, skills, saving, abilities, music direction and the tutorial are pure TypeScript with Vitest tests; rendering code only mirrors state.
 - **One tuning object.** Every feel parameter lives in `src/core/tuning.ts` and shows up in the F3 debug panel ("Copy tuning as JSON").
+- **Procedural detail.** Facades (windows per bay and floor from one runtime-drawn tile), roofs, roof clutter and set dressing are generated from the same city data with seeded, unit-tested rules (`src/world/facade.ts`, `src/world/dressingPlan.ts`); repeated items are instanced. One shadow map follows the player on the high preset.
 - **World pipeline.** `npm run data:build` turns the raw Helsinki open-data snapshot (`data/raw/`) into `data/generated/kauppatori.json`; buildings are chunk-merged meshes, static collision comes from the same data, and Rapier only simulates loose props.
 - **The city fights back.** Heat tiers deploy vendors, scare lines, nets and the Gull Warden; each deterrent has a "learned" counter, so repeated dodges weaken it and the city brings in something new.
 
