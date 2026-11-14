@@ -33,7 +33,7 @@ export const LINE_POSTS: [number, number][] = [
 ];
 
 /** A net over the whole area: catches gulls diving down into it, but gulls learn to fly in under it (and can climb out through it). */
-export const NET_Y = 4.0;
+export const NET_Y = 5.0; // high enough that a gull flying under it can still start a dive (needs dive.minHeight of clearance)
 export const NET_ZONE: Zone = { ...DEFENSE_ZONE, maxY: NET_Y - 0.5 }; // "under the net"
 export const LINE_ZONE: Zone = { ...DEFENSE_ZONE, maxY: 6 };
 

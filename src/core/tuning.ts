@@ -50,7 +50,7 @@ export const tuning = {
     minTime: p(0.7, 0.1, 2, 0.05), // committed: cannot be cancelled before this
     maxTime: p(2, 0.5, 5, 0.1),
     turnFactor: p(0.9, 0, 1.5, 0.05), // steering authority while diving (1 = same as gliding)
-    minHeight: p(3, 0, 20, 0.5), // need this much clearance to start
+    minHeight: p(1.6, 0, 20, 0.5), // need this much clearance to start (low enough to dive from under the net)
     cooldown: p(1, 0, 5, 0.1),
     pullOutRate: p(30, 5, 100, 1), // how fast falling speed bleeds off after a dive
     pullUpRatio: p(0.25, 0, 1, 0.05), // share of dive speed turned into a swoop up on release

@@ -42,7 +42,7 @@ test('heat escalates the city (vendors, lines, nets, Warden) and the deterrents 
     () => {
       const { gull, cam } = (window as unknown as { __lokki: Lokki }).__lokki;
       if (gull.state.stunT > 0) return true;
-      Object.assign(gull.state, { x: -20, y: 3.9, z: -40, vx: 0, vy: -4, vz: 0, heading: 0, mode: 'air', stamina: 100 }); // coming down into the net
+      Object.assign(gull.state, { x: -20, y: 4.9, z: -40, vx: 0, vy: -4, vz: 0, heading: 0, mode: 'air', stamina: 100 }); // coming down into the net
       cam.yaw = 0;
       return false;
     },
