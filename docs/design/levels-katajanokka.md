@@ -84,9 +84,8 @@ Theme of the district: **"All aboard!"** The market is about stealing, Senate Sq
 | Winter: the frozen harbour, cracks, drifting floes (shares snow with the Christmas market) | M |
 | The X-ray scanner view (a funny screen overlay) | S |
 
-## 8. Questions for you
-
-1. Is **"All aboard!"** (moving things and the sea) the right flavour for Katajanokka?
-2. Keep **both new skills** (Plunge and Gust Rider)?
-3. The district has the **most new landmarks** so far. Is that worth it, or should it share more with the Market Square's harbour?
-4. Is ending on **the ferry to the next district** (Suomenlinna) a good way to tie the districts together?
+## 8. Decisions so far
+- "All aboard!" (moving things and the sea) is the district's flavour.
+- Both new skills stay: **Plunge** and **Gust Rider**.
+- The large set of new landmarks is worth it.
+- Each district ends on the **ferry to the next one**.
