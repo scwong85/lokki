@@ -28,7 +28,7 @@ const MAIN_WINS: Record<string, string[]> = {
 
 describe('the quest pack', () => {
   it('has the seven quests, the finale and the extras, each with its own objectives', () => {
-    expect(QUESTS.map((q) => q.id)).toEqual(['icecream', 'swap', 'cap', 'bun', 'map', 'date', 'toy', 'finale', 'extras']);
+    expect(QUESTS.map((q) => q.id)).toEqual(['icecream', 'swap', 'cap', 'bun', 'map', 'date', 'toy', 'finale', 'extras', 'bonus']);
     for (const q of QUESTS) expect(q.objectives.length).toBeGreaterThan(0);
   });
   it('the finale is locked until the seven main quests are won, then unlocks with a note', () => {

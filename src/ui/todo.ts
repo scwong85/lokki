@@ -48,6 +48,7 @@ export class Todo {
   private quest(q: QuestState): string {
     const def = QUESTS.find((d) => d.id === q.id);
     const timer = q.timed && q.status === 'active' ? ` <span class="timer" data-q="${q.id}"></span>` : '';
+    if (q.status === 'locked' && def?.hidden) return '';
     if (q.status === 'locked') return `<div class="q locked"><div class="qt">&#128274; ${q.title}</div><div class="teaser">Finish the other quests first.</div></div>`;
     if (q.status === 'won') return `<div class="q won"><div class="qt"><s>${q.title}</s> <b class="ok">done!</b></div></div>`;
     if (q.status === 'lost') return `<div class="q lost"><div class="qt">${q.title} <b class="bad">failed, resetting...</b></div></div>`;

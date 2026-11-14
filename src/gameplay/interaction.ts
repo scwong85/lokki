@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { tuning } from '../core/tuning';
+import { mods } from '../core/skillMods';
 import type { FlightState } from '../gull/flight';
 import { pickGrabTarget, type GrabCandidate } from './grab';
 import { spawnPoopAssisted, stepPoop, predictPoop, type HitSphere, type PoopState, type PoopHit } from './poop';
@@ -99,7 +100,7 @@ export class Interaction {
     const it = tuning.interaction;
     const beak = this.beakPos(s);
     const cands = [...this.props.candidates(), ...(this.npcs?.snatchCandidates(beak) ?? [])];
-    const pick = pickGrabTarget(beak, s.heading, cands, it.grabRange.value, it.grabConeDeg.value, it.carryMax.value, it.closeRange.value, { x: s.x, y: s.y, z: s.z });
+    const pick = pickGrabTarget(beak, s.heading, cands, it.grabRange.value, it.grabConeDeg.value, it.carryMax.value * mods.carryMax, it.closeRange.value, { x: s.x, y: s.y, z: s.z });
     if (!pick) return null;
     const prop = this.props.byId(pick.id);
     return prop ? { prop, tooHeavy: pick.tooHeavy } : null;
@@ -165,7 +166,7 @@ export class Interaction {
 
     // ---- poop ----
     if (inp.poop && !stunned && this.poopCd <= 0) {
-      this.poopCd = tuning.poop.cooldown.value;
+      this.poopCd = tuning.poop.cooldown.value * mods.poopCooldown;
       const { spheres: pSpheres } = this.props.hitSpheres();
       const nSpheres = this.npcs?.poopSpheres() ?? [];
       const state = spawnPoopAssisted({ x: s.x, y: s.y, z: s.z }, { x: s.vx, y: s.vy, z: s.vz }, time, this.world, [...pSpheres, ...nSpheres], nSpheres.filter((n) => n.tag !== 'umbrella'));

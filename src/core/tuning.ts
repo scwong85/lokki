@@ -196,6 +196,17 @@ export const tuning = {
     hawkTime: p(4, 1, 15, 0.5),
     hawkCooldown: p(8, 1, 40, 1),
   },
+  skills: {
+    mimicCooldown: p(6, 1, 30, 0.5),
+    mimicDistance: p(18, 5, 40, 1), // where the crow call is heard, ahead of the camera
+    mimicLoud: p(1.2, 0.3, 2, 0.1),
+    flockCooldown: p(25, 5, 90, 1),
+    flockCount: p(4, 2, 8, 1),
+    flockTime: p(5, 2, 12, 0.5), // how long the decoy gulls make a racket
+    flockDistance: p(22, 8, 50, 1),
+    disguiseTime: p(10, 3, 30, 0.5),
+    disguiseCooldown: p(25, 5, 90, 1),
+  },
   audio: {
     master: p(0.5, 0, 1, 0.05),
     sfx: p(0.8, 0, 1, 0.05),

@@ -7,6 +7,7 @@ export class DebugPanel {
   private frames = 0;
   private acc = 0;
   private worst = 0;
+  private body!: HTMLElement;
 
   constructor(root: HTMLElement) {
     const el = document.createElement('div');
@@ -15,6 +16,7 @@ export class DebugPanel {
     root.appendChild(el);
     this.stats = el.querySelector('.stats')!;
     const body = el.querySelector('.body') as HTMLElement;
+    this.body = body;
 
     for (const [group, params] of Object.entries(tuning)) {
       const h = document.createElement('h4');
@@ -64,6 +66,14 @@ export class DebugPanel {
       }
     });
     body.hidden = true;
+  }
+
+  /** Extra button at the bottom of the tuning panel (e.g. reset the save). */
+  addButton(label: string, fn: () => void): void {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.addEventListener('click', fn);
+    this.body.appendChild(b);
   }
 
   frame(dt: number, extra = ''): void {

@@ -44,6 +44,10 @@ export interface QuestDef {
   startOn?: QuestEventType[];
   /** Locked until all of these quests are won. */
   requires?: string[];
+  /** Locked until this flag is switched on (the replay variants after the first clear). */
+  requiresFlag?: string;
+  /** Not listed on the to-do list while locked. */
+  hidden?: boolean;
   /** The city notices when this quest starts: the heat is raised to at least this. */
   startHeat?: number;
   /** Shown while the quest is idle and unlocked. */
@@ -171,6 +175,22 @@ export const QUESTS: QuestDef[] = [
       { id: 'bin', text: 'Tip over a bin', kind: 'event', event: 'tipBin' },
       { id: 'bottle', text: 'Smash a bottle', kind: 'event', event: 'breakBottle' },
       { id: 'warden', text: 'Poop on the Gull Warden', kind: 'event', event: 'poopWarden', hint: 'He arrives when the heat is very high. His umbrella blocks poop from above. It tips aside (blue ? over his head) for about 6 s when a noise distracts him: throw or drop something away from him, or tip a bin. Then poop from above (the reticle turns brown when it is clear).' },
+    ],
+  },
+  {
+    id: 'bonus',
+    title: '★ Extra objectives',
+    teaser: 'For gulls who cleared the level: even more mischief.',
+    timed: false,
+    requiresFlag: 'replay',
+    hidden: true,
+    objectives: [
+      { id: 'steal', text: 'Steal 4 things', kind: 'event', event: 'snatch', count: 4 },
+      { id: 'poop', text: 'Poop on 3 people', kind: 'event', event: 'poopNpc', count: 3 },
+      { id: 'bottles', text: 'Smash 3 bottles', kind: 'event', event: 'breakBottle', count: 3 },
+      { id: 'bins', text: 'Tip over 3 bins', kind: 'event', event: 'tipBin', count: 3 },
+      { id: 'dodge', text: 'Dodge 5 vendor sprays', kind: 'event', event: 'dodge:vendors', count: 5 },
+      { id: 'warden', text: 'Poop on the Warden 3 times', kind: 'event', event: 'poopWarden', count: 3 },
     ],
   },
 ];

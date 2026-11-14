@@ -3,6 +3,7 @@ import { startLoop } from './core/loop';
 import { Input } from './core/input';
 import { events } from './core/events';
 import { tuning } from './core/tuning';
+import { mods, staminaMax } from './core/skillMods';
 import { addGroundPlane, createScene } from './render/scene';
 import { palette } from './render/palette';
 import { FollowCamera } from './render/camera';
@@ -43,6 +44,13 @@ import { activeMarkers } from './gameplay/questMarkers';
 import type { Marker } from './data/quests';
 import { MarkerPool } from './render/markers';
 import { Waypoints } from './ui/waypoints';
+import { SaveStore, type SaveData } from './core/save';
+import { SkillSet } from './gameplay/skills';
+import { Abilities, aheadOf } from './gameplay/abilities';
+import { FlockSystem, PingFx } from './render/flock';
+import { RunTimer, isBest } from './gameplay/runTimer';
+import { SkillsPanel } from './ui/skillsPanel';
+import { RunHud } from './ui/runHud';
 
 const app = document.getElementById('app')!;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -113,6 +121,16 @@ if (npcs && defense) {
   };
 }
 const quests = new QuestLog(greybox ? [] : QUESTS);
+// progress: skills, finished quests, best times (localStorage; every call is safe if storage is blocked)
+const store = new SaveStore();
+let save: SaveData = store.load();
+const skills = new SkillSet();
+skills.restore(save.skills);
+const abilities = new Abilities();
+const runTimer = new RunTimer();
+// restore progress from the save (silent)
+if (save.replayUnlocked && save.extrasOn) quests.setFlag('replay', true);
+quests.restoreWon(save.questsWon);
 const triggers = new TriggerSystem(greybox ? [] : TRIGGERS);
 const stats = new LevelStats();
 const levelComplete = new LevelComplete(document.body);
@@ -120,17 +138,26 @@ const markerPool = new MarkerPool();
 const waypoints = new Waypoints(document.body);
 scene.add(markerPool.group);
 const todo = new Todo(document.body);
+const skillsPanel = new SkillsPanel(document.body);
+const runHud = new RunHud(document.body);
+const flock = new FlockSystem(scene);
+const pings = new PingFx(scene);
 const poopReticle = new Reticle();
 scene.add(poopReticle.mesh);
 const marker = new DiveMarker();
 scene.add(gull.mesh, gull.shadow, marker.group);
 const cam = new FollowCamera(innerWidth / innerHeight);
 const input = new Input(renderer.domElement);
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, defense, noise, heat, triggers, stats, notes };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, defense, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, store, saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
+debug.addButton('Reset saved progress', () => {
+  store.clear();
+  location.reload();
+});
 const hud = new Hud(document.body);
 const credits = new Credits(document.body);
 const audio = new AudioManager();
+audio.muted = save.muted;
 for (const ev of ['pointerdown', 'keydown'] as const) addEventListener(ev, () => audio.unlock());
 let simTime = 0;
 let hits = 0;
@@ -174,6 +201,31 @@ function onFlightEvents(evs: FlightEvent[]): void {
   }
 }
 
+/** Write the current progress to the save. */
+function persist(): void {
+  save = { ...save, skills: skills.ids, questsWon: quests.wonIds(), muted: audio.muted };
+  store.save(save);
+}
+
+/** Restart the level (R) or start a speedrun (Z). Skills and best times are kept. */
+function restartLevel(mode: 'normal' | 'speedrun'): void {
+  gull.reset();
+  gull.setDisguise(false);
+  interaction.reset();
+  npcs?.reset();
+  defense?.reset();
+  announce.clear();
+  quests.reset();
+  triggers.reset();
+  stats.reset();
+  levelComplete.hide();
+  abilities.reset();
+  flock.clear();
+  if (mode === 'speedrun') runTimer.startSpeedrun();
+  else runTimer.setNormal();
+  persist();
+}
+
 /** A sound the tourists and the Warden can hear. */
 function noise(x: number, z: number, loud: number): void {
   npcs?.addNoise(x, z, loud);
@@ -205,6 +257,7 @@ function onDefense(evs: DefenseEvent[]): void {
       }
       case 'dodged': {
         stats.add('dodge');
+        notes(quests.onEvent(`dodge:${e.id}`));
         const what = { vendors: 'Dodged the spray!', warden: 'Dodged the swat!', lines: 'Slipped past the scare lines!', nets: 'Flew under the net!' }[e.id];
         hud.toast(`${what} (gulls learning ${e.count}/${e.need})`, 1.6);
         if (!explainedLearning) {
@@ -276,10 +329,27 @@ function notes(list: QuestNote[]): void {
       }
     } else if (n.type === 'won') {
       audio.play('win');
-      hud.toast(n.quest === 'extras' ? 'All extras done!' : `Quest complete: ${q.title}!`, 2.4);
-      if (n.quest === 'finale') {
-        levelComplete.show(stats.summary(), quests.quests.filter((x) => x.id !== 'extras').map((x) => ({ title: x.title, won: x.status === 'won' })));
+      hud.toast(n.quest === 'extras' ? 'All extras done!' : n.quest === 'bonus' ? 'All extra objectives done!' : `Quest complete: ${q.title}!`, 2.4);
+      const skill = skills.unlockForQuest(n.quest);
+      if (skill) {
+        announce.show(`New skill: ${skill.name}`, `${skill.blurb}${skill.key ? ` Press ${skill.key}.` : ''} (K: all skills)`, 'learned');
+        audio.play('win');
       }
+      if (n.quest === 'finale') {
+        const seconds = runTimer.finish() ?? stats.summary().seconds;
+        const notes: string[] = [];
+        const first = !save.replayUnlocked;
+        const speed = runTimer.mode === 'speedrun';
+        if (isBest(seconds, save.bestTime)) notes.push(`New best time: ${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, '0')}!`);
+        if (speed && isBest(seconds, save.speedrunBest)) {
+          save.speedrunBest = seconds;
+          notes.push('New speedrun record!');
+        }
+        save = { ...save, replayUnlocked: true, clears: save.clears + 1, bestTime: isBest(seconds, save.bestTime) ? seconds : save.bestTime };
+        if (first) notes.push('Unlocked: extra objectives (X) and speedrun (Z)!');
+        levelComplete.show(stats.summary(), quests.quests.filter((x) => x.id !== 'extras' && x.id !== 'bonus').map((x) => ({ title: x.title, won: x.status === 'won' })), notes);
+      }
+      persist();
     } else if (n.type === 'lost') {
       audio.play('lose');
       hud.toast(`${q.title}: time is up! Try again in a moment`, 3);
@@ -349,6 +419,7 @@ function onGags(gags: GagEvent[]): void {
         audio.play('yelp');
         hud.toast('Snatched!', 1);
         notes(quests.onEvent(`snatch:${g.prop.type}`));
+        notes(quests.onEvent('snatch'));
         stats.add('snatch');
         heat('snatch');
         break;
@@ -401,21 +472,61 @@ startLoop({
     simTime += dt;
     const m = input.consumeMouse();
     cam.rotate(m.dx, m.dy);
-    if (input.wasPressed('KeyR')) {
-      gull.reset();
-      interaction.reset();
-      npcs?.reset();
-      defense?.reset();
-      announce.clear();
-      quests.reset();
-      triggers.reset();
-      stats.reset();
-      levelComplete.hide();
+    if (input.wasPressed('KeyR')) restartLevel('normal');
+    if (input.wasPressed('KeyZ')) {
+      if (save.replayUnlocked) {
+        restartLevel('speedrun');
+        hud.toast('Speedrun! The clock starts when you move.', 2);
+      } else hud.toast('Clear the finale to unlock the speedrun.', 1.6);
     }
+    if (input.wasPressed('KeyX')) {
+      if (save.replayUnlocked) {
+        const on = !save.extrasOn;
+        save = { ...save, extrasOn: on };
+        notes(quests.setFlag('replay', on));
+        hud.toast(on ? 'Extra objectives on' : 'Extra objectives off', 1.4);
+        persist();
+      } else hud.toast('Clear the finale to unlock extra objectives.', 1.6);
+    }
+    if (input.wasPressed('KeyK')) skillsPanel.toggle(skills, save);
     if (input.wasPressed('KeyC')) credits.toggle();
     if (input.wasPressed('Enter') && levelComplete.visible) levelComplete.hide();
     if (input.wasPressed('KeyH') && defense?.activateHawk()) hud.toast('Hawk-eye!', 0.8);
-    if (input.wasPressed('KeyM')) hud.toast(audio.toggleMute() ? 'Sound off' : 'Sound on', 0.8);
+    if (input.wasPressed('KeyM')) {
+      hud.toast(audio.toggleMute() ? 'Sound off' : 'Sound on', 0.8);
+      persist();
+    }
+    // active skills
+    if (abilities.tick(dt)) {
+      gull.setDisguise(false);
+      hud.toast('The disguise is over', 1.2);
+    }
+    if (input.wasPressed('KeyV') && skills.has('mimic') && abilities.use('mimic')) {
+      const at = aheadOf(gull.state, cam.yaw, tuning.skills.mimicDistance.value);
+      noise(at.x, at.z, tuning.skills.mimicLoud.value);
+      pings.add(at.x, at.z);
+      audio.play('crow');
+      gull.openBeak(0.5);
+      hud.toast('Caw! Caw!', 0.8);
+    }
+    if (input.wasPressed('KeyG') && skills.has('flock') && abilities.use('flock')) {
+      const at = aheadOf(gull.state, cam.yaw, tuning.skills.flockDistance.value);
+      flock.start({ x: gull.state.x, y: gull.state.y, z: gull.state.z }, at);
+      pings.add(at.x, at.z);
+      audio.play('screech');
+      gull.openBeak(0.6);
+      hud.toast('Flock call!', 0.9);
+    }
+    if (input.wasPressed('KeyB') && skills.has('disguise') && abilities.use('disguise')) {
+      gull.setDisguise(true);
+      audio.play('pop');
+      hud.toast('Pigeon mode! The vendors and the Warden ignore you.', 1.6);
+    }
+    for (const n of flock.update(dt)) noise(n.x, n.z, 0.9);
+    pings.update(dt);
+    // speedrun clock: starts on the first move
+    if (runTimer.mode === 'speedrun' && !runTimer.running && !runTimer.finished && (input.axes().x !== 0 || input.axes().y !== 0 || input.isDown('Space'))) runTimer.begin();
+    runTimer.tick(dt);
     const { x, y } = input.axes();
     const wasDive = gull.state.mode === 'dive';
     const evs = gull.update(
@@ -448,7 +559,7 @@ startLoop({
       const g = gull.state;
       onNpcEvents(npcs.update(dt, { x: g.x, y: g.y, z: g.z, diving: g.mode === 'dive' }));
       notes(quests.tick({ dt, carryingStolen: interaction.carried?.stolen === true, nearestNpc: npcs.nearestDistance(g) }));
-      if (defense) onDefense(defense.update(dt, g, stepNoises, npcs.npcs.some((n) => n.seesGull)));
+      if (defense) onDefense(defense.update(dt, g, stepNoises, npcs.npcs.some((n) => n.seesGull), abilities.disguised));
       stepNoises.length = 0;
       // world triggers (delivery zones, the sea, the ferry horn, bun checkpoints) -> quest events
       const views: PropView[] = interaction.props.props.map((p) => ({
@@ -497,6 +608,8 @@ startLoop({
       if (!p.lost || p.broken || p.carried || p.heldBy !== null || markers.length >= 8) continue;
       markers.push({ x: p.cur.p.x, z: p.cur.p.z, r: 1.6, y: Math.max(0, p.cur.p.y - 0.3), label: `Dropped ${p.def.name}` });
     }
+    skillsPanel.updateBar(skills, abilities);
+    runHud.update(runTimer, save.speedrunBest);
     markerPool.update(markers, simTime);
     waypoints.update(markers, cam.camera, gull.position, innerWidth, innerHeight);
     todo.update(quests.quests, npcs ? npcs.nearestDistance(gull.state) : Infinity, interaction.carried?.stolen === true);
@@ -516,7 +629,7 @@ startLoop({
     }
     targets.forEach((t, i) => targetMeshes[i].scale.setScalar(t === aimTarget ? 1.5 : 1));
     // poop aim reticle + context prompt
-    const poopReady = 1 - Math.min(1, interaction.poopCd / tuning.poop.cooldown.value);
+    const poopReady = 1 - Math.min(1, interaction.poopCd / (tuning.poop.cooldown.value * mods.poopCooldown));
     const aimPoop = s.mode !== 'ground' && s.stunT === 0 && interaction.poopCd <= 0;
     const poopHit = aimPoop ? interaction.poopPrediction(s, simTime) : null;
     const blocked = poopHit?.tag === 'umbrella';
@@ -526,7 +639,7 @@ startLoop({
     audio.setAir(Math.hypot(s.vx, s.vy, s.vz) / tuning.dive.speed.value, s.mode !== 'ground');
     renderer.render(scene, cam.camera);
     debug.frame(frameDt, `${renderer.info.render.calls} calls · ${(renderer.info.render.triangles / 1000).toFixed(0)}k tris`);
-    hud.update(s, tuning.flight.staminaMax.value, windAt(simTime), cam.yaw, hits, targets.length, frameDt);
+    hud.update(s, staminaMax(), windAt(simTime), cam.yaw, hits, targets.length, frameDt);
   },
 });
 

@@ -56,11 +56,25 @@
       #levelcomplete h2 { margin: 0; font-size: 28px; } #levelcomplete .lc-sub { margin: 2px 0 10px; color: #8a7b5c; }
       #levelcomplete .lc-quests { list-style: none; padding: 0; margin: 0 0 10px; text-align: left; } #levelcomplete .lc-quests li.won { color: #3f9a62; }
       #levelcomplete table { width: 100%; border-collapse: collapse; margin-bottom: 10px; } #levelcomplete td { padding: 3px 4px; text-align: left; border-bottom: 1px dotted #d9c9a3; } #levelcomplete td:last-child { text-align: right; font-weight: 700; }
+      #levelcomplete .lc-note { margin: 4px 0; color: #3f9a62; font-weight: 700; }
       #levelcomplete .lc-keys { margin: 4px 0 0; color: #8a7b5c; }
       #waypoints { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
       #waypoints .wp { position: absolute; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 6px; background: rgba(255, 210, 63, .95); color: #4a3a10; padding: 3px 10px; border-radius: 12px; font: 700 13px system-ui, sans-serif; box-shadow: 0 2px 6px rgba(0,0,0,.25); white-space: nowrap; }
       #waypoints .wp[hidden] { display: none; }
       #waypoints .wp-arrow { font-size: 16px; line-height: 1; }
+      #skills { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(255,248,225,.5); font-family: system-ui, sans-serif; }
+      #skills[hidden] { display: none; }
+      #skills .sk-card { background: #fff8e1; color: #4a4033; padding: 18px 28px; border-radius: 14px; box-shadow: 0 10px 30px rgba(80,60,30,.3); width: 440px; max-width: 92vw; }
+      #skills h2 { margin: 0 0 8px; } #skills ul { list-style: none; padding: 0; margin: 0; } #skills li { margin-bottom: 6px; opacity: .6; } #skills li.have { opacity: 1; }
+      #skills li div { font-size: 13px; color: #6a5a4a; margin-left: 20px; }
+      #skills kbd { background: #fff; border: 1px solid #d9c9a3; border-radius: 4px; padding: 0 5px; font: 12px monospace; }
+      #skills .sk-replay { margin: 10px 0 4px; font-size: 13px; } #skills .sk-keys { margin: 8px 0 0; color: #8a7b5c; font-size: 12px; }
+      #abilities { position: fixed; right: 14px; bottom: 56px; display: flex; flex-direction: column; gap: 6px; pointer-events: none; font: 600 12px system-ui, sans-serif; }
+      #abilities .ab { background: rgba(255,255,255,.8); color: #4a4033; padding: 4px 10px; border-radius: 8px; min-width: 90px; }
+      #abilities .ab[hidden] { display: none; } #abilities .ab b { background: #ffd23f; border-radius: 4px; padding: 0 5px; margin-right: 4px; }
+      #abilities .abf { height: 4px; margin-top: 3px; background: #a9dcff; border-radius: 3px; } #abilities .ab.ready .abf { background: #6bd66b; } #abilities .ab.on { background: #d6e4ff; }
+      #runhud { position: fixed; top: 50px; right: 14px; background: rgba(40,40,60,.8); color: #fff; padding: 4px 12px; border-radius: 8px; font: 700 14px monospace; pointer-events: none; }
+      #runhud[hidden] { display: none; }
     </style>
   </head>
   <body>

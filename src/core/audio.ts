@@ -1,6 +1,6 @@
 import { tuning } from './tuning';
 
-export type Sfx = 'flap' | 'hop' | 'screech' | 'thud' | 'bonk' | 'chime' | 'pop' | 'splat' | 'clatter' | 'crash' | 'gasp' | 'yelp' | 'win' | 'lose' | 'hiss' | 'whistle' | 'twang' | 'alarm';
+export type Sfx = 'flap' | 'hop' | 'screech' | 'thud' | 'bonk' | 'chime' | 'pop' | 'splat' | 'clatter' | 'crash' | 'gasp' | 'yelp' | 'win' | 'lose' | 'hiss' | 'whistle' | 'twang' | 'alarm' | 'crow';
 
 /**
  * Tiny audio manager. Placeholder sounds are synthesised with WebAudio (no files, no licences, fully offline).
@@ -88,6 +88,11 @@ export class AudioManager {
         break;
       case 'lose':
         this.tone('sawtooth', 300, 180, 0.35, 0.2 * v);
+        break;
+      case 'crow':
+        this.tone('sawtooth', 650, 380, 0.2, 0.3 * v);
+        this.tone('sawtooth', 620, 340, 0.22, 0.3 * v, 0.26);
+        this.burst(0.18, 900, 2, 0.15 * v, 500);
         break;
       case 'hiss':
         this.burst(0.45, 6000, 1, 0.4 * v, 3500);

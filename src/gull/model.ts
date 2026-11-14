@@ -12,6 +12,7 @@ export class GullModel {
   private legs: THREE.Group[] = [];
   private head = new THREE.Group();
   private lowerBeak = new THREE.Group();
+  private mats!: { white: THREE.MeshLambertMaterial; grey: THREE.MeshLambertMaterial; black: THREE.MeshLambertMaterial; orange: THREE.MeshLambertMaterial; legs: THREE.MeshLambertMaterial };
   private cur = { flap: 0, fold: 1, sweep: 0.5, legTuck: 0, headRoll: 0, headPitch: 0, beakOpen: 0 };
 
   constructor() {
@@ -20,6 +21,7 @@ export class GullModel {
     const black = mat(palette.gullBlack);
     const orange = mat(palette.gullBeak);
     const legMat = mat(palette.gullLegs);
+    this.mats = { white, grey, black, orange, legs: legMat };
 
     // body + tail
     const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 10, 8), white);
@@ -79,6 +81,16 @@ export class GullModel {
       this.root.add(leg);
       this.legs.push(leg);
     }
+  }
+
+  /** Pigeon colours (the Disguise skill): grey-blue body, dark wings, pink legs. */
+  setDisguise(on: boolean): void {
+    const m = this.mats;
+    m.white.color.setHex(on ? 0x9aa3b8 : palette.gull);
+    m.grey.color.setHex(on ? 0x7d869a : palette.gullGrey);
+    m.black.color.setHex(on ? 0x4a5068 : palette.gullBlack);
+    m.orange.color.setHex(on ? 0x5a5060 : palette.gullBeak);
+    m.legs.color.setHex(on ? 0xd9708a : palette.gullLegs);
   }
 
   /** Move the model toward a pose. Stroke-driven flaps apply immediately, the rest is smoothed. */

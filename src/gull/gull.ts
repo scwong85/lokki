@@ -32,6 +32,11 @@ export class Gull {
     this.shadow.rotation.x = -Math.PI / 2;
   }
 
+  /** Pigeon look on/off. */
+  setDisguise(on: boolean): void {
+    this.model.setDisguise(on);
+  }
+
   reset(): void {
     this.state = newFlightState(this.start.x, this.start.z);
     this.prev = { x: this.state.x, y: this.state.y, z: this.state.z, heading: 0 };

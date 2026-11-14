@@ -15,7 +15,7 @@ export class LevelComplete {
     return !this.el.hidden;
   }
 
-  show(s: StatSummary, quests: { title: string; won: boolean }[]): void {
+  show(s: StatSummary, quests: { title: string; won: boolean }[], notes: string[] = []): void {
     const row = (label: string, value: string | number) => `<tr><td>${label}</td><td>${value}</td></tr>`;
     this.el.innerHTML = `
       <div class="lc-card">
@@ -33,7 +33,8 @@ export class LevelComplete {
           ${row('Clean dodges', s.dodges)}
           ${row('Highest heat', Math.round(s.peakHeat))}
         </table>
-        <p class="lc-keys"><b>Enter</b>: keep playing &nbsp;·&nbsp; <b>R</b>: play again</p>
+        ${notes.map((n) => `<p class="lc-note">${n}</p>`).join('')}
+        <p class="lc-keys"><b>Enter</b>: keep playing &nbsp;·&nbsp; <b>R</b>: play again · <b>X</b>: extra objectives · <b>Z</b>: speedrun</p>
       </div>`;
     this.el.hidden = false;
   }

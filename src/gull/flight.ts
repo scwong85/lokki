@@ -1,4 +1,5 @@
 import { tuning } from '../core/tuning';
+import { mods, staminaMax } from '../core/skillMods';
 import type { World } from '../world/collision';
 import { windAt } from './wind';
 import { bestAimTarget, type Target } from '../gameplay/targets';
@@ -58,7 +59,7 @@ export type FlightEvent =
 export function newFlightState(x = 0, z = 0): FlightState {
   return {
     x, y: GULL_RADIUS, z, vx: 0, vy: 0, vz: 0, heading: 0, turnRate: 0, mode: 'ground',
-    stamina: tuning.flight.staminaMax.value, stunT: 0, flapCd: 0, hopCd: 0, diveT: 0, diveCd: 0, diveAngle: 0.7,
+    stamina: staminaMax(), stunT: 0, flapCd: 0, hopCd: 0, diveT: 0, diveCd: 0, diveAngle: 0.7,
     flapAnim: 99, perched: false, heightAbove: 0,
   };
 }
@@ -231,7 +232,7 @@ export function stepFlight(
         if (s.stamina >= f.flapCost.value) {
           s.stamina -= f.flapCost.value;
           const load = 1 / (1 + (ctl.carryMass ?? 0) * tuning.interaction.carryPenalty.value);
-          s.vy = Math.min(f.maxClimb.value, Math.max(s.vy, 0) + f.flapImpulse.value * load);
+          s.vy = Math.min(f.maxClimb.value, Math.max(s.vy, 0) + f.flapImpulse.value * load * mods.flapImpulse);
           sp = Math.min(f.maxSpeed.value, sp + f.flapBoost.value);
           s.flapAnim = 0;
           ev.push({ type: 'flap' });
@@ -239,7 +240,7 @@ export function stepFlight(
           ev.push({ type: 'exhausted' });
         }
       }
-      const sink = flare && s.heightAbove < l.assistHeight.value ? f.flareSink.value : f.glideSink.value;
+      const sink = flare && s.heightAbove < l.assistHeight.value ? f.flareSink.value : f.glideSink.value * mods.glideSink;
       if (s.vy < -sink) s.vy = Math.min(-sink, s.vy + (f.gravity.value + d.pullOutRate.value) * dt);
       s.vx = -Math.sin(s.heading) * sp;
       s.vz = -Math.cos(s.heading) * sp;
@@ -254,7 +255,7 @@ export function stepFlight(
     }
     s.perched = false;
   }
-  s.stamina = clamp(s.stamina, 0, f.staminaMax.value);
+  s.stamina = clamp(s.stamina, 0, staminaMax());
   s.turnRate = angleDiff(s.heading, prevHeading) / dt;
 
   // ---- integrate ----

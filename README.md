@@ -2,7 +2,7 @@
 
 *Lokki* ("gull" in Finnish) is a browser-based 3D game: you are a seagull causing gentle slapstick havoc in downtown Helsinki. Low-poly, pastel, mouse + keyboard. See [`docs/PLAN.md`](docs/PLAN.md) for the full plan.
 
-Status: **M7 – Market Square quest pack** (six quests, finale, level-complete screen), awaiting playtest. M0–M6 done.
+Status: **M8 – Skills and saving** (seven skills, localStorage save, extra objectives, speedrun), awaiting playtest. M0–M7 done.
 
 ## Run
 
@@ -36,6 +36,9 @@ npm run data:fetch # re-download the raw snapshot from Helsinki open data (needs
 | F or left click | poop (click only while the mouse is captured); ring shows where it will land |
 | H | hawk-eye: briefly reveals the city's lines and nets |
 | R | reset everything (gull, props, tourists, heat, deterrents) |
+| V / G / B | skills: crow call (Mimic), flock call, pigeon disguise (once earned) |
+| K | skills panel |
+| X / Z | extra objectives on/off, start a speedrun (after clearing the finale) |
 | M | mute / unmute |
 | C | credits |
 | F3 | debug panel: live tuning, "Copy tuning as JSON" |

@@ -42,6 +42,8 @@ export type QuestNote =
 /** Runs the quest definitions: events and ticks in, state and notifications out. Pure logic. */
 export class QuestLog {
   quests: QuestState[] = [];
+  /** Switches that unlock quests outside the normal chain ('replay' after the first clear). */
+  private flags = new Set<string>();
 
   constructor(private defs: readonly QuestDef[]) {
     this.reset();
@@ -61,7 +63,7 @@ export class QuestLog {
       id: d.id,
       title: d.title,
       timed: d.timed,
-      status: d.requires?.length ? 'locked' : this.open(d),
+      status: d.requires?.length || (d.requiresFlag && !this.flags.has(d.requiresFlag)) ? 'locked' : this.open(d),
       timeLeft: this.timeFor(d),
       retryT: 0,
       objectives: d.objectives.map((o) => ({ id: o.id, text: o.text, done: false, count: 0, progress: 0 })),
@@ -74,6 +76,39 @@ export class QuestLog {
 
   private def(id: string): QuestDef {
     return this.defs.find((d) => d.id === id)!;
+  }
+
+  /** Switch a flag on or off: quests that need it unlock (or lock again, with their progress cleared). */
+  setFlag(flag: string, on: boolean): QuestNote[] {
+    const notes: QuestNote[] = [];
+    if (on) this.flags.add(flag);
+    else this.flags.delete(flag);
+    for (const q of this.quests) {
+      const d = this.def(q.id);
+      if (d.requiresFlag !== flag) continue;
+      if (on && q.status === 'locked') {
+        const f = this.fresh(d);
+        if (f.status !== 'locked') {
+          Object.assign(q, f);
+          notes.push({ type: 'unlocked', quest: q.id });
+        }
+      } else if (!on && q.status !== 'locked') Object.assign(q, { ...this.fresh(d), status: 'locked' });
+    }
+    return notes;
+  }
+
+  /** Restore finished quests from a save (silent: no notes). */
+  restoreWon(ids: readonly string[]): void {
+    for (const q of this.quests) {
+      if (!ids.includes(q.id) || q.status === 'locked' && this.def(q.id).requiresFlag) continue;
+      q.status = 'won';
+      for (const o of q.objectives) o.done = true;
+    }
+    this.afterWin([]);
+  }
+
+  wonIds(): string[] {
+    return this.quests.filter((q) => q.status === 'won').map((q) => q.id);
   }
 
   /** Events some quest could use right now (so world triggers do not waste progress on closed quests). */
@@ -96,7 +131,7 @@ export class QuestLog {
     for (const q of this.quests) {
       if (q.status !== 'locked') continue;
       const d = this.def(q.id);
-      if (d.requires!.every((id) => this.quests.find((x) => x.id === id)?.status === 'won')) {
+      if ((d.requires ?? []).every((id) => this.quests.find((x) => x.id === id)?.status === 'won') && (!d.requiresFlag || this.flags.has(d.requiresFlag))) {
         q.status = this.open(d);
         notes.push({ type: 'unlocked', quest: q.id });
       }

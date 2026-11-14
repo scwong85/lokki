@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createRng, type Rng } from '../core/rng';
+import { mods } from '../core/skillMods';
 import { tuning } from '../core/tuning';
 import { DEFENSE_ZONE as ZONE, LINES, LINE_POSTS, LINE_ZONE, NET_POSTS, NET_Y, NET_ZONE, VENDOR_SPAWNS, WARDEN_PATROL, WARDEN_SPAWN } from '../data/deterrents';
 import { CityResponse, ZoneTracker, segmentHit, type DeterrentId, type GullHit } from './deterrents';
@@ -180,9 +181,10 @@ export class CityDefense {
   }
 
   // ---------- one sim step ----------
-  update(dt: number, gull: FlightState, noises: readonly Noise[], touristSees: boolean): DefenseEvent[] {
+  /** `hidden`: the gull is disguised as a pigeon, so the vendors and the Warden neither see nor target it. */
+  update(dt: number, gull: FlightState, noises: readonly Noise[], touristSees: boolean, hidden = false): DefenseEvent[] {
     const ev: DefenseEvent[] = this.pending.splice(0);
-    const info: GullInfo = { x: gull.x, y: gull.y, z: gull.z, diving: gull.mode === 'dive' };
+    const info: GullInfo = hidden ? { x: 1e5, y: 60, z: 1e5, diving: false } : { x: gull.x, y: gull.y, z: gull.z, diving: gull.mode === 'dive' };
     this.hitCd = Math.max(0, this.hitCd - dt);
     this.hawkT = Math.max(0, this.hawkT - dt);
     this.hawkCd = Math.max(0, this.hawkCd - dt);
@@ -269,8 +271,8 @@ export class CityDefense {
   // ---------- hawk-eye hint ----------
   activateHawk(): boolean {
     if (this.hawkCd > 0 || this.hawkT > 0) return false;
-    this.hawkT = tuning.deter.hawkTime.value;
-    this.hawkCd = tuning.deter.hawkCooldown.value + tuning.deter.hawkTime.value;
+    this.hawkT = tuning.deter.hawkTime.value * mods.hawkTime;
+    this.hawkCd = tuning.deter.hawkCooldown.value * mods.hawkCooldown + this.hawkT;
     return true;
   }
 
@@ -279,7 +281,8 @@ export class CityDefense {
   }
 
   get hawkReady(): number {
-    return this.hawkCd > 0 ? 1 - this.hawkCd / (tuning.deter.hawkCooldown.value + tuning.deter.hawkTime.value) : 1;
+    const total = tuning.deter.hawkCooldown.value * mods.hawkCooldown + tuning.deter.hawkTime.value * mods.hawkTime;
+    return this.hawkCd > 0 ? 1 - this.hawkCd / total : 1;
   }
 
   // ---------- poop hooks (composed with the tourists in main) ----------
