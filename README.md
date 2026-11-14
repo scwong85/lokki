@@ -48,7 +48,8 @@ Play in landscape with on-screen controls: left thumb steers (floating stick), d
 | V / G / B | skills: crow call (Mimic), flock call, pigeon disguise (once earned) |
 | K | skills panel and gull looks (1–5 pick a look) |
 | X / Z | extra objectives on/off, start a speedrun (after clearing the finale) |
-| O | options (volumes, mouse look, screen shake, graphics quality) |
+| O | options (volumes, mouse look, screen shake, graphics quality, HUD) |
+| U | HUD: full / minimal / off |
 | T | skip the first-flight tips |
 | M | mute / unmute (sound and music) |
 | C | credits |

@@ -38,11 +38,19 @@ test('smashing a bottle does not crash or freeze the game (regression: removed R
   const bottle = await page.evaluate(() => (window as unknown as { __lokki: Lokki }).__lokki.interaction.props.props.find((p) => p.type === 'bottle')!.body.translation());
   await place(bottle.x, 0.5, bottle.z + 1.8);
   await page.waitForTimeout(800);
-  await page.keyboard.press('KeyE');
-  await page.waitForTimeout(400);
-  expect(await page.evaluate(() => (window as unknown as { __lokki: Lokki }).__lokki.interaction.carried?.def.name)).toBe('bottle');
+  // take it (the page's first key also starts the audio, which can stall a headless page: retry until carried)
+  await expect
+    .poll(async () => {
+      const name = await page.evaluate(() => (window as unknown as { __lokki: Lokki }).__lokki.interaction.carried?.def.name);
+      if (name !== 'bottle') {
+        await page.keyboard.press('KeyE');
+        await page.waitForTimeout(400);
+      }
+      return page.evaluate(() => (window as unknown as { __lokki: Lokki }).__lokki.interaction.carried?.def.name);
+    }, { timeout: 20_000 })
+    .toBe('bottle');
 
-  await place(60, 9, 60); // up in the air over the open harbour: nothing to land on but the ground, whatever the timing
+  await place(6, 9, -175); // above an open street (not the sea: things float there now, so a bottle may not shatter)
   // drop it from 9 m; retry until released (the grab cooldown runs in simulated time, which is slow in headless runs)
   await expect
     .poll(async () => {

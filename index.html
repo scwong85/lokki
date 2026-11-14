@@ -160,6 +160,16 @@
         body.touch #rotate .ph { font-size: 54px; display: inline-block; animation: tilt 1.6s ease-in-out infinite; }
       }
       @keyframes tilt { 0%, 30% { transform: rotate(0deg); } 60%, 100% { transform: rotate(-90deg); } }
+      /* ---- HUD modes (U / HUD button / Options) ---- */
+      body.hud-minimal #todo .q:not(.active):not(.lost), body.hud-minimal #todo .q.side { display: none; }
+      body.touch.hud-minimal #todo.open .q { display: block; }
+      body.hud-minimal #todo .hint, body.hud-minimal #heat .hd, body.hud-minimal #heat .hn, body.hud-minimal #heat .hh, body.hud-minimal #heat .mood, body.hud-minimal #announce .as { display: none; }
+      body.hud-minimal #heat { width: 160px; padding: 3px 8px; }
+      body.hud-off #todo, body.hud-off #heat, body.hud-off #announce, body.hud-off #tip, body.hud-off #waypoints { display: none !important; }
+      #minitimer { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); padding: 3px 12px; border-radius: 12px; background: rgba(255,255,255,.8); color: #3a3a4a; font: 700 15px system-ui, sans-serif; pointer-events: none; z-index: 20; }
+      #minitimer[hidden] { display: none; } #minitimer.low { color: #d6453d; }
+      .hudbtn { font: inherit; padding: 4px 14px; border: 0; border-radius: 8px; background: #fff3c4; color: #3a3a4a; cursor: pointer; }
+      #touch .t-hud { left: calc(10px + env(safe-area-inset-left)); top: 60px; width: 44px; height: 30px; border-radius: 15px; font-size: 11px; }
     </style>
   </head>
   <body>

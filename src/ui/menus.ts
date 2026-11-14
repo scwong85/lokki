@@ -1,4 +1,5 @@
 import { OPTION_SLIDERS, type Options } from '../core/options';
+import { HUD_NAMES, nextHudMode } from './hudMode';
 
 /** Options panel (O, or from the title screen): sliders write straight into the options object. */
 export class OptionsPanel {
@@ -10,12 +11,18 @@ export class OptionsPanel {
     this.el.className = 'menu-card';
     this.el.hidden = true;
     const rows = OPTION_SLIDERS.map((s) => `<label>${s.label}<input type="range" data-k="${s.key}" min="${s.min}" max="${s.max}" step="${s.step}" value="${options[s.key]}"></label>`).join('');
-    this.el.innerHTML = `<h3>Options</h3>${rows}<label class="chk"><input type="checkbox" data-k="graphics"> High quality graphics (shadows)</label><label class="chk"><input type="checkbox" data-k="tutorial"> Show the flying tips again</label><p class="menu-keys"><b>M</b> mutes everything · <b>O</b> closes this</p><button data-act="close">Close</button>`;
+    this.el.innerHTML = `<h3>Options</h3>${rows}<label class="chk">HUD <button type="button" data-act="hud" class="hudbtn"></button></label><label class="chk"><input type="checkbox" data-k="graphics"> High quality graphics (shadows)</label><label class="chk"><input type="checkbox" data-k="tutorial"> Show the flying tips again</label><p class="menu-keys"><b>M</b> mutes everything · <b>U</b> cycles the HUD · <b>O</b> closes this</p><button data-act="close">Close</button>`;
     this.el.querySelectorAll<HTMLInputElement>('input[type=range]').forEach((inp) => {
       inp.addEventListener('input', () => {
         (this.options as unknown as Record<string, number>)[inp.dataset.k!] = Number(inp.value);
         this.onChange(this.options);
       });
+    });
+    const hudBtn = this.el.querySelector<HTMLButtonElement>('[data-act=hud]')!;
+    hudBtn.addEventListener('click', () => {
+      this.options.hud = nextHudMode(this.options.hud);
+      hudBtn.textContent = HUD_NAMES[this.options.hud];
+      this.onChange(this.options);
     });
     const gfx = this.el.querySelector<HTMLInputElement>('input[data-k=graphics]')!;
     gfx.addEventListener('change', () => {
@@ -46,6 +53,7 @@ export class OptionsPanel {
   show(): void {
     this.el.querySelector<HTMLInputElement>('input[data-k=tutorial]')!.checked = !this.options.tutorialDone;
     this.el.querySelector<HTMLInputElement>('input[data-k=graphics]')!.checked = this.options.graphics === 'high';
+    this.el.querySelector<HTMLButtonElement>('[data-act=hud]')!.textContent = HUD_NAMES[this.options.hud];
     this.el.hidden = false;
   }
 

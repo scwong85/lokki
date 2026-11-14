@@ -2,12 +2,13 @@ import type { Marker, QuestDef } from '../data/quests';
 import type { QuestState } from './quest';
 
 /** Which map markers to show now: the open objectives' spots of each active quest, and the start spot of an unlocked idle quest. */
-export function activeMarkers(defs: readonly QuestDef[], quests: readonly QuestState[]): Marker[] {
+/** Markers for quests to start and objectives in progress (`activeOnly`: skip the not-yet-started quests). */
+export function activeMarkers(defs: readonly QuestDef[], quests: readonly QuestState[], activeOnly = false): Marker[] {
   const out: Marker[] = [];
   for (const q of quests) {
     const d = defs.find((x) => x.id === q.id);
     if (!d) continue;
-    if (q.status === 'idle') {
+    if (q.status === 'idle' && !activeOnly) {
       // point at where to begin: explicit start markers, or the first objective when it IS the start action (take the cap)
       const first = d.objectives[0];
       if (d.startMarkers) out.push(...d.startMarkers);

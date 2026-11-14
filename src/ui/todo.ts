@@ -64,6 +64,8 @@ export class Todo {
         return `<li class="${o.done ? 'done' : ''}"><span>${o.done ? '&#9745;' : '&#9744;'}</span> ${o.text}${(od?.count ?? 1) > 1 ? ` <b class="cnt">(${Math.min(o.count, od!.count!)}/${od!.count})</b>` : ''}${extra}${hint}</li>`;
       })
       .join('');
-    return `<div class="q active"><div class="qt">${q.title}${timer}</div><ul>${items}</ul></div>`;
+    // the always-on side lists (little extras, bonus) are marked so the minimal HUD can leave them out
+    const side = q.id === 'extras' || q.id === 'bonus' ? ' side' : '';
+    return `<div class="q active${side}"><div class="qt">${q.title}${timer}</div><ul>${items}</ul></div>`;
   }
 }

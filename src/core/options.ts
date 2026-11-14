@@ -1,5 +1,6 @@
 import { tuning } from './tuning';
 import type { StorageLike } from './save';
+import { HUD_MODES, type HudMode } from '../ui/hudMode';
 
 export interface Options {
   version: 1;
@@ -13,6 +14,8 @@ export interface Options {
   tutorialDone: boolean;
   /** Shadows and full resolution (high) or the fast path (low). */
   graphics: 'high' | 'low';
+  /** How much HUD to show (full / minimal / off). */
+  hud: HudMode;
 }
 
 export const defaultOptions = (): Options => ({
@@ -24,6 +27,7 @@ export const defaultOptions = (): Options => ({
   shake: tuning.juice.shake.value,
   tutorialDone: false,
   graphics: 'high',
+  hud: 'full',
 });
 
 const RANGES = {
@@ -45,6 +49,7 @@ export function sanitizeOptions(raw: unknown, base: Options = defaultOptions()):
   for (const k of Object.keys(RANGES) as (keyof typeof RANGES)[]) o[k] = clampNum(r[k], RANGES[k][0], RANGES[k][1], base[k]);
   o.tutorialDone = r.tutorialDone === true;
   o.graphics = r.graphics === 'low' ? 'low' : 'high';
+  o.hud = HUD_MODES.includes(r.hud as HudMode) ? (r.hud as HudMode) : 'full';
   return o;
 }
 

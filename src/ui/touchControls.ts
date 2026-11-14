@@ -47,6 +47,7 @@ export class TouchControls {
     el.innerHTML = `
       <div class="t-stick"><div class="t-knob"></div></div>
       <button class="t-btn t-menu" data-code="menu" aria-label="Menu">☰</button>
+      <button class="t-btn t-hud" data-code="KeyU" data-mode="tap" aria-label="Show or hide the HUD">HUD</button>
       <button class="t-btn t-hawk" data-code="KeyH" data-mode="tap" aria-label="Hawk-eye">👁</button>
       <div class="t-abil">
         <button class="t-btn t-ab" data-code="KeyV" data-mode="tap" hidden>Caw</button>

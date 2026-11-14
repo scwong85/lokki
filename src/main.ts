@@ -62,6 +62,7 @@ import { loadPeople } from './world/people';
 import { GULL_SKINS, skinById, unlockedSkins } from './data/gullSkins';
 import { TouchControls } from './ui/touchControls';
 import { wantsTouch } from './core/touchMath';
+import { HUD_NAMES, hudFlags, nextHudMode, type HudMode } from './ui/hudMode';
 import { SkillsPanel, skinProgress } from './ui/skillsPanel';
 import { RunHud } from './ui/runHud';
 
@@ -212,14 +213,26 @@ const options = optStore.load();
 if (touch && firstVisit) options.graphics = 'low'; // phones start on the fast preset (switch in Options)
 applyOptions(options);
 graphics.apply(options.graphics);
+let hudF = applyHud(options.hud);
 const optionsPanel = new OptionsPanel(document.body, options, (o) => {
   applyOptions(o);
   if (o.graphics !== graphics.level) graphics.apply(o.graphics);
+  hudF = applyHud(o.hud);
   optStore.save(o);
 });
 // automated browser tests skip the title screen and the tips (add ?title to see them)
 const interactive = !navigator.webdriver || new URLSearchParams(location.search).has('title');
 const tutorial = new Tutorial(interactive && !options.tutorialDone);
+const miniTimer = document.createElement('div');
+miniTimer.id = 'minitimer';
+miniTimer.hidden = true;
+document.body.appendChild(miniTimer);
+/** Show the HUD mode on the page (body classes do the hiding) and return what the game should still draw. */
+function applyHud(mode: HudMode) {
+  document.body.classList.toggle('hud-minimal', mode === 'minimal');
+  document.body.classList.toggle('hud-off', mode === 'off');
+  return hudFlags(mode);
+}
 const tipEl = document.createElement('div');
 tipEl.id = 'tip';
 tipEl.hidden = true;
@@ -602,6 +615,12 @@ startLoop({
       return;
     }
     if (input.wasPressed('KeyO')) optionsPanel.toggle();
+    if (input.wasPressed('KeyU')) {
+      options.hud = nextHudMode(options.hud);
+      hudF = applyHud(options.hud);
+      optStore.save(options);
+      hud.toast(`HUD: ${HUD_NAMES[options.hud]}`, 0.9);
+    }
     if (input.wasPressed('KeyT') && tutorial.running) {
       tutorial.skip();
       options.tutorialDone = true;
@@ -755,6 +774,15 @@ startLoop({
     if (defense && heatMeter) heatMeter.update(defense.heat, defense.response, defense.hawkReady, defense.hawkActive);
     // quest spots, plus a marker on any item that was knocked out of the beak (so it can never be lost)
     const markers: Marker[] = greybox ? [] : activeMarkers(QUESTS, quests.quests);
+    const labelled = hudF.waypoints === 'all' ? markers : hudF.waypoints === 'active' ? activeMarkers(QUESTS, quests.quests, true) : [];
+    // a small timer on its own when the to-do note is hidden
+    const timed = hudF.miniTimer ? quests.quests.find((q) => q.status === 'active' && q.timed) : undefined;
+    miniTimer.hidden = !timed;
+    if (timed) {
+      const sec = Math.max(0, Math.ceil(timed.timeLeft));
+      miniTimer.textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+      miniTimer.classList.toggle('low', sec <= 10);
+    }
     for (const p of interaction.props.props) {
       if (!p.lost || p.broken || p.carried || p.heldBy !== null || markers.length >= 8) continue;
       markers.push({ x: p.cur.p.x, z: p.cur.p.z, r: 1.6, y: Math.max(0, p.cur.p.y - 0.3), label: `Dropped ${p.def.name}` });
@@ -762,7 +790,7 @@ startLoop({
     skillsPanel.updateBar(skills, abilities);
     runHud.update(runTimer, save.speedrunBest);
     markerPool.update(markers, simTime);
-    waypoints.update(markers, cam.camera, gull.position, innerWidth, innerHeight);
+    waypoints.update(labelled, cam.camera, gull.position, innerWidth, innerHeight);
     todo.update(quests.quests, npcs ? npcs.nearestDistance(gull.state) : Infinity, interaction.carried?.stolen === true);
     targets.forEach((t, i) => (targetMeshes[i].visible = t.cooldown === 0));
     const s = gull.state;
