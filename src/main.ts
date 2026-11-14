@@ -318,6 +318,7 @@ function notes(list: QuestNote[]): void {
     if (n.type === 'started') {
       hud.toast(q.timed ? `${q.title}: ${Math.round(q.timeLeft)} seconds!` : `Quest started: ${q.title}`, 1.6);
       if (n.quest === 'finale') announce.show('The ferry horn blows!', 'Chairs in the sandbox, the pastry on the south stall (yellow pillar), and the Warden. The city is on full alert.', 'alert');
+      if (n.quest === 'finale') interaction.restock((pr) => pr.type === 'chair' || pr.tag === 'stallBun'); // knocked-over chairs and a taken pastry come back for the finale
       if (def.startHeat && defense) onDefense(defense.ensureHeat(def.startHeat));
     } else if (n.type === 'objective') {
       const text = q.objectives.find((o) => o.id === n.objective)!.text;
@@ -471,7 +472,7 @@ startLoop({
   update(dt) {
     simTime += dt;
     const m = input.consumeMouse();
-    cam.rotate(m.dx, m.dy);
+    if (!skillsPanel.visible) cam.rotate(m.dx, m.dy);
     if (input.wasPressed('KeyR')) restartLevel('normal');
     if (input.wasPressed('KeyZ')) {
       if (save.replayUnlocked) {
@@ -495,6 +496,10 @@ startLoop({
     if (input.wasPressed('KeyM')) {
       hud.toast(audio.toggleMute() ? 'Sound off' : 'Sound on', 0.8);
       persist();
+    }
+    if (skillsPanel.visible) {
+      input.endStep(); // the skills panel pauses the game
+      return;
     }
     // active skills
     if (abilities.tick(dt)) {
@@ -523,6 +528,7 @@ startLoop({
       hud.toast('Pigeon mode! The vendors and the Warden ignore you.', 1.6);
     }
     for (const n of flock.update(dt)) noise(n.x, n.z, 0.9);
+    for (const d of flock.takeDrops()) interaction.dropDecoyPoop(d, simTime);
     pings.update(dt);
     // speedrun clock: starts on the first move
     if (runTimer.mode === 'speedrun' && !runTimer.running && !runTimer.finished && (input.axes().x !== 0 || input.axes().y !== 0 || input.isDown('Space'))) runTimer.begin();

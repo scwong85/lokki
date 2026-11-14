@@ -34,6 +34,8 @@ export class FlockSystem {
   private birds: THREE.Mesh[] = [];
   private t = -1;
   private nextNoise = 0;
+  private ticks = 0;
+  private drops: { x: number; y: number; z: number }[] = [];
   private from = { x: 0, y: 0, z: 0 };
   private target = { x: 0, z: 0 };
 
@@ -56,6 +58,15 @@ export class FlockSystem {
     this.target = { ...target };
     this.t = 0;
     this.nextNoise = 1.0;
+    this.ticks = 0;
+    this.drops = [];
+  }
+
+  /** Where the decoy gulls let go of a dropping since the last call. */
+  takeDrops(): { x: number; y: number; z: number }[] {
+    const d = this.drops;
+    this.drops = [];
+    return d;
   }
 
   /** Advance; returns the places that are noisy this step (every ~0.7 s once the birds have arrived). */
@@ -77,6 +88,10 @@ export class FlockSystem {
     if (this.t >= this.nextNoise && this.t < life) {
       out.push({ ...this.target });
       this.nextNoise += 0.7;
+      this.ticks++;
+      this.birds.forEach((b, i) => {
+        if (b.visible && (this.ticks + i) % 2 === 0) this.drops.push({ x: b.position.x, y: b.position.y, z: b.position.z });
+      });
     }
     if (this.t >= life) this.t = -1;
     return out;
@@ -84,6 +99,7 @@ export class FlockSystem {
 
   clear(): void {
     this.t = -1;
+    this.drops = [];
     for (const b of this.birds) b.visible = false;
   }
 }

@@ -42,6 +42,8 @@ export type GagEvent =
 interface LivePoop {
   state: PoopState;
   mesh: THREE.Mesh;
+  /** Dropped by a decoy gull: no heat, no quest credit. */
+  decoy?: boolean;
 }
 
 const poopGeo = new THREE.SphereGeometry(0.14, 8, 6);
@@ -189,7 +191,7 @@ export class Interaction {
       if (hit.prop !== null && hit.prop >= propSpheres.length) {
         const role = this.npcs?.onPooped(hit.prop - propSpheres.length);
         this.decals.add({ x: hit.x, y: 0, z: hit.z }, { x: 0, y: 1, z: 0 }, 0.5);
-        ev.push({ type: 'poopNpc', role });
+        if (!lp.decoy) ev.push({ type: 'poopNpc', role });
       } else if (hit.prop !== null) {
         const p = props[hit.prop];
         p.dirty++;
@@ -198,10 +200,10 @@ export class Interaction {
         blob.scale.set(1, 0.5, 1);
         blob.position.copy(p.mesh.worldToLocal(new THREE.Vector3(hit.x, hit.y, hit.z)));
         p.mesh.add(blob);
-        ev.push({ type: 'poopProp', prop: p });
+        if (!lp.decoy) ev.push({ type: 'poopProp', prop: p });
       } else {
         this.decals.add(hit, { x: hit.nx, y: hit.ny, z: hit.nz });
-        ev.push({ type: 'splat', x: hit.x, z: hit.z });
+        if (!lp.decoy) ev.push({ type: 'splat', x: hit.x, z: hit.z });
       }
     }
 
@@ -232,6 +234,26 @@ export class Interaction {
     this.carried = null;
     this.grabCd = 0.5;
     return p;
+  }
+
+  /** A decoy gull (flock call) lets go of a dropping: it splats and the victims react, but it earns no heat or quest credit. */
+  dropDecoyPoop(at: { x: number; y: number; z: number }, time: number): void {
+    const { spheres: pSpheres } = this.props.hitSpheres();
+    const nSpheres = this.npcs?.poopSpheres() ?? [];
+    const state = spawnPoopAssisted(at, { x: 0, y: 0, z: 0 }, time, this.world, [...pSpheres, ...nSpheres], nSpheres.filter((n) => n.tag !== 'umbrella'));
+    const mesh = new THREE.Mesh(poopGeo, poopMat);
+    mesh.position.set(state.x, state.y, state.z);
+    this.group.add(mesh);
+    this.poops.push({ state, mesh, decoy: true });
+  }
+
+  /** Put matching props back at their spawn points (the finale restocks its chairs and pastry). */
+  restock(match: (p: Prop) => boolean): void {
+    for (const p of this.props.props) {
+      if (!match(p)) continue;
+      if (this.carried === p) this.carried = null;
+      this.props.reset(p);
+    }
   }
 
   /** Put every prop back and wipe the splats (R). */
