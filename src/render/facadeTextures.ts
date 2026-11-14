@@ -26,12 +26,12 @@ const rect = (g: CanvasRenderingContext2D, col: string, x: number, y: number, w:
 /** One upper-floor bay: a framed two-pane window with a sill. */
 export const windowTexture = (): THREE.Texture =>
   tile((g) => {
-    rect(g, '#ece6dc', 18, 10, 28, 37); // frame
-    rect(g, '#7189a3', 21, 13, 22, 31); // glass
-    rect(g, '#9fb4c9', 21, 13, 22, 8); // sky reflection
-    rect(g, '#ece6dc', 31, 13, 2, 31); // mullion
-    rect(g, '#ece6dc', 21, 26, 22, 2); // transom
-    rect(g, '#d6cfc3', 15, 47, 34, 3); // sill
+    rect(g, '#ece6dc', 22, 13, 20, 31); // frame
+    rect(g, '#7189a3', 24, 15, 16, 27); // glass
+    rect(g, '#9fb4c9', 24, 15, 16, 7); // sky reflection
+    rect(g, '#ece6dc', 31, 15, 2, 27); // mullion
+    rect(g, '#ece6dc', 24, 26, 16, 2); // transom
+    rect(g, '#d6cfc3', 20, 44, 24, 3); // sill
   });
 
 /** One ground-floor bay: a shop window over a stone plinth. */

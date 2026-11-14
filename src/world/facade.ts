@@ -20,7 +20,7 @@ export function hash(n: number, k = 0): number {
 
 export const FLOOR_H = 3.2;
 export const GROUND_H = 3.6;
-export const BAY_W = 3.4;
+export const BAY_W = 5.2;
 
 /** Whole window bays on a wall of this length (0 = too short for windows). */
 export function bays(len: number): number {

@@ -13,8 +13,8 @@ const normal = (t: number[][]) => {
 describe('facade rules', () => {
   it('bays and storeys', () => {
     expect(bays(1.5)).toBe(0);
-    expect(bays(3.4)).toBe(1);
-    expect(bays(17)).toBe(5);
+    expect(bays(5.2)).toBe(1);
+    expect(bays(26)).toBe(5);
     expect(storeys(4)).toEqual({ ground: 4, upperFloors: 0 });
     expect(storeys(GROUND_H + FLOOR_H * 4)).toEqual({ ground: GROUND_H, upperFloors: 4 });
   });
@@ -97,5 +97,22 @@ describe('set dressing plan', () => {
       expect(Math.hypot(p.x + 30, p.z + 30)).toBeGreaterThan(6);
     }
     for (const t of plan.filter((p) => p.type === 'tree')) expect(pointInRings(park.rings, t.x, t.z)).toBe(true);
+  });
+});
+
+describe('floating', () => {
+  it('items in the water settle at the float line instead of sinking', async () => {
+    const { floatVy, halfHeight } = await import('../../src/gameplay/buoyancy');
+    let y = 0.02, vy = 0;
+    const g = 14, dt = 1 / 60;
+    for (let i = 0; i < 600; i++) {
+      vy = floatVy(y, vy - g * dt, 0.15, g, 18, 2.5, dt);
+      y = Math.max(0, y + vy * dt);
+    }
+    expect(y).toBeGreaterThan(0.1);
+    expect(y).toBeLessThan(0.2);
+    expect(floatVy(1, -2, 0.15, g, 18, 2.5, dt)).toBe(-2); // above the water: untouched
+    expect(halfHeight({ kind: 'box', hy: 0.3 })).toBe(0.3);
+    expect(halfHeight({ kind: 'capsule', hh: 0.12, r: 0.14 })).toBeCloseTo(0.26);
   });
 });

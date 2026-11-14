@@ -7,6 +7,16 @@ import { restY } from '../data/props';
 export interface PrismDef extends Prism {
   wall: number;
   roof: number;
+  /** Collision only: drawn by a separate model (e.g. the striped tent canopies). */
+  hidden?: boolean;
+}
+
+/** Instanced decorations a landmark asks for (drawn in city.ts). */
+export interface Decor {
+  kind: 'tent';
+  x: number;
+  z: number;
+  a: number;
 }
 
 export interface LandmarkSrc {
@@ -34,6 +44,7 @@ export interface LandmarkOut {
   targets: Target[];
   props?: PropSpawn[];
   mats?: Mat[];
+  decor?: Decor[];
 }
 
 /** Regular polygon ring (flat x,z). */
@@ -121,12 +132,15 @@ function tents(l: LandmarkSrc): LandmarkOut {
   const a = ((l.rotationDeg ?? 0) * Math.PI) / 180;
   const prisms: PrismDef[] = [];
   const targets: Target[] = [];
+  const decor: Decor[] = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const [ox, oz] = rot((c - (cols - 1) / 2) * dx, (r - (rows - 1) / 2) * dz, a);
       const cx = l.x + ox, cz = l.z + oz;
       prisms.push(prism(rect(cx, cz, 2.6, 1.4, a), 0, 1.0, 0xfff1d6, 0xffd1b3));
-      prisms.push(prism(rect(cx, cz, 3.8, 3.8, a), 2.3, 2.7, ORANGE, 0xff8a3d));
+      prisms.push({ ...prism(rect(cx, cz, 3.8, 3.8, a), 2.3, 2.7, ORANGE, 0xff8a3d), hidden: true });
+      prisms.push({ ...prism(rect(cx, cz, 1.6, 1.6, a), 2.7, 3.2, ORANGE, 0xff8a3d, 'perch'), hidden: true });
+      decor.push({ kind: 'tent', x: cx, z: cz, a });
     }
     if (r < rows - 1) {
       for (let c = 2; c < cols; c += 4) {
@@ -141,7 +155,7 @@ function tents(l: LandmarkSrc): LandmarkOut {
     const [ox, oz] = rot((5 - (cols - 1) / 2) * dx, (rows - 1 - (rows - 1) / 2) * dz, a);
     props.push({ type: 'bun', x: l.x + ox, y: restY('bun', 1.0), z: l.z + oz, tag: 'stallBun' });
   }
-  return { prisms, targets, props };
+  return { prisms, targets, props, decor };
 }
 
 function ferry(l: LandmarkSrc): LandmarkOut {
@@ -223,7 +237,7 @@ function cafe(l: LandmarkSrc): LandmarkOut {
 const BUILDERS: Record<string, (l: LandmarkSrc) => LandmarkOut> = { cathedral, statue, tents, ferry, lamps, clock, toy, goods, bins, cafe };
 
 export function buildLandmarks(list: readonly LandmarkSrc[]): Required<LandmarkOut> {
-  const out: Required<LandmarkOut> = { prisms: [], targets: [], props: [], mats: [] };
+  const out: Required<LandmarkOut> = { prisms: [], targets: [], props: [], mats: [], decor: [] };
   for (const l of list) {
     if (l.type === 'restyle') continue; // handled by the building pass (city.ts)
     const b = BUILDERS[l.type];
@@ -236,6 +250,7 @@ export function buildLandmarks(list: readonly LandmarkSrc[]): Required<LandmarkO
     out.targets.push(...r.targets);
     out.props.push(...(r.props ?? []));
     out.mats.push(...(r.mats ?? []));
+    out.decor.push(...(r.decor ?? []));
   }
   return out;
 }

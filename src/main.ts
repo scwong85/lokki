@@ -6,6 +6,7 @@ import { tuning } from './core/tuning';
 import { mods, staminaMax } from './core/skillMods';
 import { addGroundPlane, createScene } from './render/scene';
 import { Graphics, shadows } from './render/graphics';
+import { Ripples, type Water } from './render/water';
 import { palette } from './render/palette';
 import { FollowCamera } from './render/camera';
 import { Gull } from './gull/gull';
@@ -84,6 +85,7 @@ let start: { x: number; z: number };
 let propSpawns: PropSpawn[] = [];
 let walkable: (x: number, z: number) => boolean = () => true;
 let isLand: (x: number, z: number) => boolean = () => true;
+let water: Water | null = null;
 if (greybox) {
   const course = buildCourse();
   const visuals = buildCourseVisuals(course.boxes, course.targets);
@@ -96,12 +98,19 @@ if (greybox) {
   const city = buildCity();
   scene.add(city.group);
   world = city.world;
-  ({ targets, start, targetMeshes, propSpawns, walkable, isLand } = city);
+  ({ targets, start, targetMeshes, propSpawns, walkable, isLand, water } = city);
   phys.addStaticMesh(city.physicsMesh.vertices, city.physicsMesh.indices);
 }
 const gull = new Gull(start);
 phys.createGullBody(GULL_RADIUS, start.x, GULL_RADIUS, start.z);
 const interaction = new Interaction(phys, world, scene);
+if (!greybox) {
+  gull.isWater = (x, z) => !isLand(x, z);
+  interaction.props.isWater = (x, z) => !isLand(x, z);
+}
+const ripples = new Ripples();
+scene.add(ripples.group);
+let rippleT = 0;
 for (const sp of propSpawns) interaction.props.spawn(sp);
 // tourists and the quest log only exist in the city
 const npcs = greybox ? null : new NpcManager(world, interaction.props, scene, walkable);
@@ -230,7 +239,12 @@ function onFlightEvents(evs: FlightEvent[]): void {
       audio.play('screech');
       gull.openBeak(0.5);
     } else if (e.type === 'exhausted') hud.toast('Out of breath!', 0.6);
-    else if (e.type === 'land' && e.quality === 'hard') {
+    else if (e.type === 'land' && e.water) {
+      hud.toast('Splash!', 0.6);
+      audio.play('splat');
+      ripples.add(gull.state.x, gull.state.z, 1.6);
+      interaction.debris.burst({ x: gull.state.x, y: 0.2, z: gull.state.z }, 0xdff4fb, 10);
+    } else if (e.type === 'land' && e.quality === 'hard') {
       hud.toast('Oof!');
       cam.shake(0.7);
       interaction.debris.burst(gull.state, 0xe9dcc8, 10); // dust
@@ -722,6 +736,13 @@ startLoop({
     cam.update(gull.position, frameDt, { vx: s.vx, vy: s.vy, vz: s.vz, diving: s.mode === 'dive', turnRate: s.turnRate });
     audio.setAir(Math.hypot(s.vx, s.vy, s.vz) / tuning.dive.speed.value, s.mode !== 'ground');
     graphics.update(gull.position);
+    water?.update(simTime);
+    ripples.update(frameDt);
+    rippleT -= frameDt;
+    if (s.mode === 'ground' && s.overWater && rippleT <= 0) {
+      rippleT = Math.hypot(s.vx, s.vz) > 0.4 ? 0.45 : 1.6; // paddling makes more rings than floating
+      ripples.add(s.x, s.z, 0.8);
+    }
     renderer.render(scene, cam.camera);
     debug.frame(frameDt, `${renderer.info.render.calls} calls · ${(renderer.info.render.triangles / 1000).toFixed(0)}k tris`);
     const tip = tutorial.current;

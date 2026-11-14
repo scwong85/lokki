@@ -33,6 +33,8 @@ export interface FlightState {
   perched: boolean;
   /** Height of the gull's underside above the surface below. */
   heightAbove: number;
+  /** Sitting on (or just above) the sea: set by the caller each step. Swimming is slower and landings are splashes. */
+  overWater: boolean;
 }
 
 export interface FlightInput {
@@ -53,14 +55,14 @@ export type FlightEvent =
   | { type: 'exhausted' }
   | { type: 'diveStart' }
   | { type: 'diveEnd' }
-  | { type: 'land'; impact: number; quality: 'soft' | 'rough' | 'hard'; perch: boolean }
+  | { type: 'land'; impact: number; quality: 'soft' | 'rough' | 'hard'; perch: boolean; water?: boolean }
   | { type: 'bonk'; impact: number };
 
 export function newFlightState(x = 0, z = 0): FlightState {
   return {
     x, y: GULL_RADIUS, z, vx: 0, vy: 0, vz: 0, heading: 0, turnRate: 0, mode: 'ground',
     stamina: staminaMax(), stunT: 0, flapCd: 0, hopCd: 0, diveT: 0, diveCd: 0, diveAngle: 0.7,
-    flapAnim: 99, perched: false, heightAbove: 0,
+    flapAnim: 99, perched: false, heightAbove: 0, overWater: false,
   };
 }
 
@@ -139,14 +141,15 @@ export function stepFlight(
   const prevHeading = s.heading;
 
   if (s.mode === 'ground') {
-    // ---- walking ----
+    // ---- walking (or paddling, slower) ----
     const { wx, wz, len } = worldDir(ctl.ax, ctl.ay, camYaw);
+    const walkSpeed = w.speed.value * (s.overWater ? tuning.water.swimSpeed.value : 1);
     const spBefore = Math.hypot(s.vx, s.vz);
     if (len > 0) {
       s.vx += wx * w.accel.value * dt;
       s.vz += wz * w.accel.value * dt;
       // acceleration may steer but never push past walk speed (or the speed we landed with)
-      const cap = Math.max(w.speed.value, spBefore);
+      const cap = Math.max(walkSpeed, spBefore);
       const spNow = Math.hypot(s.vx, s.vz);
       if (spNow > cap) {
         s.vx *= cap / spNow;
@@ -154,8 +157,8 @@ export function stepFlight(
       }
     }
     const sp = Math.hypot(s.vx, s.vz);
-    const decel = (len === 0 ? w.friction.value : 0) + (sp > w.speed.value ? l.groundDrag.value : 0);
-    const floor = len === 0 ? 0 : w.speed.value;
+    const decel = (len === 0 ? w.friction.value : 0) + (sp > walkSpeed ? l.groundDrag.value * (s.overWater ? 2 : 1) : 0);
+    const floor = len === 0 ? 0 : walkSpeed;
     if (sp > 0) {
       const target = Math.max(floor, sp - decel * dt);
       const cur = Math.min(sp, Math.max(target, 0));
@@ -292,7 +295,11 @@ export function stepFlight(
     if (c.ny > 0.6) {
       grounded = true;
       perch = perch || c.kind === 'perch';
-      if (!wasGrounded) {
+      if (!wasGrounded && s.overWater && c.kind !== 'perch') {
+        // splashdown: water is soft, whatever the speed
+        if (wasDive) s.diveCd = d.cooldown.value;
+        ev.push({ type: 'land', impact, quality: 'soft', perch: false, water: true });
+      } else if (!wasGrounded) {
         const quality = impact < l.softSpeed.value ? 'soft' : impact < l.hardSpeed.value ? 'rough' : 'hard';
         if (quality === 'rough') s.stunT = l.stunSoft.value;
         if (quality === 'hard') s.stunT = wasDive ? l.diveStun.value : l.stunHard.value;

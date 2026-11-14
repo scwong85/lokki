@@ -89,6 +89,14 @@ export const tuning = {
     lookAhead: p(0.2, 0, 1, 0.01), // seconds of velocity the camera looks ahead
     minHeight: p(0.6, 0, 3, 0.1),
   },
+  water: {
+    waves: p(1, 0, 2, 0.1), // strength of the wave colour pattern
+    floatHeight: p(0.12, -0.2, 0.6, 0.02), // where loose items float
+    buoyancy: p(18, 0, 60, 1), // how hard the water pushes items up
+    drag: p(2.5, 0, 10, 0.1), // water drag on floating items
+    swimSpeed: p(0.55, 0.1, 1.5, 0.05), // swimming speed as a fraction of walking
+    swimSink: p(0.2, 0, 0.5, 0.02), // how low the gull sits in the water
+  },
   people: {
     facing: p(3.14, -3.15, 3.15, 0.05), // model yaw so people face where they walk
     walkRate: p(1.3, 0.2, 3, 0.05), // walk animation speed

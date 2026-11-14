@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import earcut from 'earcut';
-import { palette } from '../render/palette';
 import { World, pointInRings, type Box, type Prism } from './collision';
 import { buildLandmarks, ngon, type LandmarkSrc, type PrismDef } from './landmarks';
 import { createTargetMeshes } from './targetMeshes';
@@ -12,6 +11,9 @@ import { shopTexture, windowTexture } from '../render/facadeTextures';
 import { tuning } from '../core/tuning';
 import { planDressing } from './dressingPlan';
 import { buildDressing } from './dressing';
+import { Water } from '../render/water';
+import { buildTents } from './tents';
+import { asphaltTexture, grassTexture, pavingTexture } from '../render/groundTextures';
 
 interface CityData {
   half: number;
@@ -42,6 +44,7 @@ export interface City {
   walkable: (x: number, z: number) => boolean;
   /** Triangle soup of every building/landmark for static physics colliders. */
   physicsMesh: { vertices: Float32Array; indices: Uint32Array };
+  water: Water;
   stats: { buildings: number; prisms: number; chunks: number };
 }
 
@@ -125,18 +128,19 @@ function extrude(buf: Buf, p: PrismDef | { rings: number[][]; y0: number; y1: nu
   }
 }
 
-/** Flat polygon layer (land, streets, parks) at height y. */
-function flatLayer(polys: { rings: number[][] }[], y: number, color: number, layer: number): THREE.Mesh {
+/** Flat polygon layer (land, streets, parks) at height y; `map` tiles every `tileM` metres in world space. */
+function flatLayer(polys: { rings: number[][] }[], y: number, color: number, layer: number, map?: THREE.Texture, tileM = 4): THREE.Mesh {
   const buf = new Buf();
   const c = new THREE.Color(color);
+  const uv = (x: number, z: number): [number, number] => [x / tileM, z / tileM];
   for (const poly of polys) {
     for (const [ax, az, bx, bz, cx, cz] of triangulate(poly.rings)) {
       const up = (bz - az) * (cx - ax) - (bx - ax) * (cz - az) > 0;
-      if (up) buf.tri([ax, y, az], [bx, y, bz], [cx, y, cz], c);
-      else buf.tri([ax, y, az], [cx, y, cz], [bx, y, bz], c);
+      if (up) buf.tri([ax, y, az], [bx, y, bz], [cx, y, cz], c, uv(ax, az), uv(bx, bz), uv(cx, cz));
+      else buf.tri([ax, y, az], [cx, y, cz], [bx, y, bz], c, uv(ax, az), uv(cx, cz), uv(bx, bz));
     }
   }
-  const mat = new THREE.MeshLambertMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -layer, polygonOffsetUnits: -layer });
+  const mat = new THREE.MeshLambertMaterial({ vertexColors: true, map: map ?? null, polygonOffset: true, polygonOffsetFactor: -layer, polygonOffsetUnits: -layer });
   const m = buf.mesh(mat);
   m.receiveShadow = true;
   return m;
@@ -233,6 +237,19 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
           upper.tri(U1, P2, P1, trim);
           upper.tri(U1, U2, P2, trim);
         }
+        // parapet: a low wall around the roof edge (outer face, cap, inner face)
+        const ph = 0.55, pw = 0.3;
+        const ix1 = x1 - nx * pw, iz1 = z1 - nz * pw, ix2 = x2 - nx * pw, iz2 = z2 - nz * pw;
+        wallQuad(upper, x1, z1, x2, z2, h, h + ph, sign > 0, wall, wall, 0, 0);
+        wallQuad(upper, ix1, iz1, ix2, iz2, h, h + ph, sign < 0, foot, wall, 0, 0);
+        const C1 = [x1, h + ph, z1], C2 = [x2, h + ph, z2], I1 = [ix1, h + ph, iz1], I2 = [ix2, h + ph, iz2];
+        if (sign > 0) {
+          upper.tri(C1, C2, I2, trim);
+          upper.tri(C1, I2, I1, trim);
+        } else {
+          upper.tri(C1, I2, C2, trim);
+          upper.tri(C1, I1, I2, trim);
+        }
       }
     }
   });
@@ -261,6 +278,34 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
     for (const [p, q, t] of roof.slopes) upper.tri(p, q, t, roofC);
     for (const [p, q, t] of roof.gables) upper.tri(p, q, t, wall);
     for (const sl of roof.slabs) prisms.push({ rings: [sl.ring], y0: sl.y0, y1: sl.y1, kind: sl.perch ? 'perch' : 'building', wall: roofHex, roof: roofHex });
+    // dormers along both long sides of a gable roof
+    if (!hip && r.long > 7 && rise > 2) {
+      const [a, bb, , d] = r.c;
+      const ux = (bb[0] - a[0]) / r.long, uz = (bb[1] - a[1]) / r.long;
+      const n = Math.floor((r.long - 2) / 5);
+      for (const [p0, inward] of [[a, [(d[0] - a[0]) / r.short, (d[1] - a[1]) / r.short]], [d, [(a[0] - d[0]) / r.short, (a[1] - d[1]) / r.short]]] as [[number, number], [number, number]][]) {
+        for (let i = 0; i < n; i++) {
+          const t = (r.long - (n - 1) * 5) / 2 + i * 5;
+          const cx = p0[0] + ux * t + inward[0] * 1.6, cz = p0[1] + uz * t + inward[1] * 1.6;
+          const ring = [
+            cx - ux * 0.7 - inward[0] * 0.6, cz - uz * 0.7 - inward[1] * 0.6,
+            cx + ux * 0.7 - inward[0] * 0.6, cz + uz * 0.7 - inward[1] * 0.6,
+            cx + ux * 0.7 + inward[0] * 0.6, cz + uz * 0.7 + inward[1] * 0.6,
+            cx - ux * 0.7 + inward[0] * 0.6, cz - uz * 0.7 + inward[1] * 0.6,
+          ];
+          const top = h + rise * (1.6 / (r.short / 2)) + 0.5;
+          extrude(upper, { rings: [ring], y0: h, y1: top, wall: wallHex, roof: roofHex });
+          // the dormer window, a dark pane on its outward face
+          const fx = cx - inward[0] * 0.62, fz = cz - inward[1] * 0.62;
+          const g = new THREE.Color(0x6c829b);
+          const A = [fx - ux * 0.4, top - 1.05, fz - uz * 0.4], B = [fx + ux * 0.4, top - 1.05, fz + uz * 0.4], C = [fx + ux * 0.4, top - 0.25, fz + uz * 0.4], D = [fx - ux * 0.4, top - 0.25, fz - uz * 0.4];
+          upper.tri(A, B, C, g);
+          upper.tri(A, C, D, g);
+          upper.tri(A, C, B, g);
+          upper.tri(A, D, C, g);
+        }
+      }
+    }
     if (hash(b.id, 5) % 2 === 0) {
       // a chimney poking out of the roof near the ridge
       const [R1, R2] = roof.ridge as [V3, V3];
@@ -294,6 +339,39 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
       const inside = [[-1, -1], [1, -1], [1, 1], [-1, 1]].every(([sx, sz]) => pointInRings(b.rings, cx + (sx * w) / 2 + sx * 0.5, cz + (sz * d) / 2 + sz * 0.5));
       if (inside) prisms.push(box(upper, cx, cz, w, d, h, h + 1 + (hash(b.id, 99 + i) % 10) / 8, 0xc9c4bd));
     }
+    if (h >= 6) {
+      const at = (k: number, pad: number): [number, number] | null => {
+        const fx = (hash(b.id, 200 + k) % 1000) / 1000, fz = (hash(b.id, 300 + k) % 1000) / 1000;
+        const x = minx + (0.1 + fx * 0.8) * (maxx - minx), z = minz + (0.1 + fz * 0.8) * (maxz - minz);
+        return [[-1, -1], [1, -1], [1, 1], [-1, 1]].every(([sx, sz]) => pointInRings(b.rings, x + sx * pad, z + sz * pad)) ? [x, z] : null;
+      };
+      // chimney stacks (brick, with a cap)
+      for (let i = 0; i < 1 + (hash(b.id, 13) % 3); i++) {
+        const p = at(i, 1);
+        if (!p) continue;
+        const top = h + 1.4 + (hash(b.id, 400 + i) % 10) / 10;
+        prisms.push(box(upper, p[0], p[1], 0.7, 1.1, h, top, 0xc27d66));
+        box(upper, p[0], p[1], 0.9, 1.3, top, top + 0.15, 0x8f8a86);
+      }
+      // skylights (dark glass panes lying on the roof)
+      for (let i = 0; i < hash(b.id, 17) % 3; i++) {
+        const p = at(10 + i, 1.4);
+        if (!p) continue;
+        const g = new THREE.Color(0x6c829b);
+        const y = h + 0.06;
+        upper.tri([p[0] - 0.9, y, p[1] - 0.6], [p[0] - 0.9, y, p[1] + 0.6], [p[0] + 0.9, y, p[1] + 0.6], g);
+        upper.tri([p[0] - 0.9, y, p[1] - 0.6], [p[0] + 0.9, y, p[1] + 0.6], [p[0] + 0.9, y, p[1] - 0.6], g);
+      }
+      // a TV antenna now and then
+      if (hash(b.id, 19) % 3 === 0) {
+        const p = at(20, 0.5);
+        if (p) {
+          box(upper, p[0], p[1], 0.07, 0.07, h, h + 2.6, 0x6d717a);
+          box(upper, p[0], p[1], 1.2, 0.05, h + 2.2, h + 2.26, 0x6d717a);
+          box(upper, p[0], p[1], 0.8, 0.05, h + 2.45, h + 2.5, 0x6d717a);
+        }
+      }
+    }
   }
   return prisms;
 }
@@ -302,11 +380,10 @@ export function buildCity(): City {
   const group = new THREE.Group();
 
   // water everywhere, land/streets/parks on top
-  const water = new THREE.Mesh(new THREE.PlaneGeometry(8000, 8000), new THREE.MeshLambertMaterial({ color: palette.water, flatShading: true }));
-  water.rotation.x = -Math.PI / 2;
-  water.receiveShadow = true;
-  group.add(water);
-  group.add(flatLayer(data.land, 0.02, LAND, 1), flatLayer(data.streets, 0.03, STREET, 2), flatLayer(data.parks, 0.04, PARK, 3));
+  const isLand = (x: number, z: number) => data.land.some((l) => pointInRings(l.rings, x, z));
+  const water = new Water(data.land, isLand);
+  group.add(water.group);
+  group.add(flatLayer(data.land, 0.02, LAND, 1, pavingTexture(), 3), flatLayer(data.streets, 0.03, STREET, 2, asphaltTexture(), 6), flatLayer(data.parks, 0.04, PARK, 3, grassTexture(), 5));
 
   // landmarks keep the plain prism look; registry buildings get facades, roofs and roof clutter
   const lm = buildLandmarks(data.landmarks);
@@ -328,7 +405,9 @@ export function buildCity(): City {
     if (!c) chunks.set(key, (c = { upper: new Buf(), ground: new Buf() }));
     return c;
   };
-  for (const d of lm.prisms) extrude(chunkFor(d.rings[0]).upper, d);
+  for (const d of lm.prisms) if (!d.hidden) extrude(chunkFor(d.rings[0]).upper, d);
+  const tents = buildTents(lm.decor);
+  if (tents) group.add(tents);
   for (const b of data.buildings) {
     const c = chunkFor(b.rings[0]);
     defs.push(...building(c.upper, c.ground, b));
@@ -349,7 +428,6 @@ export function buildCity(): City {
   const physicsMesh = { vertices: new Float32Array(phys), indices: Uint32Array.from({ length: phys.length / 3 }, (_, i) => i) };
 
   // set dressing (trees, benches, bollards, bikes, café umbrellas, boats); trees are perches
-  const isLand = (x: number, z: number) => data.land.some((l) => pointInRings(l.rings, x, z));
   const probe = new World([], defs, data.half);
   const keepClear = data.landmarks
     .filter((l) => Number.isFinite(l.x) && Number.isFinite(l.z))
@@ -365,5 +443,5 @@ export function buildCity(): City {
 
   const targets = lm.targets;
   const targetMeshes = createTargetMeshes(targets, group);
-  return { world, group, targets, targetMeshes, start: { x: 0, z: -12 }, propSpawns: lm.props, isLand, walkable: (x, z) => isLand(x, z) && !world.solidAt(x, 0.9, z), physicsMesh, stats: { buildings: data.buildings.length, prisms: defs.length, chunks: chunks.size } };
+  return { world, group, targets, targetMeshes, start: { x: 0, z: -12 }, propSpawns: lm.props, water, isLand, walkable: (x, z) => isLand(x, z) && !world.solidAt(x, 0.9, z), physicsMesh, stats: { buildings: data.buildings.length, prisms: defs.length, chunks: chunks.size } };
 }

@@ -19,6 +19,8 @@ export class Gull {
   private walkPhase = 0;
   private beakT = 0;
   private time = 0;
+  /** Is there sea under this spot? (set by the game; the greybox has none) */
+  isWater: ((x: number, z: number) => boolean) | null = null;
 
   constructor(private start: { x: number; z: number }) {
     this.state = newFlightState(start.x, start.z);
@@ -50,6 +52,7 @@ export class Gull {
   update(inp: FlightInput, camYaw: number, dt: number, world: World, time: number, targets: readonly Target[] = []): FlightEvent[] {
     const s = this.state;
     this.prev = { x: s.x, y: s.y, z: s.z, heading: s.heading };
+    s.overWater = !!this.isWater?.(s.x, s.z) && s.y < GULL_RADIUS + 1;
     return stepFlight(s, inp, camYaw, dt, world, time, targets);
   }
 
@@ -61,6 +64,8 @@ export class Gull {
     this.position.set(p.x + (s.x - p.x) * alpha, p.y + (s.y - p.y) * alpha, p.z + (s.z - p.z) * alpha);
     const dh = Math.atan2(Math.sin(s.heading - p.heading), Math.cos(s.heading - p.heading));
     this.mesh.position.copy(this.position);
+    const swimming = s.mode === 'ground' && s.overWater;
+    if (swimming) this.mesh.position.y -= tuning.water.swimSink.value - Math.sin(this.time * 2.2) * 0.03; // sits in the water and bobs
 
     const hs = Math.hypot(s.vx, s.vz);
     const airborne = s.mode !== 'ground';
@@ -97,5 +102,6 @@ export class Gull {
     const sc = Math.max(0.4, 1.6 - h * 0.03);
     this.shadow.scale.set(sc, sc, sc);
     (this.shadow.material as THREE.MeshBasicMaterial).opacity = Math.max(0.12, 0.4 - h * 0.01);
+    this.shadow.visible = !swimming;
   }
 }

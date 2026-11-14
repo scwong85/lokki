@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { floatVy, halfHeight, waterDrag } from './buoyancy';
 import type { Collider, RigidBody } from '@dimforge/rapier3d-compat';
 import { PROPS, classifyImpact, type PropDef, type PropType, type Shape } from '../data/props';
 import { GROUPS, type PhysicsWorld } from '../physics/physics';
@@ -64,6 +65,10 @@ function colliderFor(R: PhysicsWorld['R'], s: Shape, mass: number) {
 export class PropManager {
   readonly props: Prop[] = [];
   private nextId = 1;
+
+  /** Is there sea under this spot? (set by the game; without it nothing floats) */
+  isWater: ((x: number, z: number) => boolean) | null = null;
+  private time = 0;
 
   constructor(private phys: PhysicsWorld, private parent: THREE.Object3D) {}
 
@@ -166,11 +171,23 @@ export class PropManager {
   // ---- stepping ----
   /** Call right before the physics step: remembers poses for render interpolation. */
   beforeStep(dt: number): void {
+    this.time += dt;
+    const w = tuning.water;
     for (const p of this.props) {
       p.prev.p.copy(p.cur.p);
       p.prev.q.copy(p.cur.q);
       p.impactCd = Math.max(0, p.impactCd - dt);
       p.ignoreGrab = Math.max(0, p.ignoreGrab - dt);
+      // things in the sea float and bob instead of lying on the sea floor out of sight
+      if (!this.isWater || p.broken || p.carried || p.heldBy !== null) continue;
+      const t = p.body.translation();
+      if (t.y > 1.2 || !this.isWater(t.x, t.z)) continue;
+      const floatY = w.floatHeight.value + halfHeight(p.def.shape) * 0.5 + Math.sin(this.time * 1.7 + p.id) * 0.04;
+      const v = p.body.linvel();
+      const k = waterDrag(w.drag.value, dt);
+      p.body.setLinvel({ x: v.x * k, y: floatVy(t.y, v.y, floatY, tuning.physics.gravity.value, w.buoyancy.value, w.drag.value, dt), z: v.z * k }, true);
+      const av = p.body.angvel();
+      p.body.setAngvel({ x: av.x * k, y: av.y * k, z: av.z * k }, true);
     }
   }
 
