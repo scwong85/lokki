@@ -88,9 +88,8 @@ Each level is about 5 minutes. The first few teach the new mechanics; the rest r
 | Snow and footprints, the carousel (winter level) | M |
 | Skills: Photobomb (pose), Pigeon Diplomacy | S each |
 
-## 8. Questions for you
-
-1. Is **"Make a scene"** (performance, timing and crowds) the right flavour for this district, compared with the market's "steal stuff"?
-2. Keep **both new skills** (Photobomb and Pigeon Diplomacy), or just one?
-3. Is the **library quiet zone** (S9) a fun change of pace, or a level too many?
-4. Should the **Christmas market** be here (as in real life) and the Market Square's winter level be the frozen harbour, as I've now changed it?
+## 8. Decisions so far
+- "Make a scene" (performance, timing, crowds) is the district's flavour.
+- Both new skills stay: **Photobomb** and **Pigeon Diplomacy**.
+- The library quiet zone (S9) stays.
+- The Christmas market is here; the Market Square's winter level is the frozen harbour.

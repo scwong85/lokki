@@ -150,7 +150,7 @@ Before building lots of levels, prototype the two riskiest mechanics (**stacking
 | District | New mechanic | New skill | Signature puzzle |
 |---|---|---|---|
 | Senate Square / Cathedral | See `docs/design/levels-senaatintori.md` | Photobomb pose, Pigeon diplomacy | Full plan in its own doc |
-| Esplanadi park | Café terraces, buskers, fountains | **Sneaky waddle** (crowd stealth) | Steal the busker's hat of coins and fund your own "busking" |
+| Esplanadi park | See `docs/design/levels-esplanadi.md` | Cloud Glide, Air Snatch | Full plan in its own doc |
 | Katajanokka harbour | Icebreakers, cruise ship decks, cranes | **Dive-swim** (underwater grab) | Fish theft from the cruise ship buffet |
 | Railway station | The stone lamp-bearers, trains | **Hitch a ride** (trains as moving platforms) | Perch puzzles on the giant statues |
 | Suomenlinna | Fortress walls, cannons, tour groups | **Long glide** (sea crossing) | Tour-guide chaos; fire the (confetti) cannon |
