@@ -87,12 +87,19 @@ function buildParts(type: PropType, g: THREE.Group): void {
       break;
     }
     case 'toy': {
-      g.add(mesh(new THREE.SphereGeometry(0.16, 8, 6), 0xc58b5a, 0, -0.03, 0)); // body
-      g.add(mesh(new THREE.SphereGeometry(0.12, 8, 6), 0xc58b5a, 0, 0.16, 0)); // head
-      g.add(mesh(new THREE.SphereGeometry(0.05, 6, 5), 0xc58b5a, -0.09, 0.26, 0));
-      g.add(mesh(new THREE.SphereGeometry(0.05, 6, 5), 0xc58b5a, 0.09, 0.26, 0));
-      g.add(mesh(new THREE.SphereGeometry(0.05, 6, 5), 0xf2d3a8, 0, 0.14, -0.1)); // snout
-      g.add(mesh(new THREE.BoxGeometry(0.2, 0.05, 0.03), 0xe5484d, 0, 0.07, -0.1)); // bow tie
+      const bear = new THREE.Group(); // a chunky teddy, twice the size of the other small props so it can be spotted
+      bear.add(mesh(new THREE.SphereGeometry(0.16, 8, 6), 0xc58b5a, 0, -0.03, 0)); // body
+      bear.add(mesh(new THREE.SphereGeometry(0.12, 8, 6), 0xc58b5a, 0, 0.16, 0)); // head
+      bear.add(mesh(new THREE.SphereGeometry(0.05, 6, 5), 0xc58b5a, -0.09, 0.26, 0));
+      bear.add(mesh(new THREE.SphereGeometry(0.05, 6, 5), 0xc58b5a, 0.09, 0.26, 0));
+      bear.add(mesh(new THREE.SphereGeometry(0.05, 6, 5), 0xf2d3a8, 0, 0.14, -0.1)); // snout
+      bear.add(mesh(new THREE.BoxGeometry(0.2, 0.05, 0.03), 0xe5484d, 0, 0.07, -0.1)); // bow tie
+      bear.scale.setScalar(1.8);
+      bear.position.y = -0.1;
+      g.add(bear);
+      // a red balloon on a string so the teddy shows from far away
+      g.add(mesh(new THREE.CylinderGeometry(0.01, 0.01, 1.0, 4), 0xffffff, 0.05, 0.55, 0));
+      g.add(mesh(new THREE.SphereGeometry(0.28, 10, 8), 0xff4d6d, 0.05, 1.2, 0));
       break;
     }
     case 'flowers': {

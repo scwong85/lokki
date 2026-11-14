@@ -8,12 +8,12 @@ export class MarkerPool {
 
   constructor(count = 8) {
     const ringGeo = new THREE.RingGeometry(0.85, 1, 32);
-    const pillarGeo = new THREE.CylinderGeometry(0.12, 0.12, 14, 8, 1, true);
+    const pillarGeo = new THREE.CylinderGeometry(0.18, 0.18, 30, 8, 1, true);
     for (let i = 0; i < count; i++) {
       const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.85, depthTest: false, side: THREE.DoubleSide }));
       ring.rotation.x = -Math.PI / 2;
       ring.renderOrder = 9;
-      const pillar = new THREE.Mesh(pillarGeo, new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide }));
+      const pillar = new THREE.Mesh(pillarGeo, new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.4, depthWrite: false, side: THREE.DoubleSide }));
       ring.visible = pillar.visible = false;
       this.group.add(ring, pillar);
       this.items.push({ ring, pillar });
@@ -28,8 +28,8 @@ export class MarkerPool {
       const y = (m.y ?? 0) + 0.15;
       it.ring.position.set(m.x, y, m.z);
       it.ring.scale.setScalar(m.r * (1 + Math.sin(time * 4) * 0.06));
-      it.pillar.position.set(m.x, y + 7, m.z);
-      it.pillar.scale.set(m.r * 0.5, 1, m.r * 0.5);
+      it.pillar.position.set(m.x, y + 15, m.z);
+      it.pillar.scale.set(Math.max(1, m.r * 0.5), 1, Math.max(1, m.r * 0.5));
     });
   }
 }

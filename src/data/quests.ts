@@ -11,6 +11,8 @@ export interface Marker {
   x: number;
   z: number;
   r: number;
+  /** Name shown on the waypoint ('Teddy bear'). */
+  label?: string;
   /** Raise the ring (e.g. onto the ferry roof). */
   y?: number;
 }
@@ -76,7 +78,7 @@ export const QUESTS: QuestDef[] = [
       {
         id: 'swap', text: 'Leave her a bag of salmiakki', kind: 'event', event: 'tookItem:salmiakki', after: 'steal',
         hint: 'Salmiakki bags (black) are in the sandbox. Drop one near her and let her pick it up.',
-        markers: [{ x: SANDBOX.x, z: SANDBOX.z + 5, r: 3 }],
+        markers: [{ x: SANDBOX.x, z: SANDBOX.z + 5, r: 3, label: 'Salmiakki bags' }],
       },
       { id: 'watch', text: 'Watch her face', kind: 'event', event: 'yuck', after: 'swap' },
     ],
@@ -90,8 +92,8 @@ export const QUESTS: QuestDef[] = [
     startOn: ['grab:statueCap'],
     startHeat: 25,
     objectives: [
-      { id: 'take', text: 'Take the student cap from the statue', kind: 'event', event: 'grab:statueCap', hint: 'It lies on the statue\'s plinth (a wide perch). Land next to it and press E. The clock starts when you take it.', markers: [{ x: STATUE.x, z: STATUE.z, r: 3, y: 3 }] },
-      { id: 'deliver', text: 'Get it onto the ferry before the crowd arrives', kind: 'event', event: 'capDelivered', after: 'take', hint: 'Fly over the ferry and let go (E): anywhere on its deck or roofs counts.', markers: [{ x: FERRY.x, z: FERRY.z, r: 7, y: FERRY_DECK.minY }] },
+      { id: 'take', text: 'Take the student cap from the statue', kind: 'event', event: 'grab:statueCap', hint: 'It lies on the statue\'s plinth (a wide perch). Land next to it and press E. The clock starts when you take it.', markers: [{ x: STATUE.x, z: STATUE.z, r: 3, y: 3, label: 'Student cap' }] },
+      { id: 'deliver', text: 'Get it onto the ferry before the crowd arrives', kind: 'event', event: 'capDelivered', after: 'take', hint: 'Fly over the ferry and let go (E): anywhere on its deck or roofs counts.', markers: [{ x: FERRY.x, z: FERRY.z, r: 7, y: FERRY_DECK.minY, label: 'Ferry' }] },
     ],
   },
   {
@@ -102,9 +104,9 @@ export const QUESTS: QuestDef[] = [
     startOn: ['grab:bun'],
     startHeat: 20,
     objectives: [
-      { id: 'bun1', text: 'Carry a bun past the first vendor', kind: 'event', event: 'bun1', hint: 'Buns are in the sandbox. The vendors will spray you: dodge the red fan.', markers: [{ ...BUN_CHECKPOINTS[0] }] },
-      { id: 'bun2', text: '...the second vendor', kind: 'event', event: 'bun2', after: 'bun1', markers: [{ ...BUN_CHECKPOINTS[1] }] },
-      { id: 'bun3', text: '...and the third', kind: 'event', event: 'bun3', after: 'bun2', markers: [{ ...BUN_CHECKPOINTS[2] }] },
+      { id: 'bun1', text: 'Carry a bun past the first vendor', kind: 'event', event: 'bun1', hint: 'Buns are in the sandbox. The vendors will spray you: dodge the red fan.', markers: [{ ...BUN_CHECKPOINTS[0], label: 'Vendor 1' }] },
+      { id: 'bun2', text: '...the second vendor', kind: 'event', event: 'bun2', after: 'bun1', markers: [{ ...BUN_CHECKPOINTS[1], label: 'Vendor 2' }] },
+      { id: 'bun3', text: '...and the third', kind: 'event', event: 'bun3', after: 'bun2', markers: [{ ...BUN_CHECKPOINTS[2], label: 'Vendor 3' }] },
     ],
   },
   {
@@ -116,7 +118,7 @@ export const QUESTS: QuestDef[] = [
     objectives: [
       { id: 'steal', text: 'Steal the map from the pink tourist at the east side', kind: 'event', event: 'snatch:map', hint: STEAL_TIP },
       { id: 'sea', text: 'Drop it in the harbour', kind: 'event', event: 'mapInSea', after: 'steal', hint: 'Fly out over the water and let go (E).' },
-      { id: 'ferry', text: 'Watch them head for the wrong ferry', kind: 'event', event: 'wrongFerry', after: 'sea', markers: [{ x: WRONG_FERRY.x, z: WRONG_FERRY.z, r: 4 }] },
+      { id: 'ferry', text: 'Watch them head for the wrong ferry', kind: 'event', event: 'wrongFerry', after: 'sea', markers: [{ x: WRONG_FERRY.x, z: WRONG_FERRY.z, r: 4, label: 'Wrong ferry' }] },
     ],
   },
   {
@@ -126,7 +128,7 @@ export const QUESTS: QuestDef[] = [
     timed: false,
     startOn: ['snatch:flowers'],
     objectives: [
-      { id: 'steal', text: 'Swipe the bouquet from the man at the clock', kind: 'event', event: 'snatch:flowers', hint: STEAL_TIP, markers: [{ x: CLOCK.x, z: CLOCK.z, r: 4 }] },
+      { id: 'steal', text: 'Swipe the bouquet from the man at the clock', kind: 'event', event: 'snatch:flowers', hint: STEAL_TIP, markers: [{ x: CLOCK.x, z: CLOCK.z, r: 5, label: 'Blind date' }] },
       { id: 'splat', text: 'Poop on one of the dates', kind: 'event', event: 'poopNpc:dater', after: 'steal', hint: 'Poop from above: the reticle shows where it lands.' },
       { id: 'over', text: 'Watch them storm off', kind: 'event', event: 'dateOver', after: 'splat' },
     ],
@@ -138,8 +140,8 @@ export const QUESTS: QuestDef[] = [
     timed: false,
     startOn: ['grab:toy'],
     objectives: [
-      { id: 'find', text: 'Find the teddy bear in the Esplanadi park', kind: 'event', event: 'grab:toy', hint: 'Follow the yellow pillar west, about 330 m.', markers: [{ x: TOY_SPOT.x, z: TOY_SPOT.z, r: 4 }] },
-      { id: 'return', text: 'Bring it to the child on the quay', kind: 'event', event: 'tookItem:toy', after: 'find', hint: 'Drop it (E) next to the child and they will pick it up.', markers: [{ x: CHILD_SPOT.x, z: CHILD_SPOT.z, r: 3 }] },
+      { id: 'find', text: 'Find the teddy bear in the Esplanadi park', kind: 'event', event: 'grab:toy', hint: 'Follow the yellow pillar west, about 330 m.', markers: [{ x: TOY_SPOT.x, z: TOY_SPOT.z, r: 4, label: 'Teddy bear' }] },
+      { id: 'return', text: 'Bring it to the child on the quay', kind: 'event', event: 'tookItem:toy', after: 'find', hint: 'Drop it (E) next to the child and they will pick it up.', markers: [{ x: CHILD_SPOT.x, z: CHILD_SPOT.z, r: 3, label: 'Child' }] },
     ],
   },
   {
@@ -151,10 +153,10 @@ export const QUESTS: QuestDef[] = [
     requires: MAIN,
     startOn: ['finaleStart'],
     startHeat: 80,
-    startMarkers: [{ x: FERRY.x - 5, z: FERRY.z, r: 5, y: FERRY_CABIN_ROOFS.minY + 2.2 }],
+    startMarkers: [{ x: FERRY.x - 5, z: FERRY.z, r: 5, y: FERRY_CABIN_ROOFS.minY + 2.2, label: 'Ferry horn' }],
     objectives: [
       { id: 'chairs', text: 'Collapse the chair stack', kind: 'event', event: 'tipChair', count: 3, hint: 'Dive into the stack in the sandbox.' },
-      { id: 'pastry', text: 'Swipe the pastry from the stall counter', kind: 'event', event: 'grab:stallBun', hint: 'It sits on a counter of the south row of stalls (follow the yellow pillar), right in front of a vendor.', markers: [{ x: 8, z: -30, r: 3 }] },
+      { id: 'pastry', text: 'Swipe the pastry from the stall counter', kind: 'event', event: 'grab:stallBun', hint: 'It sits on a counter of the south row of stalls (follow the yellow pillar), right in front of a vendor.', markers: [{ x: 8, z: -30, r: 3, label: 'Pastry' }] },
       { id: 'warden', text: 'Poop on the Gull Warden', kind: 'event', event: 'poopWarden', hint: 'Distract him with a noise first so the umbrella tips aside.' },
     ],
   },

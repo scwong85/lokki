@@ -41,6 +41,7 @@ import { LevelStats } from './gameplay/levelStats';
 import { LevelComplete } from './ui/levelComplete';
 import { activeMarkers } from './gameplay/questMarkers';
 import { MarkerPool } from './render/markers';
+import { Waypoints } from './ui/waypoints';
 
 const app = document.getElementById('app')!;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -115,6 +116,7 @@ const triggers = new TriggerSystem(greybox ? [] : TRIGGERS);
 const stats = new LevelStats();
 const levelComplete = new LevelComplete(document.body);
 const markerPool = new MarkerPool();
+const waypoints = new Waypoints(document.body);
 scene.add(markerPool.group);
 const todo = new Todo(document.body);
 const poopReticle = new Reticle();
@@ -485,7 +487,9 @@ startLoop({
     npcs?.render(simTime, interaction.beakPos(gull.state), cam.camera.quaternion);
     defense?.render(simTime, frameDt);
     if (defense && heatMeter) heatMeter.update(defense.heat, defense.response, defense.hawkReady, defense.hawkActive);
-    markerPool.update(greybox ? [] : activeMarkers(QUESTS, quests.quests), simTime);
+    const markers = greybox ? [] : activeMarkers(QUESTS, quests.quests);
+    markerPool.update(markers, simTime);
+    waypoints.update(markers, cam.camera, gull.position, innerWidth, innerHeight);
     todo.update(quests.quests, npcs ? npcs.nearestDistance(gull.state) : Infinity, interaction.carried?.stolen === true);
     targets.forEach((t, i) => (targetMeshes[i].visible = t.cooldown === 0));
     const s = gull.state;

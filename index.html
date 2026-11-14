@@ -57,6 +57,10 @@
       #levelcomplete .lc-quests { list-style: none; padding: 0; margin: 0 0 10px; text-align: left; } #levelcomplete .lc-quests li.won { color: #3f9a62; }
       #levelcomplete table { width: 100%; border-collapse: collapse; margin-bottom: 10px; } #levelcomplete td { padding: 3px 4px; text-align: left; border-bottom: 1px dotted #d9c9a3; } #levelcomplete td:last-child { text-align: right; font-weight: 700; }
       #levelcomplete .lc-keys { margin: 4px 0 0; color: #8a7b5c; }
+      #waypoints { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+      #waypoints .wp { position: absolute; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 6px; background: rgba(255, 210, 63, .95); color: #4a3a10; padding: 3px 10px; border-radius: 12px; font: 700 13px system-ui, sans-serif; box-shadow: 0 2px 6px rgba(0,0,0,.25); white-space: nowrap; }
+      #waypoints .wp[hidden] { display: none; }
+      #waypoints .wp-arrow { font-size: 16px; line-height: 1; }
     </style>
   </head>
   <body>

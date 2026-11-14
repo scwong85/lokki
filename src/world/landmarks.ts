@@ -103,9 +103,9 @@ function clock(l: LandmarkSrc): LandmarkOut {
   const { x, z } = l;
   return {
     prisms: [
-      prism(ngon(x, z, 0.22, 6), 0, 4.4, 0x8a8fa0, 0x8a8fa0),
-      prism(ngon(x, z, 1.0, 14), 4.4, 5.6, 0xfdfaf2, 0xfdfaf2),
-      prism(ngon(x, z, 0.4, 6), 5.6, 6.1, GOLD, GOLD, 'perch'),
+      prism(ngon(x, z, 0.2, 6), 0, 5.0, 0x8a8fa0, 0x8a8fa0),
+      prism(ngon(x, z, 0.75, 14), 5.0, 6.0, 0xfdfaf2, 0xfdfaf2),
+      prism(ngon(x, z, 0.4, 6), 6.0, 6.4, GOLD, GOLD, 'perch'),
     ],
     targets: [],
   };
