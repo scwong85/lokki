@@ -36,3 +36,7 @@ Public-domain / CC0 recordings from Wikimedia Commons, re-encoded to Ogg Vorbis 
 | `chaos-galop-infernal.ogg` | Offenbach, "Galop infernal" (*Orpheus in the Underworld*), by Gnissah | `Jacques Offenbach - Galop Infernal from Orpheus in the Underworld (Can Can) (1858).ogg` | Public domain (own work) | none |
 
 The compositions are all long out of copyright. Known caveat: the Joplin recording's ID3 tag lists ASCAP/BMI (publishing metadata); Commons classifies it as a US government work.
+
+## Character models (added in M10)
+
+`public/models/people/*.glb` and `public/models/people/Textures/colormap.png`: **Kenney "Mini Characters" 2.0** (www.kenney.nl), licence **CC0** (http://creativecommons.org/publicdomain/zero/1.0/), downloaded 2026-11-14 from https://kenney.nl/assets/mini-characters-1. Files used unchanged (GLB format): character-male-a…g, character-female-a…f, character-worker. Rigged, with idle/walk/sprint/pick-up/emote/etc. animations.
