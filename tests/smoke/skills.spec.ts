@@ -84,3 +84,39 @@ test('the finale restocks chairs and pastry that were moved before the horn', as
   expect(away).toBe(0);
   expect(errors).toEqual([]);
 });
+
+test('gull looks: locked ones cannot be worn, earned ones can, and the choice is saved', async ({ page }) => {
+  const errors = await boot(page);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 60_000 });
+  // the first key press also starts the audio, which can stall a headless page for a moment: press until it shows
+  const panel = async (open: boolean) => {
+    await expect
+      .poll(async () => {
+        if ((await page.locator('#skills').isVisible()) !== open) {
+          await page.keyboard.press('KeyK');
+          await page.waitForTimeout(500);
+        }
+        return page.locator('#skills').isVisible();
+      }, { timeout: 20_000 })
+      .toBe(open);
+  };
+  await panel(true);
+  await expect(page.locator('[data-skin=juvenile]')).toHaveClass(/locked/);
+  await page.keyboard.press('Digit2'); // locked: nothing happens
+  await page.waitForTimeout(400);
+  expect(await page.evaluate(() => (window as unknown as { L: () => Lk }).L().saveData().skin)).toBe('herring');
+  await panel(false);
+  // earn three skills (salmiakki swap, cap heist, lost teddy) -> the juvenile look unlocks
+  await ev(page, ['snatch:candy', 'tookItem:salmiakki', 'yuck', 'grab:statueCap', 'capDelivered', 'grab:toy', 'tookItem:toy']);
+  await expect.poll(() => page.evaluate(() => (window as unknown as { L: () => Lk }).L().skills.ids.length)).toBe(3);
+  await panel(true);
+  await expect(page.locator('[data-skin=juvenile]')).not.toHaveClass(/locked/);
+  await page.locator('[data-skin=juvenile]').click();
+  await expect(page.locator('[data-skin=juvenile]')).toHaveClass(/on/);
+  await page.reload();
+  await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 60_000 });
+  expect(await page.evaluate(() => (window as unknown as { L: () => Lk }).L().saveData().skin)).toBe('juvenile');
+  expect(errors).toEqual([]);
+});

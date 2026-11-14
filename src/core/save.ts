@@ -1,4 +1,5 @@
 import { skillById } from '../data/skills';
+import { GULL_SKINS } from '../data/gullSkins';
 
 export interface SaveData {
   version: 1;
@@ -15,9 +16,11 @@ export interface SaveData {
   speedrunBest: number | null;
   clears: number;
   muted: boolean;
+  /** Chosen gull look (an id from data/gullSkins). */
+  skin: string;
 }
 
-export const blankSave = (): SaveData => ({ version: 1, skills: [], questsWon: [], replayUnlocked: false, extrasOn: false, bestTime: null, speedrunBest: null, clears: 0, muted: false });
+export const blankSave = (): SaveData => ({ version: 1, skills: [], questsWon: [], replayUnlocked: false, extrasOn: false, bestTime: null, speedrunBest: null, clears: 0, muted: false, skin: 'herring' });
 
 /** The small part of the Storage API we need (so tests can pass a fake). */
 export interface StorageLike {
@@ -42,6 +45,7 @@ export function sanitize(raw: unknown): SaveData {
   d.speedrunBest = num(r.speedrunBest);
   d.clears = typeof r.clears === 'number' && r.clears > 0 ? Math.floor(r.clears) : 0;
   d.muted = r.muted === true;
+  d.skin = typeof r.skin === 'string' && GULL_SKINS.some((s) => s.id === r.skin) ? r.skin : 'herring';
   return d;
 }
 

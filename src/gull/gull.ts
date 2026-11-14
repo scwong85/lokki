@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { GullSlot } from '../data/gullSkins';
 import { newFlightState, stepFlight, GULL_RADIUS, type FlightEvent, type FlightInput, type FlightState } from './flight';
 import type { World } from '../world/collision';
 import type { Target } from '../gameplay/targets';
@@ -32,6 +33,11 @@ export class Gull {
       new THREE.MeshBasicMaterial({ color: 0x4a4a6a, transparent: true, opacity: 0.35, depthWrite: false }),
     );
     this.shadow.rotation.x = -Math.PI / 2;
+  }
+
+  /** Wear a gull look (colours per slot). */
+  setSkin(colours: Record<GullSlot, number>): void {
+    this.model.setSkin(colours);
   }
 
   /** Pigeon look on/off. */

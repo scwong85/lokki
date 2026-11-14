@@ -59,7 +59,8 @@ import { Tutorial } from './gameplay/tutorial';
 import { SKILLS } from './data/skills';
 import { NpcModel } from './world/npcModel';
 import { loadPeople } from './world/people';
-import { SkillsPanel } from './ui/skillsPanel';
+import { GULL_SKINS, skinById, unlockedSkins } from './data/gullSkins';
+import { SkillsPanel, skinProgress } from './ui/skillsPanel';
 import { RunHud } from './ui/runHud';
 
 const app = document.getElementById('app')!;
@@ -145,6 +146,9 @@ const quests = new QuestLog(greybox ? [] : QUESTS);
 // progress: skills, finished quests, best times (localStorage; every call is safe if storage is blocked)
 const store = new SaveStore();
 let save: SaveData = store.load();
+// gull looks: the ones already earned don't get a "new look" banner again; wear the saved one if it is still unlocked
+const knownSkins = new Set(unlockedSkins(skinProgress(save)));
+gull.setSkin(skinById(knownSkins.has(save.skin) ? save.skin : 'herring').colours);
 const skills = new SkillSet();
 skills.restore(save.skills);
 const abilities = new Abilities();
@@ -162,7 +166,7 @@ const markerPool = new MarkerPool();
 const waypoints = new Waypoints(document.body);
 scene.add(markerPool.group);
 const todo = new Todo(document.body);
-const skillsPanel = new SkillsPanel(document.body);
+const skillsPanel = new SkillsPanel(document.body, (id) => pickSkin(id));
 const runHud = new RunHud(document.body);
 const flock = new FlockSystem(scene);
 const pings = new PingFx(scene);
@@ -268,6 +272,23 @@ function onFlightEvents(evs: FlightEvent[]): void {
 function persist(): void {
   save = { ...save, skills: skills.ids, questsWon: quests.wonIds(), muted: audio.muted };
   store.save(save);
+  skillsPanel.refresh(skills, save);
+  // new gull looks earned since last time?
+  for (const id of unlockedSkins(skinProgress(save))) {
+    if (knownSkins.has(id)) continue;
+    knownSkins.add(id);
+    announce.show(`New gull look: ${skinById(id).name}`, 'Press K to try it on.', 'learned');
+  }
+}
+
+/** Wear a gull look (only unlocked ones) and remember it. */
+function pickSkin(id: string): void {
+  if (!unlockedSkins(skinProgress(save)).includes(id)) return;
+  save = { ...save, skin: id };
+  gull.setSkin(skinById(id).colours);
+  store.save(save);
+  skillsPanel.refresh(skills, save);
+  audio.play('pop');
 }
 
 /** Restart the level (R) or start a speedrun (Z). Skills and best times are kept. */
@@ -575,7 +596,11 @@ startLoop({
         persist();
       } else hud.toast('Clear the finale to unlock extra objectives.', 1.6);
     }
-    if (input.wasPressed('KeyK')) skillsPanel.toggle(skills, save);
+    if (input.wasPressed('KeyK')) {
+      skillsPanel.toggle(skills, save);
+      if (skillsPanel.visible && document.pointerLockElement) document.exitPointerLock(); // free the mouse to click a look
+    }
+    if (skillsPanel.visible) GULL_SKINS.forEach((sk, i) => input.wasPressed(`Digit${i + 1}`) && pickSkin(sk.id));
     if (input.wasPressed('KeyC')) credits.toggle();
     if (input.wasPressed('Enter') && levelComplete.visible) levelComplete.hide();
     if (input.wasPressed('KeyH') && defense?.activateHawk()) hud.toast('Hawk-eye!', 0.8);

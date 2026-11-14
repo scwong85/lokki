@@ -20,7 +20,7 @@ export class Graphics {
     this.hemi = scene.getObjectByName('hemi') as THREE.HemisphereLight;
     this.sun = scene.getObjectByName('sun') as THREE.DirectionalLight;
     renderer.toneMapping = THREE.NeutralToneMapping;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     const s = this.sun.shadow;
     s.mapSize.set(2048, 2048);
     s.bias = -0.0004;

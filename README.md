@@ -41,7 +41,7 @@ npm run data:fetch # re-download the raw snapshot from Helsinki open data (needs
 | H | hawk-eye: briefly reveals the city's lines and nets |
 | R | reset everything (gull, props, tourists, heat, deterrents) |
 | V / G / B | skills: crow call (Mimic), flock call, pigeon disguise (once earned) |
-| K | skills panel |
+| K | skills panel and gull looks (1–5 pick a look) |
 | X / Z | extra objectives on/off, start a speedrun (after clearing the finale) |
 | O | options (volumes, mouse look, screen shake, graphics quality) |
 | T | skip the first-flight tips |
