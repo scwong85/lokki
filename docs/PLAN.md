@@ -185,7 +185,8 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M6 Heat and deterrents
 - [x] M7 Market Square quest pack
 - [x] M8 Skills and saving
-- [ ] M9 Portfolio polish
+- [x] M9 Portfolio polish
+- [ ] M10 Visual detail
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -241,7 +242,15 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - Title screen, short in-world tutorial, audio pass, juice (particles, screen shake, camera), loading screen, options menu.
 - README with architecture notes, GIFs, data credits (CC BY 4.0 Helsinki, ODbL OSM, CC0 assets); credits screen; deploy to a static host.
 
-### After M9 (backlog)
+### M10 — Visual detail (M–L)
+**Goal:** the city and its people read as detailed and charming up close, without leaving the pastel low-poly style or the performance budget (§4.4).
+- **Lighting pass:** soft shadow map around the player, ambient occlusion, tone mapping, hemisphere light, optional thin outline pass; a "Graphics: low / high" option.
+- **Procedural buildings:** pitched/hipped roofs on simple footprints and parapets elsewhere; runtime-generated window texture tiled per floor and bay; ground-floor shopfronts and awnings; cornices, plinths, chimneys; seeded Helsinki facade colours. More detailed hand-built landmarks (Cathedral, Uspenski, City Hall, Old Market Hall, Havis Amanda).
+- **People:** CC0 rigged low-poly character models (e.g. Kenney / Quaternius) loaded as glTF with walk/idle/run animations, recoloured in code per role (tourist, vendor, Warden), seeded variation; gameplay brains unchanged. Model files and licences recorded in `data/raw/SOURCES.md` and README credits.
+- **Set dressing:** instanced benches, trees, bollards, bikes, café umbrellas, boats.
+- **Exit:** before/after screenshots show a clear jump in detail; still 60 fps / < ~200 draw calls on integrated graphics at 1080p (high), low preset as fallback; no gameplay regressions.
+
+### After M10 (backlog)
 Second district (Senate Square or Esplanadi), seasons (Vappu, herring market, winter), nemesis story arc, gamepad support, optional WebGPU renderer, optional co-op.
 
 ---
