@@ -60,6 +60,8 @@ import { SKILLS } from './data/skills';
 import { NpcModel } from './world/npcModel';
 import { loadPeople } from './world/people';
 import { GULL_SKINS, skinById, unlockedSkins } from './data/gullSkins';
+import { TouchControls } from './ui/touchControls';
+import { wantsTouch } from './core/touchMath';
 import { SkillsPanel, skinProgress } from './ui/skillsPanel';
 import { RunHud } from './ui/runHud';
 
@@ -162,6 +164,7 @@ quests.restoreWon(save.questsWon);
 const triggers = new TriggerSystem(greybox ? [] : TRIGGERS);
 const stats = new LevelStats();
 const levelComplete = new LevelComplete(document.body);
+document.getElementById('levelcomplete')?.addEventListener('click', () => levelComplete.hide()); // tap to keep playing (phones)
 const markerPool = new MarkerPool();
 const waypoints = new Waypoints(document.body);
 scene.add(markerPool.group);
@@ -177,6 +180,24 @@ shadows(gull.mesh, true, false);
 scene.add(gull.mesh, gull.shadow, marker.group);
 const cam = new FollowCamera(innerWidth / innerHeight);
 const input = new Input(renderer.domElement);
+// phones and tablets: on-screen controls, no pointer lock, a lighter view distance
+const touch = wantsTouch(location.search, matchMedia('(pointer: coarse)').matches, navigator.maxTouchPoints);
+const touchControls = touch ? new TouchControls(document.body, input) : null;
+if (touch) {
+  document.body.classList.add('touch');
+  input.pointerLockAllowed = false;
+  graphics.lowPixelRatio = Math.min(devicePixelRatio, 1.5);
+  cam.camera.far = 650;
+  cam.camera.updateProjectionMatrix();
+  addEventListener('contextmenu', (e) => e.preventDefault());
+  document.getElementById('todo')?.addEventListener('click', (e) => (e.currentTarget as HTMLElement).classList.toggle('open'));
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    touchControls?.release();
+    input.releaseVirtual();
+  }
+});
 (window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, defense, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
@@ -186,7 +207,9 @@ debug.addButton('Reset saved progress', () => {
 const hud = new Hud(document.body);
 const credits = new Credits(document.body);
 const optStore = new OptionsStore();
+const firstVisit = !optStore.has();
 const options = optStore.load();
+if (touch && firstVisit) options.graphics = 'low'; // phones start on the fast preset (switch in Options)
 applyOptions(options);
 graphics.apply(options.graphics);
 const optionsPanel = new OptionsPanel(document.body, options, (o) => {
@@ -203,16 +226,21 @@ tipEl.hidden = true;
 document.body.appendChild(tipEl);
 function startPlaying(): void {
   title.hide();
+  if (touch) {
+    // Android: go fullscreen and hold landscape (iPhone Safari cannot; the rotate card covers portrait there)
+    const so = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
+    document.documentElement.requestFullscreen?.().then(() => so.lock?.('landscape')).catch(() => undefined);
+  }
   audio.unlock();
   music.start();
 }
 const fmtClear = (t: number | null): string => (t === null ? '' : `${Math.floor(t / 60)}:${String(Math.round(t % 60)).padStart(2, '0')}`);
 const title = new TitleScreen(document.body, { onPlay: startPlaying, onOptions: () => optionsPanel.show(), onCredits: () => credits.toggle() }, { best: fmtClear(save.bestTime), skills: skills.ids.length, total: SKILLS.length });
 if (interactive) title.show();
-const menuOpen = (): boolean => title.visible || optionsPanel.visible || skillsPanel.visible || credits.visible;
+const menuOpen = (): boolean => title.visible || optionsPanel.visible || skillsPanel.visible || credits.visible || !!touchControls?.menuOpen;
 const audio = new AudioManager();
 audio.muted = save.muted;
-for (const ev of ['pointerdown', 'keydown'] as const) addEventListener(ev, () => { audio.unlock(); music.start(); });
+for (const ev of ['pointerdown', 'touchend', 'keydown'] as const) addEventListener(ev, () => { audio.unlock(); music.start(); });
 let simTime = 0;
 let hits = 0;
 let lastBump = -10;
@@ -757,6 +785,7 @@ startLoop({
     const poopHit = aimPoop ? interaction.poopPrediction(s, simTime) : null;
     const blocked = poopHit?.tag === 'umbrella';
     poopReticle.update(poopHit, blocked);
+    touchControls?.update(interaction.grabPrompt(s), !!interaction.carried, { V: skills.has('mimic'), G: skills.has('flock'), B: skills.has('disguise') }, (code) => abilities.fraction(code === 'KeyV' ? 'mimic' : code === 'KeyG' ? 'flock' : 'disguise'));
     hud.setInteraction(blocked ? 'Umbrella blocks it! Distract the Warden with a noise first (drop or throw a bottle)' : interaction.grabPrompt(s), poopReady);
     cam.update(gull.position, frameDt, { vx: s.vx, vy: s.vy, vz: s.vz, diving: s.mode === 'dive', turnRate: s.turnRate });
     audio.setAir(Math.hypot(s.vx, s.vy, s.vz) / tuning.dive.speed.value, s.mode !== 'ground');
@@ -772,7 +801,7 @@ startLoop({
     debug.frame(frameDt, `${renderer.info.render.calls} calls · ${(renderer.info.render.triangles / 1000).toFixed(0)}k tris`);
     const tip = tutorial.current;
     tipEl.hidden = !(tip || tutorial.outroShowing) || menuOpen();
-    if (!tipEl.hidden) tipEl.innerHTML = tip ? `${tip.text} <small>${tip.keys} · T skips tips</small>` : 'That is the whole trick. The to-do list (top left) has the rest. Go be a menace!';
+    if (!tipEl.hidden) tipEl.innerHTML = tip ? (touch ? `${tip.touch.text} <small>${tip.touch.keys} · ☰ › Skip tips</small>` : `${tip.text} <small>${tip.keys} · T skips tips</small>`) : 'That is the whole trick. The to-do list (top left) has the rest. Go be a menace!';
     hud.update(s, staminaMax(), windAt(simTime), cam.yaw, hits, targets.length, frameDt);
   },
 });

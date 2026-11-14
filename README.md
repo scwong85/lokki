@@ -2,7 +2,7 @@
 
 *Lokki* ("gull" in Finnish) is a browser-based 3D game: you are a seagull causing gentle slapstick havoc in downtown Helsinki. Low-poly, pastel, mouse + keyboard. See [`docs/PLAN.md`](docs/PLAN.md) for the full plan.
 
-Status: **M10 – Visual detail** (shadows, facades, roofs, landmarks, set dressing, rigged people), awaiting playtest. M0–M9 done.
+Status: **M11 – Input layer + mobile landscape** (touch controls, phone HUD), awaiting playtest; **M10 – Visual detail** awaiting playtest. M0–M9 done.
 
 ![Lokki flight](docs/media/lokki-flight.gif)
 
@@ -17,6 +17,7 @@ npm install
 npm run dev        # dev server
 npm run build      # static build in dist/
 npm run preview    # serve dist/ locally
+npm run preview:lan # serve dist/ to your phone on the same Wi-Fi (see docs/milestones/M11.md)
 npm run lint
 npm test           # unit tests (Vitest)
 npm run test:smoke # Playwright smoke test (needs Chromium)
@@ -25,6 +26,10 @@ npm run data:fetch # re-download the raw snapshot from Helsinki open data (needs
 ```
 
 `?greybox` in the URL (e.g. `http://localhost:5173/?greybox`) loads the M1 test course instead of the city.
+
+## Phones and tablets
+
+Play in landscape with on-screen controls: left thumb steers (floating stick), drag the right half to look, **Flap**, **Dive** (slide to aim), **Poop**, a context **Grab/Drop** button, and a ☰ menu for everything else. Add `?touch` to the address to try the touch layout on a PC. Details: [`docs/milestones/M11.md`](docs/milestones/M11.md).
 
 ## Controls (M1)
 

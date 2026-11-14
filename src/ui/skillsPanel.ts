@@ -20,6 +20,10 @@ export class SkillsPanel {
     this.el.id = 'skills';
     this.el.hidden = true;
     this.el.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('[data-close]')) {
+        this.hide();
+        return;
+      }
       const b = (e.target as HTMLElement).closest<HTMLElement>('[data-skin]');
       if (b && !b.classList.contains('locked')) this.onSkin(b.dataset.skin!);
     });
@@ -71,7 +75,7 @@ export class SkillsPanel {
     const replay = save.replayUnlocked
       ? `<p class="sk-replay">Replay variants unlocked: <kbd>X</kbd> extra objectives (${save.extrasOn ? 'on' : 'off'}) · <kbd>Z</kbd> speedrun${save.speedrunBest ? ` (best ${formatClock(save.speedrunBest)})` : ''}</p>`
       : '<p class="sk-replay">Clear the finale to unlock extra objectives and a speedrun.</p>';
-    this.el.innerHTML = `<div class="sk-card"><h2>Skills</h2><ul>${rows}</ul>${replay}<h3>Gull look</h3><div class="sk-looks">${looks}</div><p class="sk-keys">Press <kbd>K</kbd> to close · <kbd>1</kbd>–<kbd>${GULL_SKINS.length}</kbd> pick a look · progress is saved in this browser</p></div>`;
+    this.el.innerHTML = `<div class="sk-card"><h2>Skills</h2><ul>${rows}</ul>${replay}<h3>Gull look</h3><div class="sk-looks">${looks}</div><p class="sk-keys">Press <kbd>K</kbd> to close · <kbd>1</kbd>–<kbd>${GULL_SKINS.length}</kbd> pick a look · progress is saved in this browser</p><button class="sk-close" data-close>Close</button></div>`;
   }
 
   /** Per frame: show the abilities you have and how far their cooldowns are. */

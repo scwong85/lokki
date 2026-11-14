@@ -60,6 +60,15 @@ export function applyOptions(o: Options): void {
 export class OptionsStore {
   constructor(private storage: StorageLike | null = defaultStorage(), private key = 'lokki-options-v1') {}
 
+  /** Has this browser saved options before? (phones start on the low preset only the first time) */
+  has(): boolean {
+    try {
+      return !!this.storage?.getItem(this.key);
+    } catch {
+      return false;
+    }
+  }
+
   load(): Options {
     try {
       const t = this.storage?.getItem(this.key);

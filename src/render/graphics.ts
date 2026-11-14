@@ -14,6 +14,8 @@ export class Graphics {
   readonly sun: THREE.DirectionalLight;
   readonly hemi: THREE.HemisphereLight;
   level: GraphicsLevel = 'high';
+  /** Pixel ratio on the low preset (1 on desktop; phones get a little more so text and edges stay readable). */
+  lowPixelRatio = 1;
   private sunDir = new THREE.Vector3(30, 50, 20).normalize();
 
   constructor(private renderer: THREE.WebGLRenderer, private scene: THREE.Scene) {
@@ -31,7 +33,7 @@ export class Graphics {
   apply(level: GraphicsLevel): void {
     this.level = level;
     const high = level === 'high';
-    this.renderer.setPixelRatio(high ? Math.min(devicePixelRatio, 2) : 1);
+    this.renderer.setPixelRatio(high ? Math.min(devicePixelRatio, 2) : this.lowPixelRatio);
     this.renderer.shadowMap.enabled = high;
     this.sun.castShadow = high;
     // materials compile differently with / without shadows

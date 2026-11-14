@@ -35,6 +35,7 @@ export class LevelComplete {
         </table>
         ${notes.map((n) => `<p class="lc-note">${n}</p>`).join('')}
         <p class="lc-keys"><b>Enter</b>: keep playing &nbsp;·&nbsp; <b>R</b>: play again · <b>X</b>: extra objectives · <b>Z</b>: speedrun</p>
+        <p class="lc-tap">Tap to keep playing · ☰ for restart, extra objectives and speedrun</p>
       </div>`;
     this.el.hidden = false;
   }

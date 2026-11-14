@@ -14,6 +14,7 @@ export class Credits {
       <p>People: "Animated Human" by Quaternius (CC0).</p>
       <p>Sound effects: synthesised in your browser. No sample files.</p>
       <p><i>Press C to close</i></p>`;
+    this.el.addEventListener('click', () => this.toggle()); // tap to close (phones)
     root.appendChild(this.el);
   }
 

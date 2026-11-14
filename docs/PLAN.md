@@ -187,6 +187,7 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M8 Skills and saving
 - [x] M9 Portfolio polish
 - [ ] M10 Visual detail
+- [ ] M11 Input layer + mobile landscape
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -250,8 +251,16 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - **Set dressing:** instanced benches, trees, bollards, bikes, café umbrellas, boats.
 - **Exit:** before/after screenshots show a clear jump in detail; still 60 fps / < ~200 draw calls on integrated graphics at 1080p (high), low preset as fallback; no gameplay regressions.
 
-### After M10 (backlog)
-Second district (Senate Square or Esplanadi), seasons (Vappu, herring market, winter), nemesis story arc, gamepad support, optional WebGPU renderer, optional co-op.
+### M11 — Input layer + mobile landscape (M)
+**Goal:** play in a phone or tablet browser in landscape (see `docs/spikes/mobile-landscape.md`).
+- One input layer: keyboard/mouse plus virtual sources (held keys, taps, analog stick, look deltas) that touch controls (and later a gamepad) feed; gameplay code unchanged.
+- Touch controls: floating stick, drag-to-look, FLAP, DIVE (slide to aim), POOP, context GRAB/DROP, TOSS, ability and hawk-eye buttons, a ☰ menu for everything else.
+- Phone HUD: compact to-do note, no keyboard hints, panels that fit 340 px of height and close by tapping, touch wording in the tips, safe areas.
+- Mobile defaults: low graphics preset, shorter view distance; browser quirks (no page scroll/zoom, rotate card in portrait, fullscreen + landscape lock where allowed, Add to Home Screen manifest, audio on first touch, release input when hidden).
+- **Exit:** the user can play a quest start to finish on their own phone in landscape; controls feel usable; frame rate acceptable.
+
+### After M11 (backlog)
+Gamepad support on the M11 input layer (small), second district (Senate Square or Esplanadi), seasons (Vappu, herring market, winter), nemesis story arc, optional WebGPU renderer, optional co-op.
 
 ---
 

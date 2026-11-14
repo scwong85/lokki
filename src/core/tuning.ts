@@ -89,6 +89,13 @@ export const tuning = {
     lookAhead: p(0.2, 0, 1, 0.01), // seconds of velocity the camera looks ahead
     minHeight: p(0.6, 0, 3, 0.1),
   },
+  touch: {
+    stickRadius: p(56, 20, 140, 2), // px the thumb travels for full speed
+    deadzone: p(7, 0, 30, 1), // px of thumb wobble ignored
+    lookScale: p(1.5, 0.2, 5, 0.1), // drag-to-look speed (times the mouse sensitivity)
+    diveAim: p(1.4, 0, 5, 0.1), // how much sliding on DIVE steepens the dive
+    stickZone: p(0.42, 0.2, 0.6, 0.02), // left part of the screen that spawns the stick
+  },
   water: {
     waves: p(1, 0, 2, 0.1), // strength of the wave colour pattern
     floatHeight: p(0.12, -0.2, 0.6, 0.02), // where loose items float
