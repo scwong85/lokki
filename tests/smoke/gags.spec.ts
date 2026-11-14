@@ -43,8 +43,14 @@ test('smashing a bottle does not crash or freeze the game (regression: removed R
   expect(await page.evaluate(() => (window as unknown as { __lokki: Lokki }).__lokki.interaction.carried?.def.name)).toBe('bottle');
 
   await place(60, 9, 60); // up in the air over the open harbour: nothing to land on but the ground, whatever the timing
-  await page.waitForTimeout(100);
-  await page.keyboard.press('KeyE'); // drop it from 9 m
+  // drop it from 9 m; retry until released (the grab cooldown runs in simulated time, which is slow in headless runs)
+  await expect
+    .poll(async () => {
+      await page.keyboard.press('KeyE');
+      await page.waitForTimeout(250);
+      return page.evaluate(() => (window as unknown as { __lokki: Lokki }).__lokki.interaction.carried === null);
+    }, { timeout: 15_000 })
+    .toBe(true);
   // wait for the bottle to land and shatter (the headless renderer is slow, so wait on the condition, not on a fixed time)
   await page.waitForFunction(
     () => (window as unknown as { __lokki: Lokki }).__lokki.quests.quests.find((q) => q.id === 'extras')!.objectives.find((o) => o.id === 'bottle')!.done,

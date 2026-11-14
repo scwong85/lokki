@@ -89,6 +89,12 @@ export const tuning = {
     lookAhead: p(0.2, 0, 1, 0.01), // seconds of velocity the camera looks ahead
     minHeight: p(0.6, 0, 3, 0.1),
   },
+  people: {
+    facing: p(3.14, -3.15, 3.15, 0.05), // model yaw so people face where they walk
+    walkRate: p(1.3, 0.2, 3, 0.05), // walk animation speed
+    runRate: p(1.2, 0.2, 3, 0.05), // run animation speed
+    blend: p(0.2, 0, 1, 0.05), // seconds to blend between animations
+  },
   juice: {
     shake: p(1, 0, 1, 0.1), // screen shake strength (0 = off)
     shakeDecay: p(5, 1, 20, 0.5), // how fast a shake dies down

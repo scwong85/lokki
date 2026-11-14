@@ -37,6 +37,6 @@ Public-domain / CC0 recordings from Wikimedia Commons, re-encoded to Ogg Vorbis 
 
 The compositions are all long out of copyright. Known caveat: the Joplin recording's ID3 tag lists ASCAP/BMI (publishing metadata); Commons classifies it as a US government work.
 
-## Character models (added in M10)
+## Character model (added in M10)
 
-`public/models/people/*.glb` and `public/models/people/Textures/colormap.png`: **Kenney "Mini Characters" 2.0** (www.kenney.nl), licence **CC0** (http://creativecommons.org/publicdomain/zero/1.0/), downloaded 2026-11-14 from https://kenney.nl/assets/mini-characters-1. Files used unchanged (GLB format): character-male-a…g, character-female-a…f, character-worker. Rigged, with idle/walk/sprint/pick-up/emote/etc. animations.
+`public/models/people/human.fbx`: **"Animated Human" by Quaternius**, licence **CC0 1.0** (https://creativecommons.org/publicdomain/zero/1.0/), downloaded 2026-11-14 from OpenGameArt (https://opengameart.org/content/animated-human-low-poly, file `Animated Human by @Quaternius_0.zip`, FBX unchanged). Clips used: Idle, Walk, Run, Jump, Working. The game does not ship the pack's skin textures: each person's clothes are a tiny band texture generated in code, following the pack's texture layout (skin, eyes, hair, shirt, trousers).

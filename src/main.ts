@@ -55,6 +55,8 @@ import { OptionsStore, applyOptions } from './core/options';
 import { OptionsPanel, TitleScreen } from './ui/menus';
 import { Tutorial } from './gameplay/tutorial';
 import { SKILLS } from './data/skills';
+import { NpcModel } from './world/npcModel';
+import { loadPeople } from './world/people';
 import { SkillsPanel } from './ui/skillsPanel';
 import { RunHud } from './ui/runHud';
 
@@ -66,6 +68,8 @@ app.appendChild(renderer.domElement);
 
 const RAPIER = (await import('@dimforge/rapier3d-compat')).default;
 await RAPIER.init();
+// rigged people (CC0 Quaternius); without them the game falls back to simple capsule people
+NpcModel.assets = await loadPeople(`${import.meta.env.BASE_URL}models/people/human.fbx`);
 const phys = new PhysicsWorld(RAPIER);
 
 const scene = createScene();
