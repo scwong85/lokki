@@ -66,6 +66,9 @@ export class NpcModel {
     this.root.add(this.body);
     if (NpcModel.assets) this.buildSkinned(NpcModel.assets, color, seed, opts);
     else this.buildCapsule(color, seed, opts);
+    this.body.traverse((c) => {
+      c.castShadow = true;
+    });
     this.buildExtras(opts);
   }
 

@@ -229,6 +229,11 @@ export const tuning = {
   render: {
     fogNear: p(150, 0, 400, 1),
     fogFar: p(700, 100, 1500, 1),
+    hemi: p(1.9, 0, 4, 0.05), // sky/ground fill light
+    sun: p(1.9, 0, 5, 0.05), // sun (casts the shadows)
+    exposure: p(1.0, 0.3, 2.5, 0.05), // tone-mapping exposure
+    shadowArea: p(70, 20, 200, 5), // half-size in metres of the shadow box around the player
+    ao: p(0.32, 0, 0.8, 0.02), // baked darkening at the foot of walls
   },
 };
 

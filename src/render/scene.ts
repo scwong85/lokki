@@ -22,8 +22,11 @@ export function createScene() {
   scene.background = skyTexture();
   scene.fog = new THREE.Fog(palette.fog, tuning.render.fogNear.value, tuning.render.fogFar.value);
 
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xf3e6dc, 2.2));
-  const sun = new THREE.DirectionalLight(palette.sun, 1.2);
+  const hemi = new THREE.HemisphereLight(0xffffff, 0xf3e6dc, tuning.render.hemi.value);
+  hemi.name = 'hemi';
+  scene.add(hemi);
+  const sun = new THREE.DirectionalLight(palette.sun, tuning.render.sun.value);
+  sun.name = 'sun';
   sun.position.set(30, 50, 20);
   scene.add(sun);
 

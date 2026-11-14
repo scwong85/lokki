@@ -81,6 +81,14 @@
       "type": "toy",
       "x": -8,
       "z": -78
+    },
+    {
+      "id": "uspenski",
+      "type": "restyle",
+      "style": "uspenski",
+      "lon": 24.95955,
+      "lat": 60.16835,
+      "height": 18
     }
   ]
 }

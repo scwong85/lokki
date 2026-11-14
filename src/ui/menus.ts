@@ -10,12 +10,17 @@ export class OptionsPanel {
     this.el.className = 'menu-card';
     this.el.hidden = true;
     const rows = OPTION_SLIDERS.map((s) => `<label>${s.label}<input type="range" data-k="${s.key}" min="${s.min}" max="${s.max}" step="${s.step}" value="${options[s.key]}"></label>`).join('');
-    this.el.innerHTML = `<h3>Options</h3>${rows}<label class="chk"><input type="checkbox" data-k="tutorial"> Show the flying tips again</label><p class="menu-keys"><b>M</b> mutes everything · <b>O</b> closes this</p><button data-act="close">Close</button>`;
+    this.el.innerHTML = `<h3>Options</h3>${rows}<label class="chk"><input type="checkbox" data-k="graphics"> High quality graphics (shadows)</label><label class="chk"><input type="checkbox" data-k="tutorial"> Show the flying tips again</label><p class="menu-keys"><b>M</b> mutes everything · <b>O</b> closes this</p><button data-act="close">Close</button>`;
     this.el.querySelectorAll<HTMLInputElement>('input[type=range]').forEach((inp) => {
       inp.addEventListener('input', () => {
         (this.options as unknown as Record<string, number>)[inp.dataset.k!] = Number(inp.value);
         this.onChange(this.options);
       });
+    });
+    const gfx = this.el.querySelector<HTMLInputElement>('input[data-k=graphics]')!;
+    gfx.addEventListener('change', () => {
+      this.options.graphics = gfx.checked ? 'high' : 'low';
+      this.onChange(this.options);
     });
     const tut = this.el.querySelector<HTMLInputElement>('input[data-k=tutorial]')!;
     tut.addEventListener('change', () => {
@@ -40,6 +45,7 @@ export class OptionsPanel {
 
   show(): void {
     this.el.querySelector<HTMLInputElement>('input[data-k=tutorial]')!.checked = !this.options.tutorialDone;
+    this.el.querySelector<HTMLInputElement>('input[data-k=graphics]')!.checked = this.options.graphics === 'high';
     this.el.hidden = false;
   }
 

@@ -5,6 +5,7 @@ import { events } from './core/events';
 import { tuning } from './core/tuning';
 import { mods, staminaMax } from './core/skillMods';
 import { addGroundPlane, createScene } from './render/scene';
+import { Graphics, shadows } from './render/graphics';
 import { palette } from './render/palette';
 import { FollowCamera } from './render/camera';
 import { Gull } from './gull/gull';
@@ -73,6 +74,7 @@ NpcModel.assets = await loadPeople(`${import.meta.env.BASE_URL}models/people/hum
 const phys = new PhysicsWorld(RAPIER);
 
 const scene = createScene();
+const graphics = new Graphics(renderer, scene);
 // `?greybox` loads the M1 test course instead of the city
 const greybox = new URLSearchParams(location.search).has('greybox');
 let world: World;
@@ -158,6 +160,7 @@ const pings = new PingFx(scene);
 const poopReticle = new Reticle();
 scene.add(poopReticle.mesh);
 const marker = new DiveMarker();
+shadows(gull.mesh, true, false);
 scene.add(gull.mesh, gull.shadow, marker.group);
 const cam = new FollowCamera(innerWidth / innerHeight);
 const input = new Input(renderer.domElement);
@@ -172,8 +175,10 @@ const credits = new Credits(document.body);
 const optStore = new OptionsStore();
 const options = optStore.load();
 applyOptions(options);
+graphics.apply(options.graphics);
 const optionsPanel = new OptionsPanel(document.body, options, (o) => {
   applyOptions(o);
+  if (o.graphics !== graphics.level) graphics.apply(o.graphics);
   optStore.save(o);
 });
 // automated browser tests skip the title screen and the tips (add ?title to see them)
@@ -716,6 +721,7 @@ startLoop({
     hud.setInteraction(blocked ? 'Umbrella blocks it! Distract the Warden with a noise first (drop or throw a bottle)' : interaction.grabPrompt(s), poopReady);
     cam.update(gull.position, frameDt, { vx: s.vx, vy: s.vy, vz: s.vz, diving: s.mode === 'dive', turnRate: s.turnRate });
     audio.setAir(Math.hypot(s.vx, s.vy, s.vz) / tuning.dive.speed.value, s.mode !== 'ground');
+    graphics.update(gull.position);
     renderer.render(scene, cam.camera);
     debug.frame(frameDt, `${renderer.info.render.calls} calls · ${(renderer.info.render.triangles / 1000).toFixed(0)}k tris`);
     const tip = tutorial.current;

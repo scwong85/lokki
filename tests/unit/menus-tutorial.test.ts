@@ -21,6 +21,9 @@ describe('options', () => {
     expect(o.sensitivity).toBe(0.01);
     expect(o.shake).toBe(0.4);
     expect(o.tutorialDone).toBe(true);
+    expect(o.graphics).toBe('high');
+    expect(sanitizeOptions({ graphics: 'low' }).graphics).toBe('low');
+    expect(sanitizeOptions({ graphics: 'ultra' }).graphics).toBe('high');
   });
 
   it('round-trips through storage and survives broken storage', () => {

@@ -11,6 +11,8 @@ export interface Options {
   shake: number;
   /** The first-flight tutorial was finished (or skipped). */
   tutorialDone: boolean;
+  /** Shadows and full resolution (high) or the fast path (low). */
+  graphics: 'high' | 'low';
 }
 
 export const defaultOptions = (): Options => ({
@@ -21,6 +23,7 @@ export const defaultOptions = (): Options => ({
   sensitivity: tuning.camera.mouseSensitivity.value,
   shake: tuning.juice.shake.value,
   tutorialDone: false,
+  graphics: 'high',
 });
 
 const RANGES = {
@@ -41,6 +44,7 @@ export function sanitizeOptions(raw: unknown, base: Options = defaultOptions()):
   const o = { ...base };
   for (const k of Object.keys(RANGES) as (keyof typeof RANGES)[]) o[k] = clampNum(r[k], RANGES[k][0], RANGES[k][1], base[k]);
   o.tutorialDone = r.tutorialDone === true;
+  o.graphics = r.graphics === 'low' ? 'low' : 'high';
   return o;
 }
 

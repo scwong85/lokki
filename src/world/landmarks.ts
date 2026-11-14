@@ -225,6 +225,7 @@ const BUILDERS: Record<string, (l: LandmarkSrc) => LandmarkOut> = { cathedral, s
 export function buildLandmarks(list: readonly LandmarkSrc[]): Required<LandmarkOut> {
   const out: Required<LandmarkOut> = { prisms: [], targets: [], props: [], mats: [] };
   for (const l of list) {
+    if (l.type === 'restyle') continue; // handled by the building pass (city.ts)
     const b = BUILDERS[l.type];
     if (!b) {
       console.warn(`unknown landmark type: ${l.type}`);

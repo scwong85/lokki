@@ -90,9 +90,36 @@ const landmarks = landmarkSrc.landmarks.map(({ lon, lat, ...rest }) => {
   return rest as typeof rest & { x: number; z: number };
 });
 
+// A `restyle` landmark dresses up the registry building under it (or the nearest one within 30 m):
+// brick market hall, City Hall, Uspenski Cathedral. The runtime adds the matching details.
+for (const l of landmarks) {
+  if (l.type !== 'restyle') continue;
+  let b = buildings.find((bd) => pointInRings(bd.rings, l.x, l.z));
+  if (!b) {
+    let best = 30;
+    for (const bd of buildings) {
+      const r = bd.rings[0];
+      let cx = 0, cz = 0;
+      for (let i = 0; i < r.length; i += 2) {
+        cx += r[i];
+        cz += r[i + 1];
+      }
+      const d = Math.hypot(cx / (r.length / 2) - l.x, cz / (r.length / 2) - l.z);
+      if (d < best) {
+        best = d;
+        b = bd;
+      }
+    }
+  }
+  if (b) {
+    (b as { style?: unknown }).style = (l as { style?: string }).style;
+    if (l.height) b.h = l.height as number;
+  } else console.warn(`landmark ${l.id}: no building near it`);
+}
+
 // A landmark with a `height` re-extrudes the building under it (e.g. the cathedral body) in white.
 for (const l of landmarks) {
-  if (!l.height) continue;
+  if (!l.height || l.type === 'restyle') continue;
   const b = buildings.find((bd) => pointInRings(bd.rings, l.x, l.z));
   if (b) {
     b.h = l.height;

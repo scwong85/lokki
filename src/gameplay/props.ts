@@ -81,6 +81,12 @@ export class PropManager {
     const collider = this.phys.world.createCollider(colliderFor(R, def.shape, def.mass), body);
     const mesh = createPropMesh(sp.type);
     mesh.position.set(sp.x, sp.y, sp.z);
+    // only the bigger props cast shadow-map shadows (each caster is another draw call in the shadow pass)
+    const bigProp = def.mass >= 1;
+    mesh.traverse((c) => {
+      c.castShadow = bigProp;
+      c.receiveShadow = true;
+    });
     this.parent.add(mesh);
     const prop: Prop = {
       id: this.nextId++, type: sp.type, tag: sp.tag, def, spawn: sp, body, collider, mesh,
