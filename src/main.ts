@@ -224,6 +224,7 @@ function onFlightEvents(evs: FlightEvent[]): void {
     else if (e.type === 'land' && e.quality === 'hard') {
       hud.toast('Oof!');
       cam.shake(0.7);
+      interaction.debris.burst(gull.state, 0xe9dcc8, 10); // dust
       audio.play('thud');
       gull.openBeak(0.8);
     } else if (e.type === 'land' && e.quality === 'rough') {
@@ -321,6 +322,7 @@ function onDefense(evs: DefenseEvent[]): void {
         hud.toast(lost ? `${what} Dropped the ${lost.def.name}!` : what, 1.4);
         audio.play(e.hit.kind === 'spray' ? 'splat' : e.hit.kind === 'swat' ? 'bonk' : 'twang');
         cam.shake(e.hit.kind === 'swat' ? 0.7 : 0.45);
+        interaction.debris.burst({ x: gull.state.x, y: gull.state.y + 0.3, z: gull.state.z }, 0xffffff, 14); // feathers
         hud.flash({ spray: '#7ec8ff', swat: '#ffb347', line: '#ffffff', net: '#ffffff' }[e.hit.kind]);
         gull.openBeak(0.7);
         break;
@@ -371,6 +373,7 @@ function notes(list: QuestNote[]): void {
       }
     } else if (n.type === 'won') {
       audio.play('win');
+      for (const c of [0xffd36e, 0xff9ec4, 0x9bd8ff, 0xb5e8b0]) interaction.debris.burst({ x: gull.state.x, y: gull.state.y + 1.2, z: gull.state.z }, c, 8); // confetti
       hud.toast(n.quest === 'extras' ? 'All extras done!' : n.quest === 'bonus' ? 'All extra objectives done!' : `Quest complete: ${q.title}!`, 2.4);
       const skill = skills.unlockForQuest(n.quest);
       if (skill) {
