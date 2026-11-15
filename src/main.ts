@@ -9,6 +9,8 @@ import { CoopCombo } from './gameplay/coopCombo';
 import type { GameEvent } from './net/protocol';
 import type { StatSummary } from './gameplay/levelStats';
 import { Lobby } from './ui/lobby';
+import { ControlsPanel } from './ui/controlsPanel';
+import { MenuNav } from './ui/menuNav';
 import { events } from './core/events';
 import { tuning } from './core/tuning';
 import { mods, staminaMax } from './core/skillMods';
@@ -64,6 +66,7 @@ import { RunTimer, isBest } from './gameplay/runTimer';
 import { MusicPlayer } from './core/music';
 import { MusicDirector } from './gameplay/musicDirector';
 import { OptionsStore, applyOptions } from './core/options';
+import { StreetLife } from './world/streetLife';
 import { OptionsPanel, TitleScreen } from './ui/menus';
 import { LevelSelect } from './ui/levelSelect';
 import { Tutorial } from './gameplay/tutorial';
@@ -103,6 +106,7 @@ let targets: Target[];
 let targetMeshes: THREE.Object3D[];
 let start: { x: number; z: number };
 let propSpawns: PropSpawn[] = [];
+let keepClearSpots: { x: number; z: number; r: number }[] = [];
 let walkable: (x: number, z: number) => boolean = () => true;
 let isLand: (x: number, z: number) => boolean = () => true;
 let water: Water | null = null;
@@ -119,6 +123,7 @@ if (greybox) {
   scene.add(city.group);
   world = city.world;
   ({ targets, start, targetMeshes, propSpawns, walkable, isLand, water } = city);
+  keepClearSpots = city.keepClear;
   phys.addStaticMesh(city.physicsMesh.vertices, city.physicsMesh.indices);
 }
 const gull = new Gull(start);
@@ -128,6 +133,9 @@ if (!greybox) {
   gull.isWater = (x, z) => !isLand(x, z);
   interaction.props.isWater = (x, z) => !isLand(x, z);
 }
+// pedestrians and cyclists on the streets (cosmetic; fewer on the low graphics preset)
+const lowGfx = new OptionsStore().load().graphics === 'low' || new URLSearchParams(location.search).has('touch');
+const streetLife = greybox ? null : new StreetLife(scene, walkable, keepClearSpots, Math.round(tuning.street.walkers.value * (lowGfx ? 0.5 : 1)), Math.round(tuning.street.cyclists.value * (lowGfx ? 0.5 : 1)));
 const ripples = new Ripples();
 scene.add(ripples.group);
 let rippleT = 0;
@@ -254,6 +262,7 @@ const firstVisit = !optStore.has();
 const options = optStore.load();
 if (touch && firstVisit) options.graphics = 'low'; // phones start on the fast preset (switch in Options)
 applyOptions(options);
+touchControls?.setHand(options.touchHand);
 graphics.apply(options.graphics);
 let hudF = applyHud(options.hud);
 const levelSelect = new LevelSelect(document.body, (id) => goToLevel(id));
@@ -385,12 +394,18 @@ function onNetEvent(e: GameEvent): void {
 }
 const levelRows = () =>
   LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), current: l.id === level.id, sandbox: l.sandbox, locked: !levelUnlocked(l, save.levels), unlockHint: l.requires ? `Clear ${levelById(l.requires).name} first` : undefined, best: save.levels[l.id]?.best ? fmtClear(save.levels[l.id].best) : undefined }));
+const controlsPanel = new ControlsPanel(document.body);
+const menuNav = new MenuNav();
+pad.menuOpen = () => menuOpen();
+pad.onMenu = (a) => menuNav.handle(a);
+addEventListener('pointerdown', () => menuNav.clear());
 const optionsPanel = new OptionsPanel(document.body, options, (o) => {
   applyOptions(o);
   if (o.graphics !== graphics.level) graphics.apply(o.graphics);
   hudF = applyHud(o.hud);
+  touchControls?.setHand(o.touchHand);
   optStore.save(o);
-}, () => levelSelect.show(levelRows()), () => lobby.show());
+}, () => levelSelect.show(levelRows()), () => lobby.show(), () => skillsPanel.toggle(skills, save), () => controlsPanel.show(), () => touchControls?.arrange(true));
 // automated browser tests skip the title screen and the tips (add ?title to see them)
 const interactive = !navigator.webdriver || new URLSearchParams(location.search).has('title');
 const tutorial = new Tutorial(interactive && !options.tutorialDone);
@@ -437,7 +452,7 @@ const title = new TitleScreen(
   },
 );
 if (interactive && !new URLSearchParams(location.search).has('play')) title.show();
-const menuOpen = (): boolean => title.visible || (lobby.visible && !net) || levelSelect.visible || optionsPanel.visible || skillsPanel.visible || credits.visible || !!touchControls?.menuOpen;
+const menuOpen = (): boolean => title.visible || (lobby.visible && !net) || levelSelect.visible || optionsPanel.visible || controlsPanel.visible || skillsPanel.visible || credits.visible || !!touchControls?.menuOpen;
 const audio = new AudioManager();
 audio.muted = save.muted;
 for (const ev of ['pointerdown', 'touchend', 'keydown'] as const) addEventListener(ev, () => { audio.unlock(); music.start(); });
@@ -1014,7 +1029,11 @@ startLoop({
       else levelSelect.show(levelRows());
       if (levelSelect.visible && document.pointerLockElement) document.exitPointerLock(); // free the mouse to click a level
     }
-    if (input.wasPressed('Escape') && levelSelect.visible) levelSelect.hide();
+    if (input.wasPressed('Escape')) {
+      // Esc: close whatever is open, else open the options (the first Esc in mouse-look only frees the mouse)
+      if (menuNav.panel() && !title.visible) menuNav.handle('b');
+      else if (!title.visible) optionsPanel.show();
+    }
     if (input.wasPressed('KeyU')) {
       options.hud = nextHudMode(options.hud);
       hudF = applyHud(options.hud);
@@ -1204,6 +1223,7 @@ startLoop({
         hud.toast(got.length > 1 ? `Double hit! x${got.length}` : 'Got it!', 0.8);
       }
     }
+    streetLife?.update(dt, gull.state);
     updateTargets(targets, dt);
     input.endStep();
   },
@@ -1212,6 +1232,7 @@ startLoop({
     pad.poll(frameDt, tuning.gamepad.deadzone.value, tuning.gamepad.lookSpeed.value);
     interaction.render(alpha, gull.state, simTime, cam.camera.quaternion);
     npcs?.render(simTime, interaction.beakPos(gull.state), cam.camera.quaternion);
+    streetLife?.render(simTime, gull.state);
     defense?.render(simTime, frameDt);
     if (defense && heatMeter) heatMeter.update(defense.heat, defense.response, defense.hawkReady, defense.hawkActive);
     // quest spots, plus a marker on any item that was knocked out of the beak (so it can never be lost)

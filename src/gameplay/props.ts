@@ -63,6 +63,8 @@ function colliderFor(R: PhysicsWorld['R'], s: Shape, mass: number) {
 }
 
 const tmpQ = new THREE.Quaternion();
+const rockQ = new THREE.Quaternion();
+const rockE = new THREE.Euler();
 
 /** Owns every prop: Rapier bodies, meshes, carry state and impact detection. */
 export class PropManager {
@@ -195,7 +197,7 @@ export class PropManager {
       if (!this.isWater || p.broken || p.carried || p.heldBy !== null) continue;
       const t = p.body.translation();
       if (t.y > 1.2 || !this.isWater(t.x, t.z)) continue;
-      const floatY = w.floatHeight.value + halfHeight(p.def.shape) * 0.5 + Math.sin(this.time * 1.7 + p.id) * 0.04;
+      const floatY = w.floatHeight.value + halfHeight(p.def.shape) * 0.5 + Math.sin(this.time * w.bobSpeed.value + p.id) * w.bobHeight.value;
       const v = p.body.linvel();
       const k = waterDrag(w.drag.value, dt);
       p.body.setLinvel({ x: v.x * k, y: floatVy(t.y, v.y, floatY, tuning.physics.gravity.value, w.buoyancy.value, w.drag.value, dt), z: v.z * k }, true);
@@ -324,6 +326,13 @@ export class PropManager {
       if (p.broken) continue;
       p.mesh.position.lerpVectors(p.prev.p, p.cur.p, alpha);
       p.mesh.quaternion.slerpQuaternions(p.prev.q, p.cur.q, alpha);
+      // floating on the sea: the mesh rocks gently with the waves (looks only; the body keeps its own pose)
+      if (this.isWater && !p.carried && p.heldBy === null && p.cur.p.y < 0.7 && this.isWater(p.cur.p.x, p.cur.p.z)) {
+        const w = tuning.water;
+        const t = this.time * w.bobSpeed.value * 0.8 + p.id * 1.7;
+        rockE.set(Math.sin(t) * w.rock.value, 0, Math.cos(t * 1.3) * w.rock.value * 0.8);
+        p.mesh.quaternion.multiply(rockQ.setFromEuler(rockE));
+      }
     }
   }
 }

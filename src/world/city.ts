@@ -6,8 +6,8 @@ import { createTargetMeshes } from './targetMeshes';
 import type { Target } from '../gameplay/targets';
 import type { PropSpawn } from '../gameplay/props';
 import cityJson from '../../data/generated/kauppatori.json';
-import { FACADES, FLAT_ROOFS, PITCHED_ROOFS, bays, hash, pitchedRoof, rectInfo, roofRise, storeys, wantsPitched, type V3 } from './facade';
-import { shopTexture, windowTexture } from '../render/facadeTextures';
+import { FACADES, FLAT_ROOFS, PITCHED_ROOFS, WINDOW_STYLES, bays, hash, pitchedRoof, rectInfo, roofRise, storeys, wantsPitched, windowPlan, type V3 } from './facade';
+import { shopTexture, windowAtlas } from '../render/facadeTextures';
 import { tuning } from '../core/tuning';
 import { planDressing } from './dressingPlan';
 import { buildDressing } from './dressing';
@@ -36,6 +36,8 @@ export interface City {
   group: THREE.Group;
   targets: Target[];
   targetMeshes: THREE.Object3D[];
+  /** Spots the game keeps clear of ambient people and set dressing (the market, the ferry, quest props). */
+  keepClear: { x: number; z: number; r: number }[];
   start: { x: number; z: number };
   propSpawns: PropSpawn[];
   /** Land (as opposed to the sea), buildings or not. */
@@ -52,12 +54,25 @@ const PLAIN: [number, number] = [0.02, 0.02]; // a white texel: faces without wi
 
 class Buf {
   pos: number[] = [];
+  /** What the physics trimesh is built from (usually the same triangles; facade detail is render-only). */
+  physPos: number[] = [];
   col: number[] = [];
   uv: number[] = [];
   tri(a: number[], b: number[], c: number[], color: THREE.Color, ua = PLAIN, ub = PLAIN, uc = PLAIN, cb = color, cc = color): void {
     this.pos.push(...a, ...b, ...c);
+    this.physPos.push(...a, ...b, ...c);
     for (const k of [color, cb, cc]) this.col.push(k.r, k.g, k.b);
     this.uv.push(...ua, ...ub, ...uc);
+  }
+  /** Looks only: not part of the physics mesh. */
+  triR(a: number[], b: number[], c: number[], color: THREE.Color, ua: [number, number], ub: [number, number], uc: [number, number], cb = color, cc = color): void {
+    this.pos.push(...a, ...b, ...c);
+    for (const k of [color, cb, cc]) this.col.push(k.r, k.g, k.b);
+    this.uv.push(...ua, ...ub, ...uc);
+  }
+  /** Physics only (an invisible wall standing in for the detailed facade bands). */
+  triP(a: number[], b: number[], c: number[]): void {
+    this.physPos.push(...a, ...b, ...c);
   }
   get empty(): boolean {
     return this.pos.length === 0;
@@ -163,6 +178,35 @@ function wallQuad(buf: Buf, x1: number, z1: number, x2: number, z2: number, y0: 
   }
 }
 
+/**
+ * One floor of a wall in a window style from the atlas (rows stacked top to bottom): `u` bays across, `style` picks the row.
+ * Only drawn; `wallPhysics` adds the solid wall for the whole building side.
+ */
+function wallBand(buf: Buf, x1: number, z1: number, x2: number, z2: number, y0: number, y1: number, out: boolean, color: THREE.Color, u: number, style: number): void {
+  const A = [x1, y0, z1], B = [x2, y0, z2], C = [x2, y1, z2], D = [x1, y1, z1];
+  const v0 = 1 - (style + 1) / WINDOW_STYLES, v1 = 1 - style / WINDOW_STYLES;
+  const uA: [number, number] = [0, v0], uB: [number, number] = [u, v0], uC: [number, number] = [u, v1], uD: [number, number] = [0, v1];
+  if (out) {
+    buf.triR(A, C, B, color, uA, uC, uB);
+    buf.triR(A, D, C, color, uA, uD, uC);
+  } else {
+    buf.triR(A, B, C, color, uA, uB, uC);
+    buf.triR(A, C, D, color, uA, uC, uD);
+  }
+}
+
+/** An invisible solid wall (physics only). */
+function wallPhysics(buf: Buf, x1: number, z1: number, x2: number, z2: number, y0: number, y1: number, out: boolean): void {
+  const A = [x1, y0, z1], B = [x2, y0, z2], C = [x2, y1, z2], D = [x1, y1, z1];
+  if (out) {
+    buf.triP(A, C, B);
+    buf.triP(A, D, C);
+  } else {
+    buf.triP(A, B, C);
+    buf.triP(A, C, D);
+  }
+}
+
 /** Simple box (x/z rectangle) for roof clutter and chimneys; also returned as a collision prism. */
 function box(buf: Buf, cx: number, cz: number, w: number, d: number, y0: number, y1: number, color: number): PrismDef {
   const ring = [cx - w / 2, cz - d / 2, cx + w / 2, cz - d / 2, cx + w / 2, cz + d / 2, cx - w / 2, cz + d / 2];
@@ -203,15 +247,34 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
   const pitched = !style && wantsPitched(r, b.id, h);
   const prisms: PrismDef[] = [{ rings: b.rings, y0: 0, y1: h, kind: 'building', wall: wallHex, roof: wallHex }];
 
+  // each building gets its own window rhythm: bay width, a main style, accent floors and a few blank walls
+  let longest = 0, longestLen = 0;
+  b.rings[0].forEach((_, k) => {
+    if (k % 2) return;
+    const n0 = b.rings[0].length / 2, i0 = k / 2, j0 = (i0 + 1) % n0;
+    const l0 = Math.hypot(b.rings[0][j0 * 2] - b.rings[0][i0 * 2], b.rings[0][j0 * 2 + 1] - b.rings[0][i0 * 2 + 1]);
+    if (l0 > longestLen) [longest, longestLen] = [i0, l0];
+  });
+  const plan = windowPlan(b.id, st.upperFloors, longest);
   b.rings.forEach((ring, ri) => {
     const n = ring.length / 2;
     const sign = (ringArea(ring) > 0 ? 1 : -1) * (ri === 0 ? 1 : -1);
     for (let i = 0; i < n; i++) {
       const j = (i + 1) % n;
       const x1 = ring[i * 2], z1 = ring[i * 2 + 1], x2 = ring[j * 2], z2 = ring[j * 2 + 1];
-      const nb = bays(Math.hypot(x2 - x1, z2 - z1));
-      wallQuad(ground, x1, z1, x2, z2, 0, st.ground, sign > 0, wall, foot, nb, 1);
-      if (st.upperFloors) wallQuad(upper, x1, z1, x2, z2, st.ground, h, sign > 0, wall, wall, nb, st.upperFloors);
+      const len = Math.hypot(x2 - x1, z2 - z1);
+      const nb = bays(len, plan.bayW);
+      wallQuad(ground, x1, z1, x2, z2, 0, st.ground, sign > 0, wall, foot, bays(len), 1);
+      if (st.upperFloors) {
+        const blank = ri !== 0 || plan.blank(i);
+        if (blank || nb === 0) wallQuad(upper, x1, z1, x2, z2, st.ground, h, sign > 0, wall, wall, 0, 0);
+        else {
+          // one band per floor so floors can differ; the physics mesh keeps a single plain wall
+          const fh = (h - st.ground) / st.upperFloors;
+          for (let f = 0; f < st.upperFloors; f++) wallBand(upper, x1, z1, x2, z2, st.ground + f * fh, st.ground + (f + 1) * fh, sign > 0, wall, nb, plan.floors[f]);
+          wallPhysics(upper, x1, z1, x2, z2, st.ground, h, sign > 0);
+        }
+      }
       // cornice: a lighter ledge that sticks out at the top of taller flat-roofed buildings
       if (ri === 0 && !pitched && h >= 6) {
         const len = Math.hypot(x2 - x1, z2 - z1) || 1;
@@ -412,7 +475,7 @@ export function buildCity(): City {
     const c = chunkFor(b.rings[0]);
     defs.push(...building(c.upper, c.ground, b));
   }
-  const upperMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, map: windowTexture() });
+  const upperMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, map: windowAtlas() });
   const groundMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, map: shopTexture() });
   const phys: number[] = [];
   for (const { upper, ground } of chunks.values()) {
@@ -422,7 +485,7 @@ export function buildCity(): City {
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       group.add(mesh);
-      for (const v of buf.pos) phys.push(v);
+      for (const v of buf.physPos) phys.push(v);
     }
   }
   const physicsMesh = { vertices: new Float32Array(phys), indices: Uint32Array.from({ length: phys.length / 3 }, (_, i) => i) };
@@ -441,7 +504,8 @@ export function buildCity(): City {
   const boxes: Box[] = [];
   const world = new World(boxes, prisms, data.half);
 
-  const targets = lm.targets;
+  // the M1 test dive-targets (floating pink ice creams with light pillars) are gone from the city; only people's held items are dive targets now
+  const targets: Target[] = [];
   const targetMeshes = createTargetMeshes(targets, group);
-  return { world, group, targets, targetMeshes, start: { x: 0, z: -12 }, propSpawns: lm.props, water, isLand, walkable: (x, z) => isLand(x, z) && !world.solidAt(x, 0.9, z), physicsMesh, stats: { buildings: data.buildings.length, prisms: defs.length, chunks: chunks.size } };
+  return { world, group, targets, targetMeshes, keepClear, start: { x: 0, z: -12 }, propSpawns: lm.props, water, isLand, walkable: (x, z) => isLand(x, z) && !world.solidAt(x, 0.9, z), physicsMesh, stats: { buildings: data.buildings.length, prisms: defs.length, chunks: chunks.size } };
 }

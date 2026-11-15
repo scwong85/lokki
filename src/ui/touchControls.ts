@@ -1,6 +1,7 @@
 import type { Input } from '../core/input';
 import { knobOffset, stickAxes } from '../core/touchMath';
 import { tuning } from '../core/tuning';
+import { BUTTON_IDS, clampSpot, layoutFor, loadLayouts, saveLayouts, type ButtonId, type Hand, type SavedLayouts } from '../core/touchLayout';
 
 /** Grab-button label from the interaction prompt ("E grab bun" -> "Grab bun", "E drop · Q toss bun" -> "Drop"). Pure. */
 export function grabLabel(prompt: string): { text: string; enabled: boolean } {
@@ -38,6 +39,12 @@ export class TouchControls {
   private grab: HTMLElement;
   private toss: HTMLElement;
   private abilities = new Map<string, HTMLElement>();
+  private hand: Hand = 'right';
+  private saved: SavedLayouts = loadLayouts();
+  private arranging = false;
+  private arrangeBar: HTMLElement;
+  /** The button being dragged while arranging. */
+  private drag: { id: ButtonId; pointer: number } | null = null;
   private buttons: Btn[] = [];
   /** What each active pointer is doing. */
   private pointers = new Map<number, { kind: 'stick' | 'look' | 'button'; x0: number; y0: number; x: number; y: number; btn?: Btn }>();
@@ -66,6 +73,20 @@ export class TouchControls {
     // the menu sits above the to-do note and the other panels, so it lives outside the control layer
     const panel = el.querySelector<HTMLElement>('.t-menupanel')!;
     root.appendChild(panel);
+    const bar = document.createElement('div');
+    bar.className = 't-arrange';
+    bar.hidden = true;
+    bar.innerHTML = '<span>Drag the buttons where your thumbs like them</span><button data-arr="reset">Reset</button><button data-arr="done" class="t-resume">Done</button>';
+    root.appendChild(bar);
+    this.arrangeBar = bar;
+    bar.addEventListener('click', (e) => {
+      const a = (e.target as HTMLElement).dataset.arr;
+      if (a === 'reset') {
+        delete this.saved[this.hand];
+        saveLayouts(this.saved);
+        this.applyLayout();
+      } else if (a === 'done') this.arrange(false);
+    });
     this.stickBase = el.querySelector('.t-stick')!;
     this.stickKnob = el.querySelector('.t-knob')!;
     this.menu = panel;
@@ -74,6 +95,7 @@ export class TouchControls {
     for (const b of el.querySelectorAll<HTMLElement>('[data-mode]')) this.buttons.push({ code: b.dataset.code!, mode: b.dataset.mode as Btn['mode'], el: b });
     for (const b of el.querySelectorAll<HTMLElement>('.t-ab')) this.abilities.set(b.dataset.code!, b);
 
+    this.applyLayout();
     el.addEventListener('pointerdown', (e) => this.down(e));
     el.addEventListener('pointermove', (e) => this.move(e));
     for (const t of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) el.addEventListener(t, (e) => this.up(e));
@@ -86,9 +108,40 @@ export class TouchControls {
     });
   }
 
-  /** The ☰ menu pauses the game like the other panels. */
+  /** The ☰ menu (and arranging the buttons) pauses the game like the other panels. */
   get menuOpen(): boolean {
-    return !this.menu.hidden;
+    return !this.menu.hidden || this.arranging;
+  }
+
+  private btnEl(id: ButtonId): HTMLElement {
+    return this.el.querySelector<HTMLElement>(`[data-code=${id}]`)!;
+  }
+
+  /** Put the five action buttons where the layout says. */
+  applyLayout(): void {
+    const l = layoutFor(this.hand, this.saved);
+    for (const id of BUTTON_IDS) {
+      const s = l[id];
+      const b = this.btnEl(id);
+      Object.assign(b.style, { left: `${s.x * 100}%`, top: `${s.y * 100}%`, right: 'auto', bottom: 'auto', translate: '-50% -50%' });
+    }
+  }
+
+  /** Right- or left-handed: the buttons move to the other side and the stick appears on the other half. */
+  setHand(h: Hand): void {
+    this.hand = h;
+    document.body.classList.toggle('touch-left', h === 'left');
+    this.applyLayout();
+  }
+
+  /** Drag-to-arrange mode: the buttons stop playing and follow the thumb. */
+  arrange(on: boolean): void {
+    this.arranging = on;
+    this.arrangeBar.hidden = !on;
+    this.el.classList.toggle('arranging', on);
+    this.toss.hidden = on ? false : this.toss.hidden;
+    if (on) this.release();
+    else saveLayouts(this.saved);
   }
 
   private down(e: PointerEvent): void {
@@ -96,6 +149,11 @@ export class TouchControls {
     if (target.closest('.t-menupanel') || target.closest('.t-menu')) return; // plain clicks
     e.preventDefault();
     this.el.setPointerCapture?.(e.pointerId);
+    if (this.arranging) {
+      const id = target.closest<HTMLElement>('[data-code]')?.dataset.code as ButtonId | undefined;
+      if (id && BUTTON_IDS.includes(id)) this.drag = { id, pointer: e.pointerId };
+      return;
+    }
     const bEl = target.closest<HTMLElement>('[data-mode]');
     const btn = bEl ? this.buttons.find((b) => b.el === bEl) : undefined;
     const p = { kind: 'look' as 'stick' | 'look' | 'button', x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, btn };
@@ -104,7 +162,7 @@ export class TouchControls {
       btn.el.classList.add('down');
       if (btn.mode === 'hold') this.input.setVirtual(btn.code, true);
       else this.input.tap(btn.code);
-    } else if (e.clientX < innerWidth * tuning.touch.stickZone.value) {
+    } else if (this.hand === 'right' ? e.clientX < innerWidth * tuning.touch.stickZone.value : e.clientX > innerWidth * (1 - tuning.touch.stickZone.value)) {
       p.kind = 'stick';
       this.stickBase.style.left = `${e.clientX}px`;
       this.stickBase.style.top = `${e.clientY}px`;
@@ -115,6 +173,13 @@ export class TouchControls {
   }
 
   private move(e: PointerEvent): void {
+    if (this.drag && this.drag.pointer === e.pointerId) {
+      e.preventDefault();
+      const spot = clampSpot({ x: e.clientX / innerWidth, y: e.clientY / innerHeight });
+      (this.saved[this.hand] ??= {})[this.drag.id] = spot;
+      this.applyLayout();
+      return;
+    }
     const p = this.pointers.get(e.pointerId);
     if (!p) return;
     e.preventDefault();
@@ -136,6 +201,7 @@ export class TouchControls {
   }
 
   private up(e: PointerEvent): void {
+    if (this.drag && this.drag.pointer === e.pointerId) this.drag = null;
     const p = this.pointers.get(e.pointerId);
     if (!p) return;
     this.pointers.delete(e.pointerId);

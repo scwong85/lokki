@@ -1,7 +1,7 @@
 import { createRng } from '../core/rng';
 import { pointInRings } from './collision';
 
-export type DressType = 'tree' | 'bench' | 'bollard' | 'bike' | 'umbrella' | 'boat';
+export type DressType = 'tree' | 'bench' | 'bollard' | 'bike' | 'umbrella' | 'boat' | 'lamp' | 'planter' | 'cafetable' | 'sign' | 'van';
 
 export interface Placement {
   type: DressType;
@@ -22,7 +22,7 @@ export interface DressCtx {
   keepClear: { x: number; z: number; r: number }[];
 }
 
-export const DRESS_LIMITS: Record<DressType, number> = { tree: 260, bench: 40, bollard: 120, bike: 45, umbrella: 24, boat: 14 };
+export const DRESS_LIMITS: Record<DressType, number> = { tree: 260, bench: 40, bollard: 120, bike: 70, umbrella: 24, boat: 14, lamp: 110, planter: 46, cafetable: 40, sign: 24, van: 9 };
 
 const bbox = (r: number[]) => {
   let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
@@ -142,7 +142,41 @@ export function planDressing(ctx: DressCtx, seed = 1234): Placement[] {
       if (freeLand(bx, bz, 0.5)) add('bike', bx, bz, Math.atan2(ux, uz) + Math.PI / 2);
     }
   }
-  const MIN_GAP: Record<DressType, number> = { tree: 3, bench: 3, bollard: 2, bike: 0.5, umbrella: 2.5, boat: 25 };
+  // street furniture along the edges of the street surfaces (inside them, so it stands on the pavement)
+  for (const st of ctx.streets) {
+    const ring = st.rings[0];
+    const c = centroid(ring);
+    if (Math.hypot(c.x, c.z) > 280) continue;
+    const n = ring.length / 2;
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      const x1 = ring[i * 2], z1 = ring[i * 2 + 1], x2 = ring[j * 2], z2 = ring[j * 2 + 1];
+      const len = Math.hypot(x2 - x1, z2 - z1);
+      if (len < 6) continue;
+      const tx = (x2 - x1) / len, tz = (z2 - z1) / len;
+      let nx = -tz, nz = tx; // pointing into the street surface
+      if (!pointInRings(st.rings, x1 + tx * len * 0.5 + nx * 1.2, z1 + tz * len * 0.5 + nz * 1.2)) {
+        nx = -nx;
+        nz = -nz;
+      }
+      const along = Math.atan2(tx, tz);
+      for (let t = 3; t < len - 2; t += 3) {
+        const roll = rng.next();
+        const px = x1 + tx * t + nx * 0.9, pz = z1 + tz * t + nz * 0.9;
+        if (!pointInRings(st.rings, px, pz) || !freeLand(px, pz, 0.7)) continue;
+        if (roll < 0.17) add('lamp', px, pz, along);
+        else if (roll < 0.23) add('planter', px, pz, along, rng.range(0.9, 1.15));
+        else if (roll < 0.27) add('sign', px, pz, along + Math.PI / 2);
+        else if (roll < 0.285 && freeLand(px + nx * 1.4, pz + nz * 1.4, 1)) add('cafetable', px + nx * 1.4, pz + nz * 1.4, rng.range(0, Math.PI));
+        else if (roll < 0.292 && len > 12) {
+          // a parked delivery van, lengthways along the kerb
+          const vx = px + nx * 1.1, vz = pz + nz * 1.1;
+          if (freeLand(vx, vz, 2.4)) add('van', vx, vz, along);
+        }
+      }
+    }
+  }
+  const MIN_GAP: Record<DressType, number> = { tree: 3, bench: 3, bollard: 2, bike: 0.5, umbrella: 2.5, boat: 25, lamp: 9, planter: 7, cafetable: 4, sign: 14, van: 14 };
   const kept: Placement[] = [];
   for (const type of Object.keys(DRESS_LIMITS) as DressType[]) {
     const mine: Placement[] = [];

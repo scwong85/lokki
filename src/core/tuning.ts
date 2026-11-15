@@ -113,7 +113,7 @@ export const tuning = {
   touch: {
     stickRadius: p(56, 20, 140, 2), // px the thumb travels for full speed
     deadzone: p(7, 0, 30, 1), // px of thumb wobble ignored
-    lookScale: p(1.5, 0.2, 5, 0.1), // drag-to-look speed (times the mouse sensitivity)
+    lookScale: p(2.6, 0.2, 6, 0.1), // drag-to-look speed (times the mouse sensitivity)
     diveAim: p(1.4, 0, 5, 0.1), // how much sliding on DIVE steepens the dive
     stickZone: p(0.42, 0.2, 0.6, 0.02), // left part of the screen that spawns the stick
   },
@@ -124,12 +124,21 @@ export const tuning = {
     drag: p(2.5, 0, 10, 0.1), // water drag on floating items
     swimSpeed: p(0.55, 0.1, 1.5, 0.05), // swimming speed as a fraction of walking
     swimSink: p(0.2, 0, 0.5, 0.02), // how low the gull sits in the water
+    bobHeight: p(0.1, 0, 0.4, 0.01), // how far floating items rise and fall with the waves (m)
+    bobSpeed: p(1.9, 0.3, 5, 0.1), // wave rhythm for floating items
+    rock: p(0.22, 0, 0.8, 0.02), // how far floating items tilt with the waves (rad)
+  },
+  street: {
+    walkers: p(12, 0, 40, 1), // pedestrians wandering the streets (halved on the low graphics preset)
+    cyclists: p(4, 0, 15, 1), // cyclists
+    cull: p(150, 40, 400, 10), // only people this close to you are moved and drawn (m)
   },
   people: {
     facing: p(3.14, -3.15, 3.15, 0.05), // model yaw so people face where they walk
     walkRate: p(1.3, 0.2, 3, 0.05), // walk animation speed
     runRate: p(1.2, 0.2, 3, 0.05), // run animation speed
     blend: p(0.2, 0, 1, 0.05), // seconds to blend between animations
+    runArms: p(0.1, 0, 1, 0.05), // how much the panic/cheer arm raise overrides the run clip (0 = the clip's own arms)
   },
   juice: {
     shake: p(1, 0, 1, 0.1), // screen shake strength (0 = off)

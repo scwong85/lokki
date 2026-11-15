@@ -40,6 +40,13 @@ describe('computePose', () => {
     expect(computePose({ ...base, beakOpen: true }).beakOpen).toBe(1);
     expect(computePose({ ...base, stunned: true }).beakOpen).toBe(1);
   });
+  it('swimming: legs fully tucked and not drawn, no stride', () => {
+    const p = computePose({ ...base, mode: 'ground', hspeed: 2, swimming: true });
+    expect(p.swimming).toBe(true);
+    expect(p.legTuck).toBe(1);
+    expect(p.legStride).toBe(0);
+    expect(computePose({ ...base, mode: 'ground', hspeed: 2 }).swimming).toBe(false);
+  });
   it('tilts the head into turns', () => {
     expect(computePose({ ...base, turnRate: 2 }).headRoll).toBeGreaterThan(0.2);
   });

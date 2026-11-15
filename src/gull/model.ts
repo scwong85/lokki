@@ -228,6 +228,7 @@ export class GullModel {
       const swing = Math.sin(pose.walkPhase + (i === 0 ? 0 : Math.PI)) * pose.legStride;
       this.legs[i].rotation.x = -1.3 * c.legTuck + swing;
     }
+    for (const leg of this.legs) leg.visible = !pose.swimming; // swimming: no legs in sight
     this.head.rotation.set(c.headPitch, 0, c.headRoll);
     this.lowerBeak.rotation.x = c.beakOpen * 0.5;
     this.root.position.y = pose.bob;

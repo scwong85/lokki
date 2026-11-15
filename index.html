@@ -55,6 +55,11 @@
       #lobby .lb-room { font: 700 34px/1.2 ui-monospace, monospace; letter-spacing: 6px; text-align: center; background: #fff3c4; border-radius: 10px; padding: 8px; margin: 6px 0; user-select: all; }
       #lobby .lb-code { width: 100%; box-sizing: border-box; font: 700 28px/1.3 ui-monospace, monospace; letter-spacing: 6px; text-align: center; text-transform: uppercase; border: 1px solid #d9c9a3; border-radius: 10px; padding: 6px; }
       #lobby .lb-set { margin: 10px 0; font-size: 13px; } #lobby .lb-set label { grid-template-columns: 100px 1fr; align-items: start; } #lobby .lb-set input { width: 100%; box-sizing: border-box; }
+      .touch-only { display: none !important; } body.touch .touch-only { display: grid !important; } body.touch button.touch-only { display: inline-block !important; }
+      #touch.arranging .t-btn { outline: 2px dashed #ff9d2e; } .t-arrange { position: fixed; left: 50%; top: 8px; translate: -50% 0; z-index: 60; background: rgba(255,255,255,.95); border-radius: 12px; padding: 6px 12px; font: 13px system-ui, sans-serif; color: #3a3a4a; box-shadow: 0 4px 16px rgba(60,60,90,.3); } .t-arrange[hidden] { display: none; } .t-arrange button { margin-left: 8px; font: inherit; border: 0; border-radius: 8px; padding: 6px 12px; background: #fff3c4; } .t-arrange .t-resume { background: #ffd36e; }
+      .pad-focus { outline: 3px solid #ff9d2e !important; outline-offset: 2px; }
+      #controls { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 47; width: 460px; max-width: 94vw; } #controls[hidden] { display: none; }
+      #controls h4 { margin: 10px 0 2px; } #controls table { width: 100%; border-collapse: collapse; font-size: 13px; } #controls td { padding: 2px 6px 2px 0; vertical-align: top; } #controls td:first-child { white-space: nowrap; width: 1%; }
       #options { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 45; }
       .menu-card { min-width: 320px; padding: 14px 22px 16px; background: rgba(255,255,255,.95); border-radius: 12px; box-shadow: 0 8px 30px rgba(60,60,90,.3); color: #3a3a4a; font: 14px/1.4 system-ui, sans-serif; }
       .menu-card h3 { margin: 0 0 8px; } .menu-card label { display: grid; grid-template-columns: 120px 1fr; align-items: center; gap: 8px; margin: 6px 0; } .menu-card label.chk { grid-template-columns: auto 1fr; }
