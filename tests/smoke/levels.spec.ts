@@ -102,3 +102,24 @@ test('level 2: splatting the sign sends the Clean Freak scrubbing (his fish is o
   await expect.poll(async () => { await dropOn('buoy'); await page.waitForTimeout(6000); return page.evaluate(() => (window as unknown as W).__lokki.quests.quests.find((q) => q.id === 'buoy')!.status); }, { timeout: 120_000, intervals: [200] }).toBe('won');
   expect(errors).toEqual([]);
 });
+
+test('level 3: a noise makes the watchful tourist look away (first to-do), and the crates with bottles are there', async ({ page }) => {
+  test.setTimeout(240_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  await page.goto('/?level=nosy-parkers');
+  await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 60_000 });
+  type W = { __lokki: { noise: (x: number, z: number, l: number) => void; interaction: { props: { props: { type: string }[] } }; quests: { quests: { id: string; objectives: { done: boolean }[] }[] }; npcs: { npcs: { x: number; z: number; holding: number | null; stationary: boolean; distractT: number }[] } } };
+  expect(await page.evaluate(() => (window as unknown as W).__lokki.interaction.props.props.filter((p) => p.type === 'bottle').length)).toBeGreaterThanOrEqual(2);
+  await expect.poll(async () => {
+    await page.evaluate(() => {
+      const l = (window as unknown as W).__lokki;
+      const w = l.npcs.npcs.find((n) => n.stationary && n.holding !== null)!;
+      l.noise(w.x + 4, w.z + 2, 1.5);
+    });
+    await page.waitForTimeout(800);
+    return page.evaluate(() => (window as unknown as W).__lokki.quests.quests.find((q) => q.id === 'bottleService')!.objectives[0].done);
+  }, { timeout: 120_000, intervals: [200] }).toBe(true);
+  expect(errors).toEqual([]);
+});

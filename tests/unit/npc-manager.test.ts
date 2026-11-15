@@ -117,7 +117,7 @@ describe('NpcManager: the Clean Freak and the selfie tourist', () => {
   const freak: NpcSpawn = { x: 0, z: 0, heading: 0, holds: 'fish', role: 'cleaner', stationary: true, signAt: { x: 3, z: 0 }, color: 0 };
 
   it('a splatted sign sends him scrubbing (distracted, so his fish is open); more splats add time; robbing him is reported', () => {
-    const { npcs, run } = setup([freak]);
+    const { npcs, props, run } = setup([freak]);
     const n = npcs.npcs[0];
     expect(npcs.signSplatted()).toBe(true);
     const ev = run(DT);
@@ -130,7 +130,7 @@ describe('NpcManager: the Clean Freak and the selfie tourist', () => {
     npcs.signSplatted();
     expect(run(DT).some((e) => e.type === 'signSplat' && e.splats === 3)).toBe(true);
     // robbing him while he scrubs
-    const fish = npcs.props.byId(n.holding!)!;
+    const fish = props.byId(n.holding!)!;
     npcs.onSnatched(fish.id);
     expect(run(DT).some((e) => e.type === 'cleanerRobbed')).toBe(true);
   });

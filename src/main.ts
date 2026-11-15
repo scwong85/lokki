@@ -307,6 +307,7 @@ for (const ev of ['pointerdown', 'touchend', 'keydown'] as const) addEventListen
 let simTime = 0;
 let hits = 0;
 let lastBump = -10;
+let lastSnatchAt = -100;
 let explainedLearning = false;
 let stealTipShown = false;
 
@@ -614,6 +615,14 @@ function onNpcEvents(evs: NpcEvent[]): void {
     } else if (e.type === 'cheer') {
       audio.play('chime');
       hud.toast('The child hugs the teddy!', 2);
+    } else if (e.type === 'snatchUnseen') {
+      hud.toast('They never saw it coming.', 1.6);
+      notes(quests.onEvent('snatchUnseen'));
+    } else if (e.type === 'distracted') {
+      if (e.npc.holding !== null) {
+        hud.toast('They look away...', 1.2);
+        notes(quests.onEvent('distract'));
+      }
     } else if (e.type === 'signSplat') {
       audio.play('gasp');
       notes(quests.onEvent('signSplat'));
@@ -669,6 +678,11 @@ function onGags(gags: GagEvent[]): void {
         hud.toast('Snatched!', 1);
         notes(quests.onEvent(`snatch:${g.prop.type}`));
         notes(quests.onEvent('snatch'));
+        if (simTime - lastSnatchAt < 8) {
+          hud.toast('Double snatch!', 1.6);
+          notes(quests.onEvent('doubleSnatch'));
+        }
+        lastSnatchAt = simTime;
         stats.add('snatch');
         heat('snatch');
         break;

@@ -111,3 +111,31 @@ describe('level 1 selfie routine', () => {
     expect(levelUnlocked(lvl2, { 'snack-attack': { stars: [true, false, false], best: 100, clears: 1 } })).toBe(true);
   });
 });
+
+describe('level 3: noise, sight and the double snatch', () => {
+  it('unseen snatches: a calm tourist who does not see the gull; not one who is shielding or watching', async () => {
+    const { default: RAPIER } = await import('@dimforge/rapier3d-compat');
+    await RAPIER.init();
+    const THREE = await import('three');
+    const { PhysicsWorld } = await import('../../src/physics/physics');
+    const { PropManager } = await import('../../src/gameplay/props');
+    const { NpcManager } = await import('../../src/gameplay/npcs');
+    const { World } = await import('../../src/world/collision');
+    const setup = () => {
+      const phys = new PhysicsWorld(RAPIER);
+      const g = new THREE.Group();
+      const props = new PropManager(phys, g);
+      const npcs = new NpcManager(new World(), props, g, () => true, 5);
+      npcs.spawn({ x: 0, z: 0, heading: 0, ice: true, stationary: true, color: 0 });
+      return { npcs, props };
+    };
+    const a = setup();
+    a.npcs.npcs[0].seesGull = false;
+    a.npcs.onSnatched(a.npcs.npcs[0].holding!);
+    expect(a.npcs.update(1 / 60, { x: 500, y: 20, z: 500, diving: false }).some((e) => e.type === 'snatchUnseen')).toBe(true);
+    const b = setup();
+    b.npcs.npcs[0].seesGull = true;
+    b.npcs.onSnatched(b.npcs.npcs[0].holding!);
+    expect(b.npcs.update(1 / 60, { x: 500, y: 20, z: 500, diving: false }).some((e) => e.type === 'snatchUnseen')).toBe(false);
+  });
+});

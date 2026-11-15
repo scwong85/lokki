@@ -271,6 +271,8 @@ export class NpcManager implements NpcHooks {
     if (n) {
       this.victimOf.set(propId, n.id);
       if (n.role === 'cleaner' && n.cleanT > 0) this.pending.push({ type: 'cleanerRobbed', npc: n });
+      // never saw it coming: calm, and not looking at the gull (approached from behind, from above, or while distracted)
+      if ((n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat') && !n.seesGull) this.pending.push({ type: 'snatchUnseen', npc: n });
       this.pending.push(...startle(n, 'snatched'));
     }
   }
