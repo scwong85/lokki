@@ -10,6 +10,7 @@ import { newWarden, stepWarden, umbrellaUp, wardenPooped, type Warden } from './
 import type { GullInfo, Noise } from './npc';
 import { nearestGull, wardenTarget } from './focus';
 import type { HitSphere } from './poop';
+import type { DefenseSnap } from '../net/snapshot';
 import type { FlightState } from '../gull/flight';
 import type { World } from '../world/collision';
 import { NpcModel, type NpcView } from '../world/npcModel';
@@ -447,6 +448,50 @@ export class CityDefense {
       f.vel.y -= 6 * dt;
       if (f.life <= 0) f.mesh.visible = false;
     }
+  }
+
+  /** What a guest needs to draw the city's response. */
+  remoteSnap(): DefenseSnap {
+    const r = (v: number, k = 100) => Math.round(v * k) / k || 0;
+    const w = this.warden;
+    return {
+      dep: [...this.response.deployed],
+      inst: [r(this.install.lines), r(this.install.nets)],
+      v: this.vendors.map((v) => [r(v.x), r(v.z), r(v.heading, 1000), v.mode, r(v.aimX), r(v.aimZ)]),
+      w: w ? [r(w.x), r(w.z), r(w.heading, 1000), w.mode, w.moving ? 1 : 0, r(w.walkPhase), w.distractT > 0 ? 1 : 0, w.exposedT > 0 ? 1 : 0, r(w.aimX), r(w.aimZ)] : null,
+      hawk: r(this.hawkT, 10),
+    };
+  }
+
+  /** A guest copies the host's response (nothing is decided here). */
+  applyRemote(d: DefenseSnap, dt: number): void {
+    this.response.deployed = new Set(d.dep as DeterrentId[]);
+    this.install = { lines: d.inst[0], nets: d.inst[1] };
+    d.v.forEach((s, i) => {
+      const v = this.vendors[i];
+      if (!v) return;
+      v.x = s[0];
+      v.z = s[1];
+      v.heading = s[2];
+      v.mode = s[3] as Vendor['mode'];
+      v.aimX = s[4];
+      v.aimZ = s[5];
+      v.t += dt;
+    });
+    if (!d.w) this.warden = null;
+    else {
+      const w = this.warden ?? (this.warden = newWarden(d.w[0], d.w[1]));
+      [w.x, w.z, w.heading] = [d.w[0], d.w[1], d.w[2]];
+      w.mode = d.w[3] as Warden['mode'];
+      w.moving = d.w[4] === 1;
+      w.walkPhase = d.w[5];
+      w.distractT = d.w[6];
+      w.exposedT = d.w[7];
+      w.aimX = d.w[8];
+      w.aimZ = d.w[9];
+      w.t += dt;
+    }
+    this.hawkT = d.hawk;
   }
 
   /** Take the vendors, lines and nets out of the scene (loading another level). */

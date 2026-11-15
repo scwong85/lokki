@@ -240,7 +240,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, defense, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -349,6 +349,18 @@ function onNetEvent(e: GameEvent): void {
     case 'levelComplete': {
       const d = e.data as { st: StatSummary; qs: { title: string; won: boolean }[]; ns: string[]; heading?: string; next?: { id: string; name: string } };
       levelComplete.show(d.st, d.qs, d.ns, { heading: d.heading ?? 'Level cleared!', next: d.next, go: (t) => (t === 'menu' ? levelComplete.hide() : hud.toast('The host picks the next level.', 1.6)) });
+      break;
+    }
+    case 'poop':
+      interaction.ghostPoop({ x: e.p[0], y: e.p[1], z: e.p[2] }, { x: e.v[0], y: e.v[1], z: e.v[2] }, simTime);
+      break;
+    case 'hit': {
+      const h = e.hit as Parameters<typeof applyHit>[1];
+      if (applyHit(gull.state, h)) {
+        cam.shake(h.kind === 'swat' ? 0.7 : 0.45);
+        hud.flash({ spray: '#7ec8ff', swat: '#ffb347', line: '#ffffff', net: '#ffffff' }[h.kind]);
+        gull.openBeak(0.7);
+      }
       break;
     }
     case 'hideComplete':
@@ -608,8 +620,10 @@ function guestStep(dt: number): void {
     npcs?.setRemote(snap.npcs);
     quests.applyRemote(snap.quests);
     defense?.heat.setRemote(snap.heat);
+    if (snap.d) defense?.applyRemote(snap.d, 0.05);
   }
   interaction.props.stepRemote(dt);
+  interaction.stepGhosts(dt, simTime);
   npcs?.stepRemote(dt);
   const s = gull.state;
   const { x, y } = input.axes();
@@ -627,6 +641,7 @@ function captureSnapshot(): Snapshot {
     props: interaction.props.props.map((pr) => ({ id: pr.id, x: pr.cur.p.x, y: pr.cur.p.y, z: pr.cur.p.z, qx: pr.cur.q.x, qy: pr.cur.q.y, qz: pr.cur.q.z, qw: pr.cur.q.w, by: interaction.carrierOf(pr), held: pr.heldBy, broken: pr.broken })),
     npcs: (npcs?.npcs ?? []).map((n) => ({ id: n.id, x: n.x, z: n.z, heading: n.heading, mode: n.mode, holding: n.holding, handAngle: n.handAngle, selfie: n.selfie, selfieCount: n.selfieCount, cleanT: n.cleanT, shieldFrom: n.shieldFrom })),
     heat: defense?.heat.value ?? 0,
+    d: defense?.remoteSnap(),
     quests: quests.quests.map((q) => ({ id: q.id, status: q.status, timeLeft: q.timeLeft, timed: q.timed, objectives: q.objectives })),
   });
 }
@@ -678,6 +693,7 @@ function onDefense(evs: DefenseEvent[]): void {
       case 'hit': {
         stats.add('sprayed');
         const victim = players[e.gull]?.gull ?? gull;
+        if (isHost() && players[e.gull]?.remote) net!.sendEvent({ k: 'hit', hit: e.hit }); // the guest flies its own gull: it feels the hit there
         const dropped = applyHit(victim.state, e.hit);
         if (!dropped) {
           hud.toast('Slipped through!', 0.8);
@@ -838,9 +854,12 @@ function onNpcEvents(evs: NpcEvent[]): void {
 function onGags(gags: GagEvent[]): void {
   for (const g of gags) {
     switch (g.type) {
-      case 'poopDrop':
+      case 'poopDrop': {
         tutorial.event('poop');
+        const pg = players[g.by ?? 0]?.gull.state;
+        if (isHost() && pg) net!.sendEvent({ k: 'poop', p: [pg.x, pg.y, pg.z], v: [pg.vx, pg.vy, pg.vz] });
         break;
+      }
       case 'grab':
         tutorial.event('grab');
         audio.play('pop');

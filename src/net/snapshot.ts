@@ -50,6 +50,19 @@ export interface QuestSnap {
   o: [0 | 1, number][];
 }
 
+/** The city's response (vendors, Warden, lines, nets) as a guest needs it to draw it. */
+export interface DefenseSnap {
+  /** Deployed deterrents. */
+  dep: string[];
+  /** Install progress of the lines and nets (0..1). */
+  inst: [number, number];
+  /** Vendors: [x, z, heading, mode, aimX, aimZ]. */
+  v: [number, number, number, string, number, number][];
+  /** The Warden, if out: [x, z, heading, mode, moving, walkPhase, distracted, exposed, aimX, aimZ]. */
+  w: [number, number, number, string, number, number, number, number, number, number] | null;
+  hawk: number;
+}
+
 export interface Snapshot {
   /** Simulation time (s). */
   t: number;
@@ -58,6 +71,8 @@ export interface Snapshot {
   npcs: NpcSnap[];
   heat: number;
   quests: QuestSnap[];
+  /** Present when the level has a city defence. */
+  d?: DefenseSnap;
 }
 
 /** Live game objects, described just enough for a snapshot (the game passes adapters). */
@@ -67,6 +82,7 @@ export interface SnapshotSource {
   props: { id: number; x: number; y: number; z: number; qx: number; qy: number; qz: number; qw: number; by: number | null; held: number | null; broken: boolean }[];
   npcs: { id: number; x: number; z: number; heading: number; mode: string; holding: number | null; handAngle?: number; selfie?: string; selfieCount?: number; cleanT?: number; shieldFrom?: number }[];
   heat: number;
+  d?: DefenseSnap;
   quests: { id: string; status: string; timeLeft: number; timed: boolean; objectives: { done: boolean; count: number }[] }[];
 }
 
@@ -74,6 +90,7 @@ const r = (v: number, k = 100) => Math.round(v * k) / k || 0; // `|| 0` turns -0
 
 export function makeSnapshot(s: SnapshotSource): Snapshot {
   return {
+    ...(s.d ? { d: s.d } : {}),
     t: r(s.time, 1000),
     gulls: s.gulls.map((g) => ({ id: g.id, p: [r(g.x), r(g.y), r(g.z)], v: [r(g.vx), r(g.vy), r(g.vz)], h: r(g.heading, 1000), mode: g.mode, carry: g.carry, fa: r(g.flapAnim ?? 0, 100), ha: r(g.heightAbove ?? 0, 10), tr: r(g.turnRate ?? 0, 100) })),
     props: s.props.map((p) => {

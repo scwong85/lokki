@@ -10,6 +10,7 @@ type Lk = {
   players: { id: number; remote?: boolean; gull: { state: { x: number; y: number; z: number } } }[];
   interaction: { props: { props: { id: number; cur: { p: { x: number } } }[] } };
   net: { role: string } | null;
+  defense: { addHeat: (r: string) => unknown; response: { deployed: Set<string> }; heat: { value: number } } | null;
 };
 const lk = (p: import('@playwright/test').Page) => <T>(fn: (l: Lk, a?: unknown) => T, arg?: unknown) =>
   p.evaluate(([src, a]) => new Function('l', 'a', `return (${src})(l, a)`)((window as unknown as { __lokki: Lk }).__lokki, a), [fn.toString(), arg] as [string, unknown]) as Promise<Awaited<T>>;
@@ -26,8 +27,14 @@ test('online co-op: the guest follows the host between levels, sees the host gul
     await p.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 90_000 });
   }
   const H = lk(host), G = lk(guest);
-  await H((l) => ((window as unknown as { hl: Link }).hl = new l.PeerLink()) && 0);
-  await G((l) => ((window as unknown as { gl: Link }).gl = new l.PeerLink()) && 0);
+  await H((l) => {
+    (window as unknown as { hl: Link }).hl = new l.PeerLink();
+    return 0;
+  });
+  await G((l) => {
+    (window as unknown as { gl: Link }).gl = new l.PeerLink();
+    return 0;
+  });
   const invite = await host.evaluate(() => (window as unknown as { hl: Link }).hl.createInvite());
   const answer = await guest.evaluate((c) => (window as unknown as { gl: Link }).gl.acceptInvite(c), invite);
   await H((l) => l.startSession('host', (window as unknown as { hl: Link }).hl));
@@ -60,6 +67,16 @@ test('online co-op: the guest follows the host between levels, sees the host gul
   await H((l) => l.loadLevel('bombs-away'));
   await expect.poll(() => G((l) => l.level), { timeout: 120_000 }).toBe('bombs-away');
   expect(await G((l) => l.net?.role)).toBe('guest');
+
+  // free play: the city's response (vendors, heat) reaches the guest too
+  await H((l) => l.loadLevel('sandbox'));
+  await expect.poll(() => G((l) => l.level), { timeout: 120_000 }).toBe('sandbox');
+  await H((l) => {
+    for (let i = 0; i < 12; i++) l.defense!.addHeat('snatch');
+    return 0;
+  });
+  await expect.poll(() => G((l) => l.defense?.response.deployed.has('vendors') ?? false), { timeout: 120_000 }).toBe(true);
+  expect(await G((l) => l.defense!.heat.value)).toBeGreaterThan(0);
   expect(errors).toEqual([]);
   await ctx.close();
 });

@@ -28,6 +28,8 @@ export type GameEvent =
   | { k: 'sound'; name: string }
   | { k: 'banner'; title: string; sub: string; kind: string }
   | { k: 'levelComplete'; data: unknown }
+  | { k: 'poop'; p: [number, number, number]; v: [number, number, number] }
+  | { k: 'hit'; hit: unknown }
   | { k: 'hideComplete' };
 
 export type Msg =
