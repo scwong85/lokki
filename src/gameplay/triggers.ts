@@ -51,6 +51,12 @@ export class TriggerSystem {
 
   constructor(private defs: readonly TriggerDef[]) {}
 
+  /** Load another level's triggers. */
+  load(defs: readonly TriggerDef[]): void {
+    this.defs = defs;
+    this.reset();
+  }
+
   update(ctx: TriggerCtx, wanted: ReadonlySet<string>): string[] {
     const out: string[] = [];
     for (const d of this.defs) {

@@ -35,6 +35,10 @@ export class HeatMeter {
     }
   }
 
+  remove(): void {
+    this.el.remove();
+  }
+
   update(heat: Heat, response: CityResponse, hawkReady: number, hawkActive: boolean): void {
     this.fill.style.width = `${heat.value}%`;
     this.fill.style.background = heat.tier >= 4 ? '#e5484d' : heat.tier >= 3 ? '#f08a4b' : heat.tier >= 2 ? '#f2c14e' : heat.tier >= 1 ? '#9bd8b0' : '#a9dcff';

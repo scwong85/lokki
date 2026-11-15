@@ -91,8 +91,8 @@ const greybox = new URLSearchParams(location.search).has('greybox');
 const store = new SaveStore();
 let save: SaveData = store.load();
 // the level: ?level=… in the address, else the last one played (automated tests start in free play)
-const level = levelById(new URLSearchParams(location.search).get('level') ?? (navigator.webdriver ? 'sandbox' : save.level));
-const setup = levelSetup(level, QUESTS, TRIGGERS, TOURIST_SPAWNS);
+let level = levelById(new URLSearchParams(location.search).get('level') ?? (navigator.webdriver ? 'sandbox' : save.level));
+let setup = levelSetup(level, QUESTS, TRIGGERS, TOURIST_SPAWNS);
 let world: World;
 let targets: Target[];
 let targetMeshes: THREE.Object3D[];
@@ -133,12 +133,13 @@ if (npcs) {
   for (const sp of setup.tourists) npcs.spawn(sp);
   interaction.npcs = npcs;
 }
+const makeDefense = (): CityDefense | null => (greybox || !setup.defense ? null : new CityDefense(world, scene, walkable));
 // the city's response: heat, vendors, scare lines, nets, the Warden (city only)
-const defense = greybox || !setup.defense ? null : new CityDefense(world, scene, walkable);
-const heatMeter = defense ? new HeatMeter(document.body) : null;
+let defense = makeDefense();
+let heatMeter = defense ? new HeatMeter(document.body) : null;
 const announce = new Announce(document.body);
 const stepNoises: Noise[] = [];
-if (npcs && defense) {
+if (npcs) {
   let nTourist = 0;
   interaction.npcs = {
     snatchCandidates: (b) => npcs.snatchCandidates(b),
@@ -147,11 +148,11 @@ if (npcs && defense) {
     poopSpheres: () => {
       const t = npcs.poopSpheres();
       nTourist = t.length;
-      return [...t, ...defense.poopSpheres()];
+      return defense ? [...t, ...defense.poopSpheres()] : t;
     },
     onPooped: (i) => {
       if (i < nTourist) return npcs.onPooped(i);
-      defense.onPooped(i - nTourist);
+      defense?.onPooped(i - nTourist);
       return undefined;
     },
   };
@@ -233,7 +234,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, defense, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, level: level.id, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, defense, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, get level() { return level.id; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -406,20 +407,35 @@ function restartLevel(mode: 'normal' | 'speedrun'): void {
   persist();
 }
 
-/** Reload into a level (`menu`: open the title screen with the level list instead of starting to play). */
-function goToLevel(id: string, menu: boolean): void {
-  store.save({ ...save, level: id });
+/** Load another level in place (no page reload, so an online co-op link survives). */
+function loadLevel(id: string): void {
+  level = levelById(id);
+  setup = levelSetup(level, QUESTS, TRIGGERS, TOURIST_SPAWNS);
+  interaction.reset(); // drops whatever the beaks hold
+  interaction.props.clearAll();
+  npcs?.clearAll();
+  for (const sp of [...propSpawns, ...setup.props]) interaction.props.spawn(sp);
+  if (npcs) for (const sp of setup.tourists) npcs.spawn(sp);
+  defense?.dispose();
+  defense = makeDefense();
+  heatMeter?.remove();
+  heatMeter = defense ? new HeatMeter(document.body) : null;
+  quests.load(greybox ? [] : setup.quests);
+  if (level.sandbox) quests.restoreWon(save.questsWon);
+  triggers.load(greybox ? [] : setup.triggers);
+  todo.defs = setup.quests;
+  todo.secret = setup.secret;
+  title.hide();
+  levelSelect.hide();
+  levelComplete.hide();
   const q = new URLSearchParams(location.search);
   q.set('level', id);
-  if (menu) {
-    q.set('title', '');
-    q.delete('play');
-  } else {
-    q.delete('title');
-    q.set('play', ''); // straight into the level, no title screen
-  }
-  location.search = q.toString();
+  q.set('play', '');
+  history.replaceState(null, '', `?${q.toString()}`);
+  restartLevel('normal'); // gull, stats, timers, music; saves the new level
+  startPlaying();
 }
+const goToLevel = (id: string, _menu: boolean): void => loadLevel(id);
 
 /** A level is cleared when its main to-dos are done: stars, the saved result, the skill reward, the level-complete card. */
 let levelCleared = false;

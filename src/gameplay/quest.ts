@@ -70,6 +70,12 @@ export class QuestLog {
     };
   }
 
+  /** Load another level's to-dos (flags stay). */
+  load(defs: readonly QuestDef[]): void {
+    this.defs = defs;
+    this.reset();
+  }
+
   reset(): void {
     this.quests = this.defs.map((d) => this.fresh(d));
   }

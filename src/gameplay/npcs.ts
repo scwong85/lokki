@@ -347,6 +347,23 @@ export class NpcManager implements NpcHooks {
     return out;
   }
 
+  /** Remove every person (loading another level). Their props are cleared separately. */
+  clearAll(): void {
+    for (const m of this.models.values()) this.parent.remove(m.root);
+    for (const r of this.rings.values()) this.parent.remove(r);
+    this.models.clear();
+    this.rings.clear();
+    this.spawns.clear();
+    this.items.clear();
+    this.eating.clear();
+    this.victimOf.clear();
+    this.handTargetCache.clear();
+    this.pending.length = 0;
+    this.npcs.length = 0;
+    this.nextId = 1;
+    this.rng = createRng(this.seed);
+  }
+
   reset(): void {
     this.rng = createRng(this.seed);
     for (const n of this.npcs) {

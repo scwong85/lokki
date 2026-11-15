@@ -104,6 +104,16 @@ export class PropManager {
     return prop;
   }
 
+  /** Remove every prop (loading another level). */
+  clearAll(): void {
+    for (const p of this.props) {
+      this.parent.remove(p.mesh);
+      if (!p.broken) this.phys.world.removeRigidBody(p.body);
+    }
+    this.props.length = 0;
+    this.nextId = 1;
+  }
+
   byId(id: number): Prop | undefined {
     return this.props.find((p) => p.id === id);
   }

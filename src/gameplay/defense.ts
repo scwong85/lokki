@@ -449,6 +449,11 @@ export class CityDefense {
     }
   }
 
+  /** Take the vendors, lines and nets out of the scene (loading another level). */
+  dispose(): void {
+    this.group.removeFromParent();
+  }
+
   /** Back to calm: no deterrents, no heat, nothing learned. */
   reset(): void {
     this.heat.reset();
