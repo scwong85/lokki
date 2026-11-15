@@ -2,7 +2,7 @@
 
 *Lokki* ("gull" in Finnish) is a browser-based 3D game: you are a seagull causing gentle slapstick havoc in downtown Helsinki. Low-poly, pastel, mouse + keyboard. See [`docs/PLAN.md`](docs/PLAN.md) for the full plan.
 
-Status: **M11 – Input layer + mobile landscape** (touch controls, phone HUD), awaiting playtest; **M10 – Visual detail** awaiting playtest. M0–M9 done.
+Status: **M12 – Level framework (two-gull-ready)** awaiting playtest. M0–M11 done.
 
 ![Lokki flight](docs/media/lokki-flight.gif)
 
@@ -50,6 +50,7 @@ Play in landscape with on-screen controls: left thumb steers (floating stick), d
 | X / Z | extra objectives on/off, start a speedrun (after clearing the finale) |
 | O | options (volumes, mouse look, screen shake, graphics quality, HUD) |
 | U | HUD: full / minimal / off |
+| Gamepad | left stick move · right stick look · A/RB flap · RT dive · LT brake · X grab · Y toss · B poop · D-pad abilities · Back skills · Start options |
 | T | skip the first-flight tips |
 | M | mute / unmute (sound and music) |
 | C | credits |

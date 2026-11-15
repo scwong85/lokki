@@ -22,6 +22,15 @@ export class SkillSet {
     return s;
   }
 
+  /** Earned by clearing a level (M12). Returns the skill if it is new. */
+  unlock(id: string): SkillDef | null {
+    const s = skillById(id);
+    if (!s || this.owned.has(s.id)) return null;
+    this.owned.add(s.id);
+    this.apply();
+    return s;
+  }
+
   /** Load from a save: unknown ids are ignored. */
   restore(ids: readonly string[]): void {
     this.owned = new Set(ids.filter((id) => skillById(id)));

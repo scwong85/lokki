@@ -30,6 +30,8 @@ import { AudioManager } from './core/audio';
 import { NpcManager } from './gameplay/npcs';
 import { QuestLog, type QuestNote } from './gameplay/quest';
 import { QUESTS } from './data/quests';
+import { LEVELS, levelById } from './data/levels';
+import { levelProgress, levelSetup, levelStars, mergeRecord, starCount } from './gameplay/level';
 import { TOURIST_SPAWNS } from './data/npcs';
 import type { NpcEvent } from './gameplay/npc';
 import { Todo } from './ui/todo';
@@ -84,6 +86,11 @@ const scene = createScene();
 const graphics = new Graphics(renderer, scene);
 // `?greybox` loads the M1 test course instead of the city
 const greybox = new URLSearchParams(location.search).has('greybox');
+const store = new SaveStore();
+let save: SaveData = store.load();
+// the level: ?level=… in the address, else the last one played (automated tests start in free play)
+const level = levelById(new URLSearchParams(location.search).get('level') ?? (navigator.webdriver ? 'sandbox' : save.level));
+const setup = levelSetup(level, QUESTS, TRIGGERS, TOURIST_SPAWNS);
 let world: World;
 let targets: Target[];
 let targetMeshes: THREE.Object3D[];
@@ -121,11 +128,11 @@ for (const sp of propSpawns) interaction.props.spawn(sp);
 // tourists and the quest log only exist in the city
 const npcs = greybox ? null : new NpcManager(world, interaction.props, scene, walkable);
 if (npcs) {
-  for (const sp of TOURIST_SPAWNS) npcs.spawn(sp);
+  for (const sp of setup.tourists) npcs.spawn(sp);
   interaction.npcs = npcs;
 }
 // the city's response: heat, vendors, scare lines, nets, the Warden (city only)
-const defense = greybox ? null : new CityDefense(world, scene, walkable);
+const defense = greybox || !setup.defense ? null : new CityDefense(world, scene, walkable);
 const heatMeter = defense ? new HeatMeter(document.body) : null;
 const announce = new Announce(document.body);
 const stepNoises: Noise[] = [];
@@ -147,10 +154,8 @@ if (npcs && defense) {
     },
   };
 }
-const quests = new QuestLog(greybox ? [] : QUESTS);
+const quests = new QuestLog(greybox ? [] : setup.quests);
 // progress: skills, finished quests, best times (localStorage; every call is safe if storage is blocked)
-const store = new SaveStore();
-let save: SaveData = store.load();
 // gull looks: the ones already earned don't get a "new look" banner again; wear the saved one if it is still unlocked
 const knownSkins = new Set(unlockedSkins(skinProgress(save)));
 gull.setSkin(skinById(knownSkins.has(save.skin) ? save.skin : 'herring').colours);
@@ -163,8 +168,8 @@ const musicDirector = new MusicDirector();
 music.muted = save.muted;
 // restore progress from the save (silent)
 if (save.replayUnlocked && save.extrasOn) quests.setFlag('replay', true);
-quests.restoreWon(save.questsWon);
-const triggers = new TriggerSystem(greybox ? [] : TRIGGERS);
+if (level.sandbox) quests.restoreWon(save.questsWon); // finished quests belong to free play; levels start fresh
+const triggers = new TriggerSystem(greybox ? [] : setup.triggers);
 const stats = new LevelStats();
 const levelComplete = new LevelComplete(document.body);
 document.getElementById('levelcomplete')?.addEventListener('click', () => levelComplete.hide()); // tap to keep playing (phones)
@@ -172,6 +177,8 @@ const markerPool = new MarkerPool();
 const waypoints = new Waypoints(document.body);
 scene.add(markerPool.group);
 const todo = new Todo(document.body);
+todo.defs = setup.quests;
+todo.secret = setup.secret;
 const skillsPanel = new SkillsPanel(document.body, (id) => pickSkin(id));
 const runHud = new RunHud(document.body);
 const flock = new FlockSystem(scene);
@@ -222,7 +229,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, defense, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, defense, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, level: level.id, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -271,7 +278,27 @@ function startPlaying(): void {
   music.start();
 }
 const fmtClear = (t: number | null): string => (t === null ? '' : `${Math.floor(t / 60)}:${String(Math.round(t % 60)).padStart(2, '0')}`);
-const title = new TitleScreen(document.body, { onPlay: startPlaying, onOptions: () => optionsPanel.show(), onCredits: () => credits.toggle() }, { best: fmtClear(save.bestTime), skills: skills.ids.length, total: SKILLS.length });
+const title = new TitleScreen(
+  document.body,
+  {
+    onPlay: startPlaying,
+    onOptions: () => optionsPanel.show(),
+    onCredits: () => credits.toggle(),
+    // another level: remember it and reload into it
+    onPickLevel: (id) => {
+      store.save({ ...save, level: id });
+      const q = new URLSearchParams(location.search);
+      q.set('level', id);
+      location.search = q.toString();
+    },
+  },
+  {
+    best: fmtClear(save.bestTime),
+    skills: skills.ids.length,
+    total: SKILLS.length,
+    levels: LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), current: l.id === level.id, sandbox: l.sandbox })),
+  },
+);
 if (interactive) title.show();
 const menuOpen = (): boolean => title.visible || optionsPanel.visible || skillsPanel.visible || credits.visible || !!touchControls?.menuOpen;
 const audio = new AudioManager();
@@ -334,7 +361,7 @@ function onFlightEvents(evs: FlightEvent[]): void {
 
 /** Write the current progress to the save. */
 function persist(): void {
-  save = { ...save, skills: skills.ids, questsWon: quests.wonIds(), muted: audio.muted };
+  save = { ...save, skills: skills.ids, questsWon: level.sandbox ? quests.wonIds() : save.questsWon, muted: audio.muted, level: level.id };
   store.save(save);
   skillsPanel.refresh(skills, save);
   // new gull looks earned since last time?
@@ -357,6 +384,7 @@ function pickSkin(id: string): void {
 
 /** Restart the level (R) or start a speedrun (Z). Skills and best times are kept. */
 function restartLevel(mode: 'normal' | 'speedrun'): void {
+  levelCleared = false;
   gull.reset();
   gull.setDisguise(false);
   interaction.reset();
@@ -373,6 +401,38 @@ function restartLevel(mode: 'normal' | 'speedrun'): void {
   if (mode === 'speedrun') runTimer.startSpeedrun();
   else runTimer.setNormal();
   persist();
+}
+
+/** A level is cleared when its main to-dos are done: stars, the saved result, the skill reward, the level-complete card. */
+let levelCleared = false;
+function checkLevelDone(): void {
+  const p = levelProgress(level, setup, quests.quests);
+  if (!p.cleared) return;
+  const seconds = stats.summary().seconds;
+  const stars = levelStars(level, p, seconds);
+  const before = save.levels[level.id];
+  if (levelCleared) {
+    // a secret to-do found after clearing: add its star
+    if (p.allDone && before && !before.stars[1]) {
+      save = { ...save, levels: { ...save.levels, [level.id]: { ...before, stars: [before.stars[0], true, before.stars[2]] } } };
+      hud.toast('Every to-do done, secrets too! ★', 2.2);
+    }
+    return;
+  }
+  levelCleared = true;
+  save = { ...save, levels: { ...save.levels, [level.id]: mergeRecord(before, stars, seconds) } };
+  const n = stars.filter(Boolean).length;
+  const notes = [
+    `${'★'.repeat(n)}${'☆'.repeat(3 - n)}  ·  ${stars[0] ? '★' : '☆'} cleared  ·  ${stars[1] ? '★' : '☆'} every to-do (secrets too)  ·  ${stars[2] ? '★' : '☆'} under ${fmtClear(level.parTime ?? 0)}`,
+  ];
+  if (level.reward) {
+    const sk = skills.unlock(level.reward);
+    if (sk) {
+      notes.push(`New skill: ${sk.name}. ${sk.blurb}`);
+      announce.show(`New skill: ${sk.name}`, `${sk.blurb}${sk.key ? ` Press ${sk.key}.` : ''} (K: all skills)`, 'learned');
+    }
+  }
+  levelComplete.show(stats.summary(), quests.quests.map((x) => ({ title: setup.secret.has(x.id) && x.status !== 'won' ? '???' : x.title, won: x.status === 'won' })), notes);
 }
 
 /** The whole game as plain data with stable ids (what the host will send in online co-op). */
@@ -479,7 +539,7 @@ function onDefense(evs: DefenseEvent[]): void {
 function notes(list: QuestNote[]): void {
   for (const n of list) {
     const q = quests.quests.find((x) => x.id === n.quest)!;
-    const def = QUESTS.find((d) => d.id === n.quest)!;
+    const def = setup.quests.find((d) => d.id === n.quest)!;
     if (n.type === 'started') {
       hud.toast(q.timed ? `${q.title}: ${Math.round(q.timeLeft)} seconds!` : `Quest started: ${q.title}`, 1.6);
       if (n.quest === 'finale') announce.show('The ferry horn blows!', 'Chairs in the sandbox, the pastry on the south stall (yellow pillar), and the Warden. The city is on full alert.', 'alert');
@@ -497,7 +557,7 @@ function notes(list: QuestNote[]): void {
       audio.play('win');
       for (const c of [0xffd36e, 0xff9ec4, 0x9bd8ff, 0xb5e8b0]) interaction.debris.burst({ x: gull.state.x, y: gull.state.y + 1.2, z: gull.state.z }, c, 8); // confetti
       hud.toast(n.quest === 'extras' ? 'All extras done!' : n.quest === 'bonus' ? 'All extra objectives done!' : `Quest complete: ${q.title}!`, 2.4);
-      const skill = skills.unlockForQuest(n.quest);
+      const skill = level.sandbox ? skills.unlockForQuest(n.quest) : null; // levels give their skill when cleared
       if (skill) {
         announce.show(`New skill: ${skill.name}`, `${skill.blurb}${skill.key ? ` Press ${skill.key}.` : ''} (K: all skills)`, 'learned');
         audio.play('win');
@@ -516,6 +576,7 @@ function notes(list: QuestNote[]): void {
         if (first) notes.push('Unlocked: extra objectives (X) and speedrun (Z)!');
         levelComplete.show(stats.summary(), quests.quests.filter((x) => x.id !== 'extras' && x.id !== 'bonus').map((x) => ({ title: x.title, won: x.status === 'won' })), notes);
       }
+      if (!level.sandbox) checkLevelDone();
       persist();
     } else if (n.type === 'lost') {
       audio.play('lose');
@@ -827,8 +888,8 @@ startLoop({
     defense?.render(simTime, frameDt);
     if (defense && heatMeter) heatMeter.update(defense.heat, defense.response, defense.hawkReady, defense.hawkActive);
     // quest spots, plus a marker on any item that was knocked out of the beak (so it can never be lost)
-    const markers: Marker[] = greybox ? [] : activeMarkers(QUESTS, quests.quests);
-    const labelled = hudF.waypoints === 'all' ? markers : hudF.waypoints === 'active' ? activeMarkers(QUESTS, quests.quests, true) : [];
+    const markers: Marker[] = greybox ? [] : activeMarkers(setup.quests, quests.quests);
+    const labelled = hudF.waypoints === 'all' ? markers : hudF.waypoints === 'active' ? activeMarkers(setup.quests, quests.quests, true) : [];
     // a small timer on its own when the to-do note is hidden
     const timed = hudF.miniTimer ? quests.quests.find((q) => q.status === 'active' && q.timed) : undefined;
     miniTimer.hidden = !timed;

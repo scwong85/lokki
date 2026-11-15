@@ -1,5 +1,5 @@
 import type { QuestState } from '../gameplay/quest';
-import { QUESTS } from '../data/quests';
+import { QUESTS, type QuestDef } from '../data/quests';
 import { tuning } from '../core/tuning';
 
 /**
@@ -11,6 +11,10 @@ export class Todo {
   private el: HTMLElement;
   private timers = new Map<string, HTMLElement>();
   private last = '';
+
+  /** The level's quest definitions and its secret to-dos (shown as "???" until done). */
+  defs: readonly QuestDef[] = QUESTS;
+  secret: ReadonlySet<string> = new Set();
 
   constructor(root: HTMLElement) {
     this.el = document.createElement('div');
@@ -46,7 +50,8 @@ export class Todo {
   }
 
   private quest(q: QuestState): string {
-    const def = QUESTS.find((d) => d.id === q.id);
+    const def = this.defs.find((d) => d.id === q.id);
+    if (this.secret.has(q.id) && q.status !== 'won') return `<div class="q secret"><div class="qt">???</div><div class="teaser">Something to discover…</div></div>`;
     const timer = q.timed && q.status === 'active' ? ` <span class="timer" data-q="${q.id}"></span>` : '';
     if (q.status === 'locked' && def?.hidden) return '';
     if (q.status === 'locked') return `<div class="q locked"><div class="qt">&#128274; ${q.title}</div><div class="teaser">Finish the other quests first.</div></div>`;

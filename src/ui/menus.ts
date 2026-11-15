@@ -62,11 +62,25 @@ export class OptionsPanel {
   }
 }
 
+/** One row of the level select on the title screen. */
+export interface TitleLevel {
+  id: string;
+  name: string;
+  blurb: string;
+  stars: number;
+  current: boolean;
+  sandbox?: boolean;
+}
+
 /** Title screen: shown once the city has loaded; the game waits behind it. */
 export class TitleScreen {
   private el: HTMLElement;
 
-  constructor(root: HTMLElement, hooks: { onPlay: () => void; onOptions: () => void; onCredits: () => void }, info: { best: string; skills: number; total: number }) {
+  constructor(
+    root: HTMLElement,
+    hooks: { onPlay: () => void; onOptions: () => void; onCredits: () => void; onPickLevel?: (id: string) => void },
+    info: { best: string; skills: number; total: number; levels?: TitleLevel[] },
+  ) {
     this.el = document.createElement('div');
     this.el.id = 'title';
     this.el.hidden = true;
@@ -75,7 +89,8 @@ export class TitleScreen {
         <div class="title-gull">&#128038;</div>
         <h1>Lokki</h1>
         <p class="tag">A seagull. Helsinki's Market Square. Zero regrets.</p>
-        <button class="big" data-act="play">Play</button>
+        <button class="big" data-act="play">Play${info.levels?.find((l) => l.current) ? `: ${info.levels.find((l) => l.current)!.name}` : ''}</button>
+        ${info.levels ? `<div class="title-levels">${info.levels.map((l) => `<button data-level="${l.id}" class="${l.current ? 'on' : ''}" title="${l.blurb}"><span class="lv-name">${l.name}</span><span class="lv-stars">${l.sandbox ? 'free play' : '★'.repeat(l.stars) + '☆'.repeat(3 - l.stars)}</span></button>`).join('')}</div>` : ''}
         <div class="title-row"><button data-act="options">Options</button><button data-act="credits">Credits</button></div>
         <p class="title-keys"><b>WASD</b> move · <b>Space</b> hop / flap · <b>Shift</b> dive · <b>E</b> grab · <b>F</b> poop · <b>Mouse</b> look (click to capture)</p>
         ${info.best ? `<p class="title-best">Best clear ${info.best} · skills ${info.skills}/${info.total}</p>` : info.skills ? `<p class="title-best">Skills ${info.skills}/${info.total}</p>` : ''}
@@ -85,6 +100,13 @@ export class TitleScreen {
     on('play', () => hooks.onPlay());
     on('options', () => hooks.onOptions());
     on('credits', () => hooks.onCredits());
+    this.el.querySelectorAll<HTMLElement>('[data-level]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const lv = info.levels?.find((l) => l.id === b.dataset.level);
+        if (lv?.current) hooks.onPlay();
+        else hooks.onPickLevel?.(b.dataset.level!);
+      }),
+    );
     root.appendChild(this.el);
   }
 

@@ -1,5 +1,19 @@
 import { skillById } from '../data/skills';
 import { GULL_SKINS } from '../data/gullSkins';
+import type { LevelRecord, Stars } from '../gameplay/level';
+
+function sanitizeLevels(v: unknown): Record<string, LevelRecord> {
+  const out: Record<string, LevelRecord> = {};
+  if (!v || typeof v !== 'object') return out;
+  for (const [id, raw] of Object.entries(v as Record<string, unknown>)) {
+    if (!raw || typeof raw !== 'object') continue;
+    const r = raw as Record<string, unknown>;
+    const st = Array.isArray(r.stars) ? r.stars : [];
+    const stars: Stars = [st[0] === true, st[1] === true, st[2] === true];
+    out[id] = { stars, best: typeof r.best === 'number' && r.best > 0 ? r.best : null, clears: typeof r.clears === 'number' && r.clears > 0 ? Math.floor(r.clears) : 0 };
+  }
+  return out;
+}
 
 export interface SaveData {
   version: 1;
@@ -18,9 +32,13 @@ export interface SaveData {
   muted: boolean;
   /** Chosen gull look (an id from data/gullSkins). */
   skin: string;
+  /** Per level: best stars, best time, clears (M12). */
+  levels: Record<string, LevelRecord>;
+  /** The level last played (the level select opens on it). */
+  level: string;
 }
 
-export const blankSave = (): SaveData => ({ version: 1, skills: [], questsWon: [], replayUnlocked: false, extrasOn: false, bestTime: null, speedrunBest: null, clears: 0, muted: false, skin: 'herring' });
+export const blankSave = (): SaveData => ({ version: 1, skills: [], questsWon: [], replayUnlocked: false, extrasOn: false, bestTime: null, speedrunBest: null, clears: 0, muted: false, skin: 'herring', levels: {}, level: 'sandbox' });
 
 /** The small part of the Storage API we need (so tests can pass a fake). */
 export interface StorageLike {
@@ -45,6 +63,8 @@ export function sanitize(raw: unknown): SaveData {
   d.speedrunBest = num(r.speedrunBest);
   d.clears = typeof r.clears === 'number' && r.clears > 0 ? Math.floor(r.clears) : 0;
   d.muted = r.muted === true;
+  d.levels = sanitizeLevels(r.levels);
+  d.level = typeof r.level === 'string' ? r.level : 'sandbox';
   d.skin = typeof r.skin === 'string' && GULL_SKINS.some((s) => s.id === r.skin) ? r.skin : 'herring';
   return d;
 }
