@@ -35,7 +35,7 @@ export type GameEvent =
 
 export type Msg =
   | { t: 'hello'; v: number; name: string; look: string }
-  | { t: 'welcome'; v: number; level: string; hostLook: string }
+  | { t: 'welcome'; v: number; level: string; hostLook: string; skills?: string[] }
   | { t: 'level'; id: string }
   | { t: 'input'; f: InputFrame }
   | { t: 'snap'; s: Snapshot; ack: number; lvl: string; rev: number }

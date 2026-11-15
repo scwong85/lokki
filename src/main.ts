@@ -284,7 +284,7 @@ function startSession(role: 'host' | 'guest', link: PeerLink): void {
   session.onEvent = onNetEvent;
   if (role === 'host') {
     session.onHello = () => {
-      session.welcome(level.id, save.skin); // sent again for every hello: the first one may have been lost
+      session.welcome(level.id, save.skin, skills.ids); // sent again for every hello: the first one may have been lost
       if (players.length > 1) return;
       players.push(remotePlayer(session.guestLook));
       lobby.setConnected(session.guestName);
@@ -294,6 +294,9 @@ function startSession(role: 'host' | 'guest', link: PeerLink): void {
     };
   } else {
     session.onWelcome = () => {
+      skills.borrow(session.hostSkills); // a friend with no progress still gets to play with the host's skills
+      skillsPanel.refresh(skills, save);
+      if (session.hostSkills.length) hud.toast('You can use the host\'s skills in this game.', 2.4);
       players.push(remotePlayer(session.hostLook));
       lobby.setConnected('the host');
     };
@@ -304,6 +307,7 @@ function endSession(why: string): void {
   if (!net) return;
   net.bye(why);
   net = null;
+  skills.clearBorrowed();
   while (players.length > 1) {
     const p = players.pop()!;
     scene.remove(p.gull.mesh, p.gull.shadow);

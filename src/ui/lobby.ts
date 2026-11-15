@@ -85,7 +85,7 @@ export class Lobby {
         <details class="lb-set"><summary>Settings</summary>
           <label>Room service<input id="lb-url" type="text" placeholder="https://lokki-rooms.you.workers.dev" value="${this.cfg.signalUrl}"></label>
           <label>Relay (optional)<textarea id="lb-relay" rows="3" placeholder='{"urls":"turn:…","username":"…","credential":"…"}'>${this.cfg.relayJson.replace(/</g, '&lt;')}</textarea></label>
-          <button data-act="savecfg">Save</button><span class="lb-status" id="lb-cfgstatus"></span>
+          <button data-act="openrelay">Use a free public relay</button> <button data-act="savecfg">Save</button><span class="lb-status" id="lb-cfgstatus"></span>
         </details>
         <p class="lb-note">Connecting uses a public STUN server (Google's) to find your network address, only while setting up co-op. Single player never goes online.</p><button data-act="close">Close</button>`,
       roomhost: `${head}<p>Tell your friend this room code:</p><div class="lb-room" id="lb-room">······</div><button data-act="copyroom">Copy</button>
@@ -131,6 +131,15 @@ export class Lobby {
         }
         break;
       }
+      case 'openrelay':
+        // a free community relay (Metered Open Relay); traffic is encrypted end to end, the relay only forwards it. Availability is not guaranteed.
+        this.q<HTMLTextAreaElement>('#lb-relay').value = JSON.stringify([
+          { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+          { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+          { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+        ]);
+        this.q<HTMLElement>('#lb-cfgstatus').textContent = 'Filled in. Press Save, on both devices.';
+        break;
       case 'savecfg': {
         const url = this.q<HTMLInputElement>('#lb-url').value;
         const relay = this.q<HTMLTextAreaElement>('#lb-relay').value;
@@ -259,6 +268,9 @@ export class Lobby {
       if (!l || !this.role) return;
       this.hooks.onConnected(this.role, l);
       this.link = null; // the session owns it now
+    });
+    link.onState((s) => {
+      if (this.link === link && !link.isOpen) this.setStatus(`Connecting… (${s})`);
     });
     link.onClose((why) => {
       if (this.link === link) this.setStatus(why || 'The connection closed.', true);
