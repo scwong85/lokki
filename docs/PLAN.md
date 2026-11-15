@@ -189,7 +189,7 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M10 Visual detail
 - [x] M11 Input layer + mobile landscape
 - [x] M12 Level framework (two-gull-ready)
-- [ ] M13 Market Square Act 1 (levels 1–4)
+- [x] M13 Market Square Act 1 (levels 1–4)
 - [ ] M14 Online co-op
 - [ ] M15 Polish pass (playtest feedback)
 
