@@ -13,6 +13,7 @@ export function grabLabel(prompt: string): { text: string; enabled: boolean } {
 type Btn = { code: string; mode: 'hold' | 'tap'; el: HTMLElement };
 
 const MENU: [string, string][] = [
+  ['KeyL', 'Levels'],
   ['KeyK', 'Skills & gull looks'],
   ['KeyO', 'Options'],
   ['KeyM', 'Sound on / off'],

@@ -115,6 +115,12 @@ export class Interaction {
     return this.beak(id).carried?.def.mass ?? 0;
   }
 
+  /** Level targets (the buoy, the sign) as generous poop-assist targets. */
+  private targetSpheres(spheres: readonly HitSphere[], props: readonly Prop[]): HitSphere[] {
+    const reach = tuning.poop.targetAssistRadius.value;
+    return spheres.filter((_, i) => !!props[i].tag && POOP_TARGET_TAGS.has(props[i].tag!)).map((s) => ({ ...s, assist: reach }));
+  }
+
   /** Where the beak holds things. */
   beakPos(s: FlightState): { x: number; y: number; z: number } {
     return { x: s.x - Math.sin(s.heading) * 0.85, y: s.y + 0.05, z: s.z - Math.cos(s.heading) * 0.85 };
@@ -152,10 +158,11 @@ export class Interaction {
 
   /** Landing spot of a poop dropped right now (aim reticle). */
   poopPrediction(s: FlightState, time: number): PoopHit | null {
-    const { spheres: ps } = this.props.hitSpheres();
+    const { spheres: ps, props: pp } = this.props.hitSpheres();
     const npcSpheres = this.npcs?.poopSpheres() ?? [];
     const spheres = [...ps, ...npcSpheres];
-    return predictPoop({ x: s.x, y: s.y, z: s.z }, { x: s.vx, y: s.vy, z: s.vz }, time, this.world, spheres, npcSpheres.filter((n) => n.tag !== 'umbrella'));
+    // the ring on the ground includes the aim assist (also toward level targets), so what you aim at is what you get
+    return predictPoop({ x: s.x, y: s.y, z: s.z }, { x: s.vx, y: s.vy, z: s.vz }, time, this.world, spheres, [...npcSpheres.filter((n) => n.tag !== 'umbrella'), ...this.targetSpheres(ps, pp)]);
   }
 
   /** Single player: this gull's actions plus the shared world step. */
@@ -212,7 +219,7 @@ export class Interaction {
       b.poopCd = tuning.poop.cooldown.value * mods.poopCooldown;
       const { spheres: pSpheres, props: pProps } = this.props.hitSpheres();
       const nSpheres = this.npcs?.poopSpheres() ?? [];
-      const aimed = pSpheres.filter((_, i) => !!pProps[i].tag && POOP_TARGET_TAGS.has(pProps[i].tag!));
+      const aimed = this.targetSpheres(pSpheres, pProps);
       const state = spawnPoopAssisted({ x: s.x, y: s.y, z: s.z }, { x: s.vx, y: s.vy, z: s.vz }, time, this.world, [...pSpheres, ...nSpheres], [...nSpheres.filter((n) => n.tag !== 'umbrella'), ...aimed]);
       const mesh = new THREE.Mesh(poopGeo, poopMat);
       mesh.position.set(state.x, state.y, state.z);

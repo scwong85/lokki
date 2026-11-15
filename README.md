@@ -50,6 +50,7 @@ Play in landscape with on-screen controls: left thumb steers (floating stick), d
 | X / Z | extra objectives on/off, start a speedrun (after clearing the finale) |
 | O | options (volumes, mouse look, screen shake, graphics quality, HUD) |
 | U | HUD: full / minimal / off |
+| L | level list (replay any unlocked level) |
 | Gamepad | left stick move · right stick look · A/RB flap · RT dive · LT brake · X grab · Y toss · B poop · D-pad abilities · Back skills · Start options |
 | T | skip the first-flight tips |
 | M | mute / unmute (sound and music) |

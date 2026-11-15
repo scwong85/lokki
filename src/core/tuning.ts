@@ -159,6 +159,7 @@ export const tuning = {
     maxDecals: p(80, 10, 300, 1),
     assistStrength: p(0.8, 0, 1, 0.05), // 0 = no aim assist toward tourists
     assistRadius: p(4, 0.5, 8, 0.5), // a target this close to the landing spot pulls the poop in
+    targetAssistRadius: p(12, 2, 25, 1), // the same for level targets (the buoy, the brass sign): much more forgiving
   },
   physics: {
     gravity: p(14, 4, 30, 0.5), // props only; the gull has its own flight gravity

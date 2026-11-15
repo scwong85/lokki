@@ -173,3 +173,47 @@ test('clearing a level offers the next one (Next button), and it starts straight
   expect(await page.evaluate(() => (window as unknown as { __lokki: Lk }).__lokki.quests.quests.map((q) => q.id))).toContain('freak'); // level 2 is open (level 1 was cleared)
   expect(errors).toEqual([]);
 });
+
+test('L opens the level list: unlocked levels can be replayed, locked ones are marked; picking one starts it with no title screen', async ({ page }) => {
+  test.setTimeout(120_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  // level 1 cleared, so level 2 is open; levels 3 and 4 are still locked
+  await page.addInitScript(() => localStorage.setItem('lokki-save-v1', JSON.stringify({ version: 1, level: 'snack-attack', levels: { 'snack-attack': { stars: [true, true, false], best: 142, clears: 1 } } })));
+  await page.goto('/?level=snack-attack');
+  await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 60_000 });
+  const panel = page.locator('#levelselect');
+  await expect
+    .poll(async () => {
+      if (!(await panel.isVisible())) {
+        await page.keyboard.press('KeyL'); // the first key press also starts the audio, which can stall a headless page: retry
+        await page.waitForTimeout(500);
+      }
+      return panel.isVisible();
+    }, { timeout: 20_000 })
+    .toBe(true);
+  await expect(page.locator('[data-pick=snack-attack]')).toContainText('★★☆');
+  await expect(page.locator('[data-pick=snack-attack]')).toContainText('best 2:22');
+  await expect(page.locator('[data-pick=bombs-away]')).not.toHaveClass(/locked/);
+  await expect(page.locator('[data-pick=nosy-parkers]')).toHaveClass(/locked/);
+  await expect(page.locator('[data-pick=nosy-parkers]')).toContainText('Clear 2. Bombs Away first');
+  await page.locator('[data-pick=nosy-parkers]').click({ force: true }); // locked: nothing happens
+  await expect(panel).toBeVisible();
+  await page.locator('[data-pick=bombs-away]').click();
+  await page.waitForFunction(() => location.search.includes('level=bombs-away') && (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 60_000 });
+  expect(await page.evaluate(() => (window as unknown as { __lokki: Lk }).__lokki.level)).toBe('bombs-away');
+
+  // the title screen: choosing a level there starts it straight away (no second dialog)
+  await page.goto('/?title&level=snack-attack');
+  await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 60_000 });
+  await expect(page.locator('#title')).toBeVisible();
+  await page.locator('[data-level=bombs-away]').click();
+  await page.waitForFunction(() => location.search.includes('level=bombs-away') && (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 60_000 });
+  await expect(page.locator('#title')).toBeHidden();
+  // `play` in the address skips the title even where it would normally show
+  await page.goto('/?title&play&level=snack-attack');
+  await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 60_000 });
+  await expect(page.locator('#title')).toBeHidden();
+  expect(errors).toEqual([]);
+});

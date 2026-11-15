@@ -59,6 +59,7 @@ import { MusicPlayer } from './core/music';
 import { MusicDirector } from './gameplay/musicDirector';
 import { OptionsStore, applyOptions } from './core/options';
 import { OptionsPanel, TitleScreen } from './ui/menus';
+import { LevelSelect } from './ui/levelSelect';
 import { Tutorial } from './gameplay/tutorial';
 import { SKILLS } from './data/skills';
 import { NpcModel } from './world/npcModel';
@@ -246,12 +247,15 @@ if (touch && firstVisit) options.graphics = 'low'; // phones start on the fast p
 applyOptions(options);
 graphics.apply(options.graphics);
 let hudF = applyHud(options.hud);
+const levelSelect = new LevelSelect(document.body, (id) => goToLevel(id, false));
+const levelRows = () =>
+  LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), current: l.id === level.id, sandbox: l.sandbox, locked: !levelUnlocked(l, save.levels), unlockHint: l.requires ? `Clear ${levelById(l.requires).name} first` : undefined, best: save.levels[l.id]?.best ? fmtClear(save.levels[l.id].best) : undefined }));
 const optionsPanel = new OptionsPanel(document.body, options, (o) => {
   applyOptions(o);
   if (o.graphics !== graphics.level) graphics.apply(o.graphics);
   hudF = applyHud(o.hud);
   optStore.save(o);
-});
+}, () => levelSelect.show(levelRows()));
 // automated browser tests skip the title screen and the tips (add ?title to see them)
 const interactive = !navigator.webdriver || new URLSearchParams(location.search).has('title');
 const tutorial = new Tutorial(interactive && !options.tutorialDone);
@@ -297,7 +301,7 @@ const title = new TitleScreen(
   },
 );
 if (interactive && !new URLSearchParams(location.search).has('play')) title.show();
-const menuOpen = (): boolean => title.visible || optionsPanel.visible || skillsPanel.visible || credits.visible || !!touchControls?.menuOpen;
+const menuOpen = (): boolean => title.visible || levelSelect.visible || optionsPanel.visible || skillsPanel.visible || credits.visible || !!touchControls?.menuOpen;
 const audio = new AudioManager();
 audio.muted = save.muted;
 for (const ev of ['pointerdown', 'touchend', 'keydown'] as const) addEventListener(ev, () => { audio.unlock(); music.start(); });
@@ -450,7 +454,7 @@ function checkLevelDone(): void {
   levelComplete.show(stats.summary(), quests.quests.map((x) => ({ title: setup.secret.has(x.id) && x.status !== 'won' ? '???' : x.title, won: x.status === 'won' })), notes, {
     heading: `${level.name.replace(/^\d+\.\s*/, '')} cleared!`,
     next: nextLevel ? { id: nextLevel.id, name: nextLevel.name } : undefined,
-    go: (target) => goToLevel(target === 'menu' ? level.id : target, target === 'menu'),
+    go: (target) => (target === 'menu' ? (levelComplete.hide(), levelSelect.show(levelRows())) : goToLevel(target, false)),
   });
 }
 
@@ -770,6 +774,12 @@ startLoop({
       return;
     }
     if (input.wasPressed('KeyO')) optionsPanel.toggle();
+    if (input.wasPressed('KeyL')) {
+      if (levelSelect.visible) levelSelect.hide();
+      else levelSelect.show(levelRows());
+      if (levelSelect.visible && document.pointerLockElement) document.exitPointerLock(); // free the mouse to click a level
+    }
+    if (input.wasPressed('Escape') && levelSelect.visible) levelSelect.hide();
     if (input.wasPressed('KeyU')) {
       options.hud = nextHudMode(options.hud);
       hudF = applyHud(options.hud);

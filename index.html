@@ -153,6 +153,17 @@
       .lc-next { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0 4px; }
       .lc-next button { font: 600 15px system-ui, sans-serif; padding: 9px 18px; border: 0; border-radius: 10px; background: #fff3c4; color: #4a4033; cursor: pointer; box-shadow: 0 2px 0 #d9c9a3; }
       .lc-next button.big { background: #ffd36e; font-size: 17px; }
+      #levelselect { position: fixed; inset: 0; z-index: 48; display: grid; place-items: center; background: rgba(255,248,225,.55); font-family: system-ui, sans-serif; }
+      #levelselect[hidden] { display: none; }
+      #levelselect .ls-card { background: #fff8e1; color: #4a4033; padding: 16px 22px; border-radius: 14px; box-shadow: 0 10px 30px rgba(80,60,30,.3); width: 460px; max-width: 94vw; max-height: 92vh; overflow-y: auto; }
+      #levelselect h2 { margin: 0 0 2px; } .ls-hint { margin: 0 0 8px; font-size: 13px; opacity: .75; }
+      .ls-list { display: flex; flex-direction: column; gap: 6px; }
+      .ls-list button { display: grid; grid-template-columns: 1fr auto; gap: 0 12px; text-align: left; padding: 8px 12px; border: 2px solid transparent; border-radius: 10px; background: #fff3c4; color: #4a4033; font: 14px system-ui, sans-serif; cursor: pointer; }
+      .ls-list button:hover:not(.locked) { background: #ffe9a0; } .ls-list button.on { border-color: #e39a7e; } .ls-list button.locked { opacity: .55; cursor: default; }
+      .ls-name { font-weight: 700; } .ls-now { margin-left: 8px; font-size: 11px; font-weight: 600; color: #e39a7e; }
+      .ls-blurb { grid-column: 1; font-size: 12px; opacity: .75; } .ls-stars { grid-column: 2; grid-row: 1 / span 2; align-self: center; text-align: right; color: #e0a42b; letter-spacing: 1px; font-size: 15px; }
+      .ls-best { display: block; font-size: 11px; color: #8a7b5c; letter-spacing: 0; } .ls-list button.locked .ls-stars { font-size: 11px; color: #8a7b5c; letter-spacing: 0; }
+      .ls-close { margin-top: 10px; font: 600 14px system-ui, sans-serif; padding: 8px 20px; border: 0; border-radius: 10px; background: #ffd36e; color: #4a4033; cursor: pointer; } .ls-keys { font-size: 11px; opacity: .6; margin: 6px 0 0; }
       .sk-close, .lc-tap { display: none; }
       body.touch .lc-tap { display: block; font-size: 13px; } body.touch .lc-keys { display: none; }
       body.touch .sk-close { display: inline-block; margin-top: 8px; font: 600 14px system-ui; padding: 8px 18px; border: 0; border-radius: 10px; background: #ffd36e; color: #4a4033; }

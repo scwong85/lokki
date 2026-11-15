@@ -32,6 +32,8 @@ export interface HitSphere {
   r: number;
   /** What this sphere is (umbrella blocks, others are targets). */
   tag?: string;
+  /** Aim-assist reach for this target (metres from the landing spot); the global radius when absent. */
+  assist?: number;
 }
 
 /** Start state: inherits part of the gull's velocity. */
@@ -68,10 +70,10 @@ export function spawnPoopAssisted(
   const base = fly({ ...p }, time, world, props);
   if (!base) return p;
   let best: HitSphere | null = null;
-  let bestD = tuning.poop.assistRadius.value;
+  let bestD = Infinity;
   for (const t of targets) {
     const d = Math.hypot(t.x - base.hit.x, t.z - base.hit.z);
-    if (d <= bestD) {
+    if (d <= (t.assist ?? tuning.poop.assistRadius.value) && d < bestD) {
       bestD = d;
       best = t;
     }
@@ -80,8 +82,9 @@ export function spawnPoopAssisted(
   // a sideways speed v decays toward the wind at rate k, so it moves the poop by v * (1 - e^(-kT)) / k over the flight time T
   const k = tuning.poop.drag.value;
   const perSpeed = k > 1e-6 ? (1 - Math.exp(-k * base.t)) / k : base.t;
-  p.vx += ((best.x - base.hit.x) / perSpeed) * strength;
-  p.vz += ((best.z - base.hit.z) / perSpeed) * strength;
+  const pull = best.assist !== undefined ? 1 : strength; // level targets are pulled in all the way
+  p.vx += ((best.x - base.hit.x) / perSpeed) * pull;
+  p.vz += ((best.z - base.hit.z) / perSpeed) * pull;
   return p;
 }
 

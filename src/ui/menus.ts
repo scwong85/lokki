@@ -5,13 +5,13 @@ import { HUD_NAMES, nextHudMode } from './hudMode';
 export class OptionsPanel {
   private el: HTMLElement;
 
-  constructor(root: HTMLElement, private options: Options, private onChange: (o: Options) => void) {
+  constructor(root: HTMLElement, private options: Options, private onChange: (o: Options) => void, private onLevels: () => void = () => undefined) {
     this.el = document.createElement('div');
     this.el.id = 'options';
     this.el.className = 'menu-card';
     this.el.hidden = true;
     const rows = OPTION_SLIDERS.map((s) => `<label>${s.label}<input type="range" data-k="${s.key}" min="${s.min}" max="${s.max}" step="${s.step}" value="${options[s.key]}"></label>`).join('');
-    this.el.innerHTML = `<h3>Options</h3>${rows}<label class="chk">HUD <button type="button" data-act="hud" class="hudbtn"></button></label><label class="chk"><input type="checkbox" data-k="graphics"> High quality graphics (shadows)</label><label class="chk"><input type="checkbox" data-k="tutorial"> Show the flying tips again</label><p class="menu-keys"><b>M</b> mutes everything · <b>U</b> cycles the HUD · <b>O</b> closes this</p><button data-act="close">Close</button>`;
+    this.el.innerHTML = `<h3>Options</h3>${rows}<label class="chk">HUD <button type="button" data-act="hud" class="hudbtn"></button></label><label class="chk"><input type="checkbox" data-k="graphics"> High quality graphics (shadows)</label><label class="chk"><input type="checkbox" data-k="tutorial"> Show the flying tips again</label><button type="button" data-act="levels">Choose a level… (L)</button><p class="menu-keys"><b>M</b> mutes everything · <b>U</b> cycles the HUD · <b>O</b> closes this</p><button data-act="close">Close</button>`;
     this.el.querySelectorAll<HTMLInputElement>('input[type=range]').forEach((inp) => {
       inp.addEventListener('input', () => {
         (this.options as unknown as Record<string, number>)[inp.dataset.k!] = Number(inp.value);
@@ -38,6 +38,10 @@ export class OptionsPanel {
       if (e.code === 'KeyO' || e.code === 'Escape') this.hide(); // keys typed while a slider has focus never reach the game
     });
     this.el.querySelector('[data-act=close]')!.addEventListener('click', () => this.hide());
+    this.el.querySelector('[data-act=levels]')!.addEventListener('click', () => {
+      this.hide();
+      this.onLevels();
+    });
     root.appendChild(this.el);
   }
 
@@ -72,6 +76,8 @@ export interface TitleLevel {
   sandbox?: boolean;
   locked?: boolean;
   unlockHint?: string;
+  /** Best clear time (formatted). */
+  best?: string;
 }
 
 /** Title screen: shown once the city has loaded; the game waits behind it. */

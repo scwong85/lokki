@@ -153,13 +153,14 @@ describe('level 2 fixes', () => {
 
   it('the poop aim assist steers a drop onto the buoy (and the sign) even with a crosswind', async () => {
     const { spawnPoopAssisted, stepPoop } = await import('../../src/gameplay/poop');
+    type HitSphere = import('../../src/gameplay/poop').HitSphere;
     const { World } = await import('../../src/world/collision');
     const { tuning } = await import('../../src/core/tuning');
     const { PROPS } = await import('../../src/data/props');
     tuning.wind.strength.value = 3;
     const world = new World();
-    const buoy = { x: 0, y: 0.3, z: 0, r: PROPS.buoy.radius };
-    const land = (targets: (typeof buoy)[]) => {
+    const buoy: HitSphere = { x: 0, y: 0.3, z: 0, r: PROPS.buoy.radius };
+    const land = (targets: HitSphere[]) => {
       const p = spawnPoopAssisted({ x: 3.5, y: 9, z: 1 }, { x: 0, y: 0, z: 0 }, 0, world, [buoy], targets);
       for (let i = 0; i < 600; i++) {
         const hit = stepPoop(p, 1 / 60, i / 60, world, [buoy]);
@@ -167,8 +168,13 @@ describe('level 2 fixes', () => {
       }
       return false;
     };
-    expect(land([buoy])).toBe(true); // assisted
+    expect(land([{ ...buoy, assist: 12 }])).toBe(true); // assisted
     expect(land([])).toBe(false); // unassisted: the drop misses a drop this far off
+    // a release 9 m early (about 10 m off the target) still lands on it with the level-target assist
+    const far = spawnPoopAssisted({ x: 9, y: 9, z: 4 }, { x: 0, y: 0, z: -8 }, 0, world, [buoy], [{ ...buoy, assist: 12 }]);
+    let hit = false;
+    for (let i = 0; i < 600 && !hit; i++) hit = stepPoop(far, 1 / 60, i / 60, world, [buoy])?.prop === 0;
+    expect(hit).toBe(true);
     tuning.wind.strength.value = 3;
   });
 });
