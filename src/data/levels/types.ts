@@ -2,6 +2,7 @@ import type { QuestDef } from '../quests';
 import type { TriggerDef } from '../../gameplay/triggers';
 import type { SkillId } from '../skills';
 import type { NpcSpawn } from '../../gameplay/npc';
+import type { PropSpawn } from '../../gameplay/props';
 
 /**
  * One level: a short visit to a district with its own to-do list, cast and rules (M12). Plain data; the game builds
@@ -28,6 +29,8 @@ export interface LevelDef {
   tourists: 'all' | string[];
   /** Tourists placed just for this level. */
   extraTourists?: NpcSpawn[];
+  /** Props placed just for this level (on top of the city's own). */
+  extraProps?: PropSpawn[];
   /** The level that must be cleared first (shown locked until then). */
   requires?: string;
   /** Is the city on guard (heat, vendors, lines, nets, the Warden)? Early levels keep it calm. */

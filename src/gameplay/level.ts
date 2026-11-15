@@ -2,6 +2,7 @@ import type { LevelDef } from '../data/levels/types';
 import type { QuestDef } from '../data/quests';
 import type { TriggerDef } from './triggers';
 import type { NpcSpawn } from './npc';
+import type { PropSpawn } from './props';
 
 /** What the game builds for a level. Pure. */
 export interface LevelSetup {
@@ -9,6 +10,8 @@ export interface LevelSetup {
   triggers: TriggerDef[];
   tourists: NpcSpawn[];
   defense: boolean;
+  /** Props placed just for the level. */
+  props: PropSpawn[];
   /** Secret to-dos ("???" until done). */
   secret: Set<string>;
   /** The to-dos that clear the level. */
@@ -26,7 +29,7 @@ export function levelSetup(def: LevelDef, allQuests: readonly QuestDef[], allTri
   const triggers = [...pick(def.triggers, allTriggers, 'trigger'), ...(def.extraTriggers ?? [])];
   const tourists = [...(def.tourists === 'all' ? allTourists : allTourists.filter((t) => (def.tourists as string[]).includes(t.role ?? 'any'))), ...(def.extraTourists ?? [])];
   const secret = new Set(def.secret ?? []);
-  return { quests, triggers, tourists, defense: def.defense, secret, main: quests.map((q) => q.id).filter((id) => !secret.has(id)) };
+  return { quests, triggers, tourists, props: def.extraProps ?? [], defense: def.defense, secret, main: quests.map((q) => q.id).filter((id) => !secret.has(id)) };
 }
 
 export interface LevelProgress {

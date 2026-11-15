@@ -1,5 +1,6 @@
 import type { LevelDef } from './types';
 import { SNACK_ATTACK } from './snackAttack';
+import { BOMBS_AWAY } from './bombsAway';
 
 /** Free play: today's full Market Square (the eight-quest pack, the extras, the finale). */
 export const SANDBOX: LevelDef = {
@@ -14,8 +15,8 @@ export const SANDBOX: LevelDef = {
   defense: true,
 };
 
-export { SNACK_ATTACK };
+export { SNACK_ATTACK, BOMBS_AWAY };
 
-export const LEVELS: LevelDef[] = [SNACK_ATTACK, SANDBOX];
+export const LEVELS: LevelDef[] = [SNACK_ATTACK, BOMBS_AWAY, SANDBOX];
 
 export const levelById = (id: string | null | undefined): LevelDef => LEVELS.find((l) => l.id === id) ?? SANDBOX;

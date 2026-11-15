@@ -93,6 +93,11 @@ export const tuning = {
     lookAhead: p(0.2, 0, 1, 0.01), // seconds of velocity the camera looks ahead
     minHeight: p(0.6, 0, 3, 0.1),
   },
+  cleaner: {
+    baseTime: p(5, 2, 12, 0.5), // seconds the Clean Freak scrubs his sign after one splat
+    extraPerSplat: p(2, 0, 6, 0.5), // ... and each splat while he is at it adds this
+    maxTime: p(12, 4, 30, 1),
+  },
   selfie: {
     idle: p(6, 1, 20, 0.5), // seconds a selfie tourist guards her ice cream between photos
     count: p(3, 1.5, 6, 0.5), // the "3, 2, 1" countdown

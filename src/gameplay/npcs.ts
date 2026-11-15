@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createRng, type Rng } from '../core/rng';
+import { tuning } from '../core/tuning';
 import type { PropType } from '../data/props';
 import type { Target } from './targets';
 import { BODY_HEIGHT, BODY_RADIUS, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn } from './npc';
@@ -88,6 +89,7 @@ export class NpcManager implements NpcHooks {
     this.clock += dt;
     for (const n of this.npcs) {
       if (n.role === 'selfie') ev.push(...this.selfieStep(n, gulls));
+      if (n.role === 'cleaner') this.cleanStep(n, dt);
       const near = gulls.length === 1 ? gulls[0] : gulls.reduce((a, b) => ((a.x - n.x) ** 2 + (a.z - n.z) ** 2 <= (b.x - n.x) ** 2 + (b.z - n.z) ** 2 ? a : b));
       ev.push(...stepNpc(n, near, this.noises, dt, ctx));
       ev.push(...this.wantedItems(n));
@@ -114,6 +116,27 @@ export class NpcManager implements NpcHooks {
     }
     this.noises.length = 0;
     return ev;
+  }
+
+  /** The Clean Freak scrubs his sign with his back to his fish: while he does, only the sign has his attention. */
+  private cleanStep(n: Npc, dt: number): void {
+    if (n.cleanT <= 0) return;
+    n.cleanT = Math.max(0, n.cleanT - dt);
+    n.noiseX = n.signX;
+    n.noiseZ = n.signZ;
+    n.distractT = Math.max(n.distractT, 0.3);
+    if (n.cleanT === 0) n.cleanSplats = 0;
+  }
+
+  /** The sign got splatted: he rushes to clean it. Every splat while he is still at it makes him more frantic (and slower to look back). */
+  signSplatted(): boolean {
+    const n = this.npcs.find((x) => x.role === 'cleaner');
+    if (!n) return false;
+    const c = tuning.cleaner;
+    n.cleanSplats = n.cleanT > 0 ? n.cleanSplats + 1 : 1;
+    n.cleanT = Math.min(c.maxTime.value, c.baseTime.value + (n.cleanSplats - 1) * c.extraPerSplat.value);
+    this.pending.push({ type: 'signSplat', npc: n, splats: n.cleanSplats });
+    return true;
   }
 
   /**
@@ -247,6 +270,7 @@ export class NpcManager implements NpcHooks {
     const n = this.npcs.find((x) => x.holding === propId);
     if (n) {
       this.victimOf.set(propId, n.id);
+      if (n.role === 'cleaner' && n.cleanT > 0) this.pending.push({ type: 'cleanerRobbed', npc: n });
       this.pending.push(...startle(n, 'snatched'));
     }
   }

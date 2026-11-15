@@ -242,7 +242,7 @@ export class NpcModel {
 
   apply(n: Npc, time: number): void {
     const h = n.holding !== null ? handPos(n) : undefined;
-    const label = n.selfie === 'count' ? String(n.selfieCount) : n.selfie === 'open' ? '\u{1F4F7}' : undefined;
+    const label = n.cleanT > 0 ? '\u{1F9FD}' : n.selfie === 'count' ? String(n.selfieCount) : n.selfie === 'open' ? '\u{1F4F7}' : undefined;
     this.applyView({ x: n.x, z: n.z, heading: n.heading, mode: n.mode, moving: n.moving, walkPhase: n.walkPhase, t: n.t, holding: n.holding !== null, distracted: n.distractT > 0, hand: h, label }, time);
   }
 

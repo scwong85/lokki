@@ -59,6 +59,19 @@ function buildParts(type: PropType, g: THREE.Group): void {
       g.add(mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.24, 8), 0x9bd8b0, 0, -0.04, 0));
       g.add(mesh(new THREE.CylinderGeometry(0.03, 0.06, 0.12, 8), 0x9bd8b0, 0, 0.15, 0));
       break;
+    case 'sign': {
+      // a brass sign on a short post: a disk board with a shiny rim (the Clean Freak's pride and joy)
+      g.add(mesh(new THREE.CylinderGeometry(0.1, 0.12, 1.2, 8), 0x8a7a66));
+      g.add(mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.08, 14), 0xf3d37a, 0, 0.35, 0).rotateX(Math.PI / 2));
+      g.add(mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.1, 14), 0xfff0b3, 0, 0.35, 0.01).rotateX(Math.PI / 2));
+      break;
+    }
+    case 'buoy':
+      g.add(mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.3, 10), 0xffffff, 0, -0.1, 0));
+      g.add(mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.14, 10), 0xe9564b, 0, -0.04, 0));
+      g.add(mesh(new THREE.ConeGeometry(0.3, 0.4, 10), 0xe9564b, 0, 0.25, 0));
+      g.add(mesh(new THREE.SphereGeometry(0.07, 6, 5), 0xffd36e, 0, 0.5, 0));
+      break;
     case 'bin':
       g.add(mesh(new THREE.CylinderGeometry(0.45, 0.4, 1.0, 12), 0x9fd8c0));
       g.add(mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.08, 12), 0x6fb99d, 0, 0.5, 0));

@@ -112,3 +112,51 @@ describe('NpcManager: items, roles and goals', () => {
     expect(run(8).some((e) => e.type === 'reclaimed')).toBe(false);
   });
 });
+
+describe('NpcManager: the Clean Freak and the selfie tourist', () => {
+  const freak: NpcSpawn = { x: 0, z: 0, heading: 0, holds: 'fish', role: 'cleaner', stationary: true, signAt: { x: 3, z: 0 }, color: 0 };
+
+  it('a splatted sign sends him scrubbing (distracted, so his fish is open); more splats add time; robbing him is reported', () => {
+    const { npcs, run } = setup([freak]);
+    const n = npcs.npcs[0];
+    expect(npcs.signSplatted()).toBe(true);
+    const ev = run(DT);
+    expect(ev.some((e) => e.type === 'signSplat' && e.splats === 1)).toBe(true);
+    const first = n.cleanT;
+    expect(first).toBeGreaterThan(4);
+    expect(n.distractT).toBeGreaterThan(0);
+    npcs.signSplatted();
+    expect(n.cleanT).toBeGreaterThan(first); // frantic: longer
+    npcs.signSplatted();
+    expect(run(DT).some((e) => e.type === 'signSplat' && e.splats === 3)).toBe(true);
+    // robbing him while he scrubs
+    const fish = npcs.props.byId(n.holding!)!;
+    npcs.onSnatched(fish.id);
+    expect(run(DT).some((e) => e.type === 'cleanerRobbed')).toBe(true);
+  });
+
+  it('he calms down after the scrubbing and the splat count resets', () => {
+    const { npcs, run } = setup([freak]);
+    const n = npcs.npcs[0];
+    npcs.signSplatted();
+    run(20);
+    expect(n.cleanT).toBe(0);
+    expect(n.cleanSplats).toBe(0);
+    npcs.signSplatted();
+    expect(run(DT).some((e) => e.type === 'signSplat' && e.splats === 1)).toBe(true);
+  });
+
+  it('a selfie tourist reports the shot, and whether a gull was in the frame', () => {
+    const spawn: NpcSpawn = { x: 0, z: 0, heading: Math.PI, ice: true, role: 'selfie', stationary: true, color: 0 };
+    const near = { x: 0, y: 1, z: 3, diving: false };
+    const inFrameClicks = (gull: typeof near): boolean[] => {
+      const { npcs } = setup([spawn]);
+      const out: boolean[] = [];
+      for (let i = 0; i < 60 * 25; i++) for (const e of npcs.update(DT, gull)) if (e.type === 'selfieClick') out.push(e.inFrame);
+      return out;
+    };
+    expect(inFrameClicks(near).length).toBeGreaterThanOrEqual(2);
+    expect(inFrameClicks(near).every(Boolean)).toBe(true);
+    expect(inFrameClicks(far).some(Boolean)).toBe(false);
+  });
+});

@@ -75,3 +75,30 @@ test('level 1: the selfie tourist counts down, her ice cream opens on the shot, 
   await expect.poll(() => page.evaluate(() => (window as unknown as { __lokki: { quests: { quests: { id: string; status: string }[] } } }).__lokki.quests.quests.find((q) => q.id === 'photobomb')!.status), { timeout: 5000 }).toBe('won');
   expect(errors).toEqual([]);
 });
+
+test('level 2: splatting the sign sends the Clean Freak scrubbing (his fish is open), splatting the buoy counts, the level needs level 1 first', async ({ page }) => {
+  test.setTimeout(240_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  await page.addInitScript(() => localStorage.setItem('lokki-save-v1', JSON.stringify({ version: 1, level: 'bombs-away', levels: { 'snack-attack': { stars: [true, false, false], best: 100, clears: 1 } } })));
+  await page.goto('/?level=bombs-away');
+  await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 60_000 });
+  type W = { __lokki: { gull: { state: Record<string, number | string> }; interaction: { props: { props: { tag?: string; cur: { p: { x: number; y: number; z: number } } }[] }; beak: (i: number) => unknown }; npcs: { npcs: { role: string; cleanT: number; distractT: number; holding: number | null }[] }; players: { input: { tap: (c: string) => void } }[]; quests: { quests: { id: string; status: string; objectives: { done: boolean }[] }[] } } };
+  const dropOn = async (tag: string) => {
+    await page.evaluate((t) => {
+      const l = (window as unknown as W).__lokki;
+      const p = l.interaction.props.props.find((x) => x.tag === t)!.cur.p;
+      Object.assign(l.gull.state, { x: p.x, y: 2.1, z: p.z, vx: 0, vy: 0, vz: 0, mode: 'air', heading: 0 }); // low, so the wind cannot carry the drop off
+    }, tag);
+    await page.waitForTimeout(500);
+    await page.evaluate(() => (window as unknown as W).__lokki.players[0].input.tap('KeyF'));
+  };
+  // the sign: he rushes to scrub, with his back to the fish
+  await expect.poll(async () => { await dropOn('cleanSign'); await page.waitForTimeout(6000); return page.evaluate(() => (window as unknown as W).__lokki.npcs.npcs.find((n) => n.role === 'cleaner')!.cleanT > 0); }, { timeout: 120_000, intervals: [200] }).toBe(true);
+  expect(await page.evaluate(() => (window as unknown as W).__lokki.npcs.npcs.find((n) => n.role === 'cleaner')!.distractT > 0)).toBe(true);
+  expect(await page.evaluate(() => (window as unknown as W).__lokki.quests.quests.find((q) => q.id === 'freak')!.objectives[0].done)).toBe(true);
+  // the buoy: a bullseye from the air
+  await expect.poll(async () => { await dropOn('buoy'); await page.waitForTimeout(6000); return page.evaluate(() => (window as unknown as W).__lokki.quests.quests.find((q) => q.id === 'buoy')!.status); }, { timeout: 120_000, intervals: [200] }).toBe('won');
+  expect(errors).toEqual([]);
+});

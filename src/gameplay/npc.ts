@@ -27,6 +27,8 @@ export interface NpcSpawn {
   stationary?: boolean;
   /** Body scale (children are small). */
   scale?: number;
+  /** The Clean Freak's sign (role 'cleaner'). */
+  signAt?: { x: number; z: number };
 }
 
 export interface Npc {
@@ -50,6 +52,12 @@ export interface Npc {
   /** Selfie routine (role 'selfie'): what she is doing and the number she is counting. */
   selfie: 'idle' | 'count' | 'open';
   selfieCount: number;
+  /** The Clean Freak (role 'cleaner'): seconds left polishing his sign, and how many splats in a row. */
+  cleanT: number;
+  cleanSplats: number;
+  /** Where his sign is (he turns to it when it gets splatted). */
+  signX: number;
+  signZ: number;
   distractT: number;
   noiseX: number;
   noiseZ: number;
@@ -85,7 +93,7 @@ export interface Noise {
   loud: number;
 }
 
-export type NpcEvent = { type: 'reclaimed'; npc: Npc; propType: PropType } | { type: 'cheer'; npc: Npc } | { type: 'arrived'; npc: Npc; goal: string } | { type: 'yuck'; npc: Npc } | { type: 'tookItem'; npc: Npc; propType: PropType } | { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc } | { type: 'selfieClick'; npc: Npc; inFrame: boolean };
+export type NpcEvent = { type: 'reclaimed'; npc: Npc; propType: PropType } | { type: 'cheer'; npc: Npc } | { type: 'arrived'; npc: Npc; goal: string } | { type: 'yuck'; npc: Npc } | { type: 'tookItem'; npc: Npc; propType: PropType } | { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc } | { type: 'selfieClick'; npc: Npc; inFrame: boolean } | { type: 'signSplat'; npc: Npc; splats: number } | { type: 'cleanerRobbed'; npc: Npc };
 
 export interface NpcCtx {
   world: World;
@@ -103,7 +111,7 @@ export const bearing = (dx: number, dz: number) => Math.atan2(-dx, -dz);
 export function newNpc(id: number, sp: NpcSpawn): Npc {
   const h = sp.heading ?? 0;
   return {
-    id, x: sp.x, z: sp.z, heading: h, mode: 'idle', t: 0, homeX: sp.x, homeZ: sp.z, selfie: 'idle', selfieCount: 0, targetX: null, targetZ: null,
+    id, x: sp.x, z: sp.z, heading: h, mode: 'idle', t: 0, homeX: sp.x, homeZ: sp.z, selfie: 'idle', selfieCount: 0, cleanT: 0, cleanSplats: 0, signX: sp.signAt?.x ?? sp.x, signZ: sp.signAt?.z ?? sp.z, targetX: null, targetZ: null,
     holding: null, shieldFrom: h, handAngle: h - Math.PI / 2, distractT: 0, noiseX: 0, noiseZ: 0, lostSightT: 0, noticeCd: 0,
     walkPhase: 0, moving: false, speed: 0, seesGull: false, nextT: 2,
     wants: sp.wants ?? [], holdType: null, goal: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false,

@@ -7,7 +7,7 @@ export type Shape =
   | { kind: 'cyl'; hh: number; r: number }
   | { kind: 'capsule'; hh: number; r: number };
 
-export type PropType = 'icecream' | 'fish' | 'bun' | 'cap' | 'tophat' | 'bottle' | 'bin' | 'crate' | 'chair' | 'candy' | 'salmiakki' | 'map' | 'toy' | 'flowers';
+export type PropType = 'icecream' | 'fish' | 'bun' | 'cap' | 'tophat' | 'bottle' | 'bin' | 'crate' | 'chair' | 'candy' | 'salmiakki' | 'map' | 'toy' | 'flowers' | 'sign' | 'buoy';
 
 export interface PropDef {
   name: string;
@@ -33,6 +33,8 @@ export const PROPS: Record<PropType, PropDef> = {
   map: { name: 'tourist map', tags: ['paper', 'throwable'], mass: 0.1, shape: { kind: 'box', hx: 0.18, hy: 0.02, hz: 0.13 }, radius: 0.3 },
   toy: { name: 'teddy bear', tags: ['throwable'], mass: 0.3, shape: { kind: 'box', hx: 0.28, hy: 0.32, hz: 0.2 }, radius: 0.5 },
   flowers: { name: 'bouquet', tags: ['throwable'], mass: 0.2, shape: { kind: 'box', hx: 0.12, hy: 0.2, hz: 0.12 }, radius: 0.35 },
+  sign: { name: 'polished sign', tags: ['heavy', 'shiny'], mass: 60, shape: { kind: 'cyl', hh: 0.6, r: 0.32 }, radius: 0.75 },
+  buoy: { name: 'harbour buoy', tags: ['throwable'], mass: 6, shape: { kind: 'cyl', hh: 0.3, r: 0.32 }, radius: 0.5 },
   chair: { name: 'chair', tags: ['heavy', 'noisy', 'stackable'], mass: 4, shape: { kind: 'box', hx: 0.25, hy: 0.45, hz: 0.25 }, radius: 0.55 },
 };
 

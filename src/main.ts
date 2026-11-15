@@ -124,7 +124,7 @@ if (!greybox) {
 const ripples = new Ripples();
 scene.add(ripples.group);
 let rippleT = 0;
-for (const sp of propSpawns) interaction.props.spawn(sp);
+for (const sp of [...propSpawns, ...setup.props]) interaction.props.spawn(sp);
 // tourists and the quest log only exist in the city
 const npcs = greybox ? null : new NpcManager(world, interaction.props, scene, walkable);
 if (npcs) {
@@ -614,6 +614,16 @@ function onNpcEvents(evs: NpcEvent[]): void {
     } else if (e.type === 'cheer') {
       audio.play('chime');
       hud.toast('The child hugs the teddy!', 2);
+    } else if (e.type === 'signSplat') {
+      audio.play('gasp');
+      notes(quests.onEvent('signSplat'));
+      if (e.splats >= 3) {
+        hud.toast('He is losing it!', 1.6);
+        notes(quests.onEvent('frantic'));
+      }
+    } else if (e.type === 'cleanerRobbed') {
+      hud.toast('His fish! He did not even notice.', 1.8);
+      notes(quests.onEvent('cleanerRobbed'));
     } else if (e.type === 'selfieClick') {
       audio.play('pop');
       if (e.inFrame) {
@@ -674,6 +684,11 @@ function onGags(gags: GagEvent[]): void {
       case 'poopProp':
         audio.play('splat');
         hud.toast(`Splat! ${g.prop.def.name}`, 0.9);
+        if (g.prop.tag === 'cleanSign' && npcs?.signSplatted()) hud.toast('The Clean Freak drops everything to scrub!', 1.6);
+        if (g.prop.tag === 'buoy') {
+          hud.toast('Bullseye! The buoy is not impressed.', 1.6);
+          notes(quests.onEvent('buoyHit'));
+        }
         break;
       case 'break': {
         audio.play('crash');
