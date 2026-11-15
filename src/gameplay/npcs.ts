@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import type { NpcSnap } from '../net/snapshot';
+import { easeAngle, easeTo } from '../net/remote';
 import { createRng, type Rng } from '../core/rng';
 import { tuning } from '../core/tuning';
 import type { PropType } from '../data/props';
@@ -157,7 +159,7 @@ export class NpcManager implements NpcHooks {
       n.noiseZ = n.z - Math.cos(facing) * 6;
       n.distractT = Math.max(n.distractT, 0.3);
     }
-    if (was === 'count' && st.phase === 'open') ev.push({ type: 'selfieClick', npc: n, inFrame: gulls.some((g) => inFrame(n, facing, g)) });
+    if (was === 'count' && st.phase === 'open') ev.push({ type: 'selfieClick', npc: n, inFrame: gulls.some((g) => inFrame(n, facing, g)), framed: gulls.filter((g) => inFrame(n, facing, g)).length });
     return ev;
   }
 
@@ -345,6 +347,56 @@ export class NpcManager implements NpcHooks {
       out.push(t);
     }
     return out;
+  }
+
+  /** Remove every person (loading another level). Their props are cleared separately. */
+  clearAll(): void {
+    for (const m of this.models.values()) this.parent.remove(m.root);
+    for (const r of this.rings.values()) this.parent.remove(r);
+    this.models.clear();
+    this.rings.clear();
+    this.spawns.clear();
+    this.items.clear();
+    this.eating.clear();
+    this.victimOf.clear();
+    this.handTargetCache.clear();
+    this.pending.length = 0;
+    this.npcs.length = 0;
+    this.nextId = 1;
+    this.rng = createRng(this.seed);
+  }
+
+  private remote = new Map<number, NpcSnap>();
+
+  /** Where the host says each person is and what they are doing (a guest does not simulate people). */
+  setRemote(list: readonly NpcSnap[]): void {
+    for (const s of list) {
+      this.remote.set(s.id, s);
+      const n = this.npcs.find((x) => x.id === s.id);
+      if (!n) continue;
+      n.mode = s.mode as Npc['mode'];
+      n.holding = s.holding;
+      n.handAngle = s.ha ?? n.handAngle;
+      n.selfie = (s.sf as Npc['selfie']) ?? n.selfie;
+      n.selfieCount = s.sc ?? n.selfieCount;
+      n.cleanT = s.ct ?? n.cleanT;
+      n.shieldFrom = s.sh ?? n.shieldFrom;
+    }
+  }
+
+  /** One sim step on a guest: walk each person towards the host's news and animate the legs from how far they moved. */
+  stepRemote(dt: number): void {
+    for (const n of this.npcs) {
+      const s = this.remote.get(n.id);
+      if (!s) continue;
+      const ox = n.x, oz = n.z;
+      n.x = easeTo(n.x, s.p[0], dt, 14);
+      n.z = easeTo(n.z, s.p[1], dt, 14);
+      n.heading = easeAngle(n.heading, s.h, dt, 14);
+      n.speed = Math.hypot(n.x - ox, n.z - oz) / Math.max(dt, 1e-4);
+      n.moving = n.speed > 0.15;
+      n.walkPhase += n.speed * dt * 2.2;
+    }
   }
 
   reset(): void {

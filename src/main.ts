@@ -3,6 +3,12 @@ import { startLoop } from './core/loop';
 import { Input } from './core/input';
 import { GamepadSource } from './core/gamepad';
 import { makeSnapshot, type Snapshot } from './net/snapshot';
+import { PeerLink } from './net/peer';
+import { NetSession } from './net/session';
+import { CoopCombo } from './gameplay/coopCombo';
+import type { GameEvent } from './net/protocol';
+import type { StatSummary } from './gameplay/levelStats';
+import { Lobby } from './ui/lobby';
 import { events } from './core/events';
 import { tuning } from './core/tuning';
 import { mods, staminaMax } from './core/skillMods';
@@ -90,8 +96,8 @@ const greybox = new URLSearchParams(location.search).has('greybox');
 const store = new SaveStore();
 let save: SaveData = store.load();
 // the level: ?level=… in the address, else the last one played (automated tests start in free play)
-const level = levelById(new URLSearchParams(location.search).get('level') ?? (navigator.webdriver ? 'sandbox' : save.level));
-const setup = levelSetup(level, QUESTS, TRIGGERS, TOURIST_SPAWNS);
+let level = levelById(new URLSearchParams(location.search).get('level') ?? (navigator.webdriver ? 'sandbox' : save.level));
+let setup = levelSetup(level, QUESTS, TRIGGERS, TOURIST_SPAWNS);
 let world: World;
 let targets: Target[];
 let targetMeshes: THREE.Object3D[];
@@ -132,12 +138,13 @@ if (npcs) {
   for (const sp of setup.tourists) npcs.spawn(sp);
   interaction.npcs = npcs;
 }
+const makeDefense = (): CityDefense | null => (greybox || !setup.defense ? null : new CityDefense(world, scene, walkable));
 // the city's response: heat, vendors, scare lines, nets, the Warden (city only)
-const defense = greybox || !setup.defense ? null : new CityDefense(world, scene, walkable);
-const heatMeter = defense ? new HeatMeter(document.body) : null;
+let defense = makeDefense();
+let heatMeter = defense ? new HeatMeter(document.body) : null;
 const announce = new Announce(document.body);
 const stepNoises: Noise[] = [];
-if (npcs && defense) {
+if (npcs) {
   let nTourist = 0;
   interaction.npcs = {
     snatchCandidates: (b) => npcs.snatchCandidates(b),
@@ -146,11 +153,11 @@ if (npcs && defense) {
     poopSpheres: () => {
       const t = npcs.poopSpheres();
       nTourist = t.length;
-      return [...t, ...defense.poopSpheres()];
+      return defense ? [...t, ...defense.poopSpheres()] : t;
     },
     onPooped: (i) => {
       if (i < nTourist) return npcs.onPooped(i);
-      defense.onPooped(i - nTourist);
+      defense?.onPooped(i - nTourist);
       return undefined;
     },
   };
@@ -199,6 +206,8 @@ interface Player {
   id: number;
   gull: Gull;
   input: Input;
+  /** Steered over the network (the other online player). */
+  remote?: boolean;
   /** Player 2 steers its own view direction (the camera follows player 1). */
   yaw: number;
   pitch: number;
@@ -232,7 +241,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, defense, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, level: level.id, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -247,7 +256,129 @@ if (touch && firstVisit) options.graphics = 'low'; // phones start on the fast p
 applyOptions(options);
 graphics.apply(options.graphics);
 let hudF = applyHud(options.hud);
-const levelSelect = new LevelSelect(document.body, (id) => goToLevel(id, false));
+const levelSelect = new LevelSelect(document.body, (id) => goToLevel(id));
+// ---- online co-op: a host runs the game, a guest flies its own gull and sees what the host sends ----
+let net: NetSession | null = null;
+const lobby = new Lobby(document.body, {
+  onConnected: (role, link) => startSession(role, link),
+  onLeave: () => endSession('You left the game.'),
+});
+const isGuest = (): boolean => net?.role === 'guest';
+const isHost = (): boolean => net?.role === 'host';
+function remotePlayer(look: string): Player {
+  const g = new Gull({ x: start.x + 2.5, z: start.z });
+  g.isWater = gull.isWater;
+  g.setSkin(skinById(look).colours);
+  shadows(g.mesh, true, false);
+  scene.add(g.mesh, g.shadow);
+  const p: Player = { id: 1, gull: g, input: new Input(null, false), yaw: 0, pitch: 0.25, remote: true };
+  g.setRemote({ id: 1, p: [start.x + 2.5, GULL_RADIUS, start.z], v: [0, 0, 0], h: 0, mode: 'ground', carry: null });
+  return p;
+}
+function startSession(role: 'host' | 'guest', link: PeerLink): void {
+  if (players.length > 1) players.length = 1;
+  const session = new NetSession(role, link);
+  net = session;
+  seenRev = -1;
+  session.onLeave = (why) => endSession(why);
+  session.onEvent = onNetEvent;
+  if (role === 'host') {
+    session.onHello = () => {
+      session.welcome(level.id, save.skin); // sent again for every hello: the first one may have been lost
+      if (players.length > 1) return;
+      players.push(remotePlayer(session.guestLook));
+      lobby.setConnected(session.guestName);
+      hud.toast(`${session.guestName} joined!`, 2);
+      relayHost();
+      loadLevel(level.id); // restart with the two-player to-dos (the guest follows)
+    };
+  } else {
+    session.onWelcome = () => {
+      players.push(remotePlayer(session.hostLook));
+      lobby.setConnected('the host');
+    };
+    session.hello('Guest', save.skin);
+  }
+}
+function endSession(why: string): void {
+  if (!net) return;
+  net.bye(why);
+  net = null;
+  while (players.length > 1) {
+    const p = players.pop()!;
+    scene.remove(p.gull.mesh, p.gull.shadow);
+  }
+  lobby.setConnected(null);
+  hud.toast(why, 3);
+}
+/** The host tells the guest everything it should show or play (toasts, sounds, banners, the level card). */
+function relayHost(): void {
+  if (relayed) return;
+  relayed = true;
+  const toast = hud.toast.bind(hud);
+  hud.toast = (m, secs) => {
+    toast(m, secs);
+    if (isHost()) net!.sendEvent({ k: 'toast', text: m, secs });
+  };
+  const play = audio.play.bind(audio);
+  audio.play = ((name: Parameters<typeof play>[0]) => {
+    play(name);
+    if (isHost()) net!.sendEvent({ k: 'sound', name });
+  }) as typeof audio.play;
+  const show = announce.show.bind(announce);
+  announce.show = (t, sub, kind) => {
+    show(t, sub, kind);
+    if (isHost()) net!.sendEvent({ k: 'banner', title: t, sub, kind: kind ?? 'alert' });
+  };
+  const lcShow = levelComplete.show.bind(levelComplete);
+  levelComplete.show = (st, qs, ns, nav) => {
+    lcShow(st, qs, ns, nav);
+    if (isHost()) net!.sendEvent({ k: 'levelComplete', data: { st, qs, ns, heading: nav?.heading, next: nav?.next } });
+  };
+}
+let relayed = false;
+function onNetEvent(e: GameEvent): void {
+  switch (e.k) {
+    case 'toast':
+      hud.toast(e.text, e.secs);
+      break;
+    case 'sound':
+      audio.play(e.name as Parameters<typeof audio.play>[0]);
+      break;
+    case 'banner':
+      announce.show(e.title, e.sub, e.kind as Parameters<typeof announce.show>[2]);
+      break;
+    case 'levelComplete': {
+      const d = e.data as { st: StatSummary; qs: { title: string; won: boolean }[]; ns: string[]; heading?: string; next?: { id: string; name: string } };
+      levelComplete.show(d.st, d.qs, d.ns, { heading: d.heading ?? 'Level cleared!', next: d.next, go: (t) => (t === 'menu' ? levelComplete.hide() : hud.toast('The host picks the next level.', 1.6)) });
+      break;
+    }
+    case 'poop':
+      interaction.ghostPoop({ x: e.p[0], y: e.p[1], z: e.p[2] }, { x: e.v[0], y: e.v[1], z: e.v[2] }, simTime);
+      break;
+    case 'hit': {
+      const h = e.hit as Parameters<typeof applyHit>[1];
+      if (applyHit(gull.state, h)) {
+        cam.shake(h.kind === 'swat' ? 0.7 : 0.45);
+        hud.flash({ spray: '#7ec8ff', swat: '#ffb347', line: '#ffffff', net: '#ffffff' }[h.kind]);
+        gull.openBeak(0.7);
+      }
+      break;
+    }
+    case 'clear': {
+      // the guest's own progress: stars and the level's skill go to its own save
+      const def = LEVELS.find((l) => l.id === e.level);
+      if (!def) break;
+      save = { ...save, levels: { ...save.levels, [def.id]: mergeRecord(save.levels[def.id], e.stars, e.seconds) } };
+      if (def.reward) skills.unlock(def.reward);
+      persist();
+      break;
+    }
+    case 'hideComplete':
+      levelComplete.hide();
+      break;
+  }
+}
 const levelRows = () =>
   LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), current: l.id === level.id, sandbox: l.sandbox, locked: !levelUnlocked(l, save.levels), unlockHint: l.requires ? `Clear ${levelById(l.requires).name} first` : undefined, best: save.levels[l.id]?.best ? fmtClear(save.levels[l.id].best) : undefined }));
 const optionsPanel = new OptionsPanel(document.body, options, (o) => {
@@ -255,7 +386,7 @@ const optionsPanel = new OptionsPanel(document.body, options, (o) => {
   if (o.graphics !== graphics.level) graphics.apply(o.graphics);
   hudF = applyHud(o.hud);
   optStore.save(o);
-}, () => levelSelect.show(levelRows()));
+}, () => levelSelect.show(levelRows()), () => lobby.show());
 // automated browser tests skip the title screen and the tips (add ?title to see them)
 const interactive = !navigator.webdriver || new URLSearchParams(location.search).has('title');
 const tutorial = new Tutorial(interactive && !options.tutorialDone);
@@ -290,8 +421,9 @@ const title = new TitleScreen(
     onPlay: startPlaying,
     onOptions: () => optionsPanel.show(),
     onCredits: () => credits.toggle(),
+    onCoop: () => lobby.show(),
     // another level: remember it and reload into it
-    onPickLevel: (id) => goToLevel(id, false),
+    onPickLevel: (id) => goToLevel(id),
   },
   {
     best: fmtClear(save.bestTime),
@@ -301,7 +433,7 @@ const title = new TitleScreen(
   },
 );
 if (interactive && !new URLSearchParams(location.search).has('play')) title.show();
-const menuOpen = (): boolean => title.visible || levelSelect.visible || optionsPanel.visible || skillsPanel.visible || credits.visible || !!touchControls?.menuOpen;
+const menuOpen = (): boolean => title.visible || (lobby.visible && !net) || levelSelect.visible || optionsPanel.visible || skillsPanel.visible || credits.visible || !!touchControls?.menuOpen;
 const audio = new AudioManager();
 audio.muted = save.muted;
 for (const ev of ['pointerdown', 'touchend', 'keydown'] as const) addEventListener(ev, () => { audio.unlock(); music.start(); });
@@ -387,6 +519,8 @@ function pickSkin(id: string): void {
 /** Restart the level (R) or start a speedrun (Z). Skills and best times are kept. */
 function restartLevel(mode: 'normal' | 'speedrun'): void {
   levelCleared = false;
+  combo.reset();
+  lastHolder.clear();
   gull.reset();
   gull.setDisguise(false);
   interaction.reset();
@@ -405,20 +539,39 @@ function restartLevel(mode: 'normal' | 'speedrun'): void {
   persist();
 }
 
-/** Reload into a level (`menu`: open the title screen with the level list instead of starting to play). */
-function goToLevel(id: string, menu: boolean): void {
-  store.save({ ...save, level: id });
+/** Load another level in place (no page reload, so an online co-op link survives). */
+function loadLevel(id: string): void {
+  level = levelById(id);
+  setup = levelSetup(level, QUESTS, TRIGGERS, TOURIST_SPAWNS, players.length > 1);
+  interaction.reset(); // drops whatever the beaks hold
+  interaction.props.clearAll();
+  npcs?.clearAll();
+  for (const sp of [...propSpawns, ...setup.props]) interaction.props.spawn(sp);
+  if (npcs) for (const sp of setup.tourists) npcs.spawn(sp);
+  defense?.dispose();
+  defense = makeDefense();
+  heatMeter?.remove();
+  heatMeter = defense ? new HeatMeter(document.body) : null;
+  quests.load(greybox ? [] : setup.quests);
+  if (level.sandbox) quests.restoreWon(save.questsWon);
+  triggers.load(greybox ? [] : setup.triggers);
+  todo.defs = setup.quests;
+  todo.secret = setup.secret;
+  title.hide();
+  levelSelect.hide();
+  levelComplete.hide();
   const q = new URLSearchParams(location.search);
   q.set('level', id);
-  if (menu) {
-    q.set('title', '');
-    q.delete('play');
-  } else {
-    q.delete('title');
-    q.set('play', ''); // straight into the level, no title screen
-  }
-  location.search = q.toString();
+  q.set('play', '');
+  history.replaceState(null, '', `?${q.toString()}`);
+  restartLevel('normal'); // gull, stats, timers, music; saves the new level
+  if (isHost()) levelRev++;
+  startPlaying();
 }
+const goToLevel = (id: string): void => {
+  if (isGuest()) hud.toast('The host picks the level.', 1.6);
+  else loadLevel(id);
+};
 
 /** A level is cleared when its main to-dos are done: stars, the saved result, the skill reward, the level-complete card. */
 let levelCleared = false;
@@ -433,11 +586,13 @@ function checkLevelDone(): void {
     if (p.allDone && before && !before.stars[1]) {
       save = { ...save, levels: { ...save.levels, [level.id]: { ...before, stars: [before.stars[0], true, before.stars[2]] } } };
       hud.toast('Every to-do done, secrets too! ★', 2.2);
+      if (isHost()) net!.sendEvent({ k: 'clear', level: level.id, stars, seconds });
     }
     return;
   }
   levelCleared = true;
   save = { ...save, levels: { ...save.levels, [level.id]: mergeRecord(before, stars, seconds) } };
+  if (isHost()) net!.sendEvent({ k: 'clear', level: level.id, stars, seconds }); // the guest keeps its own record too
   const n = stars.filter(Boolean).length;
   const notes = [
     `${'★'.repeat(n)}${'☆'.repeat(3 - n)}  ·  ${stars[0] ? '★' : '☆'} cleared  ·  ${stars[1] ? '★' : '☆'} every to-do (secrets too)  ·  ${stars[2] ? '★' : '☆'} under ${fmtClear(level.parTime ?? 0)}`,
@@ -454,7 +609,46 @@ function checkLevelDone(): void {
   levelComplete.show(stats.summary(), quests.quests.map((x) => ({ title: setup.secret.has(x.id) && x.status !== 'won' ? '???' : x.title, won: x.status === 'won' })), notes, {
     heading: `${level.name.replace(/^\d+\.\s*/, '')} cleared!`,
     next: nextLevel ? { id: nextLevel.id, name: nextLevel.name } : undefined,
-    go: (target) => (target === 'menu' ? (levelComplete.hide(), levelSelect.show(levelRows())) : goToLevel(target, false)),
+    go: (target) => (target === 'menu' ? (levelComplete.hide(), levelSelect.show(levelRows())) : goToLevel(target)),
+  });
+}
+
+let snapTick = 0;
+/** On a guest: the weight of what the host says is in this gull's beak (it slows the flight). */
+let guestCarryMass = 0;
+let levelRev = 0;
+let seenRev = -1;
+/** A guest does not simulate the world: it takes what the host says, and tells the host what its own gull did. */
+function guestStep(dt: number): void {
+  const n = net!;
+  n.tick(dt);
+  const hl = n.hostLevel;
+  if (hl && hl.rev !== seenRev) {
+    seenRev = hl.rev; // the host started or restarted a level: do the same
+    n.takeSnapshot();
+    loadLevel(hl.id);
+    return;
+  }
+  const snap = n.takeSnapshot();
+  if (snap) {
+    const host = snap.gulls.find((g) => g.id === 0);
+    if (host && players[1]) players[1].gull.setRemote(host);
+    interaction.props.setRemote(snap.props);
+    const mine = snap.gulls.find((g) => g.id === 1)?.carry;
+    guestCarryMass = mine == null ? 0 : interaction.props.byId(mine)?.def.mass ?? 0;
+    npcs?.setRemote(snap.npcs);
+    quests.applyRemote(snap.quests);
+    defense?.heat.setRemote(snap.heat);
+    if (snap.d) defense?.applyRemote(snap.d, 0.05);
+  }
+  interaction.props.stepRemote(dt);
+  interaction.stepGhosts(dt, simTime);
+  npcs?.stepRemote(dt);
+  const s = gull.state;
+  const { x, y } = input.axes();
+  n.sendInput({
+    ax: x, ay: y, flap: input.isDown('Space'), dive: input.isDown('ShiftLeft') || input.isDown('ShiftRight'), yaw: cam.yaw, pitch: cam.pitch,
+    s: { id: 1, p: [s.x, s.y, s.z], v: [s.vx, s.vy, s.vz], h: s.heading, mode: s.mode, carry: null, fa: s.flapAnim, ha: s.heightAbove, tr: s.turnRate, dg: abilities.disguised ? 1 : 0 },
   });
 }
 
@@ -462,10 +656,11 @@ function checkLevelDone(): void {
 function captureSnapshot(): Snapshot {
   return makeSnapshot({
     time: simTime,
-    gulls: players.map((p) => ({ id: p.id, ...pickXYZ(p.gull.state), vx: p.gull.state.vx, vy: p.gull.state.vy, vz: p.gull.state.vz, heading: p.gull.state.heading, mode: p.gull.state.mode, carry: interaction.beak(p.id).carried?.id ?? null })),
+    gulls: players.map((p) => ({ id: p.id, ...pickXYZ(p.gull.state), vx: p.gull.state.vx, vy: p.gull.state.vy, vz: p.gull.state.vz, heading: p.gull.state.heading, mode: p.gull.state.mode, carry: interaction.beak(p.id).carried?.id ?? null, flapAnim: p.gull.state.flapAnim, heightAbove: p.gull.state.heightAbove, turnRate: p.gull.state.turnRate, disguised: p.remote ? p.gull.remoteDisguised : abilities.disguised })),
     props: interaction.props.props.map((pr) => ({ id: pr.id, x: pr.cur.p.x, y: pr.cur.p.y, z: pr.cur.p.z, qx: pr.cur.q.x, qy: pr.cur.q.y, qz: pr.cur.q.z, qw: pr.cur.q.w, by: interaction.carrierOf(pr), held: pr.heldBy, broken: pr.broken })),
-    npcs: (npcs?.npcs ?? []).map((n) => ({ id: n.id, x: n.x, z: n.z, heading: n.heading, mode: n.mode, holding: n.holding })),
+    npcs: (npcs?.npcs ?? []).map((n) => ({ id: n.id, x: n.x, z: n.z, heading: n.heading, mode: n.mode, holding: n.holding, handAngle: n.handAngle, selfie: n.selfie, selfieCount: n.selfieCount, cleanT: n.cleanT, shieldFrom: n.shieldFrom })),
     heat: defense?.heat.value ?? 0,
+    d: defense?.remoteSnap(),
     quests: quests.quests.map((q) => ({ id: q.id, status: q.status, timeLeft: q.timeLeft, timed: q.timed, objectives: q.objectives })),
   });
 }
@@ -517,6 +712,7 @@ function onDefense(evs: DefenseEvent[]): void {
       case 'hit': {
         stats.add('sprayed');
         const victim = players[e.gull]?.gull ?? gull;
+        if (isHost() && players[e.gull]?.remote) net!.sendEvent({ k: 'hit', hit: e.hit }); // the guest flies its own gull: it feels the hit there
         const dropped = applyHit(victim.state, e.hit);
         if (!dropped) {
           hud.toast('Slipped through!', 0.8);
@@ -664,6 +860,7 @@ function onNpcEvents(evs: NpcEvent[]): void {
         hud.toast('Photobomb! Best selfie ever.', 2);
         interaction.debris.burst({ x: e.npc.x, y: 2.2, z: e.npc.z }, 0xffffff, 10); // camera flash
         notes(quests.onEvent('photobomb'));
+        if (e.framed >= 2) notes(quests.onEvent('coop:photobomb'));
       }
     } else if (e.type === 'arrived' && e.goal === 'stormoff') {
       notes(quests.onEvent('dateOver'));
@@ -674,12 +871,38 @@ function onNpcEvents(evs: NpcEvent[]): void {
   }
 }
 
+const combo = new CoopCombo();
+/** Who last held each prop (for "pass the parcel"). */
+const lastHolder = new Map<number, { by: number; t: number }>();
+
+/** Crow call: a noise ahead of `g` that makes people look. */
+function mimic(g: Gull, yaw: number): void {
+  const at = aheadOf(g.state, yaw, tuning.skills.mimicDistance.value);
+  noise(at.x, at.z, tuning.skills.mimicLoud.value);
+  pings.add(at.x, at.z);
+  audio.play('crow');
+  g.openBeak(0.5);
+  hud.toast('Caw! Caw!', 0.8);
+}
+/** Flock call: a few gulls fly to a spot ahead of `g` and dirty it. */
+function flockCall(g: Gull, yaw: number): void {
+  const at = aheadOf(g.state, yaw, tuning.skills.flockDistance.value);
+  flock.start({ x: g.state.x, y: g.state.y, z: g.state.z }, at);
+  pings.add(at.x, at.z);
+  audio.play('screech');
+  g.openBeak(0.6);
+  hud.toast('Flock call!', 0.9);
+}
+
 function onGags(gags: GagEvent[]): void {
   for (const g of gags) {
     switch (g.type) {
-      case 'poopDrop':
+      case 'poopDrop': {
         tutorial.event('poop');
+        const pg = players[g.by ?? 0]?.gull.state;
+        if (isHost() && pg) net!.sendEvent({ k: 'poop', p: [pg.x, pg.y, pg.z], v: [pg.vx, pg.vy, pg.vz] });
         break;
+      }
       case 'grab':
         tutorial.event('grab');
         audio.play('pop');
@@ -687,9 +910,19 @@ function onGags(gags: GagEvent[]): void {
         hud.toast(`Got the ${g.prop.def.name}!`, 0.7);
         if (g.prop.tag) notes(quests.onEvent(`grab:${g.prop.tag}`));
         notes(quests.onEvent(`grab:${g.prop.type}`));
+        if (players.length > 1) {
+          const by = g.by ?? 0;
+          const was = lastHolder.get(g.prop.id);
+          if (was && was.by !== by && simTime - was.t <= 6) notes(quests.onEvent('coop:handover'));
+          lastHolder.set(g.prop.id, { by, t: simTime });
+        }
+        break;
+      case 'drop':
+        lastHolder.set(g.prop.id, { by: g.by ?? 0, t: simTime });
         break;
       case 'toss':
         audio.play('hop');
+        lastHolder.set(g.prop.id, { by: g.by ?? 0, t: simTime });
         break;
       case 'heavy':
         hud.toast(`The ${g.prop.def.name} is too heavy!`, 0.8);
@@ -703,6 +936,7 @@ function onGags(gags: GagEvent[]): void {
         hud.toast('Snatched!', 1);
         notes(quests.onEvent(`snatch:${g.prop.type}`));
         notes(quests.onEvent('snatch'));
+        if (players.length > 1 && combo.hit('snatch', g.by ?? 0, simTime, 5)) notes(quests.onEvent('coop:snatch'));
         if (simTime - lastSnatchAt < 8) {
           hud.toast('Double snatch!', 1.6);
           notes(quests.onEvent('doubleSnatch'));
@@ -716,6 +950,7 @@ function onGags(gags: GagEvent[]): void {
         audio.play('yelp');
         hud.toast('Splat! Right on a tourist!', 1.1);
         notes(quests.onEvent('poopNpc'));
+        if (players.length > 1 && combo.hit('poopNpc', g.by ?? 0, simTime, 5)) notes(quests.onEvent('coop:poopNpc'));
         if (g.role) notes(quests.onEvent(`poopNpc:${g.role}`));
         stats.add('poopPerson');
         heat('poopNpc');
@@ -788,7 +1023,14 @@ startLoop({
       optStore.save(options);
     }
     if (!menuOpen()) cam.rotate(m.dx, m.dy);
-    if (input.wasPressed('KeyR')) restartLevel('normal');
+    if (input.wasPressed('KeyN')) lobby.toggle();
+    if (input.wasPressed('KeyR')) {
+      if (isGuest()) hud.toast('The host restarts the level.', 1.4);
+      else {
+        restartLevel('normal');
+        if (isHost()) levelRev++;
+      }
+    }
     if (input.wasPressed('KeyZ')) {
       if (save.replayUnlocked) {
         restartLevel('speedrun');
@@ -811,14 +1053,19 @@ startLoop({
     if (skillsPanel.visible) GULL_SKINS.forEach((sk, i) => input.wasPressed(`Digit${i + 1}`) && pickSkin(sk.id));
     if (input.wasPressed('KeyC')) credits.toggle();
     if (input.wasPressed('Enter') && levelComplete.visible && !levelComplete.goNext()) levelComplete.hide();
-    if (input.wasPressed('KeyH') && defense?.activateHawk()) hud.toast('Hawk-eye!', 0.8);
+    if (input.wasPressed('KeyH') && !menuOpen()) {
+      if (isGuest()) net!.tap('KeyH');
+      else if (defense?.activateHawk()) hud.toast('Hawk-eye!', 0.8);
+    }
     if (input.wasPressed('KeyM')) {
       hud.toast(audio.toggleMute() ? 'Sound off' : 'Sound on', 0.8);
       music.muted = audio.muted;
       persist();
     }
-    if (menuOpen()) {
-      input.endStep(); // any open panel pauses the game
+    // an open panel pauses the game, except online: the other player must not freeze, so you just stop steering
+    const blocked = menuOpen();
+    if (blocked && !net) {
+      input.endStep();
       return;
     }
     // active skills
@@ -826,23 +1073,15 @@ startLoop({
       gull.setDisguise(false);
       hud.toast('The disguise is over', 1.2);
     }
-    if (input.wasPressed('KeyV') && skills.has('mimic') && abilities.use('mimic')) {
-      const at = aheadOf(gull.state, cam.yaw, tuning.skills.mimicDistance.value);
-      noise(at.x, at.z, tuning.skills.mimicLoud.value);
-      pings.add(at.x, at.z);
-      audio.play('crow');
-      gull.openBeak(0.5);
-      hud.toast('Caw! Caw!', 0.8);
+    if (!blocked && input.wasPressed('KeyV') && skills.has('mimic') && abilities.use('mimic')) {
+      if (isGuest()) net!.tap('KeyV'); // the host makes the noise
+      else mimic(gull, cam.yaw);
     }
-    if (input.wasPressed('KeyG') && skills.has('flock') && abilities.use('flock')) {
-      const at = aheadOf(gull.state, cam.yaw, tuning.skills.flockDistance.value);
-      flock.start({ x: gull.state.x, y: gull.state.y, z: gull.state.z }, at);
-      pings.add(at.x, at.z);
-      audio.play('screech');
-      gull.openBeak(0.6);
-      hud.toast('Flock call!', 0.9);
+    if (!blocked && input.wasPressed('KeyG') && skills.has('flock') && abilities.use('flock')) {
+      if (isGuest()) net!.tap('KeyG');
+      else flockCall(gull, cam.yaw);
     }
-    if (input.wasPressed('KeyB') && skills.has('disguise') && abilities.use('disguise')) {
+    if (!blocked && input.wasPressed('KeyB') && skills.has('disguise') && abilities.use('disguise')) {
       gull.setDisguise(true);
       audio.play('pop');
       hud.toast('Pigeon mode! The vendors and the Warden ignore you.', 1.6);
@@ -853,7 +1092,7 @@ startLoop({
     // speedrun clock: starts on the first move
     if (runTimer.mode === 'speedrun' && !runTimer.running && !runTimer.finished && (input.axes().x !== 0 || input.axes().y !== 0 || input.isDown('Space'))) runTimer.begin();
     runTimer.tick(dt);
-    const { x, y } = input.axes();
+    const { x, y } = blocked ? { x: 0, y: 0 } : input.axes();
     if (x !== 0 || y !== 0) tutorial.event('move');
     if (tutorial.tick(dt)) {
       options.tutorialDone = true;
@@ -861,10 +1100,10 @@ startLoop({
     }
     const wasDive = gull.state.mode === 'dive';
     const evs = gull.update(
-      { ax: x, ay: y, flap: input.isDown('Space'),
-        dive: input.isDown('ShiftLeft') || input.isDown('ShiftRight'),
+      { ax: x, ay: y, flap: !blocked && input.isDown('Space'),
+        dive: !blocked && (input.isDown('ShiftLeft') || input.isDown('ShiftRight')),
         aimPitch: cam.pitch,
-        carryMass: interaction.carriedMass(0),
+        carryMass: isGuest() ? guestCarryMass : interaction.carriedMass(0),
       },
       cam.yaw,
       dt,
@@ -878,10 +1117,29 @@ startLoop({
       audio.play('bonk');
       hud.toast('Blocked! They are guarding it', 1.1);
     }
-    onGags(interaction.updateGull(0, gull.state, { grab: input.wasPressed('KeyE'), toss: input.wasPressed('KeyQ'), poop: input.wasPressed('KeyF') || input.wasClicked() }, dt, simTime));
+    if (isGuest()) {
+      // the guest only flies; grabbing and pooping are decided by the host
+      if (!blocked && input.wasPressed('KeyE')) net!.tap('KeyE');
+      if (!blocked && input.wasPressed('KeyQ')) net!.tap('KeyQ');
+      if (!blocked && (input.wasPressed('KeyF') || input.wasClicked())) net!.tap('KeyF');
+    } else onGags(interaction.updateGull(0, gull.state, { grab: !blocked && input.wasPressed('KeyE'), toss: !blocked && input.wasPressed('KeyQ'), poop: !blocked && (input.wasPressed('KeyF') || input.wasClicked()) }, dt, simTime));
     // other players: their own flight and beak (the camera stays on player 1)
     for (const p of players) {
       if (p.id === 0) continue;
+      if (p.remote) {
+        if (isHost()) {
+          const f = net!.guestFrame;
+          if (f) p.gull.setRemote(f.s);
+          p.gull.stepRemote(dt);
+          const taps = net!.takeTaps();
+          const yaw = net!.guestFrame?.yaw ?? 0;
+          if (taps.includes('KeyV')) mimic(p.gull, yaw);
+          if (taps.includes('KeyG')) flockCall(p.gull, yaw);
+          if (taps.includes('KeyH') && defense?.activateHawk()) hud.toast('Hawk-eye!', 0.8);
+          onGags(interaction.updateGull(p.id, p.gull.state, { grab: taps.includes('KeyE'), toss: taps.includes('KeyQ'), poop: taps.includes('KeyF') }, dt, simTime));
+        } else p.gull.stepRemote(dt); // on a guest this is the host's gull
+        continue;
+      }
       const look = p.input.consumeMouse();
       p.yaw -= look.dx * tuning.camera.mouseSensitivity.value;
       p.pitch = Math.min(1.2, Math.max(-0.3, p.pitch + look.dy * tuning.camera.mouseSensitivity.value));
@@ -897,14 +1155,15 @@ startLoop({
       onGags(interaction.updateGull(p.id, p.gull.state, { grab: p.input.wasPressed('KeyE'), toss: p.input.wasPressed('KeyQ'), poop: p.input.wasPressed('KeyF') }, dt, simTime));
       p.input.endStep();
     }
-    onGags(interaction.step(dt, simTime, gull.state));
-    if (npcs) {
+    if (isGuest()) guestStep(dt);
+    else onGags(interaction.step(dt, simTime, gull.state));
+    if (npcs && !isGuest()) {
       const g = gull.state;
       onNpcEvents(npcs.update(dt, players.map((p) => ({ x: p.gull.state.x, y: p.gull.state.y, z: p.gull.state.z, diving: p.gull.state.mode === 'dive' }))));
       const stolen = players.some((p) => interaction.beak(p.id).carried?.stolen === true);
       notes(quests.tick({ dt, carryingStolen: stolen, nearestNpc: Math.min(...players.map((p) => npcs.nearestDistance(p.gull.state))) }));
       if (defense) {
-        const gulls = players.map((p) => ({ id: p.id, state: p.gull.state, hidden: p.id === 0 && abilities.disguised, suspicious: interaction.beak(p.id).carried?.stolen === true }));
+        const gulls = players.map((p) => ({ id: p.id, state: p.gull.state, hidden: p.remote ? p.gull.remoteDisguised : p.id === 0 && abilities.disguised, suspicious: interaction.beak(p.id).carried?.stolen === true }));
         onDefense(defense.update(dt, gulls, stepNoises, npcs.npcs.some((n) => n.seesGull)));
       }
       stepNoises.length = 0;
@@ -931,6 +1190,7 @@ startLoop({
       }
       stats.tick(dt, defense?.heat.value ?? 0);
     }
+    if (isHost() && players.length > 1 && ++snapTick % 3 === 0) net!.sendSnapshot(captureSnapshot(), level.id, levelRev); // about 20 per second
     if (wasDive) {
       const s = gull.state;
       const got = diveHits(targets, { x: s.x, y: s.y, z: s.z }, GULL_RADIUS);

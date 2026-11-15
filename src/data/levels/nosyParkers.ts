@@ -58,6 +58,14 @@ export const NOSY_PARKERS: LevelDef = {
       objectives: [{ id: 'double', text: 'Snatch two things within eight seconds', kind: 'event', event: 'doubleSnatch', hint: 'One noise, two distracted tourists.' }],
     },
   ],
+  coopQuests: [
+    {
+      id: 'duoSnatch',
+      title: 'Double trouble',
+      timed: false,
+      objectives: [{ id: 'duoSnatch', text: 'Both gulls snatch within five seconds', kind: 'event', event: 'coop:snatch', hint: 'One gull each: snatch within five seconds of each other.' }],
+    },
+  ],
   secret: ['double'],
   triggers: [],
   tourists: [],

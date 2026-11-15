@@ -215,3 +215,22 @@ test('L opens the level list: unlocked levels can be replayed, locked ones are m
   await expect(page.locator('#title')).toBeHidden();
   expect(errors).toEqual([]);
 });
+
+test('a level can be switched in place (no reload): new to-dos, people and heat meter', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto('/?level=snack-attack');
+  await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 60_000 });
+  await page.evaluate(() => ((window as unknown as { __marker: number }).__marker = 7));
+  const l = L(page);
+  expect(await page.locator('#heat').count()).toBe(0);
+  await page.evaluate(() => (window as unknown as { __lokki: { loadLevel: (id: string) => void } }).__lokki.loadLevel('sandbox'));
+  expect(await l((x) => x.level)).toBe('sandbox');
+  expect(await page.evaluate(() => (window as unknown as { __marker: number }).__marker)).toBe(7); // same page: nothing reloaded
+  expect((await l((x) => x.quests.quests.length)) > 4).toBe(true);
+  expect(await page.locator('#heat').count()).toBe(1);
+  await page.evaluate(() => (window as unknown as { __lokki: { loadLevel: (id: string) => void } }).__lokki.loadLevel('bombs-away'));
+  expect(await l((x) => x.level)).toBe('bombs-away');
+  expect(await page.locator('#heat').count()).toBe(0);
+  expect(errors).toEqual([]);
+});

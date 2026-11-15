@@ -29,6 +29,8 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build # relative base path, so it works under /<repo>/
+        env:
+          VITE_SIGNAL_URL: ${{ vars.SIGNAL_URL }} # optional co-op room service, see docs/online-setup.md
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

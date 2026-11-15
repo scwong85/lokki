@@ -20,6 +20,8 @@ export interface LevelDef {
   quests: string[];
   /** Quests defined just for this level (added after `quests`). */
   extraQuests?: QuestDef[];
+  /** Hidden to-dos that exist only when two players are on the level (online co-op): they need both gulls. */
+  coopQuests?: QuestDef[];
   /** To-dos shown as "???" until they are discovered (started or won). They count for the second star, not for clearing. */
   secret?: string[];
   /** Ids of existing world triggers (from `TRIGGERS`) this level needs. */

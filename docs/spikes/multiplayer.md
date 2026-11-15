@@ -1,5 +1,7 @@
 # Spike: two players together (co-op)
 
+> **Status:** local debug co-op shipped in M12 (`?coop`, second gull on a gamepad); online co-op is built in M14 with copy-paste codes (see `docs/milestones/M14.md`). The text below is the original feasibility study.
+
 **Verdict: yes, feasible, in two steps.**
 
 1. **Local co-op** (two players, one computer, split screen): fits the plan's "static and offline" rule, reuses the M11 input layer, size **M–L**. The best first step.

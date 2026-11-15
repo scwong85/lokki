@@ -6,6 +6,8 @@ import type { Target } from '../gameplay/targets';
 import { tuning } from '../core/tuning';
 import { GullModel } from './model';
 import { computePose } from './pose';
+import { followRemote, type Pose } from '../net/remote';
+import type { GullSnap } from '../net/snapshot';
 
 /** The player's gull: flight state + procedural model + blob shadow. */
 export class Gull {
@@ -45,7 +47,44 @@ export class Gull {
     this.model.setDisguise(on);
   }
 
+  /** Another player's gull: the last news about it (it is then eased towards that, not simulated). */
+  private remoteT: (Pose & { mode: string; fa: number; ha: number; tr: number }) | null = null;
+
+  /** True while this gull is steered by news from the network instead of its own flight. */
+  get isRemote(): boolean {
+    return this.remoteT !== null;
+  }
+
+  /** The other player is in pigeon disguise (their news says so). */
+  remoteDisguised = false;
+
+  setRemote(s: GullSnap): void {
+    if (!!s.dg !== this.remoteDisguised) {
+      this.remoteDisguised = !!s.dg;
+      this.model.setDisguise(this.remoteDisguised);
+    }
+    const t = { x: s.p[0], y: s.p[1], z: s.p[2], vx: s.v[0], vy: s.v[1], vz: s.v[2], heading: s.h, mode: s.mode, fa: s.fa ?? 0, ha: s.ha ?? 0, tr: s.tr ?? 0 };
+    if (!this.remoteT) Object.assign(this.state, { x: t.x, y: t.y, z: t.z, heading: t.heading }); // first news: appear there
+    this.remoteT = t;
+  }
+
+  /** One sim step of an other-player gull: ease towards the last news. */
+  stepRemote(dt: number): void {
+    const t = this.remoteT;
+    if (!t) return;
+    const s = this.state;
+    this.prev = { x: s.x, y: s.y, z: s.z, heading: s.heading };
+    followRemote(s, t, dt, 14);
+    s.mode = t.mode as FlightState['mode'];
+    s.flapAnim = t.fa;
+    s.heightAbove = t.ha;
+    s.turnRate = t.tr;
+    s.stunT = 0;
+    s.overWater = !!this.isWater?.(s.x, s.z) && s.y < GULL_RADIUS + 1;
+  }
+
   reset(): void {
+    this.remoteT = null;
     this.state = newFlightState(this.start.x, this.start.z);
     this.prev = { x: this.state.x, y: this.state.y, z: this.state.z, heading: 0 };
   }

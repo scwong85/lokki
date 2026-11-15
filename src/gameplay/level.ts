@@ -18,17 +18,18 @@ export interface LevelSetup {
   main: string[];
 }
 
-export function levelSetup(def: LevelDef, allQuests: readonly QuestDef[], allTriggers: readonly TriggerDef[], allTourists: readonly NpcSpawn[]): LevelSetup {
+export function levelSetup(def: LevelDef, allQuests: readonly QuestDef[], allTriggers: readonly TriggerDef[], allTourists: readonly NpcSpawn[], coop = false): LevelSetup {
   const pick = <T extends { id: string }>(ids: readonly string[], from: readonly T[], what: string): T[] =>
     ids.map((id) => {
       const x = from.find((f) => f.id === id);
       if (!x) throw new Error(`level ${def.id}: unknown ${what} "${id}"`);
       return x;
     });
-  const quests = [...pick(def.quests, allQuests, 'quest'), ...(def.extraQuests ?? [])];
+  const twists = coop ? def.coopQuests ?? [] : [];
+  const quests = [...pick(def.quests, allQuests, 'quest'), ...(def.extraQuests ?? []), ...twists];
   const triggers = [...pick(def.triggers, allTriggers, 'trigger'), ...(def.extraTriggers ?? [])];
   const tourists = [...(def.tourists === 'all' ? allTourists : allTourists.filter((t) => (def.tourists as string[]).includes(t.role ?? 'any'))), ...(def.extraTourists ?? [])];
-  const secret = new Set(def.secret ?? []);
+  const secret = new Set([...(def.secret ?? []), ...twists.map((q) => q.id)]);
   return { quests, triggers, tourists, props: def.extraProps ?? [], defense: def.defense, secret, main: quests.map((q) => q.id).filter((id) => !secret.has(id)) };
 }
 

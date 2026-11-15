@@ -3,7 +3,7 @@ import { tuning } from '../core/tuning';
 import { mods } from '../core/skillMods';
 import type { FlightState } from '../gull/flight';
 import { pickGrabTarget, type GrabCandidate } from './grab';
-import { spawnPoopAssisted, stepPoop, predictPoop, type HitSphere, type PoopState, type PoopHit } from './poop';
+import { spawnPoop, spawnPoopAssisted, stepPoop, predictPoop, type HitSphere, type PoopState, type PoopHit } from './poop';
 import { PropManager, type Prop } from './props';
 import { POOP_TARGET_TAGS } from '../data/props';
 import type { PhysicsWorld } from '../physics/physics';
@@ -293,6 +293,30 @@ export class Interaction {
     return p;
   }
 
+  /** Droppings that only look like something (a guest sees the host's gull poop; the host decides what they hit). */
+  private ghosts: LivePoop[] = [];
+
+  ghostPoop(at: { x: number; y: number; z: number }, vel: { x: number; y: number; z: number }, time: number): void {
+    const state = spawnPoop(at, vel);
+    void time;
+    const mesh = new THREE.Mesh(poopGeo, poopMat);
+    mesh.position.set(state.x, state.y, state.z);
+    this.group.add(mesh);
+    this.ghosts.push({ state, mesh, decoy: true });
+  }
+
+  stepGhosts(dt: number, time: number): void {
+    for (let i = this.ghosts.length - 1; i >= 0; i--) {
+      const g = this.ghosts[i];
+      const hit = stepPoop(g.state, dt, time, this.world, []);
+      g.mesh.position.set(g.state.x, g.state.y, g.state.z);
+      if (!hit) continue;
+      this.group.remove(g.mesh);
+      this.ghosts.splice(i, 1);
+      this.decals.add(hit, { x: hit.nx, y: hit.ny, z: hit.nz });
+    }
+  }
+
   /** A decoy gull (flock call) lets go of a dropping: it splats and the victims react, but it earns no heat or quest credit. */
   dropDecoyPoop(at: { x: number; y: number; z: number }, time: number): void {
     const { spheres: pSpheres } = this.props.hitSpheres();
@@ -320,6 +344,8 @@ export class Interaction {
     this.decals.clear();
     for (const lp of this.poops) this.group.remove(lp.mesh);
     this.poops = [];
+    for (const g of this.ghosts) this.group.remove(g.mesh);
+    this.ghosts = [];
   }
 
   render(alpha: number, s?: FlightState, time = 0, faceCamera?: THREE.Quaternion): void {

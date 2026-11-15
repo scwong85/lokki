@@ -34,6 +34,11 @@ export class Heat {
     }
   }
 
+  /** A guest copies the host's heat. */
+  setRemote(v: number): void {
+    this.set(v);
+  }
+
   private set(v: number): TierChange | null {
     this.value = Math.min(100, Math.max(0, v));
     const t = tierOf(this.value);

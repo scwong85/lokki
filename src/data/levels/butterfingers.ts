@@ -51,6 +51,14 @@ export const BUTTERFINGERS: LevelDef = {
       objectives: [{ id: 'photo', text: 'Be in the blogger\'s photo', kind: 'event', event: 'photobomb', hint: 'Stand in front of her phone at the click.' }],
     },
   ],
+  coopQuests: [
+    {
+      id: 'duoPass',
+      title: 'Pass the parcel',
+      timed: false,
+      objectives: [{ id: 'duoPass', text: 'Pass an item from one gull to the other', kind: 'event', event: 'coop:handover', hint: 'One gull drops or tosses something, the other grabs it within a few seconds.' }],
+    },
+  ],
   secret: ['photobomb'],
   triggers: [],
   tourists: [],
