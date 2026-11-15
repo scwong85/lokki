@@ -31,6 +31,10 @@ npm run data:fetch # re-download the raw snapshot from Helsinki open data (needs
 
 Play in landscape with on-screen controls: left thumb steers (floating stick), drag the right half to look, **Flap**, **Dive** (slide to aim), **Poop**, a context **Grab/Drop** button, and a ☰ menu for everything else. Add `?touch` to the address to try the touch layout on a PC. Details: [`docs/milestones/M11.md`](docs/milestones/M11.md).
 
+## Play with a friend (online co-op)
+
+Press **N** (or Options → "Play with a friend online…"). One player hosts and sends an invite code, the other pastes it and sends back an answer code; no account and no game server. The host picks the levels and the guest follows. Only while setting up co-op, the browser asks a public STUN server (Google's) for its network address; single player makes no online request. Details and limits: [`docs/milestones/M14.md`](docs/milestones/M14.md).
+
 ## Controls (M1)
 
 | Key | Action |
@@ -51,6 +55,7 @@ Play in landscape with on-screen controls: left thumb steers (floating stick), d
 | O | options (volumes, mouse look, screen shake, graphics quality, HUD) |
 | U | HUD: full / minimal / off |
 | L | level list (replay any unlocked level) |
+| N | online co-op lobby (host or join a friend) |
 | Gamepad | left stick move · right stick look · A/RB flap · RT dive · LT brake · X grab · Y toss · B poop · D-pad abilities · Back skills · Start options |
 | T | skip the first-flight tips |
 | M | mute / unmute (sound and music) |
