@@ -128,6 +128,11 @@ export const tuning = {
     bobSpeed: p(1.9, 0.3, 5, 0.1), // wave rhythm for floating items
     rock: p(0.22, 0, 0.8, 0.02), // how far floating items tilt with the waves (rad)
   },
+  street: {
+    walkers: p(12, 0, 40, 1), // pedestrians wandering the streets (halved on the low graphics preset)
+    cyclists: p(4, 0, 15, 1), // cyclists
+    cull: p(150, 40, 400, 10), // only people this close to you are moved and drawn (m)
+  },
   people: {
     facing: p(3.14, -3.15, 3.15, 0.05), // model yaw so people face where they walk
     walkRate: p(1.3, 0.2, 3, 0.05), // walk animation speed

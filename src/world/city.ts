@@ -36,6 +36,8 @@ export interface City {
   group: THREE.Group;
   targets: Target[];
   targetMeshes: THREE.Object3D[];
+  /** Spots the game keeps clear of ambient people and set dressing (the market, the ferry, quest props). */
+  keepClear: { x: number; z: number; r: number }[];
   start: { x: number; z: number };
   propSpawns: PropSpawn[];
   /** Land (as opposed to the sea), buildings or not. */
@@ -505,5 +507,5 @@ export function buildCity(): City {
   // the M1 test dive-targets (floating pink ice creams with light pillars) are gone from the city; only people's held items are dive targets now
   const targets: Target[] = [];
   const targetMeshes = createTargetMeshes(targets, group);
-  return { world, group, targets, targetMeshes, start: { x: 0, z: -12 }, propSpawns: lm.props, water, isLand, walkable: (x, z) => isLand(x, z) && !world.solidAt(x, 0.9, z), physicsMesh, stats: { buildings: data.buildings.length, prisms: defs.length, chunks: chunks.size } };
+  return { world, group, targets, targetMeshes, keepClear, start: { x: 0, z: -12 }, propSpawns: lm.props, water, isLand, walkable: (x, z) => isLand(x, z) && !world.solidAt(x, 0.9, z), physicsMesh, stats: { buildings: data.buildings.length, prisms: defs.length, chunks: chunks.size } };
 }

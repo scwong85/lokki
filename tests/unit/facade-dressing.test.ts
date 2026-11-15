@@ -71,7 +71,7 @@ describe('set dressing plan', () => {
   const ctx: DressCtx = {
     parks: [park],
     land,
-    streets: [{ rings: [[50, -20, 70, -20, 70, 20, 50, 20]] }],
+    streets: [{ rings: [[50, -20, 70, -20, 70, 20, 50, 20]] }, { rings: [[-90, 60, 90, 60, 90, 80, -90, 80]] }],
     isLand: (x, z) => pointInRings(land[0].rings, x, z),
     solid: (x, z) => pointInRings([building], x, z),
     keepClear: [{ x: -30, z: -30, r: 6 }],
@@ -85,6 +85,18 @@ describe('set dressing plan', () => {
       expect(n).toBeLessThanOrEqual(DRESS_LIMITS[t]);
     }
     expect(planDressing(ctx)).toEqual(plan);
+  });
+
+  it('adds street furniture along the streets: lamps, planters, signs, tables, vans, standing on the street surface', () => {
+    const streets = ctx.streets.map((s) => s.rings);
+    for (const t of ['lamp', 'planter'] as const) {
+      const items = plan.filter((p) => p.type === t);
+      expect(items.length, t).toBeGreaterThan(0);
+      for (const p of items) expect(streets.some((r) => pointInRings(r, p.x, p.z)), `${t} on a street at ${p.x},${p.z}`).toBe(true);
+    }
+    for (const t of ['sign', 'cafetable', 'van'] as const) expect(plan.filter((p) => p.type === t).length, t).toBeLessThanOrEqual(DRESS_LIMITS[t]);
+    const lamps = plan.filter((p) => p.type === 'lamp');
+    for (const a of lamps) for (const b of lamps) if (a !== b) expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeGreaterThanOrEqual(9);
   });
 
   it('keeps land things on free land, boats in the water, and the keep-clear spots clear', () => {

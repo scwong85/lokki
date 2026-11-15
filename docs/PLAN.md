@@ -191,7 +191,7 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M12 Level framework (two-gull-ready)
 - [x] M13 Market Square Act 1 (levels 1–4)
 - [ ] M14 Online co-op (built on `m14-online-coop`, awaiting playtest)
-- [ ] M15 Polish pass (playtest feedback)
+- [ ] M15 Polish pass (playtest feedback) (built on `m15-polish`, awaiting playtest)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.

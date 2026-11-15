@@ -66,6 +66,7 @@ import { RunTimer, isBest } from './gameplay/runTimer';
 import { MusicPlayer } from './core/music';
 import { MusicDirector } from './gameplay/musicDirector';
 import { OptionsStore, applyOptions } from './core/options';
+import { StreetLife } from './world/streetLife';
 import { OptionsPanel, TitleScreen } from './ui/menus';
 import { LevelSelect } from './ui/levelSelect';
 import { Tutorial } from './gameplay/tutorial';
@@ -105,6 +106,7 @@ let targets: Target[];
 let targetMeshes: THREE.Object3D[];
 let start: { x: number; z: number };
 let propSpawns: PropSpawn[] = [];
+let keepClearSpots: { x: number; z: number; r: number }[] = [];
 let walkable: (x: number, z: number) => boolean = () => true;
 let isLand: (x: number, z: number) => boolean = () => true;
 let water: Water | null = null;
@@ -121,6 +123,7 @@ if (greybox) {
   scene.add(city.group);
   world = city.world;
   ({ targets, start, targetMeshes, propSpawns, walkable, isLand, water } = city);
+  keepClearSpots = city.keepClear;
   phys.addStaticMesh(city.physicsMesh.vertices, city.physicsMesh.indices);
 }
 const gull = new Gull(start);
@@ -130,6 +133,9 @@ if (!greybox) {
   gull.isWater = (x, z) => !isLand(x, z);
   interaction.props.isWater = (x, z) => !isLand(x, z);
 }
+// pedestrians and cyclists on the streets (cosmetic; fewer on the low graphics preset)
+const lowGfx = new OptionsStore().load().graphics === 'low' || new URLSearchParams(location.search).has('touch');
+const streetLife = greybox ? null : new StreetLife(scene, walkable, keepClearSpots, Math.round(tuning.street.walkers.value * (lowGfx ? 0.5 : 1)), Math.round(tuning.street.cyclists.value * (lowGfx ? 0.5 : 1)));
 const ripples = new Ripples();
 scene.add(ripples.group);
 let rippleT = 0;
@@ -1217,6 +1223,7 @@ startLoop({
         hud.toast(got.length > 1 ? `Double hit! x${got.length}` : 'Got it!', 0.8);
       }
     }
+    streetLife?.update(dt, gull.state);
     updateTargets(targets, dt);
     input.endStep();
   },
@@ -1225,6 +1232,7 @@ startLoop({
     pad.poll(frameDt, tuning.gamepad.deadzone.value, tuning.gamepad.lookSpeed.value);
     interaction.render(alpha, gull.state, simTime, cam.camera.quaternion);
     npcs?.render(simTime, interaction.beakPos(gull.state), cam.camera.quaternion);
+    streetLife?.render(simTime, gull.state);
     defense?.render(simTime, frameDt);
     if (defense && heatMeter) heatMeter.update(defense.heat, defense.response, defense.hawkReady, defense.hawkActive);
     // quest spots, plus a marker on any item that was knocked out of the beak (so it can never be lost)

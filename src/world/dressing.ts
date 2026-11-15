@@ -43,6 +43,40 @@ function model(type: DressType): THREE.Mesh {
       g.add(part(new THREE.CylinderGeometry(0.55, 0.55, 0.05, 10), 0xece6dc, 0, 0.75, 0));
       g.add(part(new THREE.CylinderGeometry(0.05, 0.08, 0.75, 5), 0x5a6070, 0, 0.37, 0));
       break;
+    case 'lamp':
+      g.add(part(new THREE.CylinderGeometry(0.05, 0.08, 4.4, 6), 0x3d424d, 0, 2.2, 0));
+      g.add(part(new THREE.BoxGeometry(0.7, 0.06, 0.06), 0x3d424d, 0.3, 4.35, 0));
+      g.add(part(new THREE.SphereGeometry(0.2, 8, 6), 0xffe9a8, 0.62, 4.3, 0));
+      g.add(part(new THREE.CylinderGeometry(0.14, 0.14, 0.25, 6), 0x3d424d, 0, 0.12, 0));
+      break;
+    case 'planter':
+      g.add(part(new THREE.BoxGeometry(0.9, 0.5, 0.9), 0xcfc4b6, 0, 0.25, 0));
+      g.add(part(new THREE.IcosahedronGeometry(0.5, 0), 0x9fd18f, 0, 0.75, 0));
+      for (const [x, z] of [[0.25, 0.2], [-0.2, 0.25], [0.05, -0.3]]) g.add(part(new THREE.SphereGeometry(0.14, 6, 5), 0xffffff, x, 1.0, z));
+      break;
+    case 'cafetable':
+      g.add(part(new THREE.CylinderGeometry(0.4, 0.4, 0.05, 10), 0xece6dc, 0, 0.75, 0));
+      g.add(part(new THREE.CylinderGeometry(0.04, 0.04, 0.75, 5), 0x5a6070, 0, 0.37, 0));
+      g.add(part(new THREE.CylinderGeometry(0.22, 0.22, 0.03, 8), 0x5a6070, 0, 0.02, 0));
+      for (const s of [-1, 1]) {
+        g.add(part(new THREE.BoxGeometry(0.42, 0.05, 0.42), 0xffffff, s * 0.75, 0.45, 0));
+        g.add(part(new THREE.BoxGeometry(0.05, 0.4, 0.42), 0xffffff, s * 0.94, 0.68, 0));
+        for (const [x, z] of [[-0.17, -0.17], [0.17, -0.17], [-0.17, 0.17], [0.17, 0.17]]) g.add(part(new THREE.BoxGeometry(0.04, 0.45, 0.04), 0x5a6070, s * 0.75 + x, 0.22, z));
+      }
+      break;
+    case 'sign':
+      g.add(part(new THREE.CylinderGeometry(0.035, 0.035, 2.4, 5), 0x6d717a, 0, 1.2, 0));
+      g.add(part(new THREE.BoxGeometry(0.7, 0.5, 0.05), 0xffffff, 0, 2.2, 0));
+      g.add(part(new THREE.BoxGeometry(0.55, 0.06, 0.06), 0x4a6fa5, 0, 2.28, 0.04));
+      g.add(part(new THREE.BoxGeometry(0.55, 0.06, 0.06), 0x4a6fa5, 0, 2.1, 0.04));
+      break;
+    case 'van':
+      g.add(part(new THREE.BoxGeometry(1.9, 1.5, 3.2), 0xffffff, 0, 1.15, -0.5));
+      g.add(part(new THREE.BoxGeometry(1.9, 1.1, 1.3), 0xffffff, 0, 0.95, 1.7));
+      g.add(part(new THREE.BoxGeometry(1.7, 0.55, 0.08), 0x6f8aa6, 0, 1.2, 2.36));
+      g.add(part(new THREE.BoxGeometry(1.95, 0.12, 4.7), 0x4a4f5c, 0, 0.42, 0.2));
+      for (const [x, z] of [[-0.95, -1.1], [0.95, -1.1], [-0.95, 1.5], [0.95, 1.5]]) g.add(part(new THREE.CylinderGeometry(0.36, 0.36, 0.25, 10), 0x2f333c, x, 0.36, z, 0, 0, Math.PI / 2));
+      break;
     case 'boat':
       g.add(part(new THREE.BoxGeometry(1.7, 0.6, 4.2), 0xffffff, 0, 0.25, 0));
       g.add(part(new THREE.ConeGeometry(0.85, 1.3, 4, 1), 0xffffff, 0, 0.25, 2.7, Math.PI / 2, Math.PI / 4));
@@ -58,6 +92,9 @@ const TINTS: Partial<Record<DressType, number[]>> = {
   bike: [0x6ab7ff, 0xff9ec4, 0xffd36e, 0x9fd18f, 0xc7b5e0],
   umbrella: [0xff9ec4, 0xffd36e, 0x9bd8ff, 0xffffff, 0xb5e8b0],
   boat: [0xffffff, 0x9bd8ff, 0xffc9a8, 0xd9c9f0],
+  van: [0xffffff, 0xf2c14e, 0x9bd8ff, 0xe58b7a, 0xb5e8b0],
+  planter: [0xffffff, 0xffc2d6, 0xffe27a, 0xd9c9f0],
+  cafetable: [0xffffff, 0xffd9a8, 0xbfe0f5],
   tree: [0xffffff, 0xe8f5d8, 0xd8ecc0],
 };
 
