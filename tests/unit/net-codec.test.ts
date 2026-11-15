@@ -51,6 +51,7 @@ describe('connection diagnostics', () => {
   it('says what to do', () => {
     const none = { host: 1, srflx: 0, relay: 0 }, ok = { host: 1, srflx: 1, relay: 0 }, rel = { host: 1, srflx: 1, relay: 1 };
     expect(explainFailure(none, ok)).toMatch(/STUN is blocked/);
+    expect(explainFailure(ok, ok)).toMatch(/VPN/);
     expect(explainFailure(ok, none)).toMatch(/friend/);
     expect(explainFailure(ok, ok)).toMatch(/relay fixes it/);
     expect(explainFailure(rel, rel)).toMatch(/Even the relay/);

@@ -17,9 +17,9 @@ export function countCandidates(sdp: string | undefined): { host: number; srflx:
 
 /** Why a connection fails, in words a player can act on. Pure. */
 export function explainFailure(local: { host: number; srflx: number; relay: number }, remote: { host: number; srflx: number; relay: number }): string {
-  if (local.srflx === 0 && local.relay === 0) return 'Your network did not answer the address lookup (STUN is blocked), so only a relay can connect you. Add one in Settings.';
+  if (local.srflx === 0 && local.relay === 0) return 'Your network did not answer the address lookup (STUN is blocked), so only a relay can connect you. A VPN can cause this: turn it off, or add a relay in Settings.';
   if (remote.srflx === 0 && remote.relay === 0) return "Your friend's network did not answer the address lookup (STUN is blocked), so only a relay can connect you. Add one in Settings (both of you).";
-  if (local.relay === 0 && remote.relay === 0) return 'The two networks could not reach each other directly (common on mobile data, strict Wi-Fi and some home routers). A relay fixes it: Settings → use a relay, on both devices, then try again.';
+  if (local.relay === 0 && remote.relay === 0) return 'The two networks could not reach each other directly (common on mobile data, strict Wi-Fi and some home routers). If either of you uses a VPN, turn it off and try again. Otherwise a relay fixes it: Settings → use a relay, on both devices.';
   return 'Even the relay did not connect. Check the relay settings, or try again.';
 }
 
