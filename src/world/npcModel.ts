@@ -25,7 +25,7 @@ export interface NpcView {
 }
 
 export interface NpcModelOptions {
-  hat?: 'sun' | 'cap';
+  hat?: 'sun' | 'cap' | 'top';
   umbrella?: boolean;
   hatColor?: number;
   /** Trouser colour (else seeded). */
@@ -106,11 +106,12 @@ export class NpcModel {
   private hatMesh(opts: NpcModelOptions): THREE.Object3D {
     const hat = new THREE.Group();
     const hatColor = opts.hatColor ?? 0xfff1d6;
-    const r = opts.hat === 'cap' ? 0.15 : 0.3;
+    const r = opts.hat === 'cap' ? 0.15 : opts.hat === 'top' ? 0.2 : 0.3;
     const brim = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.025, 12), mat(hatColor));
     brim.position.set(0, -0.06, opts.hat === 'cap' ? -0.06 : 0);
-    const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.12, 10), mat(hatColor));
-    crown.position.y = -0.01;
+    const tall = opts.hat === 'top';
+    const crown = new THREE.Mesh(new THREE.CylinderGeometry(tall ? 0.13 : 0.12, 0.14, tall ? 0.34 : 0.12, 10), mat(hatColor));
+    crown.position.y = tall ? 0.1 : -0.01;
     hat.add(brim, crown);
     return mergeColored(hat);
   }
@@ -136,8 +137,9 @@ export class NpcModel {
     // sun hat: wide brim + crown, colour shifted from the jacket
     const hat = new THREE.Group();
     const hatColor = opts.hatColor ?? 0xfff1d6;
-    const brim = new THREE.Mesh(new THREE.CylinderGeometry(opts.hat === 'cap' ? 0.24 : 0.36, opts.hat === 'cap' ? 0.24 : 0.36, 0.03, 12), mat(hatColor));
-    const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 0.16, 10), mat(hatColor));
+    const brimR = opts.hat === 'cap' ? 0.24 : opts.hat === 'top' ? 0.3 : 0.36;
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(brimR, brimR, 0.03, 12), mat(hatColor));
+    const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, opts.hat === 'top' ? 0.42 : 0.16, 10), mat(hatColor));
     crown.position.y = 0.09;
     hat.add(brim, crown);
     hat.position.y = 2.0;

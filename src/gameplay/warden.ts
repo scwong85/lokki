@@ -8,7 +8,7 @@ import { bearing, canSee, type GullInfo, type Noise } from './npc';
  * when he sees it and swats it away with the umbrella. While the umbrella is up it covers his head from above;
  * it goes down when he is distracted by a noise, swatting, or sulking after a poop.
  */
-export type WardenMode = 'patrol' | 'alert' | 'hunt' | 'swat' | 'recover';
+export type WardenMode = 'patrol' | 'alert' | 'hunt' | 'swat' | 'recover' | 'lunch';
 
 export interface Warden {
   x: number;
@@ -44,6 +44,8 @@ export interface WardenCtx {
   walkable: (x: number, z: number) => boolean;
   patrol: readonly [number, number][];
   rng: Rng;
+  /** Lunch break: where he sits while it lasts (null = no lunch right now). */
+  lunch?: { x: number; z: number } | null;
 }
 
 const angleDiff = (a: number, b: number) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
@@ -97,7 +99,29 @@ export function stepWarden(w: Warden, g: GullInfo, noises: readonly Noise[], dt:
     }
   }
 
+  // lunch break: he leaves his rounds for his bench (unless he is busy with a gull) and puts the umbrella down
+  if (ctx.lunch && (w.mode === 'patrol' || w.mode === 'recover')) {
+    w.mode = 'lunch';
+    w.t = 0;
+  } else if (!ctx.lunch && w.mode === 'lunch') {
+    w.mode = 'patrol';
+    w.t = 0;
+  }
+
   switch (w.mode) {
+    case 'lunch': {
+      const spot = ctx.lunch ?? { x: w.x, z: w.z };
+      if (Math.hypot(spot.x - w.x, spot.z - w.z) > 0.8) w.moving = walk(w, spot.x, spot.z, d.wardenPatrolSpeed.value, dt, ctx);
+      else face(w, spot.x - 1, spot.z, dt); // sits, looking at his sandwich
+      // he only looks up for a gull that is close (the sandwich has his attention)
+      if (w.seesGull && dist < 6) {
+        w.mode = 'alert';
+        w.t = 0;
+        w.lostT = 0;
+        if (!wasSeeing) ev.push({ type: 'noticed' });
+      }
+      break;
+    }
     case 'patrol': {
       if (w.distractT > 0) face(w, w.noiseX, w.noiseZ, dt);
       else {
@@ -163,7 +187,7 @@ export function stepWarden(w: Warden, g: GullInfo, noises: readonly Noise[], dt:
       break;
   }
   // exposed while distracted, swatting or sulking, and for a while after: that is the window to poop him
-  if (w.distractT > 0 || w.mode === 'swat' || w.mode === 'recover') w.exposedT = d.umbrellaDelay.value;
+  if (w.distractT > 0 || w.mode === 'swat' || w.mode === 'recover' || w.mode === 'lunch') w.exposedT = d.umbrellaDelay.value;
   else w.exposedT = Math.max(0, w.exposedT - dt);
   w.walkPhase += w.speed * dt * 2.2;
   w.moving = w.speed > 0;

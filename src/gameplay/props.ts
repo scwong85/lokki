@@ -73,6 +73,8 @@ export class PropManager {
 
   /** Is there sea under this spot? (set by the game; without it nothing floats) */
   isWater: ((x: number, z: number) => boolean) | null = null;
+  /** A current that carries message bottles (tag 'note') toward this spot while they float. */
+  drift: { x: number; z: number } | null = null;
   private time = 0;
 
   constructor(private phys: PhysicsWorld, private parent: THREE.Object3D) {}
@@ -200,7 +202,15 @@ export class PropManager {
       const floatY = w.floatHeight.value + halfHeight(p.def.shape) * 0.5 + Math.sin(this.time * w.bobSpeed.value + p.id) * w.bobHeight.value;
       const v = p.body.linvel();
       const k = waterDrag(w.drag.value, dt);
-      p.body.setLinvel({ x: v.x * k, y: floatVy(t.y, v.y, floatY, tuning.physics.gravity.value, w.buoyancy.value, w.drag.value, dt), z: v.z * k }, true);
+      let vx = v.x * k, vz = v.z * k;
+      if (this.drift && p.tag === 'note') {
+        const dx = this.drift.x - t.x, dz = this.drift.z - t.z, dl = Math.hypot(dx, dz);
+        if (dl > 1.5) {
+          vx += (dx / dl) * w.driftSpeed.value * (1 - k); // settles at driftSpeed
+          vz += (dz / dl) * w.driftSpeed.value * (1 - k);
+        }
+      }
+      p.body.setLinvel({ x: vx, y: floatVy(t.y, v.y, floatY, tuning.physics.gravity.value, w.buoyancy.value, w.drag.value, dt), z: vz }, true);
       const av = p.body.angvel();
       p.body.setAngvel({ x: av.x * k, y: av.y * k, z: av.z * k }, true);
     }

@@ -22,7 +22,9 @@ export type DefenseEvent =
   | { type: 'dodged'; id: DeterrentId; count: number; need: number }
   | { type: 'hit'; hit: GullHit; gull: number }
   | { type: 'noticed'; who: 'vendor' | 'warden' }
-  | { type: 'spray' }
+  | { type: 'spray'; x: number; z: number; aimX: number; aimZ: number }
+  | { type: 'lunch'; on: boolean }
+  | { type: 'vendorsScared'; count: number }
   | { type: 'poopVendor' }
   | { type: 'poopWarden' }
   | { type: 'umbrella' };
@@ -69,6 +71,11 @@ export class CityDefense {
   }
   private hawkT = 0;
   private hawkCd = 0;
+  /** The Warden's lunch break (a level may schedule one): from `from` to `to` seconds after the level started he sits at (x, z) with his umbrella down. */
+  lunch: { x: number; z: number; from: number; to: number; repeat?: number } | null = null;
+  private clock = 0;
+  private lunchOn = false;
+  private scareCd = 0;
   private pending: DefenseEvent[] = [];
   private owners: Owner[] = [];
   private rng: Rng;
@@ -165,6 +172,13 @@ export class CityDefense {
     return this.tierEvents(this.heat.add(reason));
   }
 
+  /** Put these deterrents up right away (a level's starting situation), without touching the heat. */
+  deployNow(ids: readonly DeterrentId[]): DefenseEvent[] {
+    const ev: DefenseEvent[] = [];
+    for (const id of ids) if (this.response.deploy(id)) ev.push(...this.deployed(id, 'heat'));
+    return ev;
+  }
+
   /** A quest started: the city is at least this alert. */
   ensureHeat(min: number): DefenseEvent[] {
     return this.tierEvents(this.heat.raiseTo(min));
@@ -224,7 +238,7 @@ export class CityDefense {
         for (const e of stepVendor(v, infoFor(target), alert, dt, this.world)) {
           if (e.type === 'noticed') ev.push({ type: 'noticed', who: 'vendor' });
           else if (e.type === 'spray') {
-            ev.push({ type: 'spray' });
+            ev.push({ type: 'spray', x: v.x, z: v.z, aimX: v.aimX, aimZ: v.aimZ });
             this.spawnSpray(v);
             if (e.hit && target) ev.push({ type: 'hit', gull: target.id, hit: { kind: 'spray', dx: e.dx, dz: e.dz, strength: this.response.strength('vendors') } });
           } else this.bypass('vendors', ev);
@@ -232,10 +246,20 @@ export class CityDefense {
       }
     }
 
+    // the Warden's lunch break
+    this.clock += dt;
+    this.scareCd = Math.max(0, this.scareCd - dt);
+    const lun = this.lunch;
+    const inLunch = !!lun && this.clock >= lun.from && (lun.repeat ? (this.clock - lun.from) % lun.repeat < lun.to - lun.from : this.clock < lun.to);
+    const lunchNow = inLunch && !!this.warden;
+    if (lunchNow !== this.lunchOn) {
+      this.lunchOn = lunchNow;
+      ev.push({ type: 'lunch', on: lunchNow });
+    }
     // the Warden
     const w = this.warden;
     if (w) {
-      const ctx = { world: this.world, walkable: this.walkable, patrol: WARDEN_PATROL, rng: this.rng };
+      const ctx = { world: this.world, walkable: this.walkable, patrol: WARDEN_PATROL, rng: this.rng, lunch: lunchNow && this.lunch ? { x: this.lunch.x, z: this.lunch.z } : null };
       const target = wardenTarget(w, views, tuning.deter.wardenThiefRange.value);
       for (const e of stepWarden(w, infoFor(target), noises, dt, ctx)) {
         if (e.type === 'noticed') ev.push({ type: 'noticed', who: 'warden' });
@@ -413,7 +437,7 @@ export class CityDefense {
       this.wardenModel.applyView(
         {
           x: w.x, z: w.z, heading: w.heading, moving: w.moving, walkPhase: w.walkPhase, t: w.t, holding: w.distractT > 0, distracted: w.distractT > 0,
-          mode: w.mode === 'patrol' ? (w.moving ? 'walk' : 'idle') : w.mode === 'alert' ? 'notice' : w.mode === 'hunt' ? 'walk' : w.mode === 'swat' ? 'shield' : 'recover',
+          mode: w.mode === 'patrol' || w.mode === 'lunch' ? (w.moving ? 'walk' : w.mode === 'lunch' ? 'eat' : 'idle') : w.mode === 'alert' ? 'notice' : w.mode === 'hunt' ? 'walk' : w.mode === 'swat' ? 'shield' : 'recover',
           hand: w.mode === 'swat' ? { x: w.x - Math.sin(w.heading) * 1.4, y: 1.8, z: w.z - Math.cos(w.heading) * 1.4 } : undefined,
         },
         time,
@@ -448,6 +472,19 @@ export class CityDefense {
       f.vel.y -= 6 * dt;
       if (f.life <= 0) f.mesh.visible = false;
     }
+  }
+
+  /** The plastic owl is near: vendors within `range` freeze up for a few seconds (their customers think it is real). */
+  scareVendors(x: number, z: number, range: number): number {
+    if (this.scareCd > 0 || !this.response.deployed.has('vendors')) return 0;
+    let n = 0;
+    for (const v of this.vendors) {
+      if (Math.hypot(v.x - x, v.z - z) > range) continue;
+      vendorPooped(v);
+      n++;
+    }
+    if (n) this.scareCd = tuning.owl.cooldown.value;
+    return n;
   }
 
   /** What a guest needs to draw the city's response. */
@@ -513,6 +550,9 @@ export class CityDefense {
     this.pending.length = 0;
     this.hawkT = 0;
     this.hawkCd = 0;
+    this.clock = 0;
+    this.lunchOn = false;
+    this.scareCd = 0;
     this.rng = createRng(this.seed);
   }
 }

@@ -192,7 +192,8 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M13 Market Square Act 1 (levels 1–4)
 - [x] M14 Online co-op
 - [x] M15 Polish pass (playtest feedback)
-- [ ] M16 Controls and flow polish (built on `m16-controls-flow`, awaiting playtest)
+- [x] M16 Controls and flow polish
+- [ ] M17 Market Square Act 1, part 2: levels 5–8 (built on `m17-act1-part2`, awaiting playtest)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -307,7 +308,13 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - **Touch buttons:** better default positions for Flap, Dive, Poop, Grab, and a way to adjust them (layout presets or drag-to-arrange, left-handed mirror).
 - **Exit:** the user re-checks each item on PC and phone.
 
-### After M15 (backlog)
+### M16 — Controls and flow polish (S–M)
+From the M14/M15 playtests: host picks the level, target lock (Tab), quicker air turns, ground jump, fairer "unseen" snatch. Details: `docs/milestones/M16.md`.
+
+### M17 — Market Square Act 1, part 2: levels 5–8 (L)
+**Goal:** finish Act 1 (design: `docs/design/levels-kauppatori.md`, Act 1). L5 **The City Strikes Back** ("Spray Tan": the vendor's spray soaks the rich tourist), L6 **Owl Be Back** ("Borrowed Authority": the plastic owl scares the bread granny), L7 **The Warden** ("Lunch Break": his umbrella is down at lunch), L8 **Harbour Day** ("Message in a Bottle": the current carries it to the ferry before the horn). Rewards: Hawk-eye, Fat bird, Disguise, Flock call. Details: `docs/milestones/M17.md`.
+
+### After M17 (backlog)
 Market Square Act 1 levels 5–8, Act 2 (skill levels) and Act 3 (themed days); Senate Square (`docs/design/levels-senaatintori.md`), Esplanadi (`docs/design/levels-esplanadi.md`), Katajanokka (`docs/design/levels-katajanokka.md`), each level designed with a co-op variant; the shared systems they need (moving platforms, NPC schedules, Kalle the rival gull, the drone, seasons); local split-screen co-op (optional); optional WebGPU renderer.
 
 ---

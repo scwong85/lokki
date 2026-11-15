@@ -59,6 +59,15 @@ function buildParts(type: PropType, g: THREE.Group): void {
       g.add(mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.24, 8), 0x9bd8b0, 0, -0.04, 0));
       g.add(mesh(new THREE.CylinderGeometry(0.03, 0.06, 0.12, 8), 0x9bd8b0, 0, 0.15, 0));
       break;
+    case 'owl':
+      g.add(mesh(new THREE.SphereGeometry(0.2, 10, 8), 0x8a6a4a, 0, 0, 0));
+      g.add(mesh(new THREE.SphereGeometry(0.15, 10, 8), 0xa88460, 0, 0.22, 0));
+      for (const s of [-1, 1]) {
+        g.add(mesh(new THREE.SphereGeometry(0.06, 6, 5), 0xffd23f, s * 0.07, 0.25, 0.12));
+        g.add(mesh(new THREE.ConeGeometry(0.04, 0.1, 4), 0x6b4f33, s * 0.1, 0.38, 0));
+      }
+      g.add(mesh(new THREE.ConeGeometry(0.03, 0.07, 4), 0xff9d2e, 0, 0.21, 0.15));
+      break;
     case 'soup':
       g.add(mesh(new THREE.CylinderGeometry(0.17, 0.11, 0.14, 12), 0xf5efe6));
       g.add(mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.03, 12), 0xf2a35e, 0, 0.065, 0));
