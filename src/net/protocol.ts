@@ -2,7 +2,7 @@
  * Messages between the host (who runs the game) and the guest (a thin client). Plain JSON; versioned so an old tab
  * cannot silently confuse a new one. Pure.
  */
-import type { Snapshot } from './snapshot';
+import type { GullSnap, Snapshot } from './snapshot';
 
 export const PROTOCOL_VERSION = 1;
 
@@ -16,22 +16,24 @@ export interface InputFrame {
   dive: boolean;
   yaw: number;
   pitch: number;
-  /** One-off presses since the last frame ('KeyE', 'KeyQ', 'KeyF', 'KeyH', 'KeyV', 'KeyG', 'KeyB'). */
-  taps: string[];
+  /** The guest's own gull (it flies it itself, so flying never lags; the host trusts it). */
+  s: GullSnap;
+  /** Recent one-off presses with ids ('KeyE' grab, 'KeyQ' toss, 'KeyF' poop). Sent again for a moment: the channel may drop packets. */
+  taps: [number, string][];
 }
 
 /** Something the guest should show or play (the host decided it happened). */
 export type GameEvent =
   | { k: 'toast'; text: string; secs?: number }
   | { k: 'sound'; name: string }
-  | { k: 'shake'; amount: number }
-  | { k: 'banner'; title: string; sub: string; style: string }
-  | { k: 'levelComplete'; heading: string; lines: string[]; notes: string[]; nextId?: string; nextName?: string };
+  | { k: 'banner'; title: string; sub: string; kind: string }
+  | { k: 'levelComplete'; data: unknown }
+  | { k: 'hideComplete' };
 
 export type Msg =
   | { t: 'hello'; v: number; name: string; look: string }
-  | { t: 'welcome'; v: number; level: string; seed: number; hostLook: string }
-  | { t: 'level'; id: string; seed: number }
+  | { t: 'welcome'; v: number; level: string; hostLook: string }
+  | { t: 'level'; id: string }
   | { t: 'input'; f: InputFrame }
   | { t: 'snap'; s: Snapshot; ack: number }
   | { t: 'event'; e: GameEvent }

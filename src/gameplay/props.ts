@@ -1,3 +1,4 @@
+import type { PropSnap } from '../net/snapshot';
 import * as THREE from 'three';
 import { floatVy, halfHeight, waterDrag } from './buoyancy';
 import type { Collider, RigidBody } from '@dimforge/rapier3d-compat';
@@ -60,6 +61,8 @@ function colliderFor(R: PhysicsWorld['R'], s: Shape, mass: number) {
     : R.ColliderDesc.capsule(s.hh, s.r);
   return d.setMass(mass).setFriction(tuning.physics.friction.value).setRestitution(tuning.physics.restitution.value).setCollisionGroups(GROUPS.PROP);
 }
+
+const tmpQ = new THREE.Quaternion();
 
 /** Owns every prop: Rapier bodies, meshes, carry state and impact detection. */
 export class PropManager {
@@ -280,6 +283,39 @@ export class PropManager {
     p.prev.q.copy(p.cur.q);
     for (const c of [...p.mesh.children]) if (c.userData.blob) p.mesh.remove(c);
     p.dirty = 0;
+  }
+
+  /** Where the host says each prop is (a guest does not simulate props). */
+  private remote = new Map<number, PropSnap>();
+
+  setRemote(list: readonly PropSnap[]): void {
+    for (const s of list) {
+      this.remote.set(s.id, s);
+      const p = this.byId(s.id);
+      if (!p) continue;
+      p.carried = s.by !== null;
+      p.heldBy = s.held;
+      if (s.broken && !p.broken) {
+        p.broken = true;
+        p.mesh.visible = false;
+      } else if (!s.broken && p.broken) {
+        p.broken = false;
+        p.mesh.visible = true;
+      }
+    }
+  }
+
+  /** One sim step on a guest: ease every prop towards the host's news. */
+  stepRemote(dt: number): void {
+    const k = 1 - Math.exp(-18 * dt);
+    for (const p of this.props) {
+      const s = this.remote.get(p.id);
+      if (!s || p.broken) continue;
+      p.prev.p.copy(p.cur.p);
+      p.prev.q.copy(p.cur.q);
+      p.cur.p.set(p.cur.p.x + (s.p[0] - p.cur.p.x) * k, p.cur.p.y + (s.p[1] - p.cur.p.y) * k, p.cur.p.z + (s.p[2] - p.cur.p.z) * k);
+      p.cur.q.slerp(tmpQ.set(s.q[0], s.q[1], s.q[2], s.q[3]), k);
+    }
   }
 
   /** Interpolated mesh poses for rendering. */

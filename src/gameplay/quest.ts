@@ -76,6 +76,19 @@ export class QuestLog {
     this.reset();
   }
 
+  /** A guest copies the host's quest state (status, timers, objective progress). */
+  applyRemote(list: readonly { id: string; status: string; t?: number; o: [number, number][] }[]): void {
+    for (const s of list) {
+      const q = this.quests.find((x) => x.id === s.id);
+      if (!q) continue;
+      q.status = s.status as QuestState['status'];
+      if (s.t !== undefined) q.timeLeft = s.t;
+      s.o.forEach(([done, count], i) => {
+        if (q.objectives[i]) Object.assign(q.objectives[i], { done: done === 1, count });
+      });
+    }
+  }
+
   reset(): void {
     this.quests = this.defs.map((d) => this.fresh(d));
   }

@@ -27,9 +27,9 @@ describe('protocol', () => {
   it('encodes and decodes every message shape; junk is ignored, never thrown', () => {
     const msgs: Msg[] = [
       { t: 'hello', v: PROTOCOL_VERSION, name: 'Guest', look: 'juvenile' },
-      { t: 'welcome', v: PROTOCOL_VERSION, level: 'snack-attack', seed: 7, hostLook: 'herring' },
-      { t: 'level', id: 'bombs-away', seed: 9 },
-      { t: 'input', f: { n: 5, ax: 0.5, ay: -1, flap: true, dive: false, yaw: 1.2, pitch: 0.3, taps: ['KeyE'] } },
+      { t: 'welcome', v: PROTOCOL_VERSION, level: 'snack-attack', hostLook: 'herring' },
+      { t: 'level', id: 'bombs-away' },
+      { t: 'input', f: { n: 5, ax: 0.5, ay: -1, flap: true, dive: false, yaw: 1.2, pitch: 0.3, s: { id: 1, p: [1, 2, 3], v: [0, 0, 0], h: 0.5, mode: 'air', carry: null }, taps: [[1, 'KeyE']] } },
       { t: 'event', e: { k: 'toast', text: 'Snatched!' } },
       { t: 'bye', why: 'host left' },
       { t: 'ping', at: 1 },
