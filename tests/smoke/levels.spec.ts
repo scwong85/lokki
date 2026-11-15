@@ -123,3 +123,29 @@ test('level 3: a noise makes the watchful tourist look away (first to-do), and t
   }, { timeout: 120_000, intervals: [200] }).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('level 4: a herring left at the blogger\'s feet after her soup is taken earns the review', async ({ page }) => {
+  test.setTimeout(300_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  await page.goto('/?level=butterfingers');
+  await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 60_000 });
+  type W = { __lokki: { quests: { quests: { id: string; status: string; objectives: { done: boolean }[] }[] }; interaction: { props: { props: { type: string; id: number; heldBy: number | null; body: { setTranslation: (v: object, w: boolean) => void } }[]; destroy: (p: unknown) => void; release: (p: unknown, v: object) => void; byId: (id: number) => unknown } }; npcs: { npcs: { role: string; x: number; z: number; holding: number | null; holdType: string | null; mode: string }[] } } };
+  const state = () => page.evaluate(() => { const l = (window as unknown as W).__lokki; const b = l.npcs.npcs.find((n) => n.role === 'blogger')!; return { holding: b.holdType, soup: l.interaction.props.props.some((p) => p.type === 'soup' && p.heldBy !== null) }; });
+  expect((await state()).holding).toBe('soup');
+  // the real events: soup snatched (the quest event), then a herring lies at her feet
+  await page.evaluate(() => {
+    const l = (window as unknown as W & { __lokki: { notes: (n: unknown) => void; quests: { onEvent: (e: string) => unknown } } }).__lokki;
+    const b = l.npcs.npcs.find((n) => n.role === 'blogger')!;
+    const soup = l.interaction.props.props.find((p) => p.type === 'soup')!;
+    l.interaction.props.release(soup, { x: 0, y: 0, z: 0 }); // her hands are empty now (as after a snatch)
+    b.holding = null;
+    b.holdType = null;
+    l.notes(l.quests.onEvent('snatch:soup'));
+    const h = l.interaction.props.props.find((p) => p.type === 'herring')!;
+    h.body.setTranslation({ x: b.x + 0.8, y: 0.2, z: b.z + 0.3 }, true);
+  });
+  await expect.poll(() => page.evaluate(() => (window as unknown as W).__lokki.quests.quests.find((q) => q.id === 'switch')!.status), { timeout: 200_000, intervals: [300] }).toBe('won');
+  expect(errors).toEqual([]);
+});

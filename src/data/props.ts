@@ -7,7 +7,7 @@ export type Shape =
   | { kind: 'cyl'; hh: number; r: number }
   | { kind: 'capsule'; hh: number; r: number };
 
-export type PropType = 'icecream' | 'fish' | 'bun' | 'cap' | 'tophat' | 'bottle' | 'bin' | 'crate' | 'chair' | 'candy' | 'salmiakki' | 'map' | 'toy' | 'flowers' | 'sign' | 'buoy';
+export type PropType = 'icecream' | 'fish' | 'bun' | 'cap' | 'tophat' | 'bottle' | 'bin' | 'crate' | 'chair' | 'candy' | 'salmiakki' | 'map' | 'toy' | 'flowers' | 'sign' | 'buoy' | 'soup' | 'herring';
 
 export interface PropDef {
   name: string;
@@ -35,6 +35,8 @@ export const PROPS: Record<PropType, PropDef> = {
   flowers: { name: 'bouquet', tags: ['throwable'], mass: 0.2, shape: { kind: 'box', hx: 0.12, hy: 0.2, hz: 0.12 }, radius: 0.35 },
   sign: { name: 'polished sign', tags: ['heavy', 'shiny'], mass: 60, shape: { kind: 'cyl', hh: 0.6, r: 0.32 }, radius: 0.75 },
   buoy: { name: 'harbour buoy', tags: ['throwable'], mass: 6, shape: { kind: 'cyl', hh: 0.3, r: 0.32 }, radius: 0.5 },
+  soup: { name: 'bowl of salmon soup', tags: ['edible', 'throwable'], mass: 0.4, shape: { kind: 'cyl', hh: 0.07, r: 0.17 }, radius: 0.3 },
+  herring: { name: 'raw herring', tags: ['edible', 'throwable'], mass: 0.3, shape: { kind: 'box', hx: 0.26, hy: 0.04, hz: 0.1 }, radius: 0.32 },
   chair: { name: 'chair', tags: ['heavy', 'noisy', 'stackable'], mass: 4, shape: { kind: 'box', hx: 0.25, hy: 0.45, hz: 0.25 }, radius: 0.55 },
 };
 

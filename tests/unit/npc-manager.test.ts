@@ -160,3 +160,25 @@ describe('NpcManager: the Clean Freak and the selfie tourist', () => {
     expect(inFrameClicks(far).some(Boolean)).toBe(false);
   });
 });
+
+describe('NpcManager: the food blogger', () => {
+  it('a raw herring left at her feet is picked up, tried, and reviewed ("tastes like the Baltic")', () => {
+    const { props, npcs, run } = setup([{ x: 0, z: 0, heading: Math.PI, role: 'blogger', stationary: true, wants: ['herring'], color: 0 }]);
+    props.spawn({ type: 'herring', x: 0.9, y: restY('herring'), z: 0.2 });
+    const ev = run(6);
+    expect(ev.some((e) => e.type === 'tookItem' && e.propType === 'herring')).toBe(true);
+    expect(ev.some((e) => e.type === 'yuck')).toBe(true);
+    expect(ev.some((e) => e.type === 'review')).toBe(true);
+    expect(npcs.npcs[0].holding).toBeNull();
+  });
+
+  it('she keeps photographing her dish on the selfie rhythm (hand up, counting)', () => {
+    const { npcs } = setup([{ x: 0, z: 0, heading: Math.PI, role: 'blogger', holds: 'soup', stationary: true, color: 0 }]);
+    const seen = new Set<string>();
+    for (let i = 0; i < 60 * 14; i++) {
+      npcs.update(DT, far);
+      seen.add(npcs.npcs[0].selfie);
+    }
+    expect([...seen].sort()).toEqual(['count', 'idle', 'open']);
+  });
+});

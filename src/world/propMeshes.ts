@@ -59,6 +59,20 @@ function buildParts(type: PropType, g: THREE.Group): void {
       g.add(mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.24, 8), 0x9bd8b0, 0, -0.04, 0));
       g.add(mesh(new THREE.CylinderGeometry(0.03, 0.06, 0.12, 8), 0x9bd8b0, 0, 0.15, 0));
       break;
+    case 'soup':
+      g.add(mesh(new THREE.CylinderGeometry(0.17, 0.11, 0.14, 12), 0xf5efe6));
+      g.add(mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.03, 12), 0xf2a35e, 0, 0.065, 0));
+      g.add(mesh(new THREE.SphereGeometry(0.035, 6, 5), 0x7bbf6a, 0.04, 0.09, 0.02));
+      break;
+    case 'herring':
+      {
+        const body = mesh(new THREE.SphereGeometry(0.2, 8, 6), 0xaebfcc);
+        body.scale.set(1.3, 0.22, 0.5);
+        g.add(body);
+      }
+      g.add(mesh(new THREE.ConeGeometry(0.1, 0.18, 4), 0x93a6b6, -0.28, 0, 0).rotateZ(Math.PI / 2));
+      g.add(mesh(new THREE.SphereGeometry(0.025, 5, 4), 0x22232b, 0.2, 0.03, 0.05));
+      break;
     case 'sign': {
       // a brass sign on a short post: a disk board with a shiny rim (the Clean Freak's pride and joy)
       g.add(mesh(new THREE.CylinderGeometry(0.1, 0.12, 1.2, 8), 0x8a7a66));

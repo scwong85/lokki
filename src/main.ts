@@ -607,7 +607,7 @@ function onNpcEvents(evs: NpcEvent[]): void {
       notes(quests.onEvent(`tookItem:${e.propType}`));
     } else if (e.type === 'yuck') {
       audio.play('yelp');
-      hud.toast('Yuck! Salmiakki!', 1.6);
+      hud.toast('Yuck!', 1.4);
       notes(quests.onEvent('yuck'));
     } else if (e.type === 'reclaimed') {
       audio.play('pop');
@@ -615,6 +615,9 @@ function onNpcEvents(evs: NpcEvent[]): void {
     } else if (e.type === 'cheer') {
       audio.play('chime');
       hud.toast('The child hugs the teddy!', 2);
+    } else if (e.type === 'review') {
+      hud.toast('\u2605\u2606\u2606\u2606\u2606 "Tastes like the Baltic."', 3);
+      notes(quests.onEvent('review'));
     } else if (e.type === 'snatchUnseen') {
       hud.toast('They never saw it coming.', 1.6);
       notes(quests.onEvent('snatchUnseen'));
