@@ -8,6 +8,7 @@ import { Heat, type HeatReason, type TierChange } from './heat';
 import { newVendor, stepVendor, vendorPooped, type Vendor } from './vendor';
 import { newWarden, stepWarden, umbrellaUp, wardenPooped, type Warden } from './warden';
 import type { GullInfo, Noise } from './npc';
+import { nearestGull, wardenTarget } from './focus';
 import type { HitSphere } from './poop';
 import type { FlightState } from '../gull/flight';
 import type { World } from '../world/collision';
@@ -18,12 +19,22 @@ export type DefenseEvent =
   | { type: 'deployed'; id: DeterrentId; cause: 'heat' | 'learned' }
   | { type: 'learned'; id: DeterrentId }
   | { type: 'dodged'; id: DeterrentId; count: number; need: number }
-  | { type: 'hit'; hit: GullHit }
+  | { type: 'hit'; hit: GullHit; gull: number }
   | { type: 'noticed'; who: 'vendor' | 'warden' }
   | { type: 'spray' }
   | { type: 'poopVendor' }
   | { type: 'poopWarden' }
   | { type: 'umbrella' };
+
+/** One gull as the city's defence sees it. */
+export interface DefenseGull {
+  id: number;
+  state: FlightState;
+  /** Disguised: vendors and the Warden ignore it. */
+  hidden?: boolean;
+  /** Carrying stolen food (the Warden prefers this one). */
+  suspicious?: boolean;
+}
 
 type Owner = { kind: 'vendor'; v: Vendor } | { kind: 'umbrella' } | { kind: 'warden' };
 
@@ -48,8 +59,13 @@ export class CityDefense {
   private netPosts: THREE.Mesh[] = [];
   private lineMat: THREE.MeshBasicMaterial;
   private install: { lines: number; nets: number } = { lines: 0, nets: 0 };
-  private zones = { lines: new ZoneTracker(LINE_ZONE), nets: new ZoneTracker(NET_ZONE) };
-  private hitCd = 0;
+  /** Per gull: the fly-through trackers and a hit cooldown (two gulls never share a near miss). */
+  private perGull = new Map<number, { lines: ZoneTracker; nets: ZoneTracker; hitCd: number }>();
+  private gullState(id: number) {
+    let g = this.perGull.get(id);
+    if (!g) this.perGull.set(id, (g = { lines: new ZoneTracker(LINE_ZONE), nets: new ZoneTracker(NET_ZONE), hitCd: 0 }));
+    return g;
+  }
   private hawkT = 0;
   private hawkCd = 0;
   private pending: DefenseEvent[] = [];
@@ -163,10 +179,10 @@ export class CityDefense {
   private deployed(id: DeterrentId, cause: 'heat' | 'learned'): DefenseEvent[] {
     if (id === 'lines') {
       this.install.lines = 0;
-      this.zones.lines.reset();
+      for (const g of this.perGull.values()) g.lines.reset();
     } else if (id === 'nets') {
       this.install.nets = 0;
-      this.zones.nets.reset();
+      for (const g of this.perGull.values()) g.nets.reset();
     } else if (id === 'warden' && !this.warden) {
       this.warden = newWarden(WARDEN_SPAWN.x, WARDEN_SPAWN.z);
     }
@@ -182,10 +198,17 @@ export class CityDefense {
 
   // ---------- one sim step ----------
   /** `hidden`: the gull is disguised as a pigeon, so the vendors and the Warden neither see nor target it. */
-  update(dt: number, gull: FlightState, noises: readonly Noise[], touristSees: boolean, hidden = false): DefenseEvent[] {
+  /**
+   * `gulls`: every gull in play (or just player 1's flight state). Vendors watch the nearest visible gull, the Warden
+   * the most suspicious one; lines and nets catch any gull. Hits say which gull they hit.
+   */
+  update(dt: number, gulls: readonly DefenseGull[] | FlightState, noises: readonly Noise[], touristSees: boolean, hidden = false): DefenseEvent[] {
+    const list: readonly DefenseGull[] = Array.isArray(gulls) ? gulls : [{ id: 0, state: gulls as FlightState, hidden }];
     const ev: DefenseEvent[] = this.pending.splice(0);
-    const info: GullInfo = hidden ? { x: 1e5, y: 60, z: 1e5, diving: false } : { x: gull.x, y: gull.y, z: gull.z, diving: gull.mode === 'dive' };
-    this.hitCd = Math.max(0, this.hitCd - dt);
+    const FAR: GullInfo = { x: 1e5, y: 60, z: 1e5, diving: false };
+    const views = list.map((g) => ({ id: g.id, x: g.state.x, y: g.state.y, z: g.state.z, hidden: g.hidden, suspicious: g.suspicious, g }));
+    const infoFor = (v: (typeof views)[number] | null): GullInfo => (v ? { x: v.x, y: v.y, z: v.z, diving: v.g.state.mode === 'dive' } : FAR);
+    for (const g of list) this.gullState(g.id).hitCd = Math.max(0, this.gullState(g.id).hitCd - dt);
     this.hawkT = Math.max(0, this.hawkT - dt);
     this.hawkCd = Math.max(0, this.hawkCd - dt);
     const d = tuning.deter;
@@ -196,12 +219,13 @@ export class CityDefense {
     const alert = this.heat.tier >= 1;
     if (this.response.deployed.has('vendors')) {
       for (const v of this.vendors) {
-        for (const e of stepVendor(v, info, alert, dt, this.world)) {
+        const target = nearestGull(v, views);
+        for (const e of stepVendor(v, infoFor(target), alert, dt, this.world)) {
           if (e.type === 'noticed') ev.push({ type: 'noticed', who: 'vendor' });
           else if (e.type === 'spray') {
             ev.push({ type: 'spray' });
             this.spawnSpray(v);
-            if (e.hit) ev.push({ type: 'hit', hit: { kind: 'spray', dx: e.dx, dz: e.dz, strength: this.response.strength('vendors') } });
+            if (e.hit && target) ev.push({ type: 'hit', gull: target.id, hit: { kind: 'spray', dx: e.dx, dz: e.dz, strength: this.response.strength('vendors') } });
           } else this.bypass('vendors', ev);
         }
       }
@@ -211,9 +235,10 @@ export class CityDefense {
     const w = this.warden;
     if (w) {
       const ctx = { world: this.world, walkable: this.walkable, patrol: WARDEN_PATROL, rng: this.rng };
-      for (const e of stepWarden(w, info, noises, dt, ctx)) {
+      const target = wardenTarget(w, views, tuning.deter.wardenThiefRange.value);
+      for (const e of stepWarden(w, infoFor(target), noises, dt, ctx)) {
         if (e.type === 'noticed') ev.push({ type: 'noticed', who: 'warden' });
-        else if (e.type === 'swat' && e.hit) ev.push({ type: 'hit', hit: { kind: 'swat', dx: e.dx, dz: e.dz, strength: this.response.strength('warden') } });
+        else if (e.type === 'swat' && e.hit && target) ev.push({ type: 'hit', gull: target.id, hit: { kind: 'swat', dx: e.dx, dz: e.dz, strength: this.response.strength('warden') } });
         else if (e.type === 'dodged') this.bypass('warden', ev);
       }
       // keep him out of walls and off the water
@@ -223,30 +248,33 @@ export class CityDefense {
       w.z = p.z;
     }
 
-    // scare lines and nets (harmless until put up)
+    // scare lines and nets (harmless until put up): any gull can get caught
+    for (const { id, state: gull } of list) {
+    const gs = this.gullState(id);
     if (this.install.lines >= 1 && this.response.deployed.has('lines')) {
-      if (this.hitCd <= 0) {
+      if (gs.hitCd <= 0) {
         for (const s of LINES) {
           const h = segmentHit(gull, GULL_R + 0.05, s);
           if (h) {
-            ev.push({ type: 'hit', hit: { kind: 'line', dx: h.dx, dz: h.dz, strength: this.response.strength('lines') } });
-            this.zones.lines.markHit();
-            this.hitCd = 1.2;
+            ev.push({ type: 'hit', gull: id, hit: { kind: 'line', dx: h.dx, dz: h.dz, strength: this.response.strength('lines') } });
+            gs.lines.markHit();
+            gs.hitCd = 1.2;
             break;
           }
         }
       }
-      if (this.zones.lines.update(gull.x, gull.y, gull.z) === 'bypass') this.bypass('lines', ev);
+      if (gs.lines.update(gull.x, gull.y, gull.z) === 'bypass') this.bypass('lines', ev);
     }
     if (this.install.nets >= 1 && this.response.deployed.has('nets')) {
       const inFootprint = gull.x >= ZONE.minX && gull.x <= ZONE.maxX && gull.z >= ZONE.minZ && gull.z <= ZONE.maxZ;
       const descending = gull.vy < -0.5 || gull.mode === 'dive'; // the net stops gulls coming down; climbing out through the mesh is fine
-      if (inFootprint && descending && this.hitCd <= 0 && gull.y + GULL_R >= NET_Y && gull.y - GULL_R <= NET_Y + 0.6) {
-        ev.push({ type: 'hit', hit: { kind: 'net', dx: 0, dz: 0, strength: this.response.strength('nets') } });
-        this.zones.nets.markHit();
-        this.hitCd = 1.2;
+      if (inFootprint && descending && gs.hitCd <= 0 && gull.y + GULL_R >= NET_Y && gull.y - GULL_R <= NET_Y + 0.6) {
+        ev.push({ type: 'hit', gull: id, hit: { kind: 'net', dx: 0, dz: 0, strength: this.response.strength('nets') } });
+        gs.nets.markHit();
+        gs.hitCd = 1.2;
       }
-      if (this.zones.nets.update(gull.x, gull.y, gull.z) === 'bypass') this.bypass('nets', ev);
+      if (gs.nets.update(gull.x, gull.y, gull.z) === 'bypass') this.bypass('nets', ev);
+    }
     }
 
     // heat falls only when nobody can see the gull
@@ -431,10 +459,8 @@ export class CityDefense {
       Object.assign(v, newVendor(v.id, sp.x, sp.z, sp.heading));
     });
     this.install = { lines: 0, nets: 0 };
-    this.zones.lines.reset();
-    this.zones.nets.reset();
+    this.perGull.clear();
     this.pending.length = 0;
-    this.hitCd = 0;
     this.hawkT = 0;
     this.hawkCd = 0;
     this.rng = createRng(this.seed);

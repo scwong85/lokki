@@ -84,7 +84,7 @@ describe('props and physics', () => {
     const fish = it.props.spawn({ type: 'fish', x: 0, y: restY('fish'), z: -1 });
     run(0.3);
     run(DT, { ...none, grab: true });
-    expect(it.carriedMass).toBe(fish.def.mass);
+    expect(it.carriedMass()).toBe(fish.def.mass);
   });
   it('a fragile bottle dropped from height shatters; reset revives it', () => {
     const { it, run } = setup();

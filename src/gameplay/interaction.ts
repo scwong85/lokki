@@ -26,24 +26,34 @@ export interface InteractionInput {
 }
 
 export type GagEvent =
-  | { type: 'grab'; prop: Prop }
-  | { type: 'snatch'; prop: Prop }
-  | { type: 'poopNpc'; role?: string }
-  | { type: 'drop'; prop: Prop }
-  | { type: 'toss'; prop: Prop }
+  | { type: 'grab'; prop: Prop; by?: number }
+  | { type: 'snatch'; prop: Prop; by?: number }
+  | { type: 'poopNpc'; role?: string; by?: number }
+  | { type: 'drop'; prop: Prop; by?: number }
+  | { type: 'toss'; prop: Prop; by?: number }
   | { type: 'heavy'; prop: Prop }
-  | { type: 'poopDrop' }
+  | { type: 'poopDrop'; by?: number }
   | { type: 'splat'; x: number; z: number }
   | { type: 'poopProp'; prop: Prop }
   | { type: 'break'; prop: Prop }
   | { type: 'clatter'; prop: Prop; speed: number; quiet: boolean }
   | { type: 'tipped'; prop: Prop };
 
+/** What one gull's beak is doing. `id` is the gull (0 = player 1). */
+export interface Beak {
+  id: number;
+  carried: Prop | null;
+  poopCd: number;
+  grabCd: number;
+}
+
 interface LivePoop {
   state: PoopState;
   mesh: THREE.Mesh;
   /** Dropped by a decoy gull: no heat, no quest credit. */
   decoy?: boolean;
+  /** Which gull dropped it. */
+  by?: number;
 }
 
 const poopGeo = new THREE.SphereGeometry(0.14, 8, 6);
@@ -56,9 +66,8 @@ export class Interaction {
   readonly decals = new DecalPool();
   readonly debris = new Debris();
   readonly group = new THREE.Group();
-  carried: Prop | null = null;
-  poopCd = 0;
-  private grabCd = 0;
+  /** One beak per gull (index = gull id): what it carries and its cooldowns. */
+  private beaks: Beak[] = [];
   private poops: LivePoop[] = [];
 
   npcs: NpcHooks | null = null;
@@ -78,8 +87,31 @@ export class Interaction {
     parent.add(this.group);
   }
 
-  get carriedMass(): number {
-    return this.carried?.def.mass ?? 0;
+  /** The beak of gull `id` (made on first use). */
+  beak(id = 0): Beak {
+    return (this.beaks[id] ??= { id, carried: null, poopCd: 0, grabCd: 0 });
+  }
+
+  /** Player 1's beak (kept for the single-player code and tests). */
+  get carried(): Prop | null {
+    return this.beak(0).carried;
+  }
+
+  set carried(p: Prop | null) {
+    this.beak(0).carried = p;
+  }
+
+  get poopCd(): number {
+    return this.beak(0).poopCd;
+  }
+
+  /** Who is carrying this prop (gull id), if anyone. */
+  carrierOf(p: Prop): number | null {
+    return this.beaks.find((b) => b?.carried === p)?.id ?? null;
+  }
+
+  carriedMass(id = 0): number {
+    return this.beak(id).carried?.def.mass ?? 0;
   }
 
   /** Where the beak holds things. */
@@ -87,14 +119,14 @@ export class Interaction {
     return { x: s.x - Math.sin(s.heading) * 0.85, y: s.y + 0.05, z: s.z - Math.cos(s.heading) * 0.85 };
   }
 
-  private takeInBeak(p: Prop, ev: GagEvent[]): void {
+  private takeInBeak(p: Prop, ev: GagEvent[], b: Beak): void {
     const fromNpc = p.heldBy !== null;
     if (fromNpc) this.npcs?.onSnatched(p.id);
     this.props.grab(p);
-    this.carried = p;
-    this.grabCd = tuning.interaction.grabCooldown.value;
-    ev.push({ type: 'grab', prop: p });
-    if (fromNpc) ev.push({ type: 'snatch', prop: p });
+    b.carried = p;
+    b.grabCd = tuning.interaction.grabCooldown.value;
+    ev.push({ type: 'grab', prop: p, by: b.id });
+    if (fromNpc) ev.push({ type: 'snatch', prop: p, by: b.id });
   }
 
   /** What the beak would take right now (props on the ground and ice creams in reach), with the same rules for the prompt and for E. */
@@ -109,8 +141,9 @@ export class Interaction {
   }
 
   /** Text for the on-screen prompt: what E would do right now. */
-  grabPrompt(s: FlightState): string {
-    if (this.carried) return `E drop · Q toss ${this.carried.def.name}`;
+  grabPrompt(s: FlightState, id = 0): string {
+    const carried = this.beak(id).carried;
+    if (carried) return `E drop · Q toss ${carried.def.name}`;
     const pick = this.pick(s);
     if (!pick) return this.npcs?.blockedHint(this.beakPos(s)) ?? '';
     return pick.tooHeavy ? `${pick.prop.def.name}: too heavy` : `E grab ${pick.prop.def.name}`;
@@ -124,60 +157,74 @@ export class Interaction {
     return predictPoop({ x: s.x, y: s.y, z: s.z }, { x: s.vx, y: s.vy, z: s.vz }, time, this.world, spheres, npcSpheres.filter((n) => n.tag !== 'umbrella'));
   }
 
+  /** Single player: this gull's actions plus the shared world step. */
   update(s: FlightState, inp: InteractionInput, dt: number, time: number): GagEvent[] {
+    return [...this.updateGull(0, s, inp, dt, time), ...this.step(dt, time, s)];
+  }
+
+  /** One gull's grab / drop / toss / poop for this step (call for every gull, then `step` once). */
+  updateGull(id: number, s: FlightState, inp: InteractionInput, dt: number, time: number): GagEvent[] {
+    const b = this.beak(id);
     const ev: GagEvent[] = [];
     const it = tuning.interaction;
-    this.grabCd = Math.max(0, this.grabCd - dt);
-    this.poopCd = Math.max(0, this.poopCd - dt);
+    b.grabCd = Math.max(0, b.grabCd - dt);
+    b.poopCd = Math.max(0, b.poopCd - dt);
     const stunned = s.stunT > 0;
     const forward = { x: -Math.sin(s.heading), z: -Math.cos(s.heading) };
 
     // ---- grab / drop / toss ----
-    if (!stunned && this.grabCd <= 0) {
+    if (!stunned && b.grabCd <= 0) {
       if (inp.grab) {
-        if (this.carried) {
-          const p = this.carried;
+        if (b.carried) {
+          const p = b.carried;
           this.props.release(p, { x: s.vx * 0.6 + forward.x, y: s.vy * 0.6, z: s.vz * 0.6 + forward.z });
-          this.carried = null;
-          this.grabCd = it.grabCooldown.value;
-          ev.push({ type: 'drop', prop: p });
+          b.carried = null;
+          b.grabCd = it.grabCooldown.value;
+          ev.push({ type: 'drop', prop: p, by: id });
         } else {
           const pick = this.pick(s);
           if (pick) {
             if (pick.tooHeavy) ev.push({ type: 'heavy', prop: pick.prop });
-            else this.takeInBeak(pick.prop, ev);
+            else this.takeInBeak(pick.prop, ev, b);
           }
         }
-      } else if (!this.carried && s.mode === 'dive') {
+      } else if (!b.carried && s.mode === 'dive') {
         // diving at a held ice cream snatches it without pressing anything
         const hit = this.npcs?.snatchCandidates(this.beakPos(s))[0];
-        if (hit) this.takeInBeak(this.props.byId(hit.id)!, ev);
-      } else if (inp.toss && this.carried) {
-        const p = this.carried;
+        if (hit) this.takeInBeak(this.props.byId(hit.id)!, ev, b);
+      } else if (inp.toss && b.carried) {
+        const p = b.carried;
         this.props.release(p, {
           x: s.vx * 0.5 + forward.x * it.tossSpeed.value,
           y: s.vy * 0.5 + it.tossUp.value,
           z: s.vz * 0.5 + forward.z * it.tossSpeed.value,
         });
-        this.carried = null;
-        this.grabCd = it.grabCooldown.value;
-        ev.push({ type: 'toss', prop: p });
+        b.carried = null;
+        b.grabCd = it.grabCooldown.value;
+        ev.push({ type: 'toss', prop: p, by: id });
       }
     }
-    if (this.carried) this.props.setCarryTarget(this.carried, this.beakPos(s), s.heading);
+    if (b.carried) this.props.setCarryTarget(b.carried, this.beakPos(s), s.heading);
 
     // ---- poop ----
-    if (inp.poop && !stunned && this.poopCd <= 0) {
-      this.poopCd = tuning.poop.cooldown.value * mods.poopCooldown;
+    if (inp.poop && !stunned && b.poopCd <= 0) {
+      b.poopCd = tuning.poop.cooldown.value * mods.poopCooldown;
       const { spheres: pSpheres } = this.props.hitSpheres();
       const nSpheres = this.npcs?.poopSpheres() ?? [];
       const state = spawnPoopAssisted({ x: s.x, y: s.y, z: s.z }, { x: s.vx, y: s.vy, z: s.vz }, time, this.world, [...pSpheres, ...nSpheres], nSpheres.filter((n) => n.tag !== 'umbrella'));
       const mesh = new THREE.Mesh(poopGeo, poopMat);
       mesh.position.set(state.x, state.y, state.z);
       this.group.add(mesh);
-      this.poops.push({ state, mesh });
-      ev.push({ type: 'poopDrop' });
+      this.poops.push({ state, mesh, by: id });
+      ev.push({ type: 'poopDrop', by: id });
     }
+    return ev;
+  }
+
+  /** The shared part of a step: droppings in flight, physics, breakages. `lead` is the gull that pushes props physically. */
+  step(dt: number, time: number, lead: FlightState): GagEvent[] {
+    const ev: GagEvent[] = [];
+    const s = lead;
     const { spheres: propSpheres, props } = this.props.hitSpheres();
     const npcSpheres = this.npcs?.poopSpheres() ?? [];
     const spheres = [...propSpheres, ...npcSpheres];
@@ -191,7 +238,7 @@ export class Interaction {
       if (hit.prop !== null && hit.prop >= propSpheres.length) {
         const role = this.npcs?.onPooped(hit.prop - propSpheres.length);
         this.decals.add({ x: hit.x, y: 0, z: hit.z }, { x: 0, y: 1, z: 0 }, 0.5);
-        if (!lp.decoy) ev.push({ type: 'poopNpc', role });
+        if (!lp.decoy) ev.push({ type: 'poopNpc', role, by: lp.by });
       } else if (hit.prop !== null) {
         const p = props[hit.prop];
         p.dirty++;
@@ -216,7 +263,7 @@ export class Interaction {
         const t = e.prop.body.translation();
         this.debris.burst(t, 0x9bd8b0);
         this.props.destroy(e.prop);
-        if (this.carried === e.prop) this.carried = null;
+        for (const b of this.beaks) if (b?.carried === e.prop) b.carried = null;
         ev.push({ type: 'break', prop: e.prop });
       } else if (e.type === 'clatter') ev.push({ type: 'clatter', prop: e.prop, speed: e.speed, quiet: e.quiet });
       else ev.push({ type: 'tipped', prop: e.prop });
@@ -226,13 +273,14 @@ export class Interaction {
   }
 
   /** Something knocked the item out of the beak (spray, swat, net...). */
-  dropCarried(s: FlightState): Prop | null {
-    const p = this.carried;
+  dropCarried(s: FlightState, id = 0): Prop | null {
+    const b = this.beak(id);
+    const p = b.carried;
     if (!p) return null;
     this.props.release(p, { x: s.vx * 0.3, y: 2, z: s.vz * 0.3 });
     p.lost = true; // knocked out of the beak: mark it so it cannot be lost
-    this.carried = null;
-    this.grabCd = 0.5;
+    b.carried = null;
+    b.grabCd = 0.5;
     return p;
   }
 
@@ -251,14 +299,14 @@ export class Interaction {
   restock(match: (p: Prop) => boolean): void {
     for (const p of this.props.props) {
       if (!match(p)) continue;
-      if (this.carried === p) this.carried = null;
+      for (const b of this.beaks) if (b?.carried === p) b.carried = null;
       this.props.reset(p);
     }
   }
 
   /** Put every prop back and wipe the splats (R). */
   reset(): void {
-    if (this.carried) this.carried = null;
+    for (const b of this.beaks) if (b) b.carried = null;
     for (const p of this.props.props) this.props.reset(p);
     this.decals.clear();
     for (const lp of this.poops) this.group.remove(lp.mesh);

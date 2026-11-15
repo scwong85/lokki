@@ -17,7 +17,9 @@ export class Input {
   /** Touch devices never capture the pointer. */
   pointerLockAllowed = true;
 
-  constructor(canvas: HTMLElement) {
+  /** `devices: false` makes an input that only virtual sources feed (a second player on a gamepad, a network peer). */
+  constructor(canvas: HTMLElement | null, devices = true) {
+    if (!devices || !canvas) return;
     addEventListener('keydown', (e) => {
       if (e.target instanceof HTMLInputElement) return;
       if (!e.repeat) this.pressedThisStep.add(e.code);

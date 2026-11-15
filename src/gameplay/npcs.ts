@@ -79,12 +79,15 @@ export class NpcManager implements NpcHooks {
   }
 
   /** One fixed sim step. Returns brain events (noticed, panic, chase...). */
-  update(dt: number, gull: GullInfo): NpcEvent[] {
+  /** `gull`: one gull, or every gull in play (each tourist watches the nearest one). */
+  update(dt: number, gull: GullInfo | readonly GullInfo[]): NpcEvent[] {
+    const gulls: readonly GullInfo[] = Array.isArray(gull) ? gull : [gull as GullInfo];
     const ev: NpcEvent[] = this.pending.splice(0);
     const ctx = { world: this.world, walkable: this.walkable, rng: this.rng };
     this.clock += dt;
     for (const n of this.npcs) {
-      ev.push(...stepNpc(n, gull, this.noises, dt, ctx));
+      const near = gulls.length === 1 ? gulls[0] : gulls.reduce((a, b) => ((a.x - n.x) ** 2 + (a.z - n.z) ** 2 <= (b.x - n.x) ** 2 + (b.z - n.z) ** 2 ? a : b));
+      ev.push(...stepNpc(n, near, this.noises, dt, ctx));
       ev.push(...this.wantedItems(n));
       ev.push(...this.reclaim(n));
       // solid walls, counters and landmarks push the tourist out (horizontal only)

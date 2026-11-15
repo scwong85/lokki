@@ -89,6 +89,10 @@ export const tuning = {
     lookAhead: p(0.2, 0, 1, 0.01), // seconds of velocity the camera looks ahead
     minHeight: p(0.6, 0, 3, 0.1),
   },
+  gamepad: {
+    deadzone: p(0.18, 0, 0.5, 0.01), // stick wobble ignored
+    lookSpeed: p(900, 100, 3000, 50), // right-stick look speed (mouse pixels per second at full tilt)
+  },
   touch: {
     stickRadius: p(56, 20, 140, 2), // px the thumb travels for full speed
     deadzone: p(7, 0, 30, 1), // px of thumb wobble ignored
@@ -213,6 +217,7 @@ export const tuning = {
     wardenPatrolSpeed: p(1.2, 0.5, 3, 0.1),
     wardenSpeed: p(2.6, 1, 6, 0.1), // hunting
     wardenSwatRange: p(2.4, 1, 5, 0.1),
+    wardenThiefRange: p(30, 5, 100, 1), // with two gulls, he goes after the one carrying stolen food within this range
     wardenSwatWindup: p(0.5, 0.2, 1.5, 0.05),
     wardenSwatCooldown: p(2, 0.5, 8, 0.5),
     wardenSulk: p(5, 1, 15, 0.5), // after being pooped on

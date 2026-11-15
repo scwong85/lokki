@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { startLoop } from './core/loop';
 import { Input } from './core/input';
+import { GamepadSource } from './core/gamepad';
+import { makeSnapshot, type Snapshot } from './net/snapshot';
 import { events } from './core/events';
 import { tuning } from './core/tuning';
 import { mods, staminaMax } from './core/skillMods';
@@ -182,6 +184,27 @@ scene.add(gull.mesh, gull.shadow, marker.group);
 const cam = new FollowCamera(innerWidth / innerHeight);
 const input = new Input(renderer.domElement);
 // phones and tablets: on-screen controls, no pointer lock, a lighter view distance
+// ---- players: player 1 (keyboard/mouse/touch, or a gamepad), and with ?coop a debug second gull on a gamepad ----
+interface Player {
+  id: number;
+  gull: Gull;
+  input: Input;
+  /** Player 2 steers its own view direction (the camera follows player 1). */
+  yaw: number;
+  pitch: number;
+}
+const coop = !greybox && new URLSearchParams(location.search).has('coop');
+const players: Player[] = [{ id: 0, gull, input, yaw: 0, pitch: 0.25 }];
+if (coop) {
+  const g2 = new Gull({ x: start.x + 2.5, z: start.z });
+  g2.isWater = gull.isWater;
+  g2.setSkin(skinById('juvenile').colours); // tell them apart at a glance
+  shadows(g2.mesh, true, false);
+  scene.add(g2.mesh, g2.shadow);
+  players.push({ id: 1, gull: g2, input: new Input(null, false), yaw: 0, pitch: 0.25 });
+}
+// the first gamepad drives player 2 in co-op, otherwise player 1
+const pad = new GamepadSource(coop ? players[1].input : input, 0);
 const touch = wantsTouch(location.search, matchMedia('(pointer: coarse)').matches, navigator.maxTouchPoints);
 const touchControls = touch ? new TouchControls(document.body, input) : null;
 if (touch) {
@@ -199,7 +222,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, defense, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, defense, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -352,6 +375,19 @@ function restartLevel(mode: 'normal' | 'speedrun'): void {
   persist();
 }
 
+/** The whole game as plain data with stable ids (what the host will send in online co-op). */
+function captureSnapshot(): Snapshot {
+  return makeSnapshot({
+    time: simTime,
+    gulls: players.map((p) => ({ id: p.id, ...pickXYZ(p.gull.state), vx: p.gull.state.vx, vy: p.gull.state.vy, vz: p.gull.state.vz, heading: p.gull.state.heading, mode: p.gull.state.mode, carry: interaction.beak(p.id).carried?.id ?? null })),
+    props: interaction.props.props.map((pr) => ({ id: pr.id, x: pr.cur.p.x, y: pr.cur.p.y, z: pr.cur.p.z, qx: pr.cur.q.x, qy: pr.cur.q.y, qz: pr.cur.q.z, qw: pr.cur.q.w, by: interaction.carrierOf(pr), held: pr.heldBy, broken: pr.broken })),
+    npcs: (npcs?.npcs ?? []).map((n) => ({ id: n.id, x: n.x, z: n.z, heading: n.heading, mode: n.mode, holding: n.holding })),
+    heat: defense?.heat.value ?? 0,
+    quests: quests.quests.map((q) => ({ id: q.id, status: q.status, timeLeft: q.timeLeft, timed: q.timed, objectives: q.objectives })),
+  });
+}
+const pickXYZ = (s: { x: number; y: number; z: number }) => ({ x: s.x, y: s.y, z: s.z });
+
 /** A sound the tourists and the Warden can hear. */
 function noise(x: number, z: number, loud: number): void {
   npcs?.addNoise(x, z, loud);
@@ -397,19 +433,20 @@ function onDefense(evs: DefenseEvent[]): void {
         break;
       case 'hit': {
         stats.add('sprayed');
-        const dropped = applyHit(gull.state, e.hit);
+        const victim = players[e.gull]?.gull ?? gull;
+        const dropped = applyHit(victim.state, e.hit);
         if (!dropped) {
           hud.toast('Slipped through!', 0.8);
           break;
         }
-        const lost = interaction.dropCarried(gull.state);
+        const lost = interaction.dropCarried(victim.state, e.gull);
         const what = { spray: 'Sprayed by a vendor!', swat: 'Swatted by the Warden!', line: 'Tangled in a scare line!', net: 'Caught in the net!' }[e.hit.kind];
         hud.toast(lost ? `${what} Dropped the ${lost.def.name}!` : what, 1.4);
         audio.play(e.hit.kind === 'spray' ? 'splat' : e.hit.kind === 'swat' ? 'bonk' : 'twang');
-        cam.shake(e.hit.kind === 'swat' ? 0.7 : 0.45);
-        interaction.debris.burst({ x: gull.state.x, y: gull.state.y + 0.3, z: gull.state.z }, 0xffffff, 14); // feathers
-        hud.flash({ spray: '#7ec8ff', swat: '#ffb347', line: '#ffffff', net: '#ffffff' }[e.hit.kind]);
-        gull.openBeak(0.7);
+        if (e.gull === 0) cam.shake(e.hit.kind === 'swat' ? 0.7 : 0.45);
+        interaction.debris.burst({ x: victim.state.x, y: victim.state.y + 0.3, z: victim.state.z }, 0xffffff, 14); // feathers
+        if (e.gull === 0) hud.flash({ spray: '#7ec8ff', swat: '#ffb347', line: '#ffffff', net: '#ffffff' }[e.hit.kind]);
+        victim.openBeak(0.7);
         break;
       }
       case 'spray':
@@ -534,7 +571,7 @@ function onGags(gags: GagEvent[]): void {
       case 'grab':
         tutorial.event('grab');
         audio.play('pop');
-        gull.openBeak(0.25);
+        (players[g.by ?? 0]?.gull ?? gull).openBeak(0.25);
         hud.toast(`Got the ${g.prop.def.name}!`, 0.7);
         if (g.prop.tag) notes(quests.onEvent(`grab:${g.prop.tag}`));
         notes(quests.onEvent(`grab:${g.prop.type}`));
@@ -703,7 +740,7 @@ startLoop({
       { ax: x, ay: y, flap: input.isDown('Space'),
         dive: input.isDown('ShiftLeft') || input.isDown('ShiftRight'),
         aimPitch: cam.pitch,
-        carryMass: interaction.carriedMass,
+        carryMass: interaction.carriedMass(0),
       },
       cam.yaw,
       dt,
@@ -717,19 +754,35 @@ startLoop({
       audio.play('bonk');
       hud.toast('Blocked! They are guarding it', 1.1);
     }
-    onGags(
-      interaction.update(
-        gull.state,
-        { grab: input.wasPressed('KeyE'), toss: input.wasPressed('KeyQ'), poop: input.wasPressed('KeyF') || input.wasClicked() },
+    onGags(interaction.updateGull(0, gull.state, { grab: input.wasPressed('KeyE'), toss: input.wasPressed('KeyQ'), poop: input.wasPressed('KeyF') || input.wasClicked() }, dt, simTime));
+    // other players: their own flight and beak (the camera stays on player 1)
+    for (const p of players) {
+      if (p.id === 0) continue;
+      const look = p.input.consumeMouse();
+      p.yaw -= look.dx * tuning.camera.mouseSensitivity.value;
+      p.pitch = Math.min(1.2, Math.max(-0.3, p.pitch + look.dy * tuning.camera.mouseSensitivity.value));
+      const ax = p.input.axes();
+      p.gull.update(
+        { ax: ax.x, ay: ax.y, flap: p.input.isDown('Space'), dive: p.input.isDown('ShiftLeft'), aimPitch: p.pitch, carryMass: interaction.carriedMass(p.id) },
+        p.yaw,
         dt,
+        world,
         simTime,
-      ),
-    );
+        targets,
+      );
+      onGags(interaction.updateGull(p.id, p.gull.state, { grab: p.input.wasPressed('KeyE'), toss: p.input.wasPressed('KeyQ'), poop: p.input.wasPressed('KeyF') }, dt, simTime));
+      p.input.endStep();
+    }
+    onGags(interaction.step(dt, simTime, gull.state));
     if (npcs) {
       const g = gull.state;
-      onNpcEvents(npcs.update(dt, { x: g.x, y: g.y, z: g.z, diving: g.mode === 'dive' }));
-      notes(quests.tick({ dt, carryingStolen: interaction.carried?.stolen === true, nearestNpc: npcs.nearestDistance(g) }));
-      if (defense) onDefense(defense.update(dt, g, stepNoises, npcs.npcs.some((n) => n.seesGull), abilities.disguised));
+      onNpcEvents(npcs.update(dt, players.map((p) => ({ x: p.gull.state.x, y: p.gull.state.y, z: p.gull.state.z, diving: p.gull.state.mode === 'dive' }))));
+      const stolen = players.some((p) => interaction.beak(p.id).carried?.stolen === true);
+      notes(quests.tick({ dt, carryingStolen: stolen, nearestNpc: Math.min(...players.map((p) => npcs.nearestDistance(p.gull.state))) }));
+      if (defense) {
+        const gulls = players.map((p) => ({ id: p.id, state: p.gull.state, hidden: p.id === 0 && abilities.disguised, suspicious: interaction.beak(p.id).carried?.stolen === true }));
+        onDefense(defense.update(dt, gulls, stepNoises, npcs.npcs.some((n) => n.seesGull)));
+      }
       stepNoises.length = 0;
       // world triggers (delivery zones, the sea, the ferry horn, bun checkpoints) -> quest events
       const views: PropView[] = interaction.props.props.map((p) => ({
@@ -767,7 +820,8 @@ startLoop({
     input.endStep();
   },
   render(alpha, frameDt) {
-    gull.applyInterpolation(alpha, frameDt, world);
+    for (const p of players) p.gull.applyInterpolation(alpha, frameDt, world);
+    pad.poll(frameDt, tuning.gamepad.deadzone.value, tuning.gamepad.lookSpeed.value);
     interaction.render(alpha, gull.state, simTime, cam.camera.quaternion);
     npcs?.render(simTime, interaction.beakPos(gull.state), cam.camera.quaternion);
     defense?.render(simTime, frameDt);
