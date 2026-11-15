@@ -15,6 +15,8 @@ export interface PoseInput {
   /** Beak held open (screech, stunned). */
   beakOpen: boolean;
   time: number;
+  /** Floating on the sea. */
+  swimming?: boolean;
 }
 
 export interface Pose {
@@ -37,6 +39,8 @@ export interface Pose {
   beakOpen: number;
   /** Body vertical offset (m). */
   bob: number;
+  /** Floating on the sea: the legs are tucked away completely and not drawn. */
+  swimming: boolean;
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -45,7 +49,7 @@ export function computePose(i: PoseInput): Pose {
   const headRoll = clamp(i.turnRate * 0.15, -0.4, 0.4);
   const base: Pose = {
     flap: 0, flapActive: false, fold: 0, sweep: 0.1, legTuck: 1, legStride: 0, walkPhase: i.walkPhase,
-    headRoll, headPitch: -i.bodyPitch * 0.6, beakOpen: i.beakOpen ? 1 : 0, bob: 0,
+    headRoll, headPitch: -i.bodyPitch * 0.6, beakOpen: i.beakOpen ? 1 : 0, bob: 0, swimming: false,
   };
 
   if (i.stunned) {
@@ -53,6 +57,11 @@ export function computePose(i: PoseInput): Pose {
       ...base, flap: -0.8, fold: 0.3, sweep: 0.3, legTuck: i.mode === 'ground' ? 0 : 1,
       headRoll: Math.sin(i.time * 12) * 0.35, headPitch: 0.3, beakOpen: 1,
     };
+  }
+
+  if (i.mode === 'ground' && i.swimming) {
+    // floating: wings folded, no walking legs; they are tucked away so the gull floats instead of standing in the water
+    return { ...base, flap: -0.5, fold: 1, sweep: 0.5, legTuck: 1, legStride: 0, swimming: true, headPitch: Math.sin(i.time * 1.4) * 0.06, bob: Math.sin(i.time * 2.2) * 0.02 };
   }
 
   if (i.mode === 'ground') {

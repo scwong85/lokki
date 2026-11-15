@@ -5,13 +5,13 @@ import { HUD_NAMES, nextHudMode } from './hudMode';
 export class OptionsPanel {
   private el: HTMLElement;
 
-  constructor(root: HTMLElement, private options: Options, private onChange: (o: Options) => void, private onLevels: () => void = () => undefined, private onCoop: () => void = () => undefined) {
+  constructor(root: HTMLElement, private options: Options, private onChange: (o: Options) => void, private onLevels: () => void = () => undefined, private onCoop: () => void = () => undefined, private onSkills: () => void = () => undefined, private onControls: () => void = () => undefined, private onArrange: () => void = () => undefined) {
     this.el = document.createElement('div');
     this.el.id = 'options';
     this.el.className = 'menu-card';
     this.el.hidden = true;
-    const rows = OPTION_SLIDERS.map((s) => `<label>${s.label}<input type="range" data-k="${s.key}" min="${s.min}" max="${s.max}" step="${s.step}" value="${options[s.key]}"></label>`).join('');
-    this.el.innerHTML = `<h3>Options</h3>${rows}<label class="chk">HUD <button type="button" data-act="hud" class="hudbtn"></button></label><label class="chk"><input type="checkbox" data-k="graphics"> High quality graphics (shadows)</label><label class="chk"><input type="checkbox" data-k="tutorial"> Show the flying tips again</label><button type="button" data-act="levels">Choose a level… (L)</button><button type="button" data-act="coop">Play with a friend online… (N)</button><p class="menu-keys"><b>M</b> mutes everything · <b>U</b> cycles the HUD · <b>O</b> closes this</p><button data-act="close">Close</button>`;
+    const rows = OPTION_SLIDERS.map((s) => `<label${s.touchOnly ? ' class="touch-only"' : ''}>${s.label}<input type="range" data-k="${s.key}" min="${s.min}" max="${s.max}" step="${s.step}" value="${options[s.key]}"></label>`).join('');
+    this.el.innerHTML = `<h3>Options</h3>${rows}<label class="chk">HUD <button type="button" data-act="hud" class="hudbtn"></button></label><label class="chk touch-only"><input type="checkbox" data-k="lefty"> Left-handed buttons</label><button type="button" class="touch-only" data-act="arrange">Arrange the touch buttons…</button><label class="chk"><input type="checkbox" data-k="graphics"> High quality graphics (shadows)</label><label class="chk"><input type="checkbox" data-k="tutorial"> Show the flying tips again</label><button type="button" data-act="levels">Choose a level… (L)</button><button type="button" data-act="skills">Skills &amp; gull looks (K)</button><button type="button" data-act="controls">Controls…</button><button type="button" data-act="coop">Play with a friend online… (N)</button><p class="menu-keys"><b>M</b> mutes everything · <b>U</b> cycles the HUD · <b>O</b> closes this</p><button data-act="close">Close</button>`;
     this.el.querySelectorAll<HTMLInputElement>('input[type=range]').forEach((inp) => {
       inp.addEventListener('input', () => {
         (this.options as unknown as Record<string, number>)[inp.dataset.k!] = Number(inp.value);
@@ -29,19 +29,37 @@ export class OptionsPanel {
       this.options.graphics = gfx.checked ? 'high' : 'low';
       this.onChange(this.options);
     });
+    const lefty = this.el.querySelector<HTMLInputElement>('input[data-k=lefty]')!;
+    lefty.addEventListener('change', () => {
+      this.options.touchHand = lefty.checked ? 'left' : 'right';
+      this.onChange(this.options);
+    });
+    this.el.querySelector('[data-act=arrange]')!.addEventListener('click', () => {
+      this.hide();
+      this.onArrange();
+    });
     const tut = this.el.querySelector<HTMLInputElement>('input[data-k=tutorial]')!;
     tut.addEventListener('change', () => {
       this.options.tutorialDone = !tut.checked;
       this.onChange(this.options);
     });
     this.el.addEventListener('keydown', (e) => {
-      if (e.code === 'KeyO' || e.code === 'Escape') this.hide(); // keys typed while a slider has focus never reach the game
+      if (e.code === 'KeyO' || e.code === 'Escape') {
+        this.hide(); // keys typed while a slider has focus never reach the game
+        e.stopPropagation(); // and Esc must not also re-open the options
+      }
     });
     this.el.querySelector('[data-act=close]')!.addEventListener('click', () => this.hide());
     this.el.querySelector('[data-act=levels]')!.addEventListener('click', () => {
       this.hide();
       this.onLevels();
     });
+    for (const [act, fn] of [['skills', () => this.onSkills()], ['controls', () => this.onControls()]] as [string, () => void][]) {
+      this.el.querySelector(`[data-act=${act}]`)!.addEventListener('click', () => {
+        this.hide();
+        fn();
+      });
+    }
     this.el.querySelector('[data-act=coop]')!.addEventListener('click', () => {
       this.hide();
       this.onCoop();
@@ -60,6 +78,7 @@ export class OptionsPanel {
 
   show(): void {
     this.el.querySelector<HTMLInputElement>('input[data-k=tutorial]')!.checked = !this.options.tutorialDone;
+    this.el.querySelector<HTMLInputElement>('input[data-k=lefty]')!.checked = this.options.touchHand === 'left';
     this.el.querySelector<HTMLInputElement>('input[data-k=graphics]')!.checked = this.options.graphics === 'high';
     this.el.querySelector<HTMLButtonElement>('[data-act=hud]')!.textContent = HUD_NAMES[this.options.hud];
     this.el.hidden = false;

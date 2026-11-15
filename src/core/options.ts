@@ -16,6 +16,10 @@ export interface Options {
   graphics: 'high' | 'low';
   /** How much HUD to show (full / minimal / off). */
   hud: HudMode;
+  /** Touch: how fast dragging turns the view. */
+  touchLook: number;
+  /** Touch: which thumb works the buttons. */
+  touchHand: 'right' | 'left';
 }
 
 export const defaultOptions = (): Options => ({
@@ -28,6 +32,8 @@ export const defaultOptions = (): Options => ({
   tutorialDone: false,
   graphics: 'high',
   hud: 'full',
+  touchLook: 2.6,
+  touchHand: 'right',
 });
 
 const RANGES = {
@@ -36,6 +42,7 @@ const RANGES = {
   sfx: [0, 1],
   sensitivity: [0.0005, 0.01],
   shake: [0, 1],
+  touchLook: [0.5, 6],
 } as const;
 
 const clampNum = (v: unknown, lo: number, hi: number, fallback: number): number =>
@@ -49,6 +56,7 @@ export function sanitizeOptions(raw: unknown, base: Options = defaultOptions()):
   for (const k of Object.keys(RANGES) as (keyof typeof RANGES)[]) o[k] = clampNum(r[k], RANGES[k][0], RANGES[k][1], base[k]);
   o.tutorialDone = r.tutorialDone === true;
   o.graphics = r.graphics === 'low' ? 'low' : 'high';
+  o.touchHand = r.touchHand === 'left' ? 'left' : 'right';
   o.hud = HUD_MODES.includes(r.hud as HudMode) ? (r.hud as HudMode) : 'full';
   return o;
 }
@@ -60,6 +68,7 @@ export function applyOptions(o: Options): void {
   tuning.audio.sfx.value = o.sfx;
   tuning.camera.mouseSensitivity.value = o.sensitivity;
   tuning.juice.shake.value = o.shake;
+  tuning.touch.lookScale.value = o.touchLook;
 }
 
 export class OptionsStore {
@@ -100,10 +109,11 @@ function defaultStorage(): StorageLike | null {
   }
 }
 
-export const OPTION_SLIDERS: { key: 'master' | 'music' | 'sfx' | 'sensitivity' | 'shake'; label: string; min: number; max: number; step: number }[] = [
+export const OPTION_SLIDERS: { key: 'master' | 'music' | 'sfx' | 'sensitivity' | 'shake' | 'touchLook'; label: string; min: number; max: number; step: number; touchOnly?: boolean }[] = [
   { key: 'master', label: 'Volume', min: 0, max: 1, step: 0.05 },
   { key: 'music', label: 'Music', min: 0, max: 1, step: 0.05 },
   { key: 'sfx', label: 'Sound effects', min: 0, max: 1, step: 0.05 },
   { key: 'sensitivity', label: 'Mouse look', min: 0.0005, max: 0.008, step: 0.0005 },
   { key: 'shake', label: 'Screen shake', min: 0, max: 1, step: 0.1 },
+  { key: 'touchLook', label: 'Touch look speed', min: 0.5, max: 6, step: 0.1, touchOnly: true },
 ];

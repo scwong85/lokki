@@ -277,7 +277,8 @@ export class NpcModel {
     }
   }
 
-  private animateSkinned(n: NpcView, armRaise: number, time: number): void {
+  private animateSkinned(n: NpcView, armRaiseIn: number, time: number): void {
+    let armRaise = armRaiseIn;
     const k = this.skinned!;
     const dt = k.lastTime < 0 ? 0 : Math.min(0.1, Math.max(0, time - k.lastTime));
     k.lastTime = time;
@@ -294,6 +295,8 @@ export class NpcModel {
     this.root.updateMatrixWorld(true);
     // arms on top of the clip: raised in panic / cheering, the right one reaching for what is in hand
     const up = new THREE.Vector3(0, 1, 0);
+    // running: let the clip's own arm pump through (the raised-arms override made the hands twist around)
+    if (want === 'run') armRaise *= tuning.people.runArms.value;
     if (armRaise > 0.01) aimBone(k.armL, k.foreL, up, Math.min(1, armRaise));
     if (n.hand) {
       const shoulder = k.armR.getWorldPosition(new THREE.Vector3());

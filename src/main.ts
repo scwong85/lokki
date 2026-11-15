@@ -9,6 +9,8 @@ import { CoopCombo } from './gameplay/coopCombo';
 import type { GameEvent } from './net/protocol';
 import type { StatSummary } from './gameplay/levelStats';
 import { Lobby } from './ui/lobby';
+import { ControlsPanel } from './ui/controlsPanel';
+import { MenuNav } from './ui/menuNav';
 import { events } from './core/events';
 import { tuning } from './core/tuning';
 import { mods, staminaMax } from './core/skillMods';
@@ -254,6 +256,7 @@ const firstVisit = !optStore.has();
 const options = optStore.load();
 if (touch && firstVisit) options.graphics = 'low'; // phones start on the fast preset (switch in Options)
 applyOptions(options);
+touchControls?.setHand(options.touchHand);
 graphics.apply(options.graphics);
 let hudF = applyHud(options.hud);
 const levelSelect = new LevelSelect(document.body, (id) => goToLevel(id));
@@ -381,12 +384,18 @@ function onNetEvent(e: GameEvent): void {
 }
 const levelRows = () =>
   LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), current: l.id === level.id, sandbox: l.sandbox, locked: !levelUnlocked(l, save.levels), unlockHint: l.requires ? `Clear ${levelById(l.requires).name} first` : undefined, best: save.levels[l.id]?.best ? fmtClear(save.levels[l.id].best) : undefined }));
+const controlsPanel = new ControlsPanel(document.body);
+const menuNav = new MenuNav();
+pad.menuOpen = () => menuOpen();
+pad.onMenu = (a) => menuNav.handle(a);
+addEventListener('pointerdown', () => menuNav.clear());
 const optionsPanel = new OptionsPanel(document.body, options, (o) => {
   applyOptions(o);
   if (o.graphics !== graphics.level) graphics.apply(o.graphics);
   hudF = applyHud(o.hud);
+  touchControls?.setHand(o.touchHand);
   optStore.save(o);
-}, () => levelSelect.show(levelRows()), () => lobby.show());
+}, () => levelSelect.show(levelRows()), () => lobby.show(), () => skillsPanel.toggle(skills, save), () => controlsPanel.show(), () => touchControls?.arrange(true));
 // automated browser tests skip the title screen and the tips (add ?title to see them)
 const interactive = !navigator.webdriver || new URLSearchParams(location.search).has('title');
 const tutorial = new Tutorial(interactive && !options.tutorialDone);
@@ -433,7 +442,7 @@ const title = new TitleScreen(
   },
 );
 if (interactive && !new URLSearchParams(location.search).has('play')) title.show();
-const menuOpen = (): boolean => title.visible || (lobby.visible && !net) || levelSelect.visible || optionsPanel.visible || skillsPanel.visible || credits.visible || !!touchControls?.menuOpen;
+const menuOpen = (): boolean => title.visible || (lobby.visible && !net) || levelSelect.visible || optionsPanel.visible || controlsPanel.visible || skillsPanel.visible || credits.visible || !!touchControls?.menuOpen;
 const audio = new AudioManager();
 audio.muted = save.muted;
 for (const ev of ['pointerdown', 'touchend', 'keydown'] as const) addEventListener(ev, () => { audio.unlock(); music.start(); });
@@ -1010,7 +1019,11 @@ startLoop({
       else levelSelect.show(levelRows());
       if (levelSelect.visible && document.pointerLockElement) document.exitPointerLock(); // free the mouse to click a level
     }
-    if (input.wasPressed('Escape') && levelSelect.visible) levelSelect.hide();
+    if (input.wasPressed('Escape')) {
+      // Esc: close whatever is open, else open the options (the first Esc in mouse-look only frees the mouse)
+      if (menuNav.panel() && !title.visible) menuNav.handle('b');
+      else if (!title.visible) optionsPanel.show();
+    }
     if (input.wasPressed('KeyU')) {
       options.hud = nextHudMode(options.hud);
       hudF = applyHud(options.hud);
