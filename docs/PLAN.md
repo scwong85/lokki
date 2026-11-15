@@ -188,7 +188,7 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M9 Portfolio polish
 - [x] M10 Visual detail
 - [x] M11 Input layer + mobile landscape
-- [ ] M12 Level framework (two-gull-ready)
+- [x] M12 Level framework (two-gull-ready)
 - [ ] M13 Market Square Act 1 (levels 1–4)
 - [ ] M14 Online co-op
 - [ ] M15 Polish pass (playtest feedback)
@@ -277,6 +277,7 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - L1 **Snack Attack** (flight and dive-snatch: "Say cheese!"), L2 **Bombs Away** (poop and wind: "The Clean Freak"), L3 **Nosy Parkers** (sight and hearing: "Bottle Service"), L4 **Butterfingers** (carry and swap: "Bait and Switch").
 - New behaviours they need (selfie countdowns, the sign-polishing vendor, the food blogger, ...), hidden `???` to-dos, skill rewards per level.
 - Every puzzle rated **low or medium precision** with the forgiving tools from the design doc (big zones, long telegraphed timings, instant retry, touch assist).
+- **Landing assist** (from the M12 playtest: landing on the Havis Amanda statue was very hard): bigger perch zones on small targets, a gentle "landing magnet" that pulls a slow, descending gull onto a nearby perch, and a marked landing spot.
 - **Exit:** each level is distinct, fun and about 5 minutes on PC and phone; the user can finish all four without frustration.
 
 ### M14 — Online co-op (L–XL)
@@ -300,6 +301,8 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - **Remove the static ice cream** (confirm with the user which one at the start).
 - **Menus:** Esc opens the options; the options menu gets a "Skills & gull looks" entry (K stays as a shortcut).
 - **Touch camera:** faster drag-to-look (and a touch look-speed slider in Options).
+- **Controller in menus** (M12 playtest): navigate the title screen, options, skills and other panels with the D-pad/stick, A to confirm, B to go back.
+- **Controls screen** (M12 playtest): show the controller mapping (and keyboard and touch) in the options, including which buttons trigger the skills.
 - **Touch buttons:** better default positions for Flap, Dive, Poop, Grab, and a way to adjust them (layout presets or drag-to-arrange, left-handed mirror).
 - **Exit:** the user re-checks each item on PC and phone.
 
