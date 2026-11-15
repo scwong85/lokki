@@ -10,6 +10,7 @@ type Lk = {
   players: { id: number; remote?: boolean; gull: { state: { x: number; y: number; z: number } } }[];
   interaction: { props: { props: { id: number; cur: { p: { x: number } } }[] } };
   net: { role: string } | null;
+  quests: { quests: { id: string }[] };
   defense: { addHeat: (r: string) => unknown; response: { deployed: Set<string> }; heat: { value: number } } | null;
 };
 const lk = (p: import('@playwright/test').Page) => <T>(fn: (l: Lk, a?: unknown) => T, arg?: unknown) =>
@@ -44,6 +45,10 @@ test('online co-op: the guest follows the host between levels, sees the host gul
   // the guest joins: both have two players, and the guest is told the level
   await expect.poll(() => H((l) => l.players.length), { timeout: 120_000 }).toBe(2);
   await expect.poll(() => G((l) => l.players.length), { timeout: 120_000 }).toBe(2);
+
+  // joining restarts the level with the two-player to-do, on both screens
+  await expect.poll(() => H((l) => l.quests.quests.some((q) => q.id === 'duoPhoto')), { timeout: 60_000 }).toBe(true);
+  await expect.poll(() => G((l) => l.quests.quests.some((q) => q.id === 'duoPhoto')), { timeout: 120_000 }).toBe(true);
 
   // the host moves; the guest's copy of the host gull follows
   await H((l) => {

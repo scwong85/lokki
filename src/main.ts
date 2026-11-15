@@ -5,6 +5,7 @@ import { GamepadSource } from './core/gamepad';
 import { makeSnapshot, type Snapshot } from './net/snapshot';
 import { PeerLink } from './net/peer';
 import { NetSession } from './net/session';
+import { CoopCombo } from './gameplay/coopCombo';
 import type { GameEvent } from './net/protocol';
 import type { StatSummary } from './gameplay/levelStats';
 import { Lobby } from './ui/lobby';
@@ -289,6 +290,7 @@ function startSession(role: 'host' | 'guest', link: PeerLink): void {
       lobby.setConnected(session.guestName);
       hud.toast(`${session.guestName} joined!`, 2);
       relayHost();
+      loadLevel(level.id); // restart with the two-player to-dos (the guest follows)
     };
   } else {
     session.onWelcome = () => {
@@ -508,6 +510,8 @@ function pickSkin(id: string): void {
 /** Restart the level (R) or start a speedrun (Z). Skills and best times are kept. */
 function restartLevel(mode: 'normal' | 'speedrun'): void {
   levelCleared = false;
+  combo.reset();
+  lastHolder.clear();
   gull.reset();
   gull.setDisguise(false);
   interaction.reset();
@@ -529,7 +533,7 @@ function restartLevel(mode: 'normal' | 'speedrun'): void {
 /** Load another level in place (no page reload, so an online co-op link survives). */
 function loadLevel(id: string): void {
   level = levelById(id);
-  setup = levelSetup(level, QUESTS, TRIGGERS, TOURIST_SPAWNS);
+  setup = levelSetup(level, QUESTS, TRIGGERS, TOURIST_SPAWNS, players.length > 1);
   interaction.reset(); // drops whatever the beaks hold
   interaction.props.clearAll();
   npcs?.clearAll();
@@ -841,6 +845,7 @@ function onNpcEvents(evs: NpcEvent[]): void {
         hud.toast('Photobomb! Best selfie ever.', 2);
         interaction.debris.burst({ x: e.npc.x, y: 2.2, z: e.npc.z }, 0xffffff, 10); // camera flash
         notes(quests.onEvent('photobomb'));
+        if (e.framed >= 2) notes(quests.onEvent('coop:photobomb'));
       }
     } else if (e.type === 'arrived' && e.goal === 'stormoff') {
       notes(quests.onEvent('dateOver'));
@@ -850,6 +855,10 @@ function onNpcEvents(evs: NpcEvent[]): void {
     }
   }
 }
+
+const combo = new CoopCombo();
+/** Who last held each prop (for "pass the parcel"). */
+const lastHolder = new Map<number, { by: number; t: number }>();
 
 function onGags(gags: GagEvent[]): void {
   for (const g of gags) {
@@ -867,9 +876,19 @@ function onGags(gags: GagEvent[]): void {
         hud.toast(`Got the ${g.prop.def.name}!`, 0.7);
         if (g.prop.tag) notes(quests.onEvent(`grab:${g.prop.tag}`));
         notes(quests.onEvent(`grab:${g.prop.type}`));
+        if (players.length > 1) {
+          const by = g.by ?? 0;
+          const was = lastHolder.get(g.prop.id);
+          if (was && was.by !== by && simTime - was.t <= 6) notes(quests.onEvent('coop:handover'));
+          lastHolder.set(g.prop.id, { by, t: simTime });
+        }
+        break;
+      case 'drop':
+        lastHolder.set(g.prop.id, { by: g.by ?? 0, t: simTime });
         break;
       case 'toss':
         audio.play('hop');
+        lastHolder.set(g.prop.id, { by: g.by ?? 0, t: simTime });
         break;
       case 'heavy':
         hud.toast(`The ${g.prop.def.name} is too heavy!`, 0.8);
@@ -883,6 +902,7 @@ function onGags(gags: GagEvent[]): void {
         hud.toast('Snatched!', 1);
         notes(quests.onEvent(`snatch:${g.prop.type}`));
         notes(quests.onEvent('snatch'));
+        if (players.length > 1 && combo.hit('snatch', g.by ?? 0, simTime, 5)) notes(quests.onEvent('coop:snatch'));
         if (simTime - lastSnatchAt < 8) {
           hud.toast('Double snatch!', 1.6);
           notes(quests.onEvent('doubleSnatch'));
@@ -896,6 +916,7 @@ function onGags(gags: GagEvent[]): void {
         audio.play('yelp');
         hud.toast('Splat! Right on a tourist!', 1.1);
         notes(quests.onEvent('poopNpc'));
+        if (players.length > 1 && combo.hit('poopNpc', g.by ?? 0, simTime, 5)) notes(quests.onEvent('coop:poopNpc'));
         if (g.role) notes(quests.onEvent(`poopNpc:${g.role}`));
         stats.add('poopPerson');
         heat('poopNpc');

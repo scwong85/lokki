@@ -47,6 +47,14 @@ export const SNACK_ATTACK: LevelDef = {
       objectives: [{ id: 'photo', text: 'Be in the selfie when she clicks', kind: 'event', event: 'photobomb', hint: 'Stand in front of her phone at the click.' }],
     },
   ],
+  coopQuests: [
+    {
+      id: 'duoPhoto',
+      title: 'Say cheese, together',
+      timed: false,
+      objectives: [{ id: 'duoPhoto', text: 'Both gulls in the selfie when she clicks', kind: 'event', event: 'coop:photobomb', hint: 'Both gulls stand in front of her phone at the click.' }],
+    },
+  ],
   secret: ['photobomb'],
   triggers: [],
   extraTriggers: [{ id: 'feast', kind: 'carryLanded', event: 'feast', propType: 'icecream', minY: 6 }],

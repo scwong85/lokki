@@ -57,6 +57,14 @@ export const BOMBS_AWAY: LevelDef = {
       objectives: [{ id: 'melt', text: 'Splat the sign three times while he is still scrubbing', kind: 'event', event: 'frantic', hint: 'Keep going: every splat adds scrubbing time.' }],
     },
   ],
+  coopQuests: [
+    {
+      id: 'duoSplat',
+      title: 'Splat squad',
+      timed: false,
+      objectives: [{ id: 'duoSplat', text: 'Both gulls poop on people within five seconds', kind: 'event', event: 'coop:poopNpc', hint: 'One gull each: poop on someone within five seconds of each other.' }],
+    },
+  ],
   secret: ['frantic'],
   triggers: [],
   tourists: [],

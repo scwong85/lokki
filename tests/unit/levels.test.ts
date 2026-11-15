@@ -178,3 +178,17 @@ describe('level 2 fixes', () => {
     tuning.wind.strength.value = 3;
   });
 });
+
+describe('co-op twists', () => {
+  it('levels 1-4 have one hidden two-player to-do, only present with two players, and it does not block clearing', () => {
+    for (const id of ['snack-attack', 'bombs-away', 'nosy-parkers', 'butterfingers']) {
+      const solo = levelSetup(levelById(id), QUESTS, TRIGGERS, TOURIST_SPAWNS);
+      const duo = levelSetup(levelById(id), QUESTS, TRIGGERS, TOURIST_SPAWNS, true);
+      expect(duo.quests.length).toBe(solo.quests.length + 1);
+      const twist = duo.quests.find((q) => !solo.quests.some((s) => s.id === q.id))!;
+      expect(duo.secret.has(twist.id)).toBe(true);
+      expect(duo.main).toEqual(solo.main); // clearing still needs only the main to-dos
+      expect(twist.objectives[0].event?.startsWith('coop:')).toBe(true);
+    }
+  });
+});
