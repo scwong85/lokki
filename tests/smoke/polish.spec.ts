@@ -31,6 +31,7 @@ test('Esc opens the options and closes what is open; options lead to skills and 
 });
 
 test('a controller can drive the menus: D-pad moves, A presses, B goes back', async ({ page }) => {
+  test.setTimeout(240_000); // frames are slow in headless Chromium
   await page.addInitScript(() => {
     const w = window as unknown as { __pad: { pressed: number[]; polls: number } };
     w.__pad = { pressed: [], polls: 0 };
