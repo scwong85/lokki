@@ -46,6 +46,8 @@ export class NetSession {
   guestName = 'Guest';
   guestLook = 'herring';
   hostLook = 'herring';
+  /** Guest: the skills the host has (lent to the guest for this session). */
+  hostSkills: string[] = [];
   /** Guest: set when the host sent a level; the game loads it. */
   onLevel: ((id: string) => void) | null = null;
   /** Guest: the host has welcomed us (the other player exists now). */
@@ -93,6 +95,7 @@ export class NetSession {
         break;
       case 'welcome':
         this.hostLook = m.hostLook;
+        this.hostSkills = m.skills ?? [];
         if (!this.welcomed) {
           this.welcomed = true;
           this.onWelcome?.();
@@ -166,8 +169,8 @@ export class NetSession {
       this.hello(...this.helloArgs);
     }
   }
-  welcome(level: string, hostLook: string): void {
-    this.link.send({ t: 'welcome', v: PROTOCOL_VERSION, level, hostLook });
+  welcome(level: string, hostLook: string, skills: string[] = []): void {
+    this.link.send({ t: 'welcome', v: PROTOCOL_VERSION, level, hostLook, skills });
   }
   bye(why: string): void {
     if (this.link.isOpen) this.link.send({ t: 'bye', why });

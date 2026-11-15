@@ -165,3 +165,21 @@ describe('flock', () => {
     expect(Math.hypot(b.x - target.x, b.z - target.z)).toBeLessThan(9);
   });
 });
+
+describe('borrowed skills (online co-op)', () => {
+  it('a guest can use the host skills for a session without saving them', async () => {
+    const { SkillSet } = await import('../../src/gameplay/skills');
+    const { mods } = await import('../../src/core/skillMods');
+    const s = new SkillSet();
+    s.restore([]);
+    expect(s.has('flight')).toBe(false);
+    s.borrow(['flight', 'nonsense']);
+    expect(s.has('flight')).toBe(true);
+    expect(s.has('nonsense')).toBe(false);
+    expect(s.ids).toEqual([]); // nothing to save
+    expect(mods.flapImpulse).toBeGreaterThan(1); // and the effect applies
+    s.clearBorrowed();
+    expect(s.has('flight')).toBe(false);
+    expect(mods.flapImpulse).toBe(1);
+  });
+});
