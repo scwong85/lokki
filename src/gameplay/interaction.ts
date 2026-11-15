@@ -115,7 +115,7 @@ export class Interaction {
     return this.beak(id).carried?.def.mass ?? 0;
   }
 
-  /** Level targets (the buoy, the sign) as generous poop-assist targets. */
+  /** Level targets (the Clean Freak's sign) as generous poop-assist targets. */
   private targetSpheres(spheres: readonly HitSphere[], props: readonly Prop[]): HitSphere[] {
     const reach = tuning.poop.targetAssistRadius.value;
     return spheres.filter((_, i) => !!props[i].tag && POOP_TARGET_TAGS.has(props[i].tag!)).map((s) => ({ ...s, assist: reach }));

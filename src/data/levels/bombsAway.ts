@@ -4,11 +4,9 @@ import { restY } from '../props';
 /** The Clean Freak, his sign and his plate of fried vendace, on the open quay. */
 export const FREAK = { x: -13, z: -13 };
 export const FREAK_SIGN = { x: -9.5, z: -13 };
-/** A harbour buoy to hit from the air (wind pushes the drop). */
-export const BUOY = { x: 24, z: 30 };
 
 /**
- * Level 2: Bombs Away. Teaches pooping and the wind. Headline puzzle ("The Clean Freak"): a vendor is so proud of his
+ * Level 2: Bombs Away. Teaches pooping (and a little wind). Headline puzzle ("The Clean Freak"): a vendor is so proud of his
  * polished sign that he drops everything to scrub it the moment it gets splatted. Every splat while he is still
  * scrubbing makes him more frantic. His back is turned, his plate is open.
  */
@@ -53,22 +51,6 @@ export const BOMBS_AWAY: LevelDef = {
       objectives: [{ id: 'splatThree', text: 'Splat three tourists', kind: 'event', event: 'poopNpc', count: 3, hint: 'Fly over a tourist and press F; aim a little ahead of anyone who is walking.' }],
     },
     {
-      id: 'buoy',
-      title: 'Buoy target',
-      teaser: 'A bullseye in the harbour.',
-      timed: false,
-      objectives: [
-        {
-          id: 'hitBuoy',
-          text: 'Hit the harbour buoy',
-          kind: 'event',
-          event: 'buoyHit',
-          hint: 'The wind (the arrow top right) pushes your drop: aim upwind of it.',
-          markers: [{ x: BUOY.x, z: BUOY.z, r: 3, label: 'Buoy' }],
-        },
-      ],
-    },
-    {
       id: 'frantic',
       title: 'Meltdown',
       timed: false,
@@ -87,7 +69,6 @@ export const BOMBS_AWAY: LevelDef = {
   ],
   extraProps: [
     { type: 'sign', x: FREAK_SIGN.x, y: restY('sign'), z: FREAK_SIGN.z, tag: 'cleanSign' },
-    { type: 'buoy', x: BUOY.x, y: 0.4, z: BUOY.z, tag: 'buoy' },
   ],
   defense: false,
   parTime: 270,

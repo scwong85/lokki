@@ -724,10 +724,6 @@ function onGags(gags: GagEvent[]): void {
         audio.play('splat');
         hud.toast(`Splat! ${g.prop.def.name}`, 0.9);
         if (g.prop.tag === 'cleanSign' && npcs?.signSplatted()) hud.toast('The Clean Freak drops everything to scrub!', 1.6);
-        if (g.prop.tag === 'buoy') {
-          hud.toast('Bullseye! The buoy is not impressed.', 1.6);
-          notes(quests.onEvent('buoyHit'));
-        }
         break;
       case 'break': {
         audio.play('crash');

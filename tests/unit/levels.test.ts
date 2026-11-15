@@ -151,7 +151,7 @@ describe('level 2 fixes', () => {
     expect(q.quests.find((x) => x.id === 'freak')!.status).toBe('won');
   });
 
-  it('the poop aim assist steers a drop onto the buoy (and the sign) even with a crosswind', async () => {
+  it('the poop aim assist steers a drop onto the brass sign even with a crosswind', async () => {
     const { spawnPoopAssisted, stepPoop } = await import('../../src/gameplay/poop');
     type HitSphere = import('../../src/gameplay/poop').HitSphere;
     const { World } = await import('../../src/world/collision');
@@ -159,7 +159,7 @@ describe('level 2 fixes', () => {
     const { PROPS } = await import('../../src/data/props');
     tuning.wind.strength.value = 3;
     const world = new World();
-    const buoy: HitSphere = { x: 0, y: 0.3, z: 0, r: PROPS.buoy.radius };
+    const buoy: HitSphere = { x: 0, y: 0.6, z: 0, r: PROPS.sign.radius }; // the sign
     const land = (targets: HitSphere[]) => {
       const p = spawnPoopAssisted({ x: 3.5, y: 9, z: 1 }, { x: 0, y: 0, z: 0 }, 0, world, [buoy], targets);
       for (let i = 0; i < 600; i++) {

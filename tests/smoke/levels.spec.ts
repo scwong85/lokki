@@ -76,7 +76,7 @@ test('level 1: the selfie tourist counts down, her ice cream opens on the shot, 
   expect(errors).toEqual([]);
 });
 
-test('level 2: splatting the sign sends the Clean Freak scrubbing (his fish is open), splatting the buoy counts, the level needs level 1 first', async ({ page }) => {
+test('level 2: splatting the sign sends the Clean Freak scrubbing (his fish is open) and counts', async ({ page }) => {
   test.setTimeout(240_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -98,8 +98,6 @@ test('level 2: splatting the sign sends the Clean Freak scrubbing (his fish is o
   await expect.poll(async () => { await dropOn('cleanSign'); await page.waitForTimeout(6000); return page.evaluate(() => (window as unknown as W).__lokki.npcs.npcs.find((n) => n.role === 'cleaner')!.cleanT > 0); }, { timeout: 120_000, intervals: [200] }).toBe(true);
   expect(await page.evaluate(() => (window as unknown as W).__lokki.npcs.npcs.find((n) => n.role === 'cleaner')!.distractT > 0)).toBe(true);
   expect(await page.evaluate(() => (window as unknown as W).__lokki.quests.quests.find((q) => q.id === 'freak')!.objectives[0].done)).toBe(true);
-  // the buoy: a bullseye from the air
-  await expect.poll(async () => { await dropOn('buoy'); await page.waitForTimeout(6000); return page.evaluate(() => (window as unknown as W).__lokki.quests.quests.find((q) => q.id === 'buoy')!.status); }, { timeout: 120_000, intervals: [200] }).toBe('won');
   expect(errors).toEqual([]);
 });
 
