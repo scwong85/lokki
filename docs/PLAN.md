@@ -11,7 +11,7 @@
 
 - **Purpose:** portfolio piece (public GitHub repo, playable static build).
 - **Owner/dev:** one developer using Claude Code; no deadline ("develop whenever").
-- **Platform:** desktop browser, **mouse + keyboard first** (gamepad is a stretch goal). Not mobile.
+- **Platform:** desktop browser, **mouse + keyboard first**; phones and tablets in landscape with touch controls (M11); gamepad on the shared input layer (M12); online two-player co-op (M14).
 - **Delivery:** static site (`dist/`), tested locally first, hosted later (GitHub Pages / Netlify / any static host).
 - **Art direction:** **low-poly, pastel**, flat shading, soft fog, simple shadows. No art pipeline at first: everything is built from primitives and procedural animation; hand-made glTF can replace it later without gameplay changes.
 
@@ -27,7 +27,7 @@
 | Renderer | Three.js, **WebGL2 as baseline**; WebGPU only as a later optional upgrade |
 | Physics | Rapier (`@dimforge/rapier3d-compat`, WASM), fixed timestep, ideally in a worker later |
 | Language of UI | English only, with a few Finnish flavour words |
-| Controls | Keyboard + mouse |
+| Controls | Keyboard + mouse; touch on phones (M11); gamepad (M12) |
 | Review flow | One branch + one PR per milestone (`mN-short-name`). User pulls and plays locally |
 | Playtest feedback | Debug panel has a **"Copy tuning as JSON"** button; user pastes it back into chat/notes |
 | Map data (M3) | Helsinki open 3D city model for building footprints/heights + OpenStreetMap (Overpass) for roads, parks, coastline |
@@ -136,7 +136,7 @@ lokki/
 - **NPC brain:** small utility/behaviour-tree: senses (sight cone, hearing), needs/cares ("things I care about"), states (idle, eat, notice, chase, panic, recover). Each NPC type has a table of *what it cares about* and *how it reacts when that is disturbed*.
 - **Tuning:** a single typed `tuning` object per system; debug panel (e.g. lil-gui or a tiny custom panel) edits it live; **"Copy tuning as JSON"** exports it; JSON can be committed as defaults.
 - **Determinism where cheap:** seeded RNG for anything affecting gameplay so bugs are reproducible.
-- **No secrets, no external runtime services.** The built game must run fully static and offline after load.
+- **No secrets, no external runtime services.** The built game must run fully static and offline after load. *Exception planned for M14: online co-op may use a small signalling/relay service to connect players; single player stays offline.*
 
 ### 4.4 Performance budget (targets, validate in M3)
 - 60 fps on a typical laptop with integrated graphics at 1080p.
@@ -188,6 +188,9 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M9 Portfolio polish
 - [ ] M10 Visual detail
 - [ ] M11 Input layer + mobile landscape
+- [ ] M12 Level framework (two-gull-ready)
+- [ ] M13 Market Square Act 1 (levels 1–4)
+- [ ] M14 Online co-op
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -259,8 +262,35 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - Mobile defaults: low graphics preset, shorter view distance; browser quirks (no page scroll/zoom, rotate card in portrait, fullscreen + landscape lock where allowed, Add to Home Screen manifest, audio on first touch, release input when hidden).
 - **Exit:** the user can play a quest start to finish on their own phone in landscape; controls feel usable; frame rate acceptable.
 
-### After M11 (backlog)
-Gamepad support on the M11 input layer (small), second district (Senate Square or Esplanadi), seasons (Vappu, herring market, winter), nemesis story arc, optional WebGPU renderer, optional co-op.
+### M12 — Level framework, two-gull-ready (M–L)
+**Goal:** turn the single Market Square level into a framework for many short levels, built from the start for two gulls and for online play. Design: `docs/design/levels-kauppatori.md` (sections 1–2, 6–8); co-op background: `docs/spikes/multiplayer.md`.
+- **Levels as data** (`src/data/levels/`): cast, props, deterrents, start heat, to-dos (2–4, about 5 minutes), hidden `???` to-dos, time of day, rewards; a level loader that builds a level from its definition.
+- **Level select** (a pastel postcard of the Market Square), **stars** per level (clear · all to-dos incl. hidden · par time), **per-level saves**; **skills unlock by finishing levels** instead of per quest. Today's eight-quest level stays as a **free-play sandbox**.
+- **Two-gull-ready:** a list of gulls instead of one (flight, interaction, carrying and poop per gull; tourists and city defence sense the nearest or most suspicious gull; shared to-do and heat; per-player HUD bits).
+- **Network-ready state:** stable IDs for gulls, props and people; gameplay changes go through events; the game state can be captured as a snapshot; one authority decides outcomes (grabs, snatches, hits). No networking yet.
+- **Gamepad support** on the M11 input layer, and a **debug second gull** (gamepad, same screen, `?coop`) to test two-player logic without networking.
+- **Exit:** the sandbox plays exactly as before; a stub level loads from data and can be won; a second gull on a gamepad can grab, poop and complete to-dos alongside player 1; tests cover the level loader, multi-gull targeting and snapshots.
+
+### M13 — Market Square Act 1: levels 1–4 (L)
+**Goal:** the first four real levels from `docs/design/levels-kauppatori.md`, each about 5 minutes, single player, each teaching one mechanic with a headline puzzle.
+- L1 **Snack Attack** (flight and dive-snatch: "Say cheese!"), L2 **Bombs Away** (poop and wind: "The Clean Freak"), L3 **Nosy Parkers** (sight and hearing: "Bottle Service"), L4 **Butterfingers** (carry and swap: "Bait and Switch").
+- New behaviours they need (selfie countdowns, the sign-polishing vendor, the food blogger, ...), hidden `???` to-dos, skill rewards per level.
+- Every puzzle rated **low or medium precision** with the forgiving tools from the design doc (big zones, long telegraphed timings, instant retry, touch assist).
+- **Exit:** each level is distinct, fun and about 5 minutes on PC and phone; the user can finish all four without frustration.
+
+### M14 — Online co-op (L–XL)
+**Goal:** two players on two devices play the M13 levels together. Design: `docs/spikes/multiplayer.md`.
+- **WebRTC peer-to-peer**, host-authoritative: the host runs the game; the guest sends inputs and receives snapshots (~20 Hz) with interpolation; each player's own gull is predicted locally so flying never lags.
+- **Lobby with room codes**, join/leave/disconnect handling, host-only saving, pause rules.
+- **Co-op twists** for levels 1–4 (co-op variants of to-dos, co-op-only hidden to-dos, scaling for two).
+- Works on PC and phone (touch controls from M11).
+- **Decisions needed before starting:**
+  1. **Connection approach.** Proposed: a small serverless signalling function we own (free tier; the user creates the provider account), with **copy-paste codes** as a server-free fallback; a TURN relay for networks that need one.
+  2. **The offline rule** (§4.3, §6.4) is relaxed **for online multiplayer only**: single player stays fully static and offline.
+- **Exit:** the user and a friend finish a level together over the internet (PC–PC and phone–PC), with no noticeable lag on their own gull and a clean reconnect after a dropped connection.
+
+### After M14 (backlog)
+Market Square Act 1 levels 5–8, Act 2 (skill levels) and Act 3 (themed days); Senate Square (`docs/design/levels-senaatintori.md`), Esplanadi (`docs/design/levels-esplanadi.md`), Katajanokka (`docs/design/levels-katajanokka.md`), each level designed with a co-op variant; the shared systems they need (moving platforms, NPC schedules, Kalle the rival gull, the drone, seasons); local split-screen co-op (optional); optional WebGPU renderer.
 
 ---
 
@@ -269,7 +299,7 @@ Gamepad support on the M11 input layer (small), second district (Senate Square o
 1. **Start each session by reading this file and the latest `docs/milestones/*.md`.** Update the status tracker (§5) when a milestone is complete.
 2. **One milestone per branch/PR**, named `mN-short-name`. PR description: what was built, how to run it, how it maps to the exit criteria, known issues, and a checklist for the user's playtest.
 3. **Do not implement future milestones early.** Small refactors that unblock the current milestone are fine; note them in the PR.
-4. **Keep it static and offline-capable.** No runtime calls to third-party servers; fonts and assets bundled.
+4. **Keep it static and offline-capable.** No runtime calls to third-party servers; fonts and assets bundled. (Online co-op in M14 is the one planned exception, once the user approves the connection service.)
 5. **Ask before** adding a heavy dependency, changing the stack, or cutting scope. Cheap, reversible choices: decide and note them in the PR.
 6. **Every feel parameter goes in the tuning object** and the debug panel. Never bury magic numbers in logic.
 7. **Write tests for pure logic**; keep rendering code thin and logic testable.
