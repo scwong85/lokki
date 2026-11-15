@@ -22,9 +22,40 @@ export const FLOOR_H = 3.2;
 export const GROUND_H = 3.6;
 export const BAY_W = 5.2;
 
-/** Whole window bays on a wall of this length (0 = too short for windows). */
-export function bays(len: number): number {
-  return len < 2.2 ? 0 : Math.max(1, Math.round(len / BAY_W));
+/** Whole window bays on a wall of this length (0 = too short for windows). `bayW` varies per building. */
+export function bays(len: number, bayW = BAY_W): number {
+  return len < 2.2 ? 0 : Math.max(1, Math.round(len / bayW));
+}
+
+/** Window styles in the facade atlas (row order in `windowAtlas`): classic, tall arched, wide ribbon, small pair, shuttered, banded. */
+export const WINDOW_STYLES = 6;
+
+export interface WindowPlan {
+  /** Bay width in metres: some buildings have close, narrow windows, others wide spacing. */
+  bayW: number;
+  /** Style (0..WINDOW_STYLES-1) for each upper floor, bottom to top. */
+  floors: number[];
+  /** Which wall (ring edge) indices are left blank. */
+  blank: (i: number) => boolean;
+}
+
+/**
+ * How one building's windows look: its own bay width and a main style, with some floors in an accent style (often the
+ * top one, as on old Helsinki blocks) and a few blank walls (never the longest one). Seeded by building id. Pure.
+ */
+export function windowPlan(id: number, floors: number, longestWall: number): WindowPlan {
+  const bayW = 3.4 + (hash(id, 21) % 8) * 0.55; // 3.4 .. 7.25 m
+  const main = hash(id, 22) % 5; // 0..4: the plain "banded" style (5) is only used as an accent
+  const accent = (main + 1 + (hash(id, 23) % 4)) % WINDOW_STYLES;
+  const topAccent = hash(id, 24) % 100 < 38;
+  const midAccent = hash(id, 25) % 100 < 18;
+  const list: number[] = [];
+  for (let f = 0; f < floors; f++) {
+    const top = f === floors - 1 && floors > 1;
+    const mid = f === 1 && floors > 3;
+    list.push((top && topAccent) || (mid && midAccent) ? accent : main);
+  }
+  return { bayW, floors: list, blank: (i) => i !== longestWall && hash(id, 40 + i) % 100 < 22 };
 }
 
 /** Split a wall of height h into the ground floor (shopfronts) and the upper floors (windows). */
