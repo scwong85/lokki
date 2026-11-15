@@ -418,7 +418,7 @@ const levelRows = () =>
   LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), current: l.id === level.id, sandbox: l.sandbox, locked: !levelUnlocked(l, save.levels), unlockHint: l.requires ? `Clear ${levelById(l.requires).name} first` : undefined, best: save.levels[l.id]?.best ? fmtClear(save.levels[l.id].best) : undefined }));
 const controlsPanel = new ControlsPanel(document.body);
 const menuNav = new MenuNav();
-pad.menuOpen = () => menuOpen();
+pad.menuOpen = () => menuOpen() || levelComplete.visible; // the level card takes the controller too (it does not pause the game)
 pad.onMenu = (a) => menuNav.handle(a);
 addEventListener('pointerdown', () => menuNav.clear());
 const optionsPanel = new OptionsPanel(document.body, options, (o) => {

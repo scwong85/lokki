@@ -32,8 +32,8 @@ export function nextFocus(spots: readonly Spot[], cur: number, dir: 'up' | 'down
 }
 
 /** Panels in the order they sit on top of each other (the first visible one gets the controller). */
-const PANELS = ['lobby', 'controls', 'skills', 'levelselect', 'options', 'credits', 'title'];
-const FOCUSABLE = 'button, input, textarea, [data-skin], [data-pick]';
+const PANELS = ['lobby', 'controls', 'skills', 'levelselect', 'options', 'credits', 'levelcomplete', 'title'];
+const FOCUSABLE = 'button, input, textarea, select, [data-skin], [data-pick]';
 
 export class MenuNav {
   private focus: HTMLElement | null = null;
@@ -56,7 +56,7 @@ export class MenuNav {
     if (!root) return;
     const items = this.items(root);
     if (a === 'b') {
-      if (root.id === 'credits') root.click(); // tap anywhere closes the credits
+      if (root.id === 'credits' || root.id === 'levelcomplete') root.click(); // tap anywhere closes the credits and the level card (keep playing)
       else root.querySelector<HTMLElement>('[data-act=close], [data-close]')?.click();
       this.setFocus(null);
       return;
@@ -65,9 +65,20 @@ export class MenuNav {
     let i = this.focus ? items.indexOf(this.focus) : -1;
     if (i < 0) {
       this.setFocus(items[0]);
-      return; // the first press just shows where the highlight is
+      // the first press just shows where the highlight is, except on the level card where A means "next level" straight away
+      if (!(root.id === 'levelcomplete' && a === 'a')) return;
+      i = 0;
     }
     const cur = items[i];
+    if (cur instanceof HTMLSelectElement && (a === 'left' || a === 'right' || a === 'a')) {
+      // a drop-down list: left / right (or A) step through the choices
+      const n = cur.options.length;
+      if (n) {
+        cur.selectedIndex = (cur.selectedIndex + (a === 'left' ? -1 : 1) + n) % n;
+        cur.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      return;
+    }
     if (a === 'a') {
       if (cur instanceof HTMLTextAreaElement || (cur instanceof HTMLInputElement && cur.type === 'text')) cur.focus();
       else if (!(cur instanceof HTMLInputElement && cur.type === 'range')) cur.click();
