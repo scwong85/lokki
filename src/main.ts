@@ -3,6 +3,7 @@ import { startLoop } from './core/loop';
 import { Input } from './core/input';
 import { GamepadSource } from './core/gamepad';
 import { makeSnapshot, type Snapshot } from './net/snapshot';
+import { PeerLink } from './net/peer';
 import { events } from './core/events';
 import { tuning } from './core/tuning';
 import { mods, staminaMax } from './core/skillMods';
@@ -232,7 +233,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, defense, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, level: level.id, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, defense, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, level: level.id, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
