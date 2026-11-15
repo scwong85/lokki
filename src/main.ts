@@ -4,6 +4,10 @@ import { Input } from './core/input';
 import { GamepadSource } from './core/gamepad';
 import { makeSnapshot, type Snapshot } from './net/snapshot';
 import { PeerLink } from './net/peer';
+import { NetSession } from './net/session';
+import type { GameEvent } from './net/protocol';
+import type { StatSummary } from './gameplay/levelStats';
+import { Lobby } from './ui/lobby';
 import { events } from './core/events';
 import { tuning } from './core/tuning';
 import { mods, staminaMax } from './core/skillMods';
@@ -201,6 +205,8 @@ interface Player {
   id: number;
   gull: Gull;
   input: Input;
+  /** Steered over the network (the other online player). */
+  remote?: boolean;
   /** Player 2 steers its own view direction (the camera follows player 1). */
   yaw: number;
   pitch: number;
@@ -234,7 +240,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, defense, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, get level() { return level.id; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, defense, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -249,7 +255,107 @@ if (touch && firstVisit) options.graphics = 'low'; // phones start on the fast p
 applyOptions(options);
 graphics.apply(options.graphics);
 let hudF = applyHud(options.hud);
-const levelSelect = new LevelSelect(document.body, (id) => goToLevel(id, false));
+const levelSelect = new LevelSelect(document.body, (id) => goToLevel(id));
+// ---- online co-op: a host runs the game, a guest flies its own gull and sees what the host sends ----
+let net: NetSession | null = null;
+const lobby = new Lobby(document.body, {
+  onConnected: (role, link) => startSession(role, link),
+  onLeave: () => endSession('You left the game.'),
+});
+const isGuest = (): boolean => net?.role === 'guest';
+const isHost = (): boolean => net?.role === 'host';
+function remotePlayer(look: string): Player {
+  const g = new Gull({ x: start.x + 2.5, z: start.z });
+  g.isWater = gull.isWater;
+  g.setSkin(skinById(look).colours);
+  shadows(g.mesh, true, false);
+  scene.add(g.mesh, g.shadow);
+  const p: Player = { id: 1, gull: g, input: new Input(null, false), yaw: 0, pitch: 0.25, remote: true };
+  g.setRemote({ id: 1, p: [start.x + 2.5, GULL_RADIUS, start.z], v: [0, 0, 0], h: 0, mode: 'ground', carry: null });
+  return p;
+}
+function startSession(role: 'host' | 'guest', link: PeerLink): void {
+  if (players.length > 1) players.length = 1;
+  const session = new NetSession(role, link);
+  net = session;
+  seenRev = -1;
+  session.onLeave = (why) => endSession(why);
+  session.onEvent = onNetEvent;
+  if (role === 'host') {
+    session.onHello = () => {
+      session.welcome(level.id, save.skin); // sent again for every hello: the first one may have been lost
+      if (players.length > 1) return;
+      players.push(remotePlayer(session.guestLook));
+      lobby.setConnected(session.guestName);
+      hud.toast(`${session.guestName} joined!`, 2);
+      relayHost();
+    };
+  } else {
+    session.onWelcome = () => {
+      players.push(remotePlayer(session.hostLook));
+      lobby.setConnected('the host');
+    };
+    session.hello('Guest', save.skin);
+  }
+}
+function endSession(why: string): void {
+  if (!net) return;
+  net.bye(why);
+  net = null;
+  while (players.length > 1) {
+    const p = players.pop()!;
+    scene.remove(p.gull.mesh, p.gull.shadow);
+  }
+  lobby.setConnected(null);
+  hud.toast(why, 3);
+}
+/** The host tells the guest everything it should show or play (toasts, sounds, banners, the level card). */
+function relayHost(): void {
+  if (relayed) return;
+  relayed = true;
+  const toast = hud.toast.bind(hud);
+  hud.toast = (m, secs) => {
+    toast(m, secs);
+    if (isHost()) net!.sendEvent({ k: 'toast', text: m, secs });
+  };
+  const play = audio.play.bind(audio);
+  audio.play = ((name: Parameters<typeof play>[0]) => {
+    play(name);
+    if (isHost()) net!.sendEvent({ k: 'sound', name });
+  }) as typeof audio.play;
+  const show = announce.show.bind(announce);
+  announce.show = (t, sub, kind) => {
+    show(t, sub, kind);
+    if (isHost()) net!.sendEvent({ k: 'banner', title: t, sub, kind: kind ?? 'alert' });
+  };
+  const lcShow = levelComplete.show.bind(levelComplete);
+  levelComplete.show = (st, qs, ns, nav) => {
+    lcShow(st, qs, ns, nav);
+    if (isHost()) net!.sendEvent({ k: 'levelComplete', data: { st, qs, ns, heading: nav?.heading, next: nav?.next } });
+  };
+}
+let relayed = false;
+function onNetEvent(e: GameEvent): void {
+  switch (e.k) {
+    case 'toast':
+      hud.toast(e.text, e.secs);
+      break;
+    case 'sound':
+      audio.play(e.name as Parameters<typeof audio.play>[0]);
+      break;
+    case 'banner':
+      announce.show(e.title, e.sub, e.kind as Parameters<typeof announce.show>[2]);
+      break;
+    case 'levelComplete': {
+      const d = e.data as { st: StatSummary; qs: { title: string; won: boolean }[]; ns: string[]; heading?: string; next?: { id: string; name: string } };
+      levelComplete.show(d.st, d.qs, d.ns, { heading: d.heading ?? 'Level cleared!', next: d.next, go: (t) => (t === 'menu' ? levelComplete.hide() : hud.toast('The host picks the next level.', 1.6)) });
+      break;
+    }
+    case 'hideComplete':
+      levelComplete.hide();
+      break;
+  }
+}
 const levelRows = () =>
   LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), current: l.id === level.id, sandbox: l.sandbox, locked: !levelUnlocked(l, save.levels), unlockHint: l.requires ? `Clear ${levelById(l.requires).name} first` : undefined, best: save.levels[l.id]?.best ? fmtClear(save.levels[l.id].best) : undefined }));
 const optionsPanel = new OptionsPanel(document.body, options, (o) => {
@@ -257,7 +363,7 @@ const optionsPanel = new OptionsPanel(document.body, options, (o) => {
   if (o.graphics !== graphics.level) graphics.apply(o.graphics);
   hudF = applyHud(o.hud);
   optStore.save(o);
-}, () => levelSelect.show(levelRows()));
+}, () => levelSelect.show(levelRows()), () => lobby.show());
 // automated browser tests skip the title screen and the tips (add ?title to see them)
 const interactive = !navigator.webdriver || new URLSearchParams(location.search).has('title');
 const tutorial = new Tutorial(interactive && !options.tutorialDone);
@@ -292,8 +398,9 @@ const title = new TitleScreen(
     onPlay: startPlaying,
     onOptions: () => optionsPanel.show(),
     onCredits: () => credits.toggle(),
+    onCoop: () => lobby.show(),
     // another level: remember it and reload into it
-    onPickLevel: (id) => goToLevel(id, false),
+    onPickLevel: (id) => goToLevel(id),
   },
   {
     best: fmtClear(save.bestTime),
@@ -303,7 +410,7 @@ const title = new TitleScreen(
   },
 );
 if (interactive && !new URLSearchParams(location.search).has('play')) title.show();
-const menuOpen = (): boolean => title.visible || levelSelect.visible || optionsPanel.visible || skillsPanel.visible || credits.visible || !!touchControls?.menuOpen;
+const menuOpen = (): boolean => title.visible || (lobby.visible && !net) || levelSelect.visible || optionsPanel.visible || skillsPanel.visible || credits.visible || !!touchControls?.menuOpen;
 const audio = new AudioManager();
 audio.muted = save.muted;
 for (const ev of ['pointerdown', 'touchend', 'keydown'] as const) addEventListener(ev, () => { audio.unlock(); music.start(); });
@@ -433,9 +540,13 @@ function loadLevel(id: string): void {
   q.set('play', '');
   history.replaceState(null, '', `?${q.toString()}`);
   restartLevel('normal'); // gull, stats, timers, music; saves the new level
+  if (isHost()) levelRev++;
   startPlaying();
 }
-const goToLevel = (id: string, _menu: boolean): void => loadLevel(id);
+const goToLevel = (id: string): void => {
+  if (isGuest()) hud.toast('The host picks the level.', 1.6);
+  else loadLevel(id);
+};
 
 /** A level is cleared when its main to-dos are done: stars, the saved result, the skill reward, the level-complete card. */
 let levelCleared = false;
@@ -471,7 +582,40 @@ function checkLevelDone(): void {
   levelComplete.show(stats.summary(), quests.quests.map((x) => ({ title: setup.secret.has(x.id) && x.status !== 'won' ? '???' : x.title, won: x.status === 'won' })), notes, {
     heading: `${level.name.replace(/^\d+\.\s*/, '')} cleared!`,
     next: nextLevel ? { id: nextLevel.id, name: nextLevel.name } : undefined,
-    go: (target) => (target === 'menu' ? (levelComplete.hide(), levelSelect.show(levelRows())) : goToLevel(target, false)),
+    go: (target) => (target === 'menu' ? (levelComplete.hide(), levelSelect.show(levelRows())) : goToLevel(target)),
+  });
+}
+
+let snapTick = 0;
+let levelRev = 0;
+let seenRev = -1;
+/** A guest does not simulate the world: it takes what the host says, and tells the host what its own gull did. */
+function guestStep(dt: number): void {
+  const n = net!;
+  n.tick(dt);
+  const hl = n.hostLevel;
+  if (hl && hl.rev !== seenRev) {
+    seenRev = hl.rev; // the host started or restarted a level: do the same
+    n.takeSnapshot();
+    loadLevel(hl.id);
+    return;
+  }
+  const snap = n.takeSnapshot();
+  if (snap) {
+    const host = snap.gulls.find((g) => g.id === 0);
+    if (host && players[1]) players[1].gull.setRemote(host);
+    interaction.props.setRemote(snap.props);
+    npcs?.setRemote(snap.npcs);
+    quests.applyRemote(snap.quests);
+    defense?.heat.setRemote(snap.heat);
+  }
+  interaction.props.stepRemote(dt);
+  npcs?.stepRemote(dt);
+  const s = gull.state;
+  const { x, y } = input.axes();
+  n.sendInput({
+    ax: x, ay: y, flap: input.isDown('Space'), dive: input.isDown('ShiftLeft') || input.isDown('ShiftRight'), yaw: cam.yaw, pitch: cam.pitch,
+    s: { id: 1, p: [s.x, s.y, s.z], v: [s.vx, s.vy, s.vz], h: s.heading, mode: s.mode, carry: null, fa: s.flapAnim, ha: s.heightAbove, tr: s.turnRate },
   });
 }
 
@@ -479,9 +623,9 @@ function checkLevelDone(): void {
 function captureSnapshot(): Snapshot {
   return makeSnapshot({
     time: simTime,
-    gulls: players.map((p) => ({ id: p.id, ...pickXYZ(p.gull.state), vx: p.gull.state.vx, vy: p.gull.state.vy, vz: p.gull.state.vz, heading: p.gull.state.heading, mode: p.gull.state.mode, carry: interaction.beak(p.id).carried?.id ?? null })),
+    gulls: players.map((p) => ({ id: p.id, ...pickXYZ(p.gull.state), vx: p.gull.state.vx, vy: p.gull.state.vy, vz: p.gull.state.vz, heading: p.gull.state.heading, mode: p.gull.state.mode, carry: interaction.beak(p.id).carried?.id ?? null, flapAnim: p.gull.state.flapAnim, heightAbove: p.gull.state.heightAbove, turnRate: p.gull.state.turnRate })),
     props: interaction.props.props.map((pr) => ({ id: pr.id, x: pr.cur.p.x, y: pr.cur.p.y, z: pr.cur.p.z, qx: pr.cur.q.x, qy: pr.cur.q.y, qz: pr.cur.q.z, qw: pr.cur.q.w, by: interaction.carrierOf(pr), held: pr.heldBy, broken: pr.broken })),
-    npcs: (npcs?.npcs ?? []).map((n) => ({ id: n.id, x: n.x, z: n.z, heading: n.heading, mode: n.mode, holding: n.holding })),
+    npcs: (npcs?.npcs ?? []).map((n) => ({ id: n.id, x: n.x, z: n.z, heading: n.heading, mode: n.mode, holding: n.holding, handAngle: n.handAngle, selfie: n.selfie, selfieCount: n.selfieCount, cleanT: n.cleanT, shieldFrom: n.shieldFrom })),
     heat: defense?.heat.value ?? 0,
     quests: quests.quests.map((q) => ({ id: q.id, status: q.status, timeLeft: q.timeLeft, timed: q.timed, objectives: q.objectives })),
   });
@@ -805,7 +949,14 @@ startLoop({
       optStore.save(options);
     }
     if (!menuOpen()) cam.rotate(m.dx, m.dy);
-    if (input.wasPressed('KeyR')) restartLevel('normal');
+    if (input.wasPressed('KeyN')) lobby.toggle();
+    if (input.wasPressed('KeyR')) {
+      if (isGuest()) hud.toast('The host restarts the level.', 1.4);
+      else {
+        restartLevel('normal');
+        if (isHost()) levelRev++;
+      }
+    }
     if (input.wasPressed('KeyZ')) {
       if (save.replayUnlocked) {
         restartLevel('speedrun');
@@ -895,10 +1046,25 @@ startLoop({
       audio.play('bonk');
       hud.toast('Blocked! They are guarding it', 1.1);
     }
-    onGags(interaction.updateGull(0, gull.state, { grab: input.wasPressed('KeyE'), toss: input.wasPressed('KeyQ'), poop: input.wasPressed('KeyF') || input.wasClicked() }, dt, simTime));
+    if (isGuest()) {
+      // the guest only flies; grabbing and pooping are decided by the host
+      if (input.wasPressed('KeyE')) net!.tap('KeyE');
+      if (input.wasPressed('KeyQ')) net!.tap('KeyQ');
+      if (input.wasPressed('KeyF') || input.wasClicked()) net!.tap('KeyF');
+    } else onGags(interaction.updateGull(0, gull.state, { grab: input.wasPressed('KeyE'), toss: input.wasPressed('KeyQ'), poop: input.wasPressed('KeyF') || input.wasClicked() }, dt, simTime));
     // other players: their own flight and beak (the camera stays on player 1)
     for (const p of players) {
       if (p.id === 0) continue;
+      if (p.remote) {
+        if (isHost()) {
+          const f = net!.guestFrame;
+          if (f) p.gull.setRemote(f.s);
+          p.gull.stepRemote(dt);
+          const taps = net!.takeTaps();
+          onGags(interaction.updateGull(p.id, p.gull.state, { grab: taps.includes('KeyE'), toss: taps.includes('KeyQ'), poop: taps.includes('KeyF') }, dt, simTime));
+        } else p.gull.stepRemote(dt); // on a guest this is the host's gull
+        continue;
+      }
       const look = p.input.consumeMouse();
       p.yaw -= look.dx * tuning.camera.mouseSensitivity.value;
       p.pitch = Math.min(1.2, Math.max(-0.3, p.pitch + look.dy * tuning.camera.mouseSensitivity.value));
@@ -914,8 +1080,9 @@ startLoop({
       onGags(interaction.updateGull(p.id, p.gull.state, { grab: p.input.wasPressed('KeyE'), toss: p.input.wasPressed('KeyQ'), poop: p.input.wasPressed('KeyF') }, dt, simTime));
       p.input.endStep();
     }
-    onGags(interaction.step(dt, simTime, gull.state));
-    if (npcs) {
+    if (isGuest()) guestStep(dt);
+    else onGags(interaction.step(dt, simTime, gull.state));
+    if (npcs && !isGuest()) {
       const g = gull.state;
       onNpcEvents(npcs.update(dt, players.map((p) => ({ x: p.gull.state.x, y: p.gull.state.y, z: p.gull.state.z, diving: p.gull.state.mode === 'dive' }))));
       const stolen = players.some((p) => interaction.beak(p.id).carried?.stolen === true);
@@ -948,6 +1115,7 @@ startLoop({
       }
       stats.tick(dt, defense?.heat.value ?? 0);
     }
+    if (isHost() && players.length > 1 && ++snapTick % 3 === 0) net!.sendSnapshot(captureSnapshot(), level.id, levelRev); // about 20 per second
     if (wasDive) {
       const s = gull.state;
       const got = diveHits(targets, { x: s.x, y: s.y, z: s.z }, GULL_RADIUS);

@@ -48,6 +48,13 @@ export class NetSession {
   hostLook = 'herring';
   /** Guest: set when the host sent a level; the game loads it. */
   onLevel: ((id: string) => void) | null = null;
+  /** Guest: the host has welcomed us (the other player exists now). */
+  onWelcome: (() => void) | null = null;
+  /** Guest: the level and restart count the host is on (snapshots repeat it, so a lost message cannot strand the guest). */
+  hostLevel: { id: string; rev: number } | null = null;
+  welcomed = false;
+  private helloT = 0;
+  private helloArgs: [string, string] | null = null;
   onEvent: ((e: GameEvent) => void) | null = null;
   onHello: (() => void) | null = null;
   onLeave: ((why: string) => void) | null = null;
@@ -86,7 +93,10 @@ export class NetSession {
         break;
       case 'welcome':
         this.hostLook = m.hostLook;
-        this.onLevel?.(m.level);
+        if (!this.welcomed) {
+          this.welcomed = true;
+          this.onWelcome?.();
+        }
         break;
       case 'level':
         this.onLevel?.(m.id);
@@ -100,6 +110,7 @@ export class NetSession {
       case 'snap':
         this.snapshot = m.s;
         this.lastAck = m.ack;
+        this.hostLevel = { id: m.lvl, rev: m.rev };
         break;
       case 'event':
         this.onEvent?.(m.e);
@@ -133,8 +144,8 @@ export class NetSession {
   sendInput(f: { ax: number; ay: number; flap: boolean; dive: boolean; yaw: number; pitch: number; s: GullSnap }): void {
     this.link.send({ t: 'input', f: { n: ++this.inputN, ...f, taps: this.tapOut.frame(this.now()) } });
   }
-  sendSnapshot(s: Snapshot): void {
-    this.link.send({ t: 'snap', s, ack: this.guestFrame?.n ?? 0 });
+  sendSnapshot(s: Snapshot, lvl: string, rev: number): void {
+    this.link.send({ t: 'snap', s, ack: this.guestFrame?.n ?? 0, lvl, rev });
   }
   sendEvent(e: GameEvent): void {
     if (this.open) this.link.send({ t: 'event', e });
@@ -143,7 +154,17 @@ export class NetSession {
     if (this.open) this.link.send({ t: 'level', id });
   }
   hello(name: string, look: string): void {
+    this.helloArgs = [name, look];
     this.link.send({ t: 'hello', v: PROTOCOL_VERSION, name, look });
+  }
+  /** Each sim step: a guest repeats its hello until the host welcomes it (the channel may drop packets). */
+  tick(dt: number): void {
+    if (this.role !== 'guest' || this.welcomed || !this.helloArgs) return;
+    this.helloT += dt;
+    if (this.helloT >= 0.5) {
+      this.helloT = 0;
+      this.hello(...this.helloArgs);
+    }
   }
   welcome(level: string, hostLook: string): void {
     this.link.send({ t: 'welcome', v: PROTOCOL_VERSION, level, hostLook });

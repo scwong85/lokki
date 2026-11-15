@@ -35,7 +35,7 @@ export type Msg =
   | { t: 'welcome'; v: number; level: string; hostLook: string }
   | { t: 'level'; id: string }
   | { t: 'input'; f: InputFrame }
-  | { t: 'snap'; s: Snapshot; ack: number }
+  | { t: 'snap'; s: Snapshot; ack: number; lvl: string; rev: number }
   | { t: 'event'; e: GameEvent }
   | { t: 'chat'; text: string }
   | { t: 'bye'; why: string }

@@ -62,17 +62,29 @@ describe('NetSession', () => {
     expect(host.takeTaps()).toEqual(['KeyE']);
     expect(host.takeTaps()).toEqual([]);
   });
-  it('guest: keeps the newest snapshot until taken, and follows level changes', () => {
+  it('guest: keeps the newest snapshot until taken, knows the host level, and is welcomed once', () => {
     const link = new FakeLink();
     const guest = new NetSession('guest', link);
-    const levels: string[] = [];
-    guest.onLevel = (id) => levels.push(id);
+    let welcomed = 0;
+    guest.onWelcome = () => welcomed++;
     link.deliver({ t: 'welcome', v: 1, level: 'snack-attack', hostLook: 'herring' });
-    link.deliver({ t: 'level', id: 'bombs-away' });
-    expect(levels).toEqual(['snack-attack', 'bombs-away']);
-    link.deliver({ t: 'snap', s: { t: 1, gulls: [], props: [], npcs: [], heat: 0, quests: [] }, ack: 5 });
+    link.deliver({ t: 'welcome', v: 1, level: 'snack-attack', hostLook: 'herring' }); // a repeat
+    expect(welcomed).toBe(1);
+    link.deliver({ t: 'snap', s: { t: 1, gulls: [], props: [], npcs: [], heat: 0, quests: [] }, ack: 5, lvl: 'bombs-away', rev: 2 });
+    expect(guest.hostLevel).toEqual({ id: 'bombs-away', rev: 2 });
     expect(guest.takeSnapshot()?.t).toBe(1);
     expect(guest.takeSnapshot()).toBeNull();
+  });
+  it('guest: repeats hello until welcomed', () => {
+    const link = new FakeLink();
+    const guest = new NetSession('guest', link);
+    guest.hello('G', 'herring');
+    for (let i = 0; i < 90; i++) guest.tick(1 / 60); // 1.5 s
+    const n = link.sent.filter((m) => m.t === 'hello').length;
+    expect(n).toBeGreaterThanOrEqual(3);
+    link.deliver({ t: 'welcome', v: 1, level: 'x', hostLook: 'herring' });
+    for (let i = 0; i < 90; i++) guest.tick(1 / 60);
+    expect(link.sent.filter((m) => m.t === 'hello').length).toBe(n);
   });
   it('a different protocol version is turned away; a dropped link ends the session once', () => {
     const link = new FakeLink();
