@@ -55,7 +55,14 @@ export class Gull {
     return this.remoteT !== null;
   }
 
+  /** The other player is in pigeon disguise (their news says so). */
+  remoteDisguised = false;
+
   setRemote(s: GullSnap): void {
+    if (!!s.dg !== this.remoteDisguised) {
+      this.remoteDisguised = !!s.dg;
+      this.model.setDisguise(this.remoteDisguised);
+    }
     const t = { x: s.p[0], y: s.p[1], z: s.p[2], vx: s.v[0], vy: s.v[1], vz: s.v[2], heading: s.h, mode: s.mode, fa: s.fa ?? 0, ha: s.ha ?? 0, tr: s.tr ?? 0 };
     if (!this.remoteT) Object.assign(this.state, { x: t.x, y: t.y, z: t.z, heading: t.heading }); // first news: appear there
     this.remoteT = t;

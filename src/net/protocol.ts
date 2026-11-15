@@ -30,6 +30,7 @@ export type GameEvent =
   | { k: 'levelComplete'; data: unknown }
   | { k: 'poop'; p: [number, number, number]; v: [number, number, number] }
   | { k: 'hit'; hit: unknown }
+  | { k: 'clear'; level: string; stars: [boolean, boolean, boolean]; seconds: number }
   | { k: 'hideComplete' };
 
 export type Msg =

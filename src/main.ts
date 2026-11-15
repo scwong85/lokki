@@ -365,6 +365,15 @@ function onNetEvent(e: GameEvent): void {
       }
       break;
     }
+    case 'clear': {
+      // the guest's own progress: stars and the level's skill go to its own save
+      const def = LEVELS.find((l) => l.id === e.level);
+      if (!def) break;
+      save = { ...save, levels: { ...save.levels, [def.id]: mergeRecord(save.levels[def.id], e.stars, e.seconds) } };
+      if (def.reward) skills.unlock(def.reward);
+      persist();
+      break;
+    }
     case 'hideComplete':
       levelComplete.hide();
       break;
@@ -577,11 +586,13 @@ function checkLevelDone(): void {
     if (p.allDone && before && !before.stars[1]) {
       save = { ...save, levels: { ...save.levels, [level.id]: { ...before, stars: [before.stars[0], true, before.stars[2]] } } };
       hud.toast('Every to-do done, secrets too! ★', 2.2);
+      if (isHost()) net!.sendEvent({ k: 'clear', level: level.id, stars, seconds });
     }
     return;
   }
   levelCleared = true;
   save = { ...save, levels: { ...save.levels, [level.id]: mergeRecord(before, stars, seconds) } };
+  if (isHost()) net!.sendEvent({ k: 'clear', level: level.id, stars, seconds }); // the guest keeps its own record too
   const n = stars.filter(Boolean).length;
   const notes = [
     `${'★'.repeat(n)}${'☆'.repeat(3 - n)}  ·  ${stars[0] ? '★' : '☆'} cleared  ·  ${stars[1] ? '★' : '☆'} every to-do (secrets too)  ·  ${stars[2] ? '★' : '☆'} under ${fmtClear(level.parTime ?? 0)}`,
@@ -603,6 +614,8 @@ function checkLevelDone(): void {
 }
 
 let snapTick = 0;
+/** On a guest: the weight of what the host says is in this gull's beak (it slows the flight). */
+let guestCarryMass = 0;
 let levelRev = 0;
 let seenRev = -1;
 /** A guest does not simulate the world: it takes what the host says, and tells the host what its own gull did. */
@@ -621,6 +634,8 @@ function guestStep(dt: number): void {
     const host = snap.gulls.find((g) => g.id === 0);
     if (host && players[1]) players[1].gull.setRemote(host);
     interaction.props.setRemote(snap.props);
+    const mine = snap.gulls.find((g) => g.id === 1)?.carry;
+    guestCarryMass = mine == null ? 0 : interaction.props.byId(mine)?.def.mass ?? 0;
     npcs?.setRemote(snap.npcs);
     quests.applyRemote(snap.quests);
     defense?.heat.setRemote(snap.heat);
@@ -633,7 +648,7 @@ function guestStep(dt: number): void {
   const { x, y } = input.axes();
   n.sendInput({
     ax: x, ay: y, flap: input.isDown('Space'), dive: input.isDown('ShiftLeft') || input.isDown('ShiftRight'), yaw: cam.yaw, pitch: cam.pitch,
-    s: { id: 1, p: [s.x, s.y, s.z], v: [s.vx, s.vy, s.vz], h: s.heading, mode: s.mode, carry: null, fa: s.flapAnim, ha: s.heightAbove, tr: s.turnRate },
+    s: { id: 1, p: [s.x, s.y, s.z], v: [s.vx, s.vy, s.vz], h: s.heading, mode: s.mode, carry: null, fa: s.flapAnim, ha: s.heightAbove, tr: s.turnRate, dg: abilities.disguised ? 1 : 0 },
   });
 }
 
@@ -641,7 +656,7 @@ function guestStep(dt: number): void {
 function captureSnapshot(): Snapshot {
   return makeSnapshot({
     time: simTime,
-    gulls: players.map((p) => ({ id: p.id, ...pickXYZ(p.gull.state), vx: p.gull.state.vx, vy: p.gull.state.vy, vz: p.gull.state.vz, heading: p.gull.state.heading, mode: p.gull.state.mode, carry: interaction.beak(p.id).carried?.id ?? null, flapAnim: p.gull.state.flapAnim, heightAbove: p.gull.state.heightAbove, turnRate: p.gull.state.turnRate })),
+    gulls: players.map((p) => ({ id: p.id, ...pickXYZ(p.gull.state), vx: p.gull.state.vx, vy: p.gull.state.vy, vz: p.gull.state.vz, heading: p.gull.state.heading, mode: p.gull.state.mode, carry: interaction.beak(p.id).carried?.id ?? null, flapAnim: p.gull.state.flapAnim, heightAbove: p.gull.state.heightAbove, turnRate: p.gull.state.turnRate, disguised: p.remote ? p.gull.remoteDisguised : abilities.disguised })),
     props: interaction.props.props.map((pr) => ({ id: pr.id, x: pr.cur.p.x, y: pr.cur.p.y, z: pr.cur.p.z, qx: pr.cur.q.x, qy: pr.cur.q.y, qz: pr.cur.q.z, qw: pr.cur.q.w, by: interaction.carrierOf(pr), held: pr.heldBy, broken: pr.broken })),
     npcs: (npcs?.npcs ?? []).map((n) => ({ id: n.id, x: n.x, z: n.z, heading: n.heading, mode: n.mode, holding: n.holding, handAngle: n.handAngle, selfie: n.selfie, selfieCount: n.selfieCount, cleanT: n.cleanT, shieldFrom: n.shieldFrom })),
     heat: defense?.heat.value ?? 0,
@@ -860,6 +875,25 @@ const combo = new CoopCombo();
 /** Who last held each prop (for "pass the parcel"). */
 const lastHolder = new Map<number, { by: number; t: number }>();
 
+/** Crow call: a noise ahead of `g` that makes people look. */
+function mimic(g: Gull, yaw: number): void {
+  const at = aheadOf(g.state, yaw, tuning.skills.mimicDistance.value);
+  noise(at.x, at.z, tuning.skills.mimicLoud.value);
+  pings.add(at.x, at.z);
+  audio.play('crow');
+  g.openBeak(0.5);
+  hud.toast('Caw! Caw!', 0.8);
+}
+/** Flock call: a few gulls fly to a spot ahead of `g` and dirty it. */
+function flockCall(g: Gull, yaw: number): void {
+  const at = aheadOf(g.state, yaw, tuning.skills.flockDistance.value);
+  flock.start({ x: g.state.x, y: g.state.y, z: g.state.z }, at);
+  pings.add(at.x, at.z);
+  audio.play('screech');
+  g.openBeak(0.6);
+  hud.toast('Flock call!', 0.9);
+}
+
 function onGags(gags: GagEvent[]): void {
   for (const g of gags) {
     switch (g.type) {
@@ -1019,14 +1053,19 @@ startLoop({
     if (skillsPanel.visible) GULL_SKINS.forEach((sk, i) => input.wasPressed(`Digit${i + 1}`) && pickSkin(sk.id));
     if (input.wasPressed('KeyC')) credits.toggle();
     if (input.wasPressed('Enter') && levelComplete.visible && !levelComplete.goNext()) levelComplete.hide();
-    if (input.wasPressed('KeyH') && defense?.activateHawk()) hud.toast('Hawk-eye!', 0.8);
+    if (input.wasPressed('KeyH') && !menuOpen()) {
+      if (isGuest()) net!.tap('KeyH');
+      else if (defense?.activateHawk()) hud.toast('Hawk-eye!', 0.8);
+    }
     if (input.wasPressed('KeyM')) {
       hud.toast(audio.toggleMute() ? 'Sound off' : 'Sound on', 0.8);
       music.muted = audio.muted;
       persist();
     }
-    if (menuOpen()) {
-      input.endStep(); // any open panel pauses the game
+    // an open panel pauses the game, except online: the other player must not freeze, so you just stop steering
+    const blocked = menuOpen();
+    if (blocked && !net) {
+      input.endStep();
       return;
     }
     // active skills
@@ -1034,23 +1073,15 @@ startLoop({
       gull.setDisguise(false);
       hud.toast('The disguise is over', 1.2);
     }
-    if (input.wasPressed('KeyV') && skills.has('mimic') && abilities.use('mimic')) {
-      const at = aheadOf(gull.state, cam.yaw, tuning.skills.mimicDistance.value);
-      noise(at.x, at.z, tuning.skills.mimicLoud.value);
-      pings.add(at.x, at.z);
-      audio.play('crow');
-      gull.openBeak(0.5);
-      hud.toast('Caw! Caw!', 0.8);
+    if (!blocked && input.wasPressed('KeyV') && skills.has('mimic') && abilities.use('mimic')) {
+      if (isGuest()) net!.tap('KeyV'); // the host makes the noise
+      else mimic(gull, cam.yaw);
     }
-    if (input.wasPressed('KeyG') && skills.has('flock') && abilities.use('flock')) {
-      const at = aheadOf(gull.state, cam.yaw, tuning.skills.flockDistance.value);
-      flock.start({ x: gull.state.x, y: gull.state.y, z: gull.state.z }, at);
-      pings.add(at.x, at.z);
-      audio.play('screech');
-      gull.openBeak(0.6);
-      hud.toast('Flock call!', 0.9);
+    if (!blocked && input.wasPressed('KeyG') && skills.has('flock') && abilities.use('flock')) {
+      if (isGuest()) net!.tap('KeyG');
+      else flockCall(gull, cam.yaw);
     }
-    if (input.wasPressed('KeyB') && skills.has('disguise') && abilities.use('disguise')) {
+    if (!blocked && input.wasPressed('KeyB') && skills.has('disguise') && abilities.use('disguise')) {
       gull.setDisguise(true);
       audio.play('pop');
       hud.toast('Pigeon mode! The vendors and the Warden ignore you.', 1.6);
@@ -1061,7 +1092,7 @@ startLoop({
     // speedrun clock: starts on the first move
     if (runTimer.mode === 'speedrun' && !runTimer.running && !runTimer.finished && (input.axes().x !== 0 || input.axes().y !== 0 || input.isDown('Space'))) runTimer.begin();
     runTimer.tick(dt);
-    const { x, y } = input.axes();
+    const { x, y } = blocked ? { x: 0, y: 0 } : input.axes();
     if (x !== 0 || y !== 0) tutorial.event('move');
     if (tutorial.tick(dt)) {
       options.tutorialDone = true;
@@ -1069,10 +1100,10 @@ startLoop({
     }
     const wasDive = gull.state.mode === 'dive';
     const evs = gull.update(
-      { ax: x, ay: y, flap: input.isDown('Space'),
-        dive: input.isDown('ShiftLeft') || input.isDown('ShiftRight'),
+      { ax: x, ay: y, flap: !blocked && input.isDown('Space'),
+        dive: !blocked && (input.isDown('ShiftLeft') || input.isDown('ShiftRight')),
         aimPitch: cam.pitch,
-        carryMass: interaction.carriedMass(0),
+        carryMass: isGuest() ? guestCarryMass : interaction.carriedMass(0),
       },
       cam.yaw,
       dt,
@@ -1088,10 +1119,10 @@ startLoop({
     }
     if (isGuest()) {
       // the guest only flies; grabbing and pooping are decided by the host
-      if (input.wasPressed('KeyE')) net!.tap('KeyE');
-      if (input.wasPressed('KeyQ')) net!.tap('KeyQ');
-      if (input.wasPressed('KeyF') || input.wasClicked()) net!.tap('KeyF');
-    } else onGags(interaction.updateGull(0, gull.state, { grab: input.wasPressed('KeyE'), toss: input.wasPressed('KeyQ'), poop: input.wasPressed('KeyF') || input.wasClicked() }, dt, simTime));
+      if (!blocked && input.wasPressed('KeyE')) net!.tap('KeyE');
+      if (!blocked && input.wasPressed('KeyQ')) net!.tap('KeyQ');
+      if (!blocked && (input.wasPressed('KeyF') || input.wasClicked())) net!.tap('KeyF');
+    } else onGags(interaction.updateGull(0, gull.state, { grab: !blocked && input.wasPressed('KeyE'), toss: !blocked && input.wasPressed('KeyQ'), poop: !blocked && (input.wasPressed('KeyF') || input.wasClicked()) }, dt, simTime));
     // other players: their own flight and beak (the camera stays on player 1)
     for (const p of players) {
       if (p.id === 0) continue;
@@ -1101,6 +1132,10 @@ startLoop({
           if (f) p.gull.setRemote(f.s);
           p.gull.stepRemote(dt);
           const taps = net!.takeTaps();
+          const yaw = net!.guestFrame?.yaw ?? 0;
+          if (taps.includes('KeyV')) mimic(p.gull, yaw);
+          if (taps.includes('KeyG')) flockCall(p.gull, yaw);
+          if (taps.includes('KeyH') && defense?.activateHawk()) hud.toast('Hawk-eye!', 0.8);
           onGags(interaction.updateGull(p.id, p.gull.state, { grab: taps.includes('KeyE'), toss: taps.includes('KeyQ'), poop: taps.includes('KeyF') }, dt, simTime));
         } else p.gull.stepRemote(dt); // on a guest this is the host's gull
         continue;
@@ -1128,7 +1163,7 @@ startLoop({
       const stolen = players.some((p) => interaction.beak(p.id).carried?.stolen === true);
       notes(quests.tick({ dt, carryingStolen: stolen, nearestNpc: Math.min(...players.map((p) => npcs.nearestDistance(p.gull.state))) }));
       if (defense) {
-        const gulls = players.map((p) => ({ id: p.id, state: p.gull.state, hidden: p.id === 0 && abilities.disguised, suspicious: interaction.beak(p.id).carried?.stolen === true }));
+        const gulls = players.map((p) => ({ id: p.id, state: p.gull.state, hidden: p.remote ? p.gull.remoteDisguised : p.id === 0 && abilities.disguised, suspicious: interaction.beak(p.id).carried?.stolen === true }));
         onDefense(defense.update(dt, gulls, stepNoises, npcs.npcs.some((n) => n.seesGull)));
       }
       stepNoises.length = 0;

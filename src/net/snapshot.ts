@@ -15,6 +15,8 @@ export interface GullSnap {
   fa?: number;
   ha?: number;
   tr?: number;
+  /** Pigeon disguise on. */
+  dg?: number;
 }
 
 export interface PropSnap {
@@ -78,7 +80,7 @@ export interface Snapshot {
 /** Live game objects, described just enough for a snapshot (the game passes adapters). */
 export interface SnapshotSource {
   time: number;
-  gulls: { id: number; x: number; y: number; z: number; vx: number; vy: number; vz: number; heading: number; mode: string; carry: number | null; flapAnim?: number; heightAbove?: number; turnRate?: number }[];
+  gulls: { id: number; x: number; y: number; z: number; vx: number; vy: number; vz: number; heading: number; mode: string; carry: number | null; flapAnim?: number; heightAbove?: number; turnRate?: number; disguised?: boolean }[];
   props: { id: number; x: number; y: number; z: number; qx: number; qy: number; qz: number; qw: number; by: number | null; held: number | null; broken: boolean }[];
   npcs: { id: number; x: number; z: number; heading: number; mode: string; holding: number | null; handAngle?: number; selfie?: string; selfieCount?: number; cleanT?: number; shieldFrom?: number }[];
   heat: number;
@@ -92,7 +94,7 @@ export function makeSnapshot(s: SnapshotSource): Snapshot {
   return {
     ...(s.d ? { d: s.d } : {}),
     t: r(s.time, 1000),
-    gulls: s.gulls.map((g) => ({ id: g.id, p: [r(g.x), r(g.y), r(g.z)], v: [r(g.vx), r(g.vy), r(g.vz)], h: r(g.heading, 1000), mode: g.mode, carry: g.carry, fa: r(g.flapAnim ?? 0, 100), ha: r(g.heightAbove ?? 0, 10), tr: r(g.turnRate ?? 0, 100) })),
+    gulls: s.gulls.map((g) => ({ id: g.id, p: [r(g.x), r(g.y), r(g.z)], v: [r(g.vx), r(g.vy), r(g.vz)], h: r(g.heading, 1000), mode: g.mode, carry: g.carry, fa: r(g.flapAnim ?? 0, 100), ha: r(g.heightAbove ?? 0, 10), tr: r(g.turnRate ?? 0, 100), dg: g.disguised ? 1 : 0 })),
     props: s.props.map((p) => {
       const o: PropSnap = { id: p.id, p: [r(p.x), r(p.y), r(p.z)], q: [r(p.qx, 1000), r(p.qy, 1000), r(p.qz, 1000), r(p.qw, 1000)], by: p.by, held: p.held };
       if (p.broken) o.broken = true;

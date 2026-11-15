@@ -33,7 +33,7 @@ Play in landscape with on-screen controls: left thumb steers (floating stick), d
 
 ## Play with a friend (online co-op)
 
-Press **N** (or Options → "Play with a friend online…"). One player hosts and sends an invite code, the other pastes it and sends back an answer code; no account and no game server. The host picks the levels and the guest follows. Only while setting up co-op, the browser asks a public STUN server (Google's) for its network address; single player makes no online request. Details and limits: [`docs/milestones/M14.md`](docs/milestones/M14.md).
+Press **N** (or Options → "Play with a friend online…"). One player hosts and sends an invite code, the other pastes it and sends back an answer code; no account and no game server. The host picks the levels and the guest follows. Only while setting up co-op, the browser asks a public STUN server (Google's) for its network address; single player makes no online request. Short room codes and a free relay for stubborn networks are optional: [`docs/online-setup.md`](docs/online-setup.md). Details: [`docs/milestones/M14.md`](docs/milestones/M14.md).
 
 ## Controls (M1)
 
