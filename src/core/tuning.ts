@@ -60,6 +60,10 @@ export const tuning = {
     assistRange: p(70, 10, 150, 1),
   },
   landing: {
+    magnet: p(12, 0, 30, 0.5), // landing magnet: pull (m/s²) toward a perch top when gliding slowly down near it; 0 = off
+    magnetRange: p(3.5, 0.5, 8, 0.1), // metres sideways
+    magnetHeight: p(4, 0.5, 10, 0.1), // metres above the perch top
+    magnetMaxSpeed: p(16, 2, 30, 0.5), // only when slower than this (dive-speed passes are left alone)
     softSpeed: p(3.5, 0.5, 10, 0.1), // below: clean landing
     hardSpeed: p(8, 3, 25, 0.5), // above: hard landing
     stunSoft: p(0.15, 0, 1, 0.05),
@@ -88,6 +92,14 @@ export const tuning = {
     rollSmooth: p(4, 1, 20, 0.5),
     lookAhead: p(0.2, 0, 1, 0.01), // seconds of velocity the camera looks ahead
     minHeight: p(0.6, 0, 3, 0.1),
+  },
+  selfie: {
+    idle: p(6, 1, 20, 0.5), // seconds a selfie tourist guards her ice cream between photos
+    count: p(3, 1.5, 6, 0.5), // the "3, 2, 1" countdown
+    open: p(2.2, 1, 5, 0.1), // the shot: her ice cream is open this long
+    frameRange: p(7, 2, 15, 0.5), // how close to her you must be to be in the photo (m)
+    frameHeight: p(8, 2, 20, 0.5), // ...and not higher than this
+    frameConeDeg: p(100, 30, 180, 5), // the camera's field of view in front of her
   },
   gamepad: {
     deadzone: p(0.18, 0, 0.5, 0.01), // stick wobble ignored

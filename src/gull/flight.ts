@@ -112,6 +112,33 @@ function worldDir(ax: number, ay: number, camYaw: number): { wx: number; wz: num
 }
 
 /** One fixed simulation step of walking, flying, diving and landing. Pure logic: no rendering. */
+/**
+ * Landing assist (the "landing magnet"): when a slow-ish, descending gull heads for a perch top, turn its heading toward
+ * the landing spot (harder when closer) and flare when it's within 2.5 m, so it settles on the perch instead of
+ * overshooting. Returns the new heading and whether to flare. Pure.
+ */
+export function magnetSteer(
+  g: { x: number; z: number; heading: number },
+  target: { x: number; z: number },
+  strength: number,
+  range: number,
+  dt: number,
+): { heading: number; flare: boolean } {
+  const dx = target.x - g.x, dz = target.z - g.z;
+  const d = Math.hypot(dx, dz);
+  if (d < 0.05) return { heading: g.heading, flare: true };
+  const turn = strength * 0.35 * (0.5 + 0.5 * (1 - Math.min(1, d / Math.max(range, 1e-3)))) * dt;
+  const want = Math.atan2(-dx, -dz);
+  return { heading: g.heading + clamp(angleDiff(want, g.heading), -turn, turn), flare: d < 2.5 };
+}
+
+/** Is the gull heading toward the spot (not just flying past it)? */
+export const headingToward = (g: { x: number; z: number; vx: number; vz: number }, t: { x: number; z: number }): boolean => {
+  const dx = t.x - g.x, dz = t.z - g.z;
+  const d = Math.hypot(dx, dz), sp = Math.hypot(g.vx, g.vz);
+  return d < 0.5 || sp < 0.5 || (dx * g.vx + dz * g.vz) / (d * sp) > 0.25;
+};
+
 export function stepFlight(
   s: FlightState,
   inp: FlightInput,
@@ -224,9 +251,20 @@ export function stepFlight(
         ev.push({ type: 'diveEnd' });
       }
     } else {
+      // landing magnet: ease a descending gull onto a perch top it is heading for
+      let autoFlare = false;
+      const la = tuning.landing;
+      if (!stunned && !ctl.flap && s.vy < 0 && la.magnet.value > 0 && Math.hypot(s.vx, s.vz) < la.magnetMaxSpeed.value) {
+        const spot = world.perchNear(s.x, s.y - GULL_RADIUS, s.z, la.magnetRange.value, la.magnetHeight.value);
+        if (spot && headingToward(s, spot)) {
+          const m = magnetSteer(s, spot, la.magnet.value, la.magnetRange.value, dt);
+          s.heading = m.heading;
+          autoFlare = m.flare;
+        }
+      }
       // speed follows heading (glider model)
       let sp = Math.hypot(s.vx, s.vz);
-      const target = flare ? f.flareSpeed.value : f.glideSpeed.value;
+      const target = flare || autoFlare ? f.flareSpeed.value : f.glideSpeed.value;
       sp = sp < target ? Math.min(target, sp + f.airAccel.value * dt) : Math.max(target, sp - f.airDrag.value * dt);
 
       s.vy -= f.gravity.value * dt;

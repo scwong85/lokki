@@ -14,6 +14,8 @@ export type TriggerDef =
   | { id: string; kind: 'propInZone'; event: string; propType?: PropType; tag?: string; zone: Zone3 | 'sea' }
   /** The gull stands/flies in the zone. */
   | { id: string; kind: 'gullInZone'; event: string; zone: Zone3; grounded?: boolean }
+  /** The gull stands on something at least `minY` high (any rooftop) while carrying a prop of this type. */
+  | { id: string; kind: 'carryLanded'; event: string; propType: PropType; minY: number }
   /** The gull carries a prop of this type through the points in order; each point fires its own event. */
   | { id: string; kind: 'carryCheckpoints'; propType: PropType; points: { x: number; z: number; r: number }[]; events: string[]; maxY?: number };
 
@@ -64,7 +66,8 @@ export class TriggerSystem {
       }
       if (this.fired.has(d.id) || !wanted.has(d.event)) continue;
       let hit = false;
-      if (d.kind === 'gullInZone') hit = inZone(d.zone, ctx.gull.x, ctx.gull.y, ctx.gull.z) && (!d.grounded || ctx.gull.grounded);
+      if (d.kind === 'carryLanded') hit = !!ctx.carried && ctx.carried.type === d.propType && ctx.gull.grounded && ctx.gull.y >= d.minY;
+      else if (d.kind === 'gullInZone') hit = inZone(d.zone, ctx.gull.x, ctx.gull.y, ctx.gull.z) && (!d.grounded || ctx.gull.grounded);
       else {
         for (const p of ctx.props) {
           if (!p.free || (d.propType && p.type !== d.propType) || (d.tag && p.tag !== d.tag)) continue;

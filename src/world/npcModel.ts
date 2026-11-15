@@ -18,6 +18,8 @@ export interface NpcView {
   t: number;
   holding: boolean;
   distracted: boolean;
+  /** Floating text above the head (the selfie countdown "3", "2", "1", then a camera flash). */
+  label?: string;
   /** World point the right hand reaches for (ice cream, spray bottle). */
   hand?: { x: number; y: number; z: number };
 }
@@ -193,6 +195,44 @@ export class NpcModel {
     }
   }
 
+  private labelSprite: THREE.Sprite | null = null;
+  private labelText = '';
+
+  /** Big floating text above the head (selfie countdown); hidden when undefined. */
+  private setLabel(text: string | undefined): void {
+    if (!text) {
+      if (this.labelSprite) this.labelSprite.visible = false;
+      return;
+    }
+    if (!this.labelSprite) {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthTest: false }));
+      sp.scale.set(1.1, 1.1, 1);
+      sp.position.y = 2.9;
+      sp.renderOrder = 14;
+      this.root.add(sp);
+      this.labelSprite = sp;
+    }
+    this.labelSprite.visible = true;
+    if (text === this.labelText) return;
+    this.labelText = text;
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d')!;
+    g.fillStyle = 'rgba(255,255,255,0.92)';
+    g.beginPath();
+    g.arc(64, 64, 58, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#3a3a4a';
+    g.font = 'bold 76px system-ui, sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(text, 64, 70);
+    const mat = this.labelSprite.material as THREE.SpriteMaterial;
+    mat.map?.dispose();
+    mat.map = new THREE.CanvasTexture(c);
+    mat.needsUpdate = true;
+  }
+
   /** Open umbrella over the head, or tipped aside (head exposed). */
   setUmbrella(up: boolean): void {
     if (!this.umbrella) return;
@@ -202,7 +242,8 @@ export class NpcModel {
 
   apply(n: Npc, time: number): void {
     const h = n.holding !== null ? handPos(n) : undefined;
-    this.applyView({ x: n.x, z: n.z, heading: n.heading, mode: n.mode, moving: n.moving, walkPhase: n.walkPhase, t: n.t, holding: n.holding !== null, distracted: n.distractT > 0, hand: h }, time);
+    const label = n.selfie === 'count' ? String(n.selfieCount) : n.selfie === 'open' ? '\u{1F4F7}' : undefined;
+    this.applyView({ x: n.x, z: n.z, heading: n.heading, mode: n.mode, moving: n.moving, walkPhase: n.walkPhase, t: n.t, holding: n.holding !== null, distracted: n.distractT > 0, hand: h, label }, time);
   }
 
   applyView(n: NpcView, time: number): void {
@@ -215,6 +256,7 @@ export class NpcModel {
     this.question.visible = pose.indicator === 'distracted';
     this.alarmMat.color.setHex(pose.indicator === 'alarm' ? 0xff6b6b : 0xffd166);
     this.indicator.position.y = (this.skinned ? 2.3 : 2.65) + Math.sin(time * 8) * 0.05;
+    this.setLabel(n.label);
     if (this.skinned) {
       this.animateSkinned(n, pose.armRaise, time);
       return;

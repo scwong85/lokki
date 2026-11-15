@@ -1,6 +1,7 @@
 import type { QuestDef } from '../quests';
 import type { TriggerDef } from '../../gameplay/triggers';
 import type { SkillId } from '../skills';
+import type { NpcSpawn } from '../../gameplay/npc';
 
 /**
  * One level: a short visit to a district with its own to-do list, cast and rules (M12). Plain data; the game builds
@@ -23,8 +24,12 @@ export interface LevelDef {
   /** Ids of existing world triggers (from `TRIGGERS`) this level needs. */
   triggers: string[];
   extraTriggers?: TriggerDef[];
-  /** Which tourists take part: their `role`s ('any' = every tourist without a special role), or 'all'. */
+  /** Which of the shared tourists take part: their `role`s ('any' = every tourist without a special role), or 'all'. */
   tourists: 'all' | string[];
+  /** Tourists placed just for this level. */
+  extraTourists?: NpcSpawn[];
+  /** The level that must be cleared first (shown locked until then). */
+  requires?: string;
   /** Is the city on guard (heat, vendors, lines, nets, the Warden)? Early levels keep it calm. */
   defense: boolean;
   /** Par time in seconds for the third star. */

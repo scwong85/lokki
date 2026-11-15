@@ -70,6 +70,8 @@ export interface TitleLevel {
   stars: number;
   current: boolean;
   sandbox?: boolean;
+  locked?: boolean;
+  unlockHint?: string;
 }
 
 /** Title screen: shown once the city has loaded; the game waits behind it. */
@@ -90,7 +92,7 @@ export class TitleScreen {
         <h1>Lokki</h1>
         <p class="tag">A seagull. Helsinki's Market Square. Zero regrets.</p>
         <button class="big" data-act="play">Play${info.levels?.find((l) => l.current) ? `: ${info.levels.find((l) => l.current)!.name}` : ''}</button>
-        ${info.levels ? `<div class="title-levels">${info.levels.map((l) => `<button data-level="${l.id}" class="${l.current ? 'on' : ''}" title="${l.blurb}"><span class="lv-name">${l.name}</span><span class="lv-stars">${l.sandbox ? 'free play' : '★'.repeat(l.stars) + '☆'.repeat(3 - l.stars)}</span></button>`).join('')}</div>` : ''}
+        ${info.levels ? `<div class="title-levels">${info.levels.map((l) => `<button data-level="${l.id}" class="${l.current ? 'on' : ''}${l.locked ? ' locked' : ''}" title="${l.locked ? l.unlockHint ?? 'Locked' : l.blurb}"><span class="lv-name">${l.locked ? '🔒 ' : ''}${l.name}</span><span class="lv-stars">${l.locked ? l.unlockHint ?? '' : l.sandbox ? 'free play' : '★'.repeat(l.stars) + '☆'.repeat(3 - l.stars)}</span></button>`).join('')}</div>` : ''}
         <div class="title-row"><button data-act="options">Options</button><button data-act="credits">Credits</button></div>
         <p class="title-keys"><b>WASD</b> move · <b>Space</b> hop / flap · <b>Shift</b> dive · <b>E</b> grab · <b>F</b> poop · <b>Mouse</b> look (click to capture)</p>
         ${info.best ? `<p class="title-best">Best clear ${info.best} · skills ${info.skills}/${info.total}</p>` : info.skills ? `<p class="title-best">Skills ${info.skills}/${info.total}</p>` : ''}
@@ -103,6 +105,7 @@ export class TitleScreen {
     this.el.querySelectorAll<HTMLElement>('[data-level]').forEach((b) =>
       b.addEventListener('click', () => {
         const lv = info.levels?.find((l) => l.id === b.dataset.level);
+        if (lv?.locked) return;
         if (lv?.current) hooks.onPlay();
         else hooks.onPickLevel?.(b.dataset.level!);
       }),

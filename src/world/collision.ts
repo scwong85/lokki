@@ -184,6 +184,35 @@ export class World {
     return { y: best, kind };
   }
 
+  /**
+   * The nearest perch top a gull at (x, yFeet, z) could be steered onto: within `range` metres sideways and at most
+   * `height` metres below the gull's feet. Returns a spot just inside the edge (or right below, if already above it).
+   */
+  perchNear(x: number, yFeet: number, z: number, range: number, height: number): { x: number; y: number; z: number; d: number } | null {
+    let best: { x: number; y: number; z: number; d: number } | null = null;
+    for (const it of this.query(x - range, z - range, x + range, z + range)) {
+      if (!('prism' in it) || it.prism.kind !== 'perch') continue;
+      const pr = it.prism;
+      const top = pr.y1;
+      if (top > yFeet + 0.05 || yFeet - top > height) continue;
+      let tx = x, tz = z, d = 0;
+      if (!pointInRings(pr.rings, x, z)) {
+        const c = closestOnRings(pr.rings, x, z);
+        d = Math.sqrt(c.d2);
+        if (d > range) continue;
+        // aim a little inside the edge, toward the middle of the top
+        const bb = pr.bb ?? ringsBB(pr.rings);
+        const mx = (bb[0] + bb[2]) / 2, mz = (bb[1] + bb[3]) / 2;
+        const ix = mx - c.x, iz = mz - c.z, il = Math.hypot(ix, iz) || 1;
+        const inset = Math.min(0.45, il);
+        tx = c.x + (ix / il) * inset;
+        tz = c.z + (iz / il) * inset;
+      }
+      if (!best || d < best.d) best = { x: tx, y: top, z: tz, d };
+    }
+    return best;
+  }
+
   /** Is the point inside any solid (or below the ground)? Used for dive aim preview. */
   solidAt(x: number, y: number, z: number): boolean {
     if (y <= 0) return true;

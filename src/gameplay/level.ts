@@ -24,7 +24,7 @@ export function levelSetup(def: LevelDef, allQuests: readonly QuestDef[], allTri
     });
   const quests = [...pick(def.quests, allQuests, 'quest'), ...(def.extraQuests ?? [])];
   const triggers = [...pick(def.triggers, allTriggers, 'trigger'), ...(def.extraTriggers ?? [])];
-  const tourists = def.tourists === 'all' ? [...allTourists] : allTourists.filter((t) => (def.tourists as string[]).includes(t.role ?? 'any'));
+  const tourists = [...(def.tourists === 'all' ? allTourists : allTourists.filter((t) => (def.tourists as string[]).includes(t.role ?? 'any'))), ...(def.extraTourists ?? [])];
   const secret = new Set(def.secret ?? []);
   return { quests, triggers, tourists, defense: def.defense, secret, main: quests.map((q) => q.id).filter((id) => !secret.has(id)) };
 }
@@ -66,5 +66,8 @@ export function mergeRecord(prev: LevelRecord | undefined, stars: Stars, seconds
     clears: p.clears + (stars[0] ? 1 : 0),
   };
 }
+
+/** A level is open when it has no prerequisite, or the prerequisite has been cleared. */
+export const levelUnlocked = (def: LevelDef, records: Record<string, LevelRecord>): boolean => !def.requires || !!records[def.requires]?.stars[0];
 
 export const starCount = (r: LevelRecord | undefined): number => (r ? r.stars.filter(Boolean).length : 0);

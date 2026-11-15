@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LEVELS, SANDBOX, SNACK_STUB, levelById } from '../../src/data/levels';
+import { LEVELS, SANDBOX, SNACK_ATTACK, levelById } from '../../src/data/levels';
 import { QUESTS } from '../../src/data/quests';
 import { TRIGGERS } from '../../src/data/triggers';
 import { TOURIST_SPAWNS } from '../../src/data/npcs';
@@ -30,30 +30,32 @@ describe('level definitions', () => {
     expect(sb.quests.map((q) => q.id)).toEqual(QUESTS.map((q) => q.id));
     expect(sb.tourists).toHaveLength(TOURIST_SPAWNS.length);
     expect(sb.defense).toBe(true);
-    const st = build(SNACK_STUB.id);
+    const st = build(SNACK_ATTACK.id);
     expect(st.defense).toBe(false);
-    expect(st.tourists.every((t) => !t.role)).toBe(true);
-    expect(st.triggers.map((t) => t.id)).toEqual(['statuePerch']);
+    expect(st.tourists.filter((t) => t.role === 'selfie')).toHaveLength(1);
+    expect(st.tourists.every((t) => t.ice)).toBe(true);
+    expect(st.triggers.map((t) => t.id)).toEqual(['feast']);
+    expect(st.quests.map((q) => q.id)).toEqual(['snack', 'feast', 'photobomb']);
   });
 
   it('unknown ids in a level fail loudly', () => {
-    expect(() => levelSetup({ ...SNACK_STUB, quests: ['nope'] }, QUESTS, TRIGGERS, TOURIST_SPAWNS)).toThrow(/unknown quest/);
+    expect(() => levelSetup({ ...SNACK_ATTACK, quests: ['nope'] }, QUESTS, TRIGGERS, TOURIST_SPAWNS)).toThrow(/unknown quest/);
   });
 });
 
 describe('clearing and stars', () => {
   it('clears on the main to-dos; the secret one adds the second star; par time the third', () => {
-    const s = build(SNACK_STUB.id);
+    const s = build(SNACK_ATTACK.id);
     const q = new QuestLog(s.quests);
     const st = () => q.quests.map((x) => ({ id: x.id, status: x.status }));
-    expect(levelProgress(SNACK_STUB, s, st()).cleared).toBe(false);
+    expect(levelProgress(SNACK_ATTACK, s, st()).cleared).toBe(false);
     for (const x of q.quests) if (s.main.includes(x.id)) x.status = 'won';
-    const p = levelProgress(SNACK_STUB, s, st());
+    const p = levelProgress(SNACK_ATTACK, s, st());
     expect(p).toEqual({ cleared: true, allDone: false });
-    expect(levelStars(SNACK_STUB, p, 100)).toEqual([true, false, true]);
-    expect(levelStars(SNACK_STUB, p, 999)).toEqual([true, false, false]);
-    q.quests.find((x) => x.id === 'firstSplat')!.status = 'won';
-    expect(levelProgress(SNACK_STUB, s, st()).allDone).toBe(true);
+    expect(levelStars(SNACK_ATTACK, p, 100)).toEqual([true, false, true]);
+    expect(levelStars(SNACK_ATTACK, p, 999)).toEqual([true, false, false]);
+    q.quests.find((x) => x.id === 'photobomb')!.status = 'won';
+    expect(levelProgress(SNACK_ATTACK, s, st()).allDone).toBe(true);
     expect(levelProgress(SANDBOX, build('sandbox'), st()).cleared).toBe(false); // free play never "clears"
   });
 
@@ -67,9 +69,45 @@ describe('clearing and stars', () => {
   });
 
   it('per-level saves are sanitised', () => {
-    const d = sanitize({ levels: { 'snack-stub': { stars: [true, 'x', true], best: -1, clears: 2.9 }, junk: 5 }, level: 'snack-stub' });
-    expect(d.levels).toEqual({ 'snack-stub': { stars: [true, false, true], best: null, clears: 2 } });
-    expect(d.level).toBe('snack-stub');
+    const d = sanitize({ levels: { 'snack-attack': { stars: [true, 'x', true], best: -1, clears: 2.9 }, junk: 5 }, level: 'snack-attack' });
+    expect(d.levels).toEqual({ 'snack-attack': { stars: [true, false, true], best: null, clears: 2 } });
+    expect(d.level).toBe('snack-attack');
     expect(sanitize({}).levels).toEqual({});
+  });
+});
+
+describe('level 1 selfie routine', () => {
+  it('cycles idle -> 3, 2, 1 -> open, and the open window is the end of the countdown', async () => {
+    const { selfieState, inFrame } = await import('../../src/gameplay/selfie');
+    const { tuning } = await import('../../src/core/tuning');
+    const idle = tuning.selfie.idle.value, count = tuning.selfie.count.value, open = tuning.selfie.open.value;
+    expect(selfieState(0).phase).toBe('idle');
+    expect(selfieState(idle - 0.01).phase).toBe('idle');
+    const seen: number[] = [];
+    for (let t = idle; t < idle + count; t += 0.05) {
+      const st = selfieState(t);
+      expect(st.phase).toBe('count');
+      if (seen[seen.length - 1] !== st.count) seen.push(st.count);
+    }
+    expect(seen).toEqual([3, 2, 1]);
+    expect(selfieState(idle + count + 0.01).phase).toBe('open');
+    expect(selfieState(idle + count + open - 0.01).phase).toBe('open');
+    expect(selfieState(idle + count + open + 0.01).phase).toBe('idle'); // the next cycle
+    expect(selfieState(-0.5).phase).toBe('open'); // negative offsets wrap
+    // she faces +z (heading pi): the frame is the cone in front of her
+    const npc = { x: 0, z: 0 };
+    expect(inFrame(npc, Math.PI, { x: 0, y: 1, z: 3 })).toBe(true);
+    expect(inFrame(npc, Math.PI, { x: 0, y: 1, z: -3 })).toBe(false); // behind her
+    expect(inFrame(npc, Math.PI, { x: 0, y: 1, z: 20 })).toBe(false); // too far
+    expect(inFrame(npc, Math.PI, { x: 0, y: 30, z: 3 })).toBe(false); // far overhead
+  });
+
+  it('levels unlock when their prerequisite is cleared', async () => {
+    const { levelUnlocked } = await import('../../src/gameplay/level');
+    const lvl2 = { ...SNACK_ATTACK, id: 'two', requires: 'snack-attack' };
+    expect(levelUnlocked(SNACK_ATTACK, {})).toBe(true);
+    expect(levelUnlocked(lvl2, {})).toBe(false);
+    expect(levelUnlocked(lvl2, { 'snack-attack': { stars: [false, false, false], best: null, clears: 0 } })).toBe(false);
+    expect(levelUnlocked(lvl2, { 'snack-attack': { stars: [true, false, false], best: 100, clears: 1 } })).toBe(true);
   });
 });

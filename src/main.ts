@@ -31,7 +31,7 @@ import { NpcManager } from './gameplay/npcs';
 import { QuestLog, type QuestNote } from './gameplay/quest';
 import { QUESTS } from './data/quests';
 import { LEVELS, levelById } from './data/levels';
-import { levelProgress, levelSetup, levelStars, mergeRecord, starCount } from './gameplay/level';
+import { levelProgress, levelSetup, levelStars, levelUnlocked, mergeRecord, starCount } from './gameplay/level';
 import { TOURIST_SPAWNS } from './data/npcs';
 import type { NpcEvent } from './gameplay/npc';
 import { Todo } from './ui/todo';
@@ -296,7 +296,7 @@ const title = new TitleScreen(
     best: fmtClear(save.bestTime),
     skills: skills.ids.length,
     total: SKILLS.length,
-    levels: LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), current: l.id === level.id, sandbox: l.sandbox })),
+    levels: LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), current: l.id === level.id, sandbox: l.sandbox, locked: !levelUnlocked(l, save.levels), unlockHint: l.requires ? `Clear ${levelById(l.requires).name} first` : undefined })),
   },
 );
 if (interactive) title.show();
@@ -614,6 +614,13 @@ function onNpcEvents(evs: NpcEvent[]): void {
     } else if (e.type === 'cheer') {
       audio.play('chime');
       hud.toast('The child hugs the teddy!', 2);
+    } else if (e.type === 'selfieClick') {
+      audio.play('pop');
+      if (e.inFrame) {
+        hud.toast('Photobomb! Best selfie ever.', 2);
+        interaction.debris.burst({ x: e.npc.x, y: 2.2, z: e.npc.z }, 0xffffff, 10); // camera flash
+        notes(quests.onEvent('photobomb'));
+      }
     } else if (e.type === 'arrived' && e.goal === 'stormoff') {
       notes(quests.onEvent('dateOver'));
     } else if (e.type === 'arrived' && e.goal === 'ferry') {

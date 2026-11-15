@@ -47,6 +47,9 @@ export interface Npc {
   shieldFrom: number;
   /** World angle of the hand around the body (heading convention). */
   handAngle: number;
+  /** Selfie routine (role 'selfie'): what she is doing and the number she is counting. */
+  selfie: 'idle' | 'count' | 'open';
+  selfieCount: number;
   distractT: number;
   noiseX: number;
   noiseZ: number;
@@ -82,7 +85,7 @@ export interface Noise {
   loud: number;
 }
 
-export type NpcEvent = { type: 'reclaimed'; npc: Npc; propType: PropType } | { type: 'cheer'; npc: Npc } | { type: 'arrived'; npc: Npc; goal: string } | { type: 'yuck'; npc: Npc } | { type: 'tookItem'; npc: Npc; propType: PropType } | { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc };
+export type NpcEvent = { type: 'reclaimed'; npc: Npc; propType: PropType } | { type: 'cheer'; npc: Npc } | { type: 'arrived'; npc: Npc; goal: string } | { type: 'yuck'; npc: Npc } | { type: 'tookItem'; npc: Npc; propType: PropType } | { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc } | { type: 'selfieClick'; npc: Npc; inFrame: boolean };
 
 export interface NpcCtx {
   world: World;
@@ -100,7 +103,7 @@ export const bearing = (dx: number, dz: number) => Math.atan2(-dx, -dz);
 export function newNpc(id: number, sp: NpcSpawn): Npc {
   const h = sp.heading ?? 0;
   return {
-    id, x: sp.x, z: sp.z, heading: h, mode: 'idle', t: 0, homeX: sp.x, homeZ: sp.z, targetX: null, targetZ: null,
+    id, x: sp.x, z: sp.z, heading: h, mode: 'idle', t: 0, homeX: sp.x, homeZ: sp.z, selfie: 'idle', selfieCount: 0, targetX: null, targetZ: null,
     holding: null, shieldFrom: h, handAngle: h - Math.PI / 2, distractT: 0, noiseX: 0, noiseZ: 0, lostSightT: 0, noticeCd: 0,
     walkPhase: 0, moving: false, speed: 0, seesGull: false, nextT: 2,
     wants: sp.wants ?? [], holdType: null, goal: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false,
@@ -130,6 +133,8 @@ export function canSee(n: { x: number; z: number; heading: number; mode: string 
 
 /** Where the ice cream hand is, in world space. */
 export function handPos(n: Npc): { x: number; y: number; z: number } {
+  // taking a selfie: the arm is up, holding the phone (and the ice cream) out in front
+  if (n.selfie !== 'idle' && n.mode !== 'panic') return { x: n.x - Math.sin(n.heading) * 0.6, y: 2.0, z: n.z - Math.cos(n.heading) * 0.6 };
   if (n.mode === 'eat') return { x: n.x - Math.sin(n.heading) * 0.3, y: 1.45, z: n.z - Math.cos(n.heading) * 0.3 };
   if (n.mode === 'panic') return { x: n.x - Math.sin(n.handAngle) * 0.3, y: 1.95, z: n.z - Math.cos(n.handAngle) * 0.3 };
   const r = n.mode === 'shield' ? 0.55 : 0.5;

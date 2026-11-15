@@ -101,7 +101,7 @@ function statue(l: LandmarkSrc): LandmarkOut {
       prism(ngon(x, z, 4.5, 12), 0, 0.5, 0xe8e2d6, 0x9fd8ea),
       // a wide plinth (a perch you can actually land on) with the figure on top
       prism(ngon(x, z, 1.9, 10), 0.5, 3, 0xe8e2d6, 0xe8e2d6, 'perch'),
-      prism(ngon(x, z, 0.55), 3, 5.2, 0x8fbfa8, 0x8fbfa8, 'perch'),
+      prism(ngon(x, z, 0.9), 3, 5.2, 0x8fbfa8, 0x8fbfa8, 'perch'), // wide enough to land on (M12 playtest)
     ],
     targets: [],
     // the student cap lies on the plinth beside the figure (cap heist)

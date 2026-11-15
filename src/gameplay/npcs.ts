@@ -10,6 +10,7 @@ import type { Prop, PropManager } from './props';
 import type { World } from '../world/collision';
 import type { FlightState } from '../gull/flight';
 import { NpcModel } from '../world/npcModel';
+import { inFrame, selfieState } from './selfie';
 
 const NPC_RADIUS_BODY = 0.5;
 const RING_GUARDED = 0xff6b6b;
@@ -86,6 +87,7 @@ export class NpcManager implements NpcHooks {
     const ctx = { world: this.world, walkable: this.walkable, rng: this.rng };
     this.clock += dt;
     for (const n of this.npcs) {
+      if (n.role === 'selfie') ev.push(...this.selfieStep(n, gulls));
       const near = gulls.length === 1 ? gulls[0] : gulls.reduce((a, b) => ((a.x - n.x) ** 2 + (a.z - n.z) ** 2 <= (b.x - n.x) ** 2 + (b.z - n.z) ** 2 ? a : b));
       ev.push(...stepNpc(n, near, this.noises, dt, ctx));
       ev.push(...this.wantedItems(n));
@@ -111,6 +113,28 @@ export class NpcManager implements NpcHooks {
       }
     }
     this.noises.length = 0;
+    return ev;
+  }
+
+  /**
+   * The selfie routine: on "1" the shot is taken and for a moment she looks only at the screen (her ice cream is open).
+   * Emits `selfieClick` when the photo is taken, saying whether a gull is in the frame (the photobomb).
+   */
+  private selfieStep(n: Npc, gulls: readonly GullInfo[]): NpcEvent[] {
+    const ev: NpcEvent[] = [];
+    const sp = this.spawns.get(n.id);
+    const facing = sp?.heading ?? n.heading;
+    const st = selfieState(this.clock, n.id * 1.7);
+    const was = n.selfie;
+    n.selfie = st.phase;
+    n.selfieCount = st.count;
+    if (st.phase === 'open') {
+      // eyes on the phone: she turns toward her camera, the hand stays up where it is, so the ice cream is free
+      n.noiseX = n.x - Math.sin(facing) * 6;
+      n.noiseZ = n.z - Math.cos(facing) * 6;
+      n.distractT = Math.max(n.distractT, 0.3);
+    }
+    if (was === 'count' && st.phase === 'open') ev.push({ type: 'selfieClick', npc: n, inFrame: gulls.some((g) => inFrame(n, facing, g)) });
     return ev;
   }
 
