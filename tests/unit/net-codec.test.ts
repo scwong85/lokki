@@ -40,3 +40,19 @@ describe('protocol', () => {
     expect(decodeMsg('null')).toBeNull();
   });
 });
+
+import { countCandidates, explainFailure } from '../../src/net/peer';
+describe('connection diagnostics', () => {
+  const sdp = ['a=candidate:1 1 udp 2122260223 192.168.1.5 5000 typ host', 'a=candidate:2 1 udp 1686052607 85.1.2.3 5000 typ srflx raddr 0.0.0.0 rport 0', 'a=candidate:3 1 udp 41885439 5.5.5.5 6000 typ relay', 'a=candidate:4 1 udp 1 abc.local 5000 typ host'].join('\r\n');
+  it('counts candidates by kind', () => {
+    expect(countCandidates(sdp)).toEqual({ host: 2, srflx: 1, relay: 1 });
+    expect(countCandidates(undefined)).toEqual({ host: 0, srflx: 0, relay: 0 });
+  });
+  it('says what to do', () => {
+    const none = { host: 1, srflx: 0, relay: 0 }, ok = { host: 1, srflx: 1, relay: 0 }, rel = { host: 1, srflx: 1, relay: 1 };
+    expect(explainFailure(none, ok)).toMatch(/STUN is blocked/);
+    expect(explainFailure(ok, none)).toMatch(/friend/);
+    expect(explainFailure(ok, ok)).toMatch(/relay fixes it/);
+    expect(explainFailure(rel, rel)).toMatch(/Even the relay/);
+  });
+});

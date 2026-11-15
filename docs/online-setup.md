@@ -70,6 +70,9 @@ Providers such as Metered (https://www.metered.ca/tools/openrelay/ and their fre
 ```
 The game checks the JSON when you press Save. Both players should add it (a relay helps whichever side needs it). Because this is stored in the browser, do not use a paid plan's master key here; use the free plan's credentials.
 
+## Quick fix for "connection failed"
+Most failures are two networks that cannot reach each other directly. On **both** devices: press **N → Settings → Use a free public relay → Save**, then host and join again. The lobby now also shows what it found (for example "ice checking; you found 2 local, 1 public, 0 relay") and a plain-words reason when it gives up; send me that line if it still fails. The public relay is a free community service (Metered Open Relay): game packets pass through it encrypted, but its availability is not guaranteed, so for anything long-term set up your own (Part 3).
+
 ## If it still does not connect
 1. Both players: press **N**, check the status line under the code.
 2. Try the same two windows on one PC (always works): proves the game is fine.
