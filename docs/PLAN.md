@@ -186,11 +186,12 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M7 Market Square quest pack
 - [x] M8 Skills and saving
 - [x] M9 Portfolio polish
-- [ ] M10 Visual detail
-- [ ] M11 Input layer + mobile landscape
+- [x] M10 Visual detail
+- [x] M11 Input layer + mobile landscape
 - [ ] M12 Level framework (two-gull-ready)
 - [ ] M13 Market Square Act 1 (levels 1–4)
 - [ ] M14 Online co-op
+- [ ] M15 Polish pass (playtest feedback)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -289,7 +290,20 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
   2. **The offline rule** (§4.3, §6.4) is relaxed **for online multiplayer only**: single player stays fully static and offline.
 - **Exit:** the user and a friend finish a level together over the internet (PC–PC and phone–PC), with no noticeable lag on their own gull and a clean reconnect after a dropped connection.
 
-### After M14 (backlog)
+### M15 — Polish pass from playtest feedback (M)
+**Goal:** fix the things the user noticed while playtesting M10 and M11 (see their playtest notes). Can be scheduled earlier or split if something becomes urgent.
+- **Windows:** more variation in window spacing and styles (per building: bay width, window shapes and sizes, some blank walls and accent floors).
+- **Streets feel empty:** more street life and furniture (walking pedestrians and cyclists, lamp posts, signs, café tables, parked bikes and delivery vans, planters).
+- **Swimming:** hide or fully tuck the legs while swimming, so the gull floats instead of standing in the water.
+- **Floating items:** visibly bob and rock on the waves (they float but look static; the bob is too small or the physics body sleeps).
+- **Running tourists:** fix the arm and hand positions in the run animation (the arm overrides fight the run clip).
+- **Remove the static ice cream** (confirm with the user which one at the start).
+- **Menus:** Esc opens the options; the options menu gets a "Skills & gull looks" entry (K stays as a shortcut).
+- **Touch camera:** faster drag-to-look (and a touch look-speed slider in Options).
+- **Touch buttons:** better default positions for Flap, Dive, Poop, Grab, and a way to adjust them (layout presets or drag-to-arrange, left-handed mirror).
+- **Exit:** the user re-checks each item on PC and phone.
+
+### After M15 (backlog)
 Market Square Act 1 levels 5–8, Act 2 (skill levels) and Act 3 (themed days); Senate Square (`docs/design/levels-senaatintori.md`), Esplanadi (`docs/design/levels-esplanadi.md`), Katajanokka (`docs/design/levels-katajanokka.md`), each level designed with a co-op variant; the shared systems they need (moving platforms, NPC schedules, Kalle the rival gull, the drone, seasons); local split-screen co-op (optional); optional WebGPU renderer.
 
 ---
