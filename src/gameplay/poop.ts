@@ -85,6 +85,13 @@ export function spawnPoopAssisted(
   const pull = best.assist !== undefined ? 1 : strength; // level targets are pulled in all the way
   p.vx += ((best.x - base.hit.x) / perSpeed) * pull;
   p.vz += ((best.z - base.hit.z) / perSpeed) * pull;
+  // second look: the first nudge lands it at the target's feet, but it should arrive at the target itself (a long pull is slightly short)
+  const again = fly({ ...p }, time, world, props);
+  if (again) {
+    const k2 = k > 1e-6 ? (1 - Math.exp(-k * again.t)) / k : again.t;
+    p.vx += ((best.x - again.hit.x) / k2) * pull;
+    p.vz += ((best.z - again.hit.z) / k2) * pull;
+  }
   return p;
 }
 

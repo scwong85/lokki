@@ -17,6 +17,8 @@ export interface GullSnap {
   tr?: number;
   /** Pigeon disguise on. */
   dg?: number;
+  /** Where the gull's target lock is (the host uses it to aim this player's droppings). */
+  lk?: [number, number, number];
 }
 
 export interface PropSnap {

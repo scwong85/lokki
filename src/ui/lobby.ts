@@ -14,10 +14,19 @@ export class Lobby {
   /** Bumped whenever a page is left, so an old room wait stops. */
   private gen = 0;
   private roomCode = '';
+  /** The level the host chose to play (set on the start page). */
+  private hostLevel = '';
 
   constructor(
     root: HTMLElement,
-    private hooks: { onConnected: (role: 'host' | 'guest', link: PeerLink) => void; onLeave: () => void },
+    private hooks: {
+      onConnected: (role: 'host' | 'guest', link: PeerLink, hostLevel: string) => void;
+      onLeave: () => void;
+      /** The levels the host can start (unlocked ones) and the one being played. */
+      levels: () => { id: string; name: string; current: boolean }[];
+      /** The host wants to pick another level while playing. */
+      onChangeLevel: () => void;
+    },
   ) {
     this.el = document.createElement('div');
     this.el.id = 'lobby';
@@ -41,6 +50,7 @@ export class Lobby {
   }
 
   show(): void {
+    if (!this.link && !this.who) this.render('start'); // fresh level list
     this.el.hidden = false;
     if (document.pointerLockElement) document.exitPointerLock();
   }
@@ -55,7 +65,10 @@ export class Lobby {
   }
 
   /** Tell the lobby the session is on (or over), so it shows the right page. */
+  private who = '';
+
   setConnected(who: string | null): void {
+    this.who = who ?? '';
     if (who) this.render('playing', who);
     else this.render('start');
   }
@@ -77,6 +90,7 @@ export class Lobby {
     const copyRow = (id: string) => `<textarea id="${id}" rows="4" readonly></textarea><button data-act="copy" data-for="${id}">Copy</button>`;
     const pages = {
       start: `${head}<p>Two players, two devices, no account. The host chooses the levels; the game runs between your browsers.</p>
+        <label class="lb-level">Level to host<select id="lb-level">${this.hooks.levels().map((l) => `<option value="${l.id}"${l.id === (this.hostLevel || this.hooks.levels().find((x) => x.current)?.id) ? ' selected' : ''}>${l.name}</option>`).join('')}</select></label>
         ${this.cfg.signalUrl
           ? `<button class="big" data-act="roomhost">Host a game</button><button class="big" data-act="roomjoin">Join with a room code</button>
              <p class="lb-note">No room service? <a href="#" data-act="host">host with codes</a> · <a href="#" data-act="join">join with codes</a></p>`
@@ -99,7 +113,7 @@ export class Lobby {
         <button data-act="answer" class="big">Make my answer code</button>
         <ol start="2"><li>Send this answer code back to the host:</li></ol>${copyRow('lb-answer-out')}<p class="lb-status">&nbsp;</p><button data-act="back">Back</button>`,
       playing: `${head}<p>Playing with <b>${who}</b>.</p><p class="lb-note">${this.role === 'host' ? 'You pick the levels (L); your friend follows. Your progress is saved on your side.' : 'The host picks the levels and your game follows. Your own skills and looks stay yours.'}</p>
-        <button data-act="leave">Leave the game</button><button data-act="close">Close</button>`,
+        ${this.role === 'host' ? '<button data-act="changelevel">Change level</button>' : ''}<button data-act="leave">Leave the game</button><button data-act="close">Close</button>`,
     };
     this.el.innerHTML = pages[page];
   }
@@ -107,9 +121,15 @@ export class Lobby {
   private async click(t: HTMLElement): Promise<void> {
     const b = t.closest<HTMLElement>('[data-act]');
     if (!b) return;
+    const pick = this.el.querySelector<HTMLSelectElement>('#lb-level');
+    if (pick) this.hostLevel = pick.value;
     switch (b.dataset.act) {
       case 'close':
         this.hide();
+        break;
+      case 'changelevel':
+        this.hide();
+        this.hooks.onChangeLevel();
         break;
       case 'back':
         this.reset();
@@ -266,7 +286,7 @@ export class Lobby {
     link.onOpen(() => {
       const l = this.link;
       if (!l || !this.role) return;
-      this.hooks.onConnected(this.role, l);
+      this.hooks.onConnected(this.role, l, this.hostLevel);
       this.link = null; // the session owns it now
     });
     link.onState((s) => {

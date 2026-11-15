@@ -57,6 +57,7 @@ export class TouchControls {
       <button class="t-btn t-menu" data-code="menu" aria-label="Menu">☰</button>
       <button class="t-btn t-hud" data-code="KeyU" data-mode="tap" aria-label="Show or hide the HUD">HUD</button>
       <button class="t-btn t-hawk" data-code="KeyH" data-mode="tap" aria-label="Hawk-eye">👁</button>
+      <button class="t-btn t-lock" data-code="Tab" data-mode="tap" aria-label="Lock onto a target">⌖</button>
       <div class="t-abil">
         <button class="t-btn t-ab" data-code="KeyV" data-mode="tap" hidden>Caw</button>
         <button class="t-btn t-ab" data-code="KeyG" data-mode="tap" hidden>Flock</button>

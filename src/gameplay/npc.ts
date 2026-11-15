@@ -67,6 +67,8 @@ export interface Npc {
   moving: boolean;
   speed: number;
   seesGull: boolean;
+  /** 0..1: how close a calm person is to noticing the gull (it builds while the gull is in sight, and fades when it is not). */
+  suspicion: number;
   /** Mode timers for idle/eat cycling. */
   nextT: number;
   /** Items it picks up when free and on the ground nearby. */
@@ -113,7 +115,7 @@ export function newNpc(id: number, sp: NpcSpawn): Npc {
   return {
     id, x: sp.x, z: sp.z, heading: h, mode: 'idle', t: 0, homeX: sp.x, homeZ: sp.z, selfie: 'idle', selfieCount: 0, cleanT: 0, cleanSplats: 0, signX: sp.signAt?.x ?? sp.x, signZ: sp.signAt?.z ?? sp.z, targetX: null, targetZ: null,
     holding: null, shieldFrom: h, handAngle: h - Math.PI / 2, distractT: 0, noiseX: 0, noiseZ: 0, lostSightT: 0, noticeCd: 0,
-    walkPhase: 0, moving: false, speed: 0, seesGull: false, nextT: 2,
+    walkPhase: 0, moving: false, speed: 0, seesGull: false, suspicion: 0, nextT: 2,
     wants: sp.wants ?? [], holdType: null, goal: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false,
   };
 }
@@ -272,7 +274,11 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
   }
 
   // ---- reactions ----
-  if (calm && n.seesGull && n.noticeCd <= 0 && n.distractT <= 0) {
+  // seeing the gull is not noticing it: suspicion builds while it is in sight (twice as fast for a diving gull) and fades when it is not
+  if (calm && n.seesGull && n.distractT <= 0) n.suspicion = Math.min(1, n.suspicion + (dt / t.noticeBuild.value) * (g.diving ? 2 : 1));
+  else n.suspicion = Math.max(0, n.suspicion - dt * t.suspicionFade.value);
+  if (calm && n.suspicion >= 1 && n.noticeCd <= 0 && n.distractT <= 0) {
+    n.suspicion = 0;
     enter(n, 'notice');
     ev.push({ type: 'noticed', npc: n });
   }

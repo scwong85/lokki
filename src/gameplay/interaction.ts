@@ -24,6 +24,8 @@ export interface InteractionInput {
   grab: boolean; // E: grab / drop
   toss: boolean; // Q
   poop: boolean; // F / click
+  /** A locked target (Tab): droppings are pulled onto it. */
+  lock?: { x: number; y: number; z: number; r: number } | null;
 }
 
 export type GagEvent =
@@ -115,6 +117,11 @@ export class Interaction {
     return this.beak(id).carried?.def.mass ?? 0;
   }
 
+  /** A locked target as a strong aim-assist target. */
+  private lockSphere(l: { x: number; y: number; z: number; r: number }): HitSphere {
+    return { x: l.x, y: l.y, z: l.z, r: l.r, assist: tuning.lock.poopAssist.value };
+  }
+
   /** Level targets (the Clean Freak's sign) as generous poop-assist targets. */
   private targetSpheres(spheres: readonly HitSphere[], props: readonly Prop[]): HitSphere[] {
     const reach = tuning.poop.targetAssistRadius.value;
@@ -157,12 +164,12 @@ export class Interaction {
   }
 
   /** Landing spot of a poop dropped right now (aim reticle). */
-  poopPrediction(s: FlightState, time: number): PoopHit | null {
+  poopPrediction(s: FlightState, time: number, lock?: { x: number; y: number; z: number; r: number } | null): PoopHit | null {
     const { spheres: ps, props: pp } = this.props.hitSpheres();
     const npcSpheres = this.npcs?.poopSpheres() ?? [];
     const spheres = [...ps, ...npcSpheres];
     // the ring on the ground includes the aim assist (also toward level targets), so what you aim at is what you get
-    return predictPoop({ x: s.x, y: s.y, z: s.z }, { x: s.vx, y: s.vy, z: s.vz }, time, this.world, spheres, [...npcSpheres.filter((n) => n.tag !== 'umbrella'), ...this.targetSpheres(ps, pp)]);
+    return predictPoop({ x: s.x, y: s.y, z: s.z }, { x: s.vx, y: s.vy, z: s.vz }, time, this.world, spheres, lock ? [this.lockSphere(lock)] : [...npcSpheres.filter((n) => n.tag !== 'umbrella'), ...this.targetSpheres(ps, pp)]);
   }
 
   /** Single player: this gull's actions plus the shared world step. */
@@ -219,8 +226,8 @@ export class Interaction {
       b.poopCd = tuning.poop.cooldown.value * mods.poopCooldown;
       const { spheres: pSpheres, props: pProps } = this.props.hitSpheres();
       const nSpheres = this.npcs?.poopSpheres() ?? [];
-      const aimed = this.targetSpheres(pSpheres, pProps);
-      const state = spawnPoopAssisted({ x: s.x, y: s.y, z: s.z }, { x: s.vx, y: s.vy, z: s.vz }, time, this.world, [...pSpheres, ...nSpheres], [...nSpheres.filter((n) => n.tag !== 'umbrella'), ...aimed]);
+      const aimed = inp.lock ? [this.lockSphere(inp.lock)] : this.targetSpheres(pSpheres, pProps);
+      const state = spawnPoopAssisted({ x: s.x, y: s.y, z: s.z }, { x: s.vx, y: s.vy, z: s.vz }, time, this.world, [...pSpheres, ...nSpheres], inp.lock ? aimed : [...nSpheres.filter((n) => n.tag !== 'umbrella'), ...aimed]);
       const mesh = new THREE.Mesh(poopGeo, poopMat);
       mesh.position.set(state.x, state.y, state.z);
       this.group.add(mesh);

@@ -40,13 +40,14 @@ Press **N** (or Options → "Play with a friend online…"). One player hosts an
 | Key | Action |
 |---|---|
 | WASD | walk / steer (relative to camera) |
-| Space | hop on the ground; flap in the air (hold to keep flapping, costs stamina) |
+| Space | on the ground: tap = jump, hold = take off; in the air: flap (hold to keep flapping, costs stamina) |
 | Shift (hold) | committed dive along the camera aim (mouse up/down = steeper/shallower); release after the minimum time to swoop up |
 | S (in the air) | flare / brake, for precise landings |
 | Mouse | click canvas for mouse look (Esc releases) |
 | E | grab (with the beak) / drop; prompt shows what is in reach |
 | Q | toss what you carry |
 | F or left click | poop (click only while the mouse is captured); ring shows where it will land |
+| Tab | lock onto a target in view: dives and droppings home in on it (again: next one, then off) |
 | H | hawk-eye: briefly reveals the city's lines and nets |
 | R | reset everything (gull, props, tourists, heat, deterrents) |
 | V / G / B | skills: crow call (Mimic), flock call, pigeon disguise (once earned) |

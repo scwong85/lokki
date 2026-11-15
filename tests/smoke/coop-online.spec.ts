@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 type Link = { createInvite: () => Promise<string>; acceptInvite: (c: string) => Promise<string>; acceptAnswer: (c: string) => Promise<void> };
 type Lk = {
   PeerLink: new () => Link;
-  startSession: (role: 'host' | 'guest', l: Link) => void;
+  startSession: (role: 'host' | 'guest', l: Link, level?: string) => void;
   loadLevel: (id: string) => void;
   level: string;
   gull: { state: { x: number; y: number; z: number } };
@@ -38,7 +38,7 @@ test('online co-op: the guest follows the host between levels, sees the host gul
   });
   const invite = await host.evaluate(() => (window as unknown as { hl: Link }).hl.createInvite());
   const answer = await guest.evaluate((c) => (window as unknown as { gl: Link }).gl.acceptInvite(c), invite);
-  await H((l) => l.startSession('host', (window as unknown as { hl: Link }).hl));
+  await H((l) => l.startSession('host', (window as unknown as { hl: Link }).hl, 'bombs-away'));
   await G((l) => l.startSession('guest', (window as unknown as { gl: Link }).gl));
   await host.evaluate((c) => (window as unknown as { hl: Link }).hl.acceptAnswer(c), answer);
 
@@ -46,9 +46,11 @@ test('online co-op: the guest follows the host between levels, sees the host gul
   await expect.poll(() => H((l) => l.players.length), { timeout: 120_000 }).toBe(2);
   await expect.poll(() => G((l) => l.players.length), { timeout: 120_000 }).toBe(2);
 
-  // joining restarts the level with the two-player to-do, on both screens
-  await expect.poll(() => H((l) => l.quests.quests.some((q) => q.id === 'duoPhoto')), { timeout: 60_000 }).toBe(true);
-  await expect.poll(() => G((l) => l.quests.quests.some((q) => q.id === 'duoPhoto')), { timeout: 120_000 }).toBe(true);
+  // the host picked Level 2 when hosting: both screens start it, with its two-player to-do
+  await expect.poll(() => H((l) => l.level), { timeout: 60_000 }).toBe('bombs-away');
+  await expect.poll(() => G((l) => l.level), { timeout: 120_000 }).toBe('bombs-away');
+  await expect.poll(() => H((l) => l.quests.quests.some((q) => q.id === 'duoSplat')), { timeout: 60_000 }).toBe(true);
+  await expect.poll(() => G((l) => l.quests.quests.some((q) => q.id === 'duoSplat')), { timeout: 120_000 }).toBe(true);
 
   // the host moves; the guest's copy of the host gull follows
   await H((l) => {
@@ -69,8 +71,8 @@ test('online co-op: the guest follows the host between levels, sees the host gul
   await expect.poll(async () => Math.abs((await H((l) => l.players[1].gull.state.z)) - guestZ), { timeout: 120_000 }).toBeLessThan(3);
 
   // the host picks another level without anyone reloading; the guest follows
-  await H((l) => l.loadLevel('bombs-away'));
-  await expect.poll(() => G((l) => l.level), { timeout: 120_000 }).toBe('bombs-away');
+  await H((l) => l.loadLevel('nosy-parkers'));
+  await expect.poll(() => G((l) => l.level), { timeout: 120_000 }).toBe('nosy-parkers');
   expect(await G((l) => l.net?.role)).toBe('guest');
 
   // free play: the city's response (vendors, heat) reaches the guest too

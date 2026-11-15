@@ -17,6 +17,8 @@ export interface PoseInput {
   time: number;
   /** Floating on the sea. */
   swimming?: boolean;
+  /** Mid-way through a ground jump: wings half open, legs down. */
+  jumping?: boolean;
 }
 
 export interface Pose {
@@ -70,6 +72,11 @@ export function computePose(i: PoseInput): Pose {
       ...base, flap: -0.5, fold: 1, sweep: 0.5, legTuck: 0, legStride: stride * 0.6,
       headPitch: Math.sin(i.walkPhase * 2) * 0.12 * stride, bob: Math.abs(Math.sin(i.walkPhase)) * 0.04 * stride,
     };
+  }
+
+  if (i.mode === 'air' && i.jumping) {
+    const rise = clamp(0.5 + i.heightAbove * 0.5, 0.5, 1);
+    return { ...base, flap: 0.55 * rise, fold: 0.3, sweep: 0.2, legTuck: 0.1, headPitch: -0.1 };
   }
 
   if (i.mode === 'dive') {

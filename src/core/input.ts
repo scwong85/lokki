@@ -17,6 +17,9 @@ export class Input {
   /** Touch devices never capture the pointer. */
   pointerLockAllowed = true;
 
+  /** Set by the game: should Tab be kept from moving the page focus right now? */
+  captureTab: () => boolean = () => false;
+
   /** `devices: false` makes an input that only virtual sources feed (a second player on a gamepad, a network peer). */
   constructor(canvas: HTMLElement | null, devices = true) {
     if (!devices || !canvas) return;
@@ -25,6 +28,7 @@ export class Input {
       if (!e.repeat) this.pressedThisStep.add(e.code);
       this.down.add(e.code);
       if (e.code === 'Space') e.preventDefault();
+      if (e.code === 'Tab' && this.captureTab()) e.preventDefault(); // Tab is the target lock in the game (menus keep their normal Tab)
     });
     addEventListener('keyup', (e) => this.down.delete(e.code));
     addEventListener('blur', () => {
