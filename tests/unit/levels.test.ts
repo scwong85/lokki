@@ -139,3 +139,36 @@ describe('level 3: noise, sight and the double snatch', () => {
     expect(b.npcs.update(1 / 60, { x: 500, y: 20, z: 500, diving: false }).some((e) => e.type === 'snatchUnseen')).toBe(false);
   });
 });
+
+describe('level 2 fixes', () => {
+  it('stealing his fish after the sign counts, whether or not he is still scrubbing', () => {
+    const s = build('bombs-away');
+    const q = new QuestLog(s.quests);
+    q.onEvent('snatch:fish'); // too early: the sign has not been splatted
+    expect(q.quests.find((x) => x.id === 'freak')!.status).toBe('active');
+    q.onEvent('signSplat');
+    q.onEvent('snatch:fish');
+    expect(q.quests.find((x) => x.id === 'freak')!.status).toBe('won');
+  });
+
+  it('the poop aim assist steers a drop onto the buoy (and the sign) even with a crosswind', async () => {
+    const { spawnPoopAssisted, stepPoop } = await import('../../src/gameplay/poop');
+    const { World } = await import('../../src/world/collision');
+    const { tuning } = await import('../../src/core/tuning');
+    const { PROPS } = await import('../../src/data/props');
+    tuning.wind.strength.value = 3;
+    const world = new World();
+    const buoy = { x: 0, y: 0.3, z: 0, r: PROPS.buoy.radius };
+    const land = (targets: (typeof buoy)[]) => {
+      const p = spawnPoopAssisted({ x: 3.5, y: 9, z: 1 }, { x: 0, y: 0, z: 0 }, 0, world, [buoy], targets);
+      for (let i = 0; i < 600; i++) {
+        const hit = stepPoop(p, 1 / 60, i / 60, world, [buoy]);
+        if (hit) return hit.prop !== null;
+      }
+      return false;
+    };
+    expect(land([buoy])).toBe(true); // assisted
+    expect(land([])).toBe(false); // unassisted: the drop misses a drop this far off
+    tuning.wind.strength.value = 3;
+  });
+});

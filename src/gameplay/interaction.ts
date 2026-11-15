@@ -5,6 +5,7 @@ import type { FlightState } from '../gull/flight';
 import { pickGrabTarget, type GrabCandidate } from './grab';
 import { spawnPoopAssisted, stepPoop, predictPoop, type HitSphere, type PoopState, type PoopHit } from './poop';
 import { PropManager, type Prop } from './props';
+import { POOP_TARGET_TAGS } from '../data/props';
 import type { PhysicsWorld } from '../physics/physics';
 import type { World } from '../world/collision';
 import { DecalPool } from '../render/decals';
@@ -209,9 +210,10 @@ export class Interaction {
     // ---- poop ----
     if (inp.poop && !stunned && b.poopCd <= 0) {
       b.poopCd = tuning.poop.cooldown.value * mods.poopCooldown;
-      const { spheres: pSpheres } = this.props.hitSpheres();
+      const { spheres: pSpheres, props: pProps } = this.props.hitSpheres();
       const nSpheres = this.npcs?.poopSpheres() ?? [];
-      const state = spawnPoopAssisted({ x: s.x, y: s.y, z: s.z }, { x: s.vx, y: s.vy, z: s.vz }, time, this.world, [...pSpheres, ...nSpheres], nSpheres.filter((n) => n.tag !== 'umbrella'));
+      const aimed = pSpheres.filter((_, i) => !!pProps[i].tag && POOP_TARGET_TAGS.has(pProps[i].tag!));
+      const state = spawnPoopAssisted({ x: s.x, y: s.y, z: s.z }, { x: s.vx, y: s.vy, z: s.vz }, time, this.world, [...pSpheres, ...nSpheres], [...nSpheres.filter((n) => n.tag !== 'umbrella'), ...aimed]);
       const mesh = new THREE.Mesh(poopGeo, poopMat);
       mesh.position.set(state.x, state.y, state.z);
       this.group.add(mesh);

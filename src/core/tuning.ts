@@ -94,9 +94,9 @@ export const tuning = {
     minHeight: p(0.6, 0, 3, 0.1),
   },
   cleaner: {
-    baseTime: p(5, 2, 12, 0.5), // seconds the Clean Freak scrubs his sign after one splat
-    extraPerSplat: p(2, 0, 6, 0.5), // ... and each splat while he is at it adds this
-    maxTime: p(12, 4, 30, 1),
+    baseTime: p(8, 2, 16, 0.5), // seconds the Clean Freak scrubs his sign after one splat
+    extraPerSplat: p(3, 0, 8, 0.5), // ... and each splat while he is at it adds this
+    maxTime: p(18, 4, 40, 1),
   },
   selfie: {
     idle: p(6, 1, 20, 0.5), // seconds a selfie tourist guards her ice cream between photos

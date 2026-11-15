@@ -80,12 +80,17 @@ function buildParts(type: PropType, g: THREE.Group): void {
       g.add(mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.1, 14), 0xfff0b3, 0, 0.35, 0.01).rotateX(Math.PI / 2));
       break;
     }
-    case 'buoy':
-      g.add(mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.3, 10), 0xffffff, 0, -0.1, 0));
-      g.add(mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.14, 10), 0xe9564b, 0, -0.04, 0));
-      g.add(mesh(new THREE.ConeGeometry(0.3, 0.4, 10), 0xe9564b, 0, 0.25, 0));
-      g.add(mesh(new THREE.SphereGeometry(0.07, 6, 5), 0xffd36e, 0, 0.5, 0));
+    case 'buoy': {
+      // big and bright: a bullseye you can see from high up (the hit radius is generous too)
+      const b = new THREE.Group();
+      b.add(mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.3, 12), 0xffffff, 0, -0.1, 0));
+      b.add(mesh(new THREE.CylinderGeometry(0.37, 0.37, 0.14, 12), 0xe9564b, 0, -0.04, 0));
+      b.add(mesh(new THREE.ConeGeometry(0.3, 0.4, 12), 0xe9564b, 0, 0.25, 0));
+      b.add(mesh(new THREE.SphereGeometry(0.08, 6, 5), 0xffd36e, 0, 0.5, 0));
+      b.scale.setScalar(2.2);
+      g.add(b);
       break;
+    }
     case 'bin':
       g.add(mesh(new THREE.CylinderGeometry(0.45, 0.4, 1.0, 12), 0x9fd8c0));
       g.add(mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.08, 12), 0x6fb99d, 0, 0.5, 0));

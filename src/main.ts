@@ -172,7 +172,9 @@ if (level.sandbox) quests.restoreWon(save.questsWon); // finished quests belong 
 const triggers = new TriggerSystem(greybox ? [] : setup.triggers);
 const stats = new LevelStats();
 const levelComplete = new LevelComplete(document.body);
-document.getElementById('levelcomplete')?.addEventListener('click', () => levelComplete.hide()); // tap to keep playing (phones)
+document.getElementById('levelcomplete')?.addEventListener('click', (e) => {
+  if (!(e.target as HTMLElement).closest('button')) levelComplete.hide(); // tap anywhere else to keep playing (phones)
+});
 const markerPool = new MarkerPool();
 const waypoints = new Waypoints(document.body);
 scene.add(markerPool.group);
@@ -285,12 +287,7 @@ const title = new TitleScreen(
     onOptions: () => optionsPanel.show(),
     onCredits: () => credits.toggle(),
     // another level: remember it and reload into it
-    onPickLevel: (id) => {
-      store.save({ ...save, level: id });
-      const q = new URLSearchParams(location.search);
-      q.set('level', id);
-      location.search = q.toString();
-    },
+    onPickLevel: (id) => goToLevel(id, false),
   },
   {
     best: fmtClear(save.bestTime),
@@ -299,7 +296,7 @@ const title = new TitleScreen(
     levels: LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), current: l.id === level.id, sandbox: l.sandbox, locked: !levelUnlocked(l, save.levels), unlockHint: l.requires ? `Clear ${levelById(l.requires).name} first` : undefined })),
   },
 );
-if (interactive) title.show();
+if (interactive && !new URLSearchParams(location.search).has('play')) title.show();
 const menuOpen = (): boolean => title.visible || optionsPanel.visible || skillsPanel.visible || credits.visible || !!touchControls?.menuOpen;
 const audio = new AudioManager();
 audio.muted = save.muted;
@@ -404,6 +401,21 @@ function restartLevel(mode: 'normal' | 'speedrun'): void {
   persist();
 }
 
+/** Reload into a level (`menu`: open the title screen with the level list instead of starting to play). */
+function goToLevel(id: string, menu: boolean): void {
+  store.save({ ...save, level: id });
+  const q = new URLSearchParams(location.search);
+  q.set('level', id);
+  if (menu) {
+    q.set('title', '');
+    q.delete('play');
+  } else {
+    q.delete('title');
+    q.set('play', ''); // straight into the level, no title screen
+  }
+  location.search = q.toString();
+}
+
 /** A level is cleared when its main to-dos are done: stars, the saved result, the skill reward, the level-complete card. */
 let levelCleared = false;
 function checkLevelDone(): void {
@@ -433,7 +445,13 @@ function checkLevelDone(): void {
       announce.show(`New skill: ${sk.name}`, `${sk.blurb}${sk.key ? ` Press ${sk.key}.` : ''} (K: all skills)`, 'learned');
     }
   }
-  levelComplete.show(stats.summary(), quests.quests.map((x) => ({ title: setup.secret.has(x.id) && x.status !== 'won' ? '???' : x.title, won: x.status === 'won' })), notes);
+  const idx = LEVELS.findIndex((l) => l.id === level.id);
+  const nextLevel = LEVELS.slice(idx + 1).find((l) => !l.sandbox);
+  levelComplete.show(stats.summary(), quests.quests.map((x) => ({ title: setup.secret.has(x.id) && x.status !== 'won' ? '???' : x.title, won: x.status === 'won' })), notes, {
+    heading: `${level.name.replace(/^\d+\.\s*/, '')} cleared!`,
+    next: nextLevel ? { id: nextLevel.id, name: nextLevel.name } : undefined,
+    go: (target) => goToLevel(target === 'menu' ? level.id : target, target === 'menu'),
+  });
 }
 
 /** The whole game as plain data with stable ids (what the host will send in online co-op). */
@@ -786,7 +804,7 @@ startLoop({
     }
     if (skillsPanel.visible) GULL_SKINS.forEach((sk, i) => input.wasPressed(`Digit${i + 1}`) && pickSkin(sk.id));
     if (input.wasPressed('KeyC')) credits.toggle();
-    if (input.wasPressed('Enter') && levelComplete.visible) levelComplete.hide();
+    if (input.wasPressed('Enter') && levelComplete.visible && !levelComplete.goNext()) levelComplete.hide();
     if (input.wasPressed('KeyH') && defense?.activateHawk()) hud.toast('Hawk-eye!', 0.8);
     if (input.wasPressed('KeyM')) {
       hud.toast(audio.toggleMute() ? 'Sound off' : 'Sound on', 0.8);

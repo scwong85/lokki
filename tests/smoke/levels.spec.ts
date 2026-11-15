@@ -149,3 +149,27 @@ test('level 4: a herring left at the blogger\'s feet after her soup is taken ear
   await expect.poll(() => page.evaluate(() => (window as unknown as W).__lokki.quests.quests.find((q) => q.id === 'switch')!.status), { timeout: 200_000, intervals: [300] }).toBe('won');
   expect(errors).toEqual([]);
 });
+
+test('clearing a level offers the next one (Next button), and it starts straight away', async ({ page }) => {
+  test.setTimeout(120_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  await page.goto('/?level=snack-attack');
+  await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 60_000 });
+  await page.evaluate(() => {
+    const x = (window as unknown as { __lokki: Lk }).__lokki;
+    x.notes(x.quests.onEvent('snatch:icecream'));
+    for (let i = 0; i < 400; i++) x.notes(x.quests.tick({ dt: 1 / 60, carryingStolen: true, nearestNpc: 99 }));
+    x.notes(x.quests.onEvent('feast'));
+  });
+  await expect(page.locator('#levelcomplete')).toContainText('cleared!');
+  const next = page.locator('[data-go=bombs-away]');
+  await expect(next).toContainText('2. Bombs Away');
+  await next.click();
+  await page.waitForFunction(() => location.search.includes('level=bombs-away') && (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 60_000 });
+  expect(await page.evaluate(() => (window as unknown as { __lokki: Lk }).__lokki.level)).toBe('bombs-away');
+  expect(await page.locator('#title').isVisible()).toBe(false);
+  expect(await page.evaluate(() => (window as unknown as { __lokki: Lk }).__lokki.quests.quests.map((q) => q.id))).toContain('freak'); // level 2 is open (level 1 was cleared)
+  expect(errors).toEqual([]);
+});

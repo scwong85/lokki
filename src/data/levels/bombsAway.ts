@@ -38,7 +38,7 @@ export const BOMBS_AWAY: LevelDef = {
           id: 'steal',
           text: 'Steal his fish while he scrubs',
           kind: 'event',
-          event: 'cleanerRobbed',
+          event: 'snatch:fish',
           after: 'splatSign',
           hint: 'He has his back to the plate for several seconds: dive on it.',
           markers: [{ x: FREAK.x, z: FREAK.z, r: 2.5, label: 'Fried vendace' }],
