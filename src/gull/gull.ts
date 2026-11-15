@@ -137,6 +137,7 @@ export class Gull {
         beakOpen: this.beakT > 0,
         time: this.time,
         swimming,
+        jumping: s.jump,
       }),
       frameDt,
     );

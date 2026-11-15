@@ -113,7 +113,7 @@ describe('level 1 selfie routine', () => {
 });
 
 describe('level 3: noise, sight and the double snatch', () => {
-  it('unseen snatches: a calm tourist who does not see the gull; not one who is shielding or watching', async () => {
+  it('unseen snatches: a calm tourist who has not noticed the gull; not one who is shielding or watching', async () => {
     const { default: RAPIER } = await import('@dimforge/rapier3d-compat');
     await RAPIER.init();
     const THREE = await import('three');
@@ -134,7 +134,7 @@ describe('level 3: noise, sight and the double snatch', () => {
     a.npcs.onSnatched(a.npcs.npcs[0].holding!);
     expect(a.npcs.update(1 / 60, { x: 500, y: 20, z: 500, diving: false }).some((e) => e.type === 'snatchUnseen')).toBe(true);
     const b = setup();
-    b.npcs.npcs[0].seesGull = true;
+    b.npcs.npcs[0].mode = 'shield'; // already noticed: guarding it
     b.npcs.onSnatched(b.npcs.npcs[0].holding!);
     expect(b.npcs.update(1 / 60, { x: 500, y: 20, z: 500, diving: false }).some((e) => e.type === 'snatchUnseen')).toBe(false);
   });

@@ -24,6 +24,12 @@ export interface FlightState {
   stunT: number;
   flapCd: number;
   hopCd: number;
+  /** A ground jump in progress: walking-style control in the air until you press Space again (then you flap into flight). */
+  jump: boolean;
+  /** Was flap held last step (to tell a tap from a hold). */
+  flapPrev: boolean;
+  /** How long flap has been held on the ground (a hold takes off, a tap jumps). */
+  flapHold: number;
   diveT: number;
   diveCd: number;
   /** Current dive steepness (rad below horizontal). */
@@ -47,6 +53,8 @@ export interface FlightInput {
   aimPitch: number;
   /** kg in the beak: weakens flapping. */
   carryMass?: number;
+  /** A locked target (Tab): dives home in on it. */
+  lock?: { x: number; y: number; z: number } | null;
 }
 
 export type FlightEvent =
@@ -61,7 +69,7 @@ export type FlightEvent =
 export function newFlightState(x = 0, z = 0): FlightState {
   return {
     x, y: GULL_RADIUS, z, vx: 0, vy: 0, vz: 0, heading: 0, turnRate: 0, mode: 'ground',
-    stamina: staminaMax(), stunT: 0, flapCd: 0, hopCd: 0, diveT: 0, diveCd: 0, diveAngle: 0.7,
+    stamina: staminaMax(), stunT: 0, flapCd: 0, hopCd: 0, jump: false, flapPrev: false, flapHold: 0, diveT: 0, diveCd: 0, diveAngle: 0.7,
     flapAnim: 99, perched: false, heightAbove: 0, overWater: false,
   };
 }
@@ -166,6 +174,10 @@ export function stepFlight(
   s.heightAbove = Math.max(0, s.y - GULL_RADIUS - surf.y);
   const wasGrounded = s.mode === 'ground';
   const prevHeading = s.heading;
+  const pressed = ctl.flap && !s.flapPrev; // a fresh press of Space (not a hold)
+  s.flapPrev = ctl.flap;
+  s.flapHold = ctl.flap && (wasGrounded || s.jump) ? s.flapHold + dt : 0; // counts the hold through the jump too
+  const wasJump = s.jump;
 
   if (s.mode === 'ground') {
     // ---- walking (or paddling, slower) ----
@@ -200,15 +212,48 @@ export function stepFlight(
     }
     s.vy -= f.gravity.value * dt; // keeps us pressed to the surface
     s.stamina += (s.perched ? f.perchRegen.value : f.groundRegen.value) * dt;
-    if (ctl.flap && s.hopCd <= 0) {
+    if (pressed && s.hopCd <= 0) {
+      // a tap on the ground: a proper jump (a hop up and forward), still walking-style until you press Space again
+      s.vy = w.jumpSpeed.value;
+      s.hopCd = w.hopInterval.value;
+      s.mode = 'air';
+      s.jump = true;
+      s.perched = false;
+      ev.push({ type: 'hop' });
+    } else if (ctl.flap && s.flapHold >= w.takeoffHold.value && s.hopCd <= 0) {
+      // holding Space: take off (the old hop-and-fly)
       s.vy = w.hopSpeed.value;
       s.hopCd = w.hopInterval.value;
       s.flapCd = Math.max(s.flapCd, w.hopInterval.value);
       s.mode = 'air';
+      s.jump = false;
       s.perched = false;
       ev.push({ type: 'hop' });
     }
+  } else if (s.jump && s.mode === 'air' && !pressed && !(ctl.flap && s.flapHold >= w.takeoffHold.value)) {
+    // ---- mid-jump: steer like on the ground (with a little air control) until Space is pressed again or you land ----
+    const { wx, wz, len } = worldDir(ctl.ax, ctl.ay, camYaw);
+    const walkSpeed = w.speed.value * w.jumpSpeedFactor.value;
+    if (len > 0) {
+      s.vx += wx * w.accel.value * 0.6 * dt;
+      s.vz += wz * w.accel.value * 0.6 * dt;
+      const cap = Math.max(walkSpeed, Math.hypot(s.vx, s.vz) - 0.01);
+      const spNow = Math.hypot(s.vx, s.vz);
+      if (spNow > cap) {
+        s.vx *= cap / spNow;
+        s.vz *= cap / spNow;
+      }
+    }
+    const sp = Math.hypot(s.vx, s.vz);
+    if (sp > 0.2) s.heading += clamp(angleDiff(Math.atan2(-s.vx, -s.vz), s.heading), -w.turnRate.value * dt, w.turnRate.value * dt);
+    s.vy -= f.gravity.value * dt;
+    s.stamina += f.groundRegen.value * 0.5 * dt;
+    s.perched = false;
   } else {
+    if (s.jump) {
+      s.jump = false; // pressed (or kept holding) Space in the air: spread the wings
+      s.flapCd = 0;
+    }
     // ---- airborne (glide or dive) ----
     const diving = s.mode === 'dive';
     // gliding: W/A/D steer; diving: always aim along the camera, A/D bend the line
@@ -216,14 +261,26 @@ export function stepFlight(
     const flare = ctl.ay < 0;
     if (len > 0) {
       const diff = angleDiff(Math.atan2(-wx, -wz), s.heading);
-      const rate = f.airTurnRate.value * (diving ? d.turnFactor.value : 1);
+      const slow = 1 + f.airTurnSlow.value * clamp(1 - Math.hypot(s.vx, s.vz) / Math.max(1, f.glideSpeed.value), 0, 1); // flying slowly turns tighter
+      const rate = f.airTurnRate.value * slow * (diving ? d.turnFactor.value : 1);
       s.heading += clamp(diff, -rate * dt, rate * dt);
     }
 
     if (diving) {
       s.diveT += dt;
       let aim = aimDiveAngle(ctl.aimPitch);
-      const tgt = d.assistStrength.value > 0 ? bestAimTarget(targets, s, s.heading, s.diveAngle) : null;
+      const lock = ctl.lock;
+      const tgt = lock ? null : d.assistStrength.value > 0 ? bestAimTarget(targets, s, s.heading, s.diveAngle) : null;
+      if (lock) {
+        // locked on: bend the heading and the steepness all the way toward the target (the player still chooses when to dive)
+        const dx = lock.x - s.x, dz = lock.z - s.z;
+        const hd = Math.hypot(dx, dz);
+        if (hd > 1.2) {
+          const k = tuning.lock.diveTurn.value * dt;
+          s.heading += clamp(angleDiff(Math.atan2(-dx, -dz), s.heading), -k, k);
+          aim = clamp(Math.atan2(s.y - lock.y, hd), 0.12, 1.45);
+        }
+      }
       if (tgt) {
         // light aim assist: bend heading and steepness toward the target on the line
         const dx = tgt.x - s.x;
@@ -291,6 +348,10 @@ export function stepFlight(
         s.mode = 'dive';
         s.diveT = 0;
         s.diveAngle = aimDiveAngle(ctl.aimPitch);
+        if (ctl.lock) {
+          const hd = Math.hypot(ctl.lock.x - s.x, ctl.lock.z - s.z);
+          if (hd > 1.2) s.diveAngle = clamp(Math.atan2(s.y - ctl.lock.y, hd), 0.12, 1.45); // start already pointing at it
+        }
         ev.push({ type: 'diveStart' });
       }
     }
@@ -338,7 +399,7 @@ export function stepFlight(
         if (wasDive) s.diveCd = d.cooldown.value;
         ev.push({ type: 'land', impact, quality: 'soft', perch: false, water: true });
       } else if (!wasGrounded) {
-        const quality = impact < l.softSpeed.value ? 'soft' : impact < l.hardSpeed.value ? 'rough' : 'hard';
+        const quality = wasJump ? 'soft' : impact < l.softSpeed.value ? 'soft' : impact < l.hardSpeed.value ? 'rough' : 'hard';
         if (quality === 'rough') s.stunT = l.stunSoft.value;
         if (quality === 'hard') s.stunT = wasDive ? l.diveStun.value : l.stunHard.value;
         if (wasDive) s.diveCd = d.cooldown.value;
@@ -353,6 +414,7 @@ export function stepFlight(
   }
   if (grounded) {
     s.mode = 'ground';
+    s.jump = false;
     s.diveT = 0;
   } else if (s.mode === 'ground') {
     s.mode = 'air'; // walked off an edge

@@ -69,20 +69,20 @@ describe('tourist brain', () => {
   });
   it('notices the gull, then shields the ice cream', () => {
     const n = tourist();
-    const ev = run(n, ahead, 1.5);
+    const ev = run(n, ahead, 3);
     expect(ev.some((e) => e.type === 'noticed')).toBe(true);
     expect(ev.some((e) => e.type === 'shield')).toBe(true);
     expect(n.mode).toBe('shield');
   });
   it('without an ice cream it just watches, no shielding', () => {
     const n = tourist(false);
-    const ev = run(n, ahead, 1.5);
+    const ev = run(n, ahead, 3);
     expect(ev.some((e) => e.type === 'shield')).toBe(false);
     expect(n.mode).not.toBe('shield');
   });
   it('the body blocks a snatch from the gull side but not from the far side', () => {
     const n = tourist();
-    run(n, ahead, 2); // shielding: gull is in front (-Z), hand swings behind (+Z)
+    run(n, ahead, 3); // shielding: gull is in front (-Z), hand swings behind (+Z)
     const hand = handPos(n);
     expect(hand.z).toBeGreaterThan(0.3);
     const front = { x: 0, y: 1.2, z: -0.7 }; // gull side
@@ -92,7 +92,7 @@ describe('tourist brain', () => {
   });
   it('a noise turns the body away and the hand stays: the other side opens up (distraction)', () => {
     const n = tourist();
-    run(n, ahead, 2);
+    run(n, ahead, 3);
     const handBefore = handPos(n);
     run(n, ahead, 1, open, [{ x: 20, z: 0, loud: 1 }]); // clang off to the right (+X side)... body turns
     expect(n.distractT).toBeGreaterThan(0);
@@ -102,6 +102,21 @@ describe('tourist brain', () => {
     expect(Math.hypot(handAfter.x - handBefore.x, handAfter.z - handBefore.z)).toBeLessThan(0.3);
     // gull in front is now no longer "the front": hand at +Z side is reachable from the south
     expect(snatchable(n, { x: 0, y: 1.2, z: 1.2 })).toBe(true);
+  });
+  it('seeing the gull is not noticing it: a short glimpse builds suspicion that fades, a long stare notices', () => {
+    const n = tourist();
+    const glimpse = run(n, ahead, 0.7);
+    expect(glimpse.some((e) => e.type === 'noticed')).toBe(false);
+    expect(n.suspicion).toBeGreaterThan(0.2);
+    run(n, far, 3); // out of sight: it fades
+    expect(n.suspicion).toBe(0);
+    expect(run(n, ahead, 3).some((e) => e.type === 'noticed')).toBe(true);
+  });
+  it('a diving gull is noticed twice as fast', () => {
+    const slow = tourist(), quick = tourist();
+    run(slow, ahead, 0.6);
+    run(quick, { ...ahead, diving: true }, 0.6);
+    expect(quick.suspicion).toBeGreaterThan(slow.suspicion * 1.7);
   });
   it('nothing happens to a calm tourist when the gull is far away', () => {
     const n = tourist();

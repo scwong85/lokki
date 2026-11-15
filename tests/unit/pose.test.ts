@@ -61,3 +61,12 @@ describe('AudioManager', () => {
     expect(a.toggleMute()).toBe(true);
   });
 });
+
+describe('jump pose', () => {
+  it('wings half open and legs down while jumping', () => {
+    const p = computePose({ mode: 'air', stunned: false, hspeed: 3, walkPhase: 0, flapAnim: 99, flapDuration: 0.38, heightAbove: 0.4, turnRate: 0, bodyPitch: 0, beakOpen: false, time: 1, jumping: true });
+    expect(p.legTuck).toBeLessThan(0.3);
+    expect(p.fold).toBeLessThan(0.5);
+    expect(p.flap).toBeGreaterThan(0.2);
+  });
+});

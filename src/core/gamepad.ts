@@ -24,13 +24,14 @@ const TAP: [number, string][] = [
   [PAD.UP, 'KeyG'], // flock
   [PAD.RIGHT, 'KeyB'], // pigeon
   [PAD.DOWN, 'KeyH'], // hawk-eye
+  [PAD.LB, 'Tab'], // lock onto a target
   [PAD.BACK, 'KeyK'], // skills
   [PAD.START, 'KeyO'], // options
 ];
 
 const BUTTON_NAMES: Record<number, string> = { 0: 'A', 1: 'B', 2: 'X', 3: 'Y', 4: 'LB', 5: 'RB', 6: 'LT', 7: 'RT', 8: 'Back', 9: 'Start', 12: 'D-pad up', 13: 'D-pad down', 14: 'D-pad left', 15: 'D-pad right' };
 const KEY_ACTIONS: Record<string, string> = {
-  Space: 'Hop and flap', ShiftLeft: 'Dive', KeyE: 'Grab or drop', KeyQ: 'Toss', KeyF: 'Poop', KeyV: 'Crow call (skill)', KeyG: 'Flock call (skill)', KeyB: 'Pigeon disguise (skill)', KeyH: 'Hawk-eye', KeyK: 'Skills and gull looks', KeyO: 'Options',
+  Space: 'Hop and flap', ShiftLeft: 'Dive', KeyE: 'Grab or drop', KeyQ: 'Toss', KeyF: 'Poop', KeyV: 'Crow call (skill)', KeyG: 'Flock call (skill)', KeyB: 'Pigeon disguise (skill)', KeyH: 'Hawk-eye', Tab: 'Lock onto a target (press again: next, then off)', KeyK: 'Skills and gull looks', KeyO: 'Options',
 };
 
 /** The controller buttons and what they do, built from the real mapping so the help can never drift from it. */

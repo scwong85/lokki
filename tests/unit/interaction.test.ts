@@ -146,6 +146,19 @@ describe('poop', () => {
   });
 });
 
+describe('target lock for droppings', () => {
+  it('a locked target pulls a drop onto it from far off the line (30 m), and wind does not matter', () => {
+    const floor = new World();
+    const from = { x: 0, y: 14, z: 0 };
+    const still = { x: 0, y: 0, z: 0 };
+    const target = { x: 30, y: 1, z: -12, r: 0.8, assist: tuning.lock.poopAssist.value };
+    const hit = predictPoop(from, still, 0, floor, [target], [target])!;
+    expect(hit.prop).toBe(0); // the drop reaches the locked target
+    const plain = predictPoop(from, still, 0, floor, [target], [])!;
+    expect(plain.prop).toBeNull(); // without the lock it falls straight down
+  });
+});
+
 describe('market goods replace the sandbox', () => {
   it('the quest items lie around the market and the square, not in a test area', async () => {
     const { buildLandmarks } = await import('../../src/world/landmarks');

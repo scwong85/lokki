@@ -38,6 +38,42 @@ beforeEach(() => {
   tuning.wind.strength.value = 0; // deterministic unless a test wants wind
 });
 
+describe('target lock', () => {
+  it('a locked dive homes in on the target, an unlocked one flies straight past', () => {
+    const target = { x: 14, y: 1.2, z: -34 };
+    const dive = (lock: typeof target | null) => {
+      const s = airborne(40);
+      s.vz = -8; // slowish, heading -Z
+      let minD = Infinity;
+      for (let i = 0; i < 240; i++) {
+        stepFlight(s, { ...idle, dive: true, aimPitch: 0.8, lock }, 0, DT, new World([]), (t += DT));
+        minD = Math.min(minD, Math.hypot(s.x - target.x, s.y - target.y, s.z - target.z));
+        if (s.mode === 'ground') break;
+      }
+      return minD;
+    };
+    expect(dive(target)).toBeLessThan(3);
+    expect(dive(null)).toBeGreaterThan(8);
+  });
+  it('no lock changes nothing about normal flying', () => {
+    const a = airborne(), b = airborne();
+    run(a, 1, { ...idle, ax: 0.5 });
+    run(b, 1, { ...idle, ax: 0.5, lock: null });
+    expect(b.heading).toBeCloseTo(a.heading, 6);
+  });
+});
+
+describe('turning in the air', () => {
+  it('turns faster than before, and tighter when flying slowly', () => {
+    const fast = airborne(), slow = airborne();
+    slow.vz = -4;
+    run(fast, 0.5, { ...idle, ax: 1 }, [], 0);
+    run(slow, 0.5, { ...idle, ax: 1 }, [], 0);
+    expect(Math.abs(fast.heading)).toBeGreaterThan(0.9); // was about 1.2 rad/s^2... now >= 1.9 rad/s over half a second
+    expect(Math.abs(slow.heading)).toBeGreaterThanOrEqual(Math.abs(fast.heading) - 1e-9);
+  });
+});
+
 describe('ground', () => {
   it('stays grounded when idle and walks toward -Z when pushing forward', () => {
     const s = newFlightState();
@@ -52,6 +88,42 @@ describe('ground', () => {
     run(s, 0.3, { ...idle, flap: true });
     expect(evs.some((e) => e.type === 'hop')).toBe(true);
     expect(s.y).toBeGreaterThan(0.6);
+  });
+});
+
+describe('jumping on the ground', () => {
+  const floor: Box[] = []; // the ground plane is built into World.surfaceBelow / collide at y = 0
+  it('a tap jumps (about a metre), keeps walking-style control, and lands softly without taking off', () => {
+    const s = newFlightState();
+    run(s, 0.1, { ...idle, flap: true }, floor); // press...
+    run(s, 0.01, idle, floor); // ...and let go
+    expect(evs.some((e) => e.type === 'hop')).toBe(true);
+    expect(s.jump).toBe(true);
+    let peak = 0;
+    for (let i = 0; i < 120; i++) {
+      run(s, DT, { ...idle, ay: 1 }, floor);
+      peak = Math.max(peak, s.y);
+    }
+    expect(peak).toBeGreaterThan(0.9);
+    expect(peak).toBeLessThan(2);
+    expect(s.mode).toBe('ground'); // came back down, never glided
+    expect(s.jump).toBe(false);
+    expect(s.stunT).toBe(0); // a jump landing is never rough
+    expect(evs.some((e) => e.type === 'flap')).toBe(false);
+  });
+  it('holding Space still takes off, and pressing Space again in a jump spreads the wings', () => {
+    const held = newFlightState();
+    run(held, 0.6, { ...idle, flap: true }, floor);
+    expect(held.jump).toBe(false);
+    expect(held.mode).toBe('air');
+    const j = newFlightState();
+    run(j, 0.08, { ...idle, flap: true }, floor);
+    run(j, 0.12, idle, floor); // in the jump
+    expect(j.jump).toBe(true);
+    evs = [];
+    run(j, 0.05, { ...idle, flap: true }, floor); // a second press
+    expect(j.jump).toBe(false);
+    expect(evs.some((e) => e.type === 'flap')).toBe(true);
   });
 });
 

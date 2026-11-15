@@ -16,7 +16,10 @@ export const tuning = {
     accel: p(25, 1, 100, 0.5),
     friction: p(20, 1, 100, 0.5),
     turnRate: p(12, 1, 40, 0.5),
-    hopSpeed: p(6.5, 2, 14, 0.1), // vertical speed of a ground hop (also the take-off)
+    hopSpeed: p(6.5, 2, 14, 0.1), // vertical speed of the take-off when you hold Space on the ground
+    jumpSpeed: p(5.4, 2, 10, 0.1), // vertical speed of a ground jump (tap Space): about 0.9 m high
+    jumpSpeedFactor: p(1.25, 0.8, 2.5, 0.05), // how much faster than walking you can go in a jump
+    takeoffHold: p(0.28, 0.05, 1, 0.01), // hold Space this long on the ground to take off instead of jumping
     hopInterval: p(0.25, 0.05, 1, 0.01),
   },
   flight: {
@@ -33,7 +36,8 @@ export const tuning = {
     flapCost: p(8, 0, 40, 0.5),
     airAccel: p(10, 1, 50, 0.5),
     airDrag: p(4, 0.5, 30, 0.5),
-    airTurnRate: p(2.4, 0.5, 8, 0.1), // rad/s
+    airTurnRate: p(3.8, 0.5, 8, 0.1), // rad/s
+    airTurnSlow: p(0.8, 0, 2, 0.05), // extra turning authority when flying slowly (flaring turns on a coin)
     staminaMax: p(100, 20, 300, 1),
     glideRegen: p(8, 0, 60, 0.5),
     groundRegen: p(35, 0, 150, 1),
@@ -187,6 +191,8 @@ export const tuning = {
     eatSightFactor: p(0.45, 0.1, 1, 0.05), // eating tourists are distracted
     blindAboveDeg: p(55, 20, 90, 1), // gulls straight overhead are not seen
     noticeTime: p(0.4, 0.1, 2, 0.05),
+    noticeBuild: p(1.4, 0.1, 5, 0.1), // seconds a calm person must see you before they notice (diving: half)
+    suspicionFade: p(0.8, 0, 4, 0.1), // how fast that fades once you are out of sight
     shieldRange: p(10, 2, 25, 0.5),
     handTurnRate: p(4, 1, 12, 0.5), // how fast the hand with the ice cream swings to the far side
     hearRange: p(24, 5, 60, 1),
@@ -196,6 +202,13 @@ export const tuning = {
     chaseTime: p(4, 1, 12, 0.5),
     recoverTime: p(3, 0.5, 10, 0.5),
     loseSightTime: p(2.5, 0.5, 8, 0.1),
+  },
+  lock: {
+    range: p(90, 20, 200, 5), // Tab locks onto things this close (m)
+    coneDeg: p(80, 20, 180, 5), // ...and this far either side of where the camera looks (total angle)
+    maxRange: p(130, 30, 300, 5), // the lock lets go beyond this
+    diveTurn: p(6, 1, 15, 0.5), // how hard a locked dive bends toward its target (rad/s)
+    poopAssist: p(45, 5, 100, 1), // a locked target pulls droppings in from this far (m)
   },
   quest: {
     timeLimit: p(60, 15, 300, 5), // ice-cream snatch, starts when the first tourist spots you

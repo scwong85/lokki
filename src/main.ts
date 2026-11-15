@@ -67,6 +67,9 @@ import { MusicPlayer } from './core/music';
 import { MusicDirector } from './gameplay/musicDirector';
 import { OptionsStore, applyOptions } from './core/options';
 import { StreetLife } from './world/streetLife';
+import { LockMarker } from './render/lockMarker';
+import { nextLock, rankCandidates, resolveLock, type LockCandidate } from './gameplay/lock';
+import { POOP_TARGET_TAGS } from './data/props';
 import { OptionsPanel, TitleScreen } from './ui/menus';
 import { LevelSelect } from './ui/levelSelect';
 import { Tutorial } from './gameplay/tutorial';
@@ -204,6 +207,23 @@ const pings = new PingFx(scene);
 const poopReticle = new Reticle();
 scene.add(poopReticle.mesh);
 const marker = new DiveMarker();
+const lockMarker = new LockMarker();
+scene.add(lockMarker.group);
+/** The locked target (Tab): dives and droppings home in on it. */
+let lockId: string | null = null;
+let lockNow: LockCandidate | null = null;
+const NPC_LABELS: Record<string, string> = { cleaner: 'the Clean Freak', selfie: 'the selfie tourist', blogger: 'the food blogger', dater: 'a date', child: 'the child' };
+/** Everything that can be locked: people, the vendors and the Warden, level targets like the brass sign. */
+function lockCandidates(): LockCandidate[] {
+  const out: LockCandidate[] = [];
+  for (const n of npcs?.npcs ?? []) out.push({ id: `n${n.id}`, x: n.x, y: 1.2, z: n.z, radius: 0.8, label: NPC_LABELS[n.role] ?? 'a tourist' });
+  if (defense) {
+    if (defense.response.deployed.has('vendors')) for (const v of defense.vendors) out.push({ id: `v${v.id}`, x: v.x, y: 1.2, z: v.z, radius: 0.8, label: 'a vendor' });
+    if (defense.warden) out.push({ id: 'warden', x: defense.warden.x, y: 1.4, z: defense.warden.z, radius: 1, label: 'the Warden' });
+  }
+  for (const p of interaction.props.props) if (!p.broken && p.tag && POOP_TARGET_TAGS.has(p.tag)) out.push({ id: `p${p.id}`, x: p.cur.p.x, y: p.cur.p.y, z: p.cur.p.z, radius: 1.2, label: p.def.name });
+  return out;
+}
 shadows(gull.mesh, true, false);
 scene.add(gull.mesh, gull.shadow, marker.group);
 const cam = new FollowCamera(innerWidth / innerHeight);
@@ -269,8 +289,10 @@ const levelSelect = new LevelSelect(document.body, (id) => goToLevel(id));
 // ---- online co-op: a host runs the game, a guest flies its own gull and sees what the host sends ----
 let net: NetSession | null = null;
 const lobby = new Lobby(document.body, {
-  onConnected: (role, link) => startSession(role, link),
+  onConnected: (role, link, hostLevel) => startSession(role, link, hostLevel),
   onLeave: () => endSession('You left the game.'),
+  levels: () => LEVELS.filter((l) => levelUnlocked(l, save.levels)).map((l) => ({ id: l.id, name: l.name, current: l.id === level.id })),
+  onChangeLevel: () => levelSelect.show(levelRows()),
 });
 const isGuest = (): boolean => net?.role === 'guest';
 const isHost = (): boolean => net?.role === 'host';
@@ -284,7 +306,7 @@ function remotePlayer(look: string): Player {
   g.setRemote({ id: 1, p: [start.x + 2.5, GULL_RADIUS, start.z], v: [0, 0, 0], h: 0, mode: 'ground', carry: null });
   return p;
 }
-function startSession(role: 'host' | 'guest', link: PeerLink): void {
+function startSession(role: 'host' | 'guest', link: PeerLink, hostLevel = ''): void {
   if (players.length > 1) players.length = 1;
   const session = new NetSession(role, link);
   net = session;
@@ -299,7 +321,7 @@ function startSession(role: 'host' | 'guest', link: PeerLink): void {
       lobby.setConnected(session.guestName);
       hud.toast(`${session.guestName} joined!`, 2);
       relayHost();
-      loadLevel(level.id); // restart with the two-player to-dos (the guest follows)
+      loadLevel(hostLevel && LEVELS.some((l) => l.id === hostLevel) ? hostLevel : level.id); // the level the host picked, with the two-player to-dos (the guest follows)
     };
   } else {
     session.onWelcome = () => {
@@ -452,6 +474,7 @@ const title = new TitleScreen(
   },
 );
 if (interactive && !new URLSearchParams(location.search).has('play')) title.show();
+input.captureTab = () => !menuOpen();
 const menuOpen = (): boolean => title.visible || (lobby.visible && !net) || levelSelect.visible || optionsPanel.visible || controlsPanel.visible || skillsPanel.visible || credits.visible || !!touchControls?.menuOpen;
 const audio = new AudioManager();
 audio.muted = save.muted;
@@ -538,6 +561,7 @@ function pickSkin(id: string): void {
 /** Restart the level (R) or start a speedrun (Z). Skills and best times are kept. */
 function restartLevel(mode: 'normal' | 'speedrun'): void {
   levelCleared = false;
+  lockId = null;
   combo.reset();
   lastHolder.clear();
   gull.reset();
@@ -667,7 +691,7 @@ function guestStep(dt: number): void {
   const { x, y } = input.axes();
   n.sendInput({
     ax: x, ay: y, flap: input.isDown('Space'), dive: input.isDown('ShiftLeft') || input.isDown('ShiftRight'), yaw: cam.yaw, pitch: cam.pitch,
-    s: { id: 1, p: [s.x, s.y, s.z], v: [s.vx, s.vy, s.vz], h: s.heading, mode: s.mode, carry: null, fa: s.flapAnim, ha: s.heightAbove, tr: s.turnRate, dg: abilities.disguised ? 1 : 0 },
+    s: { id: 1, p: [s.x, s.y, s.z], v: [s.vx, s.vy, s.vz], h: s.heading, mode: s.mode, carry: null, fa: s.flapAnim, ha: s.heightAbove, tr: s.turnRate, dg: abilities.disguised ? 1 : 0, lk: lockNow ? [lockNow.x, lockNow.y, lockNow.z] : undefined },
   });
 }
 
@@ -1121,12 +1145,27 @@ startLoop({
       options.tutorialDone = true;
       optStore.save(options);
     }
+    // target lock: Tab picks the best target in view, again the next one, then off
+    const cands = lockCandidates();
+    if (!blocked && input.wasPressed('Tab')) {
+      const next = nextLock(lockId, rankCandidates(gull.state, cam.yaw, cands, tuning.lock.range.value, tuning.lock.coneDeg.value));
+      lockId = next;
+      lockNow = resolveLock(lockId, cands, gull.state, Infinity);
+      hud.toast(lockNow ? `Locked on ${lockNow.label}` : 'Lock off', 0.9);
+    }
+    lockNow = resolveLock(lockId, cands, gull.state, tuning.lock.maxRange.value);
+    if (lockId && !lockNow) {
+      lockId = null;
+      hud.toast('Lock lost', 0.8);
+    }
+    const lockPoint = lockNow ? { x: lockNow.x, y: lockNow.y, z: lockNow.z } : null;
     const wasDive = gull.state.mode === 'dive';
     const evs = gull.update(
       { ax: x, ay: y, flap: !blocked && input.isDown('Space'),
         dive: !blocked && (input.isDown('ShiftLeft') || input.isDown('ShiftRight')),
         aimPitch: cam.pitch,
         carryMass: isGuest() ? guestCarryMass : interaction.carriedMass(0),
+        lock: lockPoint,
       },
       cam.yaw,
       dt,
@@ -1145,7 +1184,7 @@ startLoop({
       if (!blocked && input.wasPressed('KeyE')) net!.tap('KeyE');
       if (!blocked && input.wasPressed('KeyQ')) net!.tap('KeyQ');
       if (!blocked && (input.wasPressed('KeyF') || input.wasClicked())) net!.tap('KeyF');
-    } else onGags(interaction.updateGull(0, gull.state, { grab: !blocked && input.wasPressed('KeyE'), toss: !blocked && input.wasPressed('KeyQ'), poop: !blocked && (input.wasPressed('KeyF') || input.wasClicked()) }, dt, simTime));
+    } else onGags(interaction.updateGull(0, gull.state, { grab: !blocked && input.wasPressed('KeyE'), toss: !blocked && input.wasPressed('KeyQ'), poop: !blocked && (input.wasPressed('KeyF') || input.wasClicked()), lock: lockPoint ? { ...lockPoint, r: lockNow!.radius } : null }, dt, simTime));
     // other players: their own flight and beak (the camera stays on player 1)
     for (const p of players) {
       if (p.id === 0) continue;
@@ -1159,7 +1198,7 @@ startLoop({
           if (taps.includes('KeyV')) mimic(p.gull, yaw);
           if (taps.includes('KeyG')) flockCall(p.gull, yaw);
           if (taps.includes('KeyH') && defense?.activateHawk()) hud.toast('Hawk-eye!', 0.8);
-          onGags(interaction.updateGull(p.id, p.gull.state, { grab: taps.includes('KeyE'), toss: taps.includes('KeyQ'), poop: taps.includes('KeyF') }, dt, simTime));
+          onGags(interaction.updateGull(p.id, p.gull.state, { grab: taps.includes('KeyE'), toss: taps.includes('KeyQ'), poop: taps.includes('KeyF'), lock: net!.guestFrame?.s.lk ? { x: net!.guestFrame.s.lk[0], y: net!.guestFrame.s.lk[1], z: net!.guestFrame.s.lk[2], r: 0.9 } : null }, dt, simTime));
         } else p.gull.stepRemote(dt); // on a guest this is the host's gull
         continue;
       }
@@ -1273,7 +1312,8 @@ startLoop({
     // poop aim reticle + context prompt
     const poopReady = 1 - Math.min(1, interaction.poopCd / (tuning.poop.cooldown.value * mods.poopCooldown));
     const aimPoop = s.mode !== 'ground' && s.stunT === 0 && interaction.poopCd <= 0;
-    const poopHit = aimPoop ? interaction.poopPrediction(s, simTime) : null;
+    const poopHit = aimPoop ? interaction.poopPrediction(s, simTime, lockNow ? { x: lockNow.x, y: lockNow.y, z: lockNow.z, r: lockNow.radius } : null) : null;
+    lockMarker.update(lockNow, lockNow?.radius ?? 1, cam.camera, simTime, lockNow ? Math.hypot(lockNow.x - s.x, lockNow.z - s.z) : 0);
     const blocked = poopHit?.tag === 'umbrella';
     poopReticle.update(poopHit, blocked);
     touchControls?.update(interaction.grabPrompt(s), !!interaction.carried, { V: skills.has('mimic'), G: skills.has('flock'), B: skills.has('disguise') }, (code) => abilities.fraction(code === 'KeyV' ? 'mimic' : code === 'KeyG' ? 'flock' : 'disguise'));

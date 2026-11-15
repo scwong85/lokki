@@ -1,12 +1,12 @@
 import { padHelp } from '../core/gamepad';
 
 const KEYS: [string, string][] = [
-  ['WASD', 'Walk and steer'], ['Space', 'Hop and flap (hold to keep flapping)'], ['Shift (hold)', 'Dive'], ['S in the air', 'Flare and brake for landings'], ['Mouse', 'Look (click the game to capture)'],
-  ['E', 'Grab or drop'], ['Q', 'Toss'], ['F or click', 'Poop'], ['V / G / B', 'Skills: crow call, flock call, pigeon disguise'], ['H', 'Hawk-eye'],
+  ['WASD', 'Walk and steer'], ['Space', 'Tap: jump. Hold: take off and flap'], ['Shift (hold)', 'Dive'], ['S in the air', 'Flare and brake for landings'], ['Mouse', 'Look (click the game to capture)'],
+  ['E', 'Grab or drop'], ['Q', 'Toss'], ['F or click', 'Poop'], ['V / G / B', 'Skills: crow call, flock call, pigeon disguise'], ['H', 'Hawk-eye'], ['Tab', 'Lock onto a target: dives and droppings home in on it (again: next one, then off)'],
   ['K', 'Skills and gull looks'], ['L', 'Level list'], ['N', 'Play with a friend online'], ['R', 'Restart the level'], ['U', 'HUD: full / minimal / off'], ['M', 'Mute'], ['Esc or O', 'Options'],
 ];
 const TOUCH: [string, string][] = [
-  ['Left thumb', 'Floating stick: move and steer'], ['Drag right side', 'Look around'], ['FLAP', 'Hop and flap'], ['DIVE', 'Hold and slide to aim the dive'], ['POOP', 'Poop'], ['GRAB / DROP', 'Grab or drop (context button)'],
+  ['Left thumb', 'Floating stick: move and steer'], ['Drag right side', 'Look around'], ['FLAP', 'Tap: jump. Hold: take off and flap'], ['LOCK', 'Lock onto a target (tap again: next, then off)'], ['DIVE', 'Hold and slide to aim the dive'], ['POOP', 'Poop'], ['GRAB / DROP', 'Grab or drop (context button)'],
   ['TOSS', 'Toss what you carry'], ['Ability buttons', 'Crow call, flock call, pigeon (once earned)'], ['\u2630 menu', 'Options, levels, skills, restart'],
 ];
 
