@@ -4,6 +4,7 @@ type Page = import('@playwright/test').Page;
 type Lk = {
   quests: { quests: { id: string; status: string; objectives: { id: string; done: boolean; count: number }[] }[]; onEvent: (e: string) => unknown };
   bell: { clock: number; left: number };
+  quiet: { clock: number; left: number };
   tram: { x: number; mode: string; frontX: number } | null;
   gang: { mode: string } | null;
   interaction: { props: { props: { type: string; tag?: string }[]; spawn: (s: { type: string; x: number; y: number; z: number }) => unknown } };
@@ -65,4 +66,34 @@ test('S6: a top hat dropped over the emperor counts', async ({ page }) => {
   const L = await open(page, 'new-look');
   await L((l) => l.interaction.props.spawn({ type: 'tophat', x: -156.5, y: 7.5, z: -300 }));
   await expect.poll(() => L((l) => l.quests.quests.find((q) => q.id === 'makeover')!.objectives[0].done), { timeout: 120_000 }).toBe(true);
+});
+
+test('S7: the band falls silent and a caw rings every phone', async ({ page }) => {
+  test.setTimeout(500_000);
+  const L = await open(page, 'concert-night');
+  await expect.poll(() => L((l) => l.quiet.left), { timeout: 400_000 }).toBeGreaterThan(0);
+  await L((l) => l.quests.onEvent('caw'));
+});
+
+test('S8: toys delivered to the children count', async ({ page }) => {
+  test.setTimeout(300_000);
+  const L = await open(page, 'christmas-market');
+  await L((l) => { l.interaction.props.spawn({ type: 'toy', x: -166, y: 0.5, z: -292 }); l.interaction.props.spawn({ type: 'toy', x: -165, y: 0.5, z: -291 }); });
+  await expect.poll(() => L((l) => l.quests.quests.find((q) => q.id === 'gifts')!.objectives[0].done), { timeout: 150_000 }).toBe(true);
+});
+
+test('S9: the library level loads with its students', async ({ page }) => {
+  test.setTimeout(300_000);
+  const L = await open(page, 'library-rule');
+  expect(await L((l) => l.quests.quests.some((q) => q.id === 'shhh'))).toBe(true);
+});
+
+test('S10: the finale has the tram, the pigeons and the key', async ({ page }) => {
+  test.setTimeout(300_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  const L = await open(page, 'key-to-the-city');
+  expect(await L((l) => l.tram !== null && l.gang !== null)).toBe(true);
+  expect(await L((l) => l.interaction.props.props.some((p) => p.tag === 'key'))).toBe(true);
+  expect(errors).toEqual([]);
 });

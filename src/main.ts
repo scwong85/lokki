@@ -275,7 +275,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -622,6 +622,10 @@ let tramView: TramView | null = null;
 let gang: PigeonGang | null = null;
 let gangView: PigeonView | null = null;
 let rideT = 0;
+let quietClock = 0;
+let quietLeft = 0;
+let quietCd = 0;
+let hushCd = 0;
 let onRoofBefore = false;
 const roofBox: import('./world/collision').Box = { min: [0, 0, 0], max: [0, 0, 0], kind: 'perch', color: 0xb9c4cf };
 function setupSenate(): void {
@@ -632,6 +636,10 @@ function setupSenate(): void {
   tram = null;
   gang = null;
   rideT = 0;
+  quietClock = 0;
+  quietLeft = 0;
+  quietCd = 0;
+  hushCd = 0;
   onRoofBefore = false;
   world.movers.length = 0;
   if (greybox) return;
@@ -655,6 +663,33 @@ function placeRoof(): void {
   roofBox.max = [tram.x + d.length / 2, d.roofY + 0.2, d.z + d.width / 2];
 }
 function stepSenate(dt: number): void {
+  const qb = level.quietBreaks;
+  if (qb) {
+    quietClock += dt;
+    if (quietLeft > 0) quietLeft -= dt;
+    else if (quietClock >= qb.first && (quietClock - qb.first) % qb.every < dt) {
+      quietLeft = qb.duration;
+      hud.toast('The band falls silent for the quiet bit...', 2);
+      notes(quests.onEvent('quietBit'));
+    }
+  }
+  const qz = level.quiet;
+  if (qz) {
+    quietCd -= dt;
+    hushCd -= dt;
+    for (const pl of players) {
+      const s = pl.gull.state;
+      if (s.mode !== 'ground' && Math.hypot(s.x - qz.x, s.z - qz.z) < qz.r && s.y < 30 && quietCd <= 0) {
+        quietCd = tuning.quiet.interval.value;
+        noise(s.x, s.z, tuning.quiet.loud.value);
+        if (hushCd <= 0) {
+          hushCd = 4;
+          hud.toast('SHHH! This is a library!', 1.4);
+          notes(quests.onEvent('hushed'));
+        }
+      }
+    }
+  }
   const free = interaction.props.props.filter((p) => !p.broken && !p.carried && p.heldBy === null);
   if (tram) {
     const blocker = free.find((p) => p.type === 'bottle' && p.cur.p.y < 1.6 && tram!.trackAhead(p.cur.p.x, p.cur.p.z, tuning.tram.brakeDistance.value));
@@ -1206,6 +1241,10 @@ function mimic(g: Gull, yaw: number): void {
   pings.add(at.x, at.z);
   audio.play('crow');
   notes(quests.onEvent('caw'));
+  if (quietLeft > 0) {
+    notes(quests.onEvent('mimicQuiet'));
+    hud.toast('Every phone in the crowd rings at once!', 1.8);
+  }
   g.openBeak(0.5);
   hud.toast('Caw! Caw!', 0.8);
 }
