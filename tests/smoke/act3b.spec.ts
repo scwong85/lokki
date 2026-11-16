@@ -53,3 +53,13 @@ test('level 22: the finale is open from the start with the city at full alert', 
   expect(await L((l) => l.quests.quests.find((q) => q.id === 'finale')!.status)).toBe('idle'); // unlocked: starts when the horn rings
   expect(await L((l) => l.defense!.heat.value)).toBeGreaterThanOrEqual(60);
 });
+
+test('level 20: clearing Night Market offers The Drone, and Enter goes there', async ({ page }) => {
+  test.setTimeout(300_000);
+  const L = await open(page, 'night-market');
+  await L((l) => { for (const e of ['grab:nightA', 'grab:nightB', 'grab:nightC', 'poopVendor']) l.notes(l.quests.onEvent(e)); });
+  await expect(page.locator('#levelcomplete')).toBeVisible({ timeout: 60_000 });
+  await expect(page.locator('#levelcomplete')).toContainText('The Drone');
+  await page.keyboard.press('Enter');
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __lokki: { level: string } }).__lokki.level), { timeout: 60_000 }).toBe('the-drone');
+});

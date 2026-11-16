@@ -396,7 +396,8 @@ export class CityDefense {
     const out: HitSphere[] = [];
     if (this.response.deployed.has('vendors')) {
       for (const v of this.vendors) {
-        out.push({ x: v.x, y: 1.0, z: v.z, r: 0.5, tag: 'vendor' }, { x: v.x, y: 1.75, z: v.z, r: 0.3, tag: 'vendor' });
+        // generous targets: a sleeping vendor slumps behind his counter and the level "Sweet dreams" needs a hit from above
+        out.push({ x: v.x, y: 1.0, z: v.z, r: 0.75, tag: 'vendor' }, { x: v.x, y: 1.75, z: v.z, r: 0.5, tag: 'vendor' });
         this.owners.push({ kind: 'vendor', v }, { kind: 'vendor', v });
       }
     }
