@@ -1,11 +1,12 @@
 import type { LevelDef } from './types';
 import { restY } from '../props';
 import { SENATE_START } from './senate';
+import { TRAM_LINE } from '../../world/roads';
 
 /** The emperor's statue (Senate Square): centre, and how high things are on it (see the `emperor` landmark). */
 export const EMPEROR = { x: -156.5, z: -300, plinthTop: 3.4, headTop: 5.8 };
 /** The tram track runs east-west just south of the statue. */
-export const TRAM = { z: -276, x0: -215, x1: -100, stopX: -156.5, length: 14, width: 2.6, roofY: 3.3 };
+export const TRAM = { ...TRAM_LINE, stopX: -156.5, length: 14, width: 2.6, roofY: 3.3 };
 
 const snap = (minY: number, maxY: number) => ({ minX: EMPEROR.x - 1.6, maxX: EMPEROR.x + 1.6, minZ: EMPEROR.z - 1.6, maxZ: EMPEROR.z + 1.6, minY, maxY });
 

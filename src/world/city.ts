@@ -1,7 +1,7 @@
 import { buildBackdrop, planBackdrop } from './backdrop';
 import { paletteAt } from './districts';
 import { planMansard } from './roofs';
-import { planRoads } from './roads';
+import { TRAM_LINE, planRoads, planTrack } from './roads';
 import * as THREE from 'three';
 import earcut from 'earcut';
 import { World, pointInRings, type Box, type Prism } from './collision';
@@ -151,11 +151,12 @@ function extrude(buf: Buf, p: PrismDef | { rings: number[][]; y0: number; y1: nu
 }
 
 /** Flat polygon layer (land, streets, parks) at height y; `map` tiles every `tileM` metres in world space. */
-function flatLayer(polys: { rings: number[][]; color?: number }[], y: number, color: number, layer: number, map?: THREE.Texture, tileM = 4): THREE.Mesh {
+function flatLayer(polys: { rings: number[][]; color?: number; dy?: number }[], y0: number, color: number, layer: number, map?: THREE.Texture, tileM = 4): THREE.Mesh {
   const buf = new Buf();
   const uv = (x: number, z: number): [number, number] => [x / tileM, z / tileM];
   for (const poly of polys) {
     const c = new THREE.Color(poly.color ?? color);
+    const y = y0 + (poly.dy ?? 0);
     for (const [ax, az, bx, bz, cx, cz] of triangulate(poly.rings)) {
       const up = (bz - az) * (cx - ax) - (bx - ax) * (cz - az) > 0;
       if (up) buf.tri([ax, y, az], [bx, y, bz], [cx, y, cz], c, uv(ax, az), uv(bx, bz), uv(cx, cz));
@@ -505,8 +506,26 @@ export function buildCity(): City {
   if (backdrop) group.add(backdrop);
   group.add(flatLayer(data.land, 0.02, LAND, 1, pavingTexture(), 3), flatLayer(data.streets, 0.03, STREET, 2, pavingTexture(), 3), flatLayer(data.parks, 0.04, PARK, 3, grassTexture(), 5));
   // roads: asphalt inset from the street edge (a pavement is left), a kerb line and a dashed centre line, all in one mesh
+  const track = planTrack(TRAM_LINE);
   const roads = planRoads(data.streets as { name?: string; rings: number[][] }[]);
-  group.add(flatLayer([...roads.asphalt.map((rings) => ({ rings, color: ASPHALT })), ...roads.kerb.map((rings) => ({ rings, color: KERB })), ...roads.dashes.map((r) => ({ rings: [r], color: LINE }))], 0.06, ASPHALT, 6, asphaltTexture(), 6));
+  group.add(flatLayer(
+    [
+      ...roads.asphalt.map((rings) => ({ rings, color: ASPHALT })),
+      ...roads.kerb.map((rings) => ({ rings, color: KERB })),
+      ...roads.dashes.map((r) => ({ rings: [r], color: LINE, dy: 0.02 })),
+      ...roads.zebra.map((r) => ({ rings: [r], color: LINE, dy: 0.02 })),
+      ...roads.manholes.map((r) => ({ rings: [r], color: 0x6f7285, dy: 0.02 })),
+      // the Senate Square tram line: a darker bed, sleepers and two steel rails
+      { rings: [track.bed], color: 0x8b8da0, dy: 0.01 },
+      ...track.sleepers.map((r) => ({ rings: [r], color: 0x786d66, dy: 0.02 })),
+      ...track.rails.map((r) => ({ rings: [r], color: 0xe3e7ef, dy: 0.03 })),
+    ],
+    0.06,
+    ASPHALT,
+    6,
+    asphaltTexture(),
+    6,
+  ));
 
   // landmarks keep the plain prism look; registry buildings get facades, roofs and roof clutter
   const lm = buildLandmarks(data.landmarks);

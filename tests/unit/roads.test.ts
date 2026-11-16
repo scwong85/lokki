@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isPlaza, planRoads, streetWidth } from '../../src/world/roads';
+import { TRAM_LINE, isPlaza, planRoads, planTrack, streetWidth } from '../../src/world/roads';
 import { area } from '../../src/world/roofs';
 import { pointInRings } from '../../src/world/collision';
 import data from '../../data/generated/kauppatori.json';
@@ -42,5 +42,34 @@ describe('roads', () => {
     const p = planRoads(streets);
     expect(p.asphalt.length).toBeGreaterThan(streets.length * 0.55);
     expect(p.dashes.length).toBeGreaterThan(20);
+  });
+
+  it('long straight streets get zebra crossings near both ends, and big streets get a few manholes on the asphalt', () => {
+    const road = [{ rings: [strip(120, 18)] }];
+    const p = planRoads(road);
+    expect(p.zebra.length).toBeGreaterThan(10);
+    // two crossings: the bars sit near both ends of the street (x about 8 and 112)
+    expect(p.zebra.some((b) => b[0] < 20)).toBe(true);
+    expect(p.zebra.some((b) => b[0] > 100)).toBe(true);
+    for (const b of p.zebra) expect(pointInRings([strip(120, 18)], b[0] + 1.7, b[1] + 0.2)).toBe(true);
+    expect(p.manholes.length).toBeGreaterThan(0);
+    for (const m of p.manholes) expect(pointInRings(p.asphalt[0], m[0], m[1])).toBe(true);
+    expect(planRoads(road)).toEqual(p); // same every time
+    expect(planRoads([{ rings: [strip(30, 18)] }]).zebra.length).toBe(0); // too short for a crossing
+  });
+});
+
+describe('tram track', () => {
+  it('two rails inside a bed, with sleepers across', () => {
+    const t = planTrack(TRAM_LINE);
+    expect(t.rails.length).toBe(2);
+    expect(t.sleepers.length).toBeGreaterThan(80);
+    const bedZ = [t.bed[1], t.bed[5]];
+    for (const r of t.rails) {
+      expect(r[1]).toBeGreaterThan(Math.min(...bedZ));
+      expect(r[5]).toBeLessThan(Math.max(...bedZ));
+    }
+    // the rails are about 1.4 m apart (standard gauge, centre to centre)
+    expect((t.rails[1][1] + t.rails[1][5]) / 2 - (t.rails[0][1] + t.rails[0][5]) / 2).toBeCloseTo(1.44, 1);
   });
 });
