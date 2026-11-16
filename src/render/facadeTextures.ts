@@ -45,27 +45,40 @@ export const shopTexture = (): THREE.Texture =>
     rect(g, '#bdb5aa', 0, 56, 64, 8); // plinth
   });
 
+/** Rows in the facade atlas: the shopfront row on top, then one row per window style. */
+export const ATLAS_ROWS = 7;
+
 /**
- * Window styles for the upper floors, six 64x64 cells stacked top to bottom (see `WINDOW_STYLES` in world/facade.ts):
- * 0 classic two-pane, 1 tall arched, 2 wide ribbon, 3 small pair, 4 shuttered, 5 banded (no windows, a painted stripe).
- * Every cell keeps a white margin, and the bottom-left corner stays white (faces without windows sample there).
+ * The facade atlas: seven 64x64 cells stacked top to bottom. Cell 0 is the ground-floor shopfront; cells 1 to 6 are the
+ * window styles of the upper floors (see `WINDOW_STYLES` in world/facade.ts): 0 classic two-pane, 1 tall arched, 2 wide ribbon,
+ * 3 small pair, 4 shuttered, 5 banded (no windows, a painted stripe). Every window cell keeps a white margin, and the
+ * bottom-left corner of the whole atlas stays white (faces without windows sample there). Shops and windows share one texture so
+ * a chunk of buildings is a single mesh (one draw call, and one shadow draw).
  */
 export const windowAtlas = (): THREE.Texture => {
-  const N = 6;
+  const N = ATLAS_ROWS;
   const c = document.createElement('canvas');
   c.width = 64;
   c.height = 64 * N;
   const g = c.getContext('2d')!;
   g.fillStyle = '#ffffff';
   g.fillRect(0, 0, c.width, c.height);
-  const R = (col: string, x: number, y: number, w: number, h: number, cell: number) => rect(g, col, x, cell * 64 + y, w, h);
+  const OFF = 64; // the shop row is first, so style cells start one row down
+  const R = (col: string, x: number, y: number, w: number, h: number, cell: number) => rect(g, col, x, cell * 64 + y + OFF, w, h);
+  // shopfront: sign band, framed glass over a stone plinth
+  rect(g, '#e6dfd3', 4, 5, 56, 6);
+  rect(g, '#efe9df', 5, 14, 54, 40);
+  rect(g, '#5c6e86', 8, 17, 48, 35);
+  rect(g, '#8ea3ba', 8, 17, 48, 9);
+  rect(g, '#efe9df', 31, 17, 2, 35);
+  rect(g, '#bdb5aa', 0, 56, 64, 8);
   const FR = '#ece6dc', GL = '#7189a3', SKY = '#9fb4c9', SILL = '#d6cfc3';
   // 0 classic
   R(FR, 22, 13, 20, 31, 0); R(GL, 24, 15, 16, 27, 0); R(SKY, 24, 15, 16, 7, 0); R(FR, 31, 15, 2, 27, 0); R(FR, 24, 26, 16, 2, 0); R(SILL, 20, 44, 24, 3, 0);
   // 1 tall arched
   R(FR, 24, 14, 16, 36, 1); R(GL, 26, 16, 12, 32, 1); R(SKY, 26, 16, 12, 8, 1);
-  g.fillStyle = FR; g.beginPath(); g.arc(32, 64 + 14, 8, Math.PI, 0); g.fill();
-  g.fillStyle = GL; g.beginPath(); g.arc(32, 64 + 15, 6, Math.PI, 0); g.fill();
+  g.fillStyle = FR; g.beginPath(); g.arc(32, OFF + 64 + 14, 8, Math.PI, 0); g.fill();
+  g.fillStyle = GL; g.beginPath(); g.arc(32, OFF + 64 + 15, 6, Math.PI, 0); g.fill();
   R(FR, 31, 16, 2, 32, 1); R(SILL, 22, 50, 20, 3, 1);
   // 2 wide ribbon
   R(FR, 6, 18, 52, 24, 2); R(GL, 8, 20, 48, 20, 2); R(SKY, 8, 20, 48, 6, 2); R(FR, 23, 20, 2, 20, 2); R(FR, 39, 20, 2, 20, 2); R(SILL, 4, 42, 56, 3, 2);

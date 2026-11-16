@@ -85,6 +85,7 @@ export const CONCERT_NIGHT: LevelDef = {
  */
 export const CHRISTMAS_MARKET: LevelDef = {
   id: 'christmas-market',
+  sky: 'dusk',
   name: 'S8. Christmas Market',
   blurb: 'Swap the presents. The children get the toys.',
   district: 'senaatintori',
@@ -193,6 +194,7 @@ export const LIBRARY_RULE: LevelDef = {
  */
 export const KEY_TO_THE_CITY: LevelDef = {
   id: 'key-to-the-city',
+  sky: 'golden',
   name: 'S10. The Key to the City',
   blurb: 'Ceremony crashers: bells, trams, pigeons and cameras.',
   district: 'senaatintori',

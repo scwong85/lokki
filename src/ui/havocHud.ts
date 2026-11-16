@@ -6,18 +6,22 @@ export class HavocHud {
   private readonly bar: HTMLElement;
   private readonly pops: HTMLElement;
   private readonly card: HTMLElement;
+  private readonly glow: HTMLElement;
+  private lastMult = 0;
 
   constructor(root: HTMLElement) {
     this.bar = document.createElement('div');
     this.bar.id = 'havoc';
     this.bar.hidden = true;
-    this.bar.innerHTML = '<div class="hv-score"></div><div class="hv-meter"><i></i></div><div class="hv-line"></div>';
+    this.bar.innerHTML = '<div class="hv-score"></div><div class="hv-chain"><span class="hv-mult"></span><span class="hv-ring"></span></div><div class="hv-meter"><i></i></div><div class="hv-line"></div>';
+    this.glow = document.createElement('div');
+    this.glow.id = 'havocglow';
     this.pops = document.createElement('div');
     this.pops.id = 'havocpops';
     this.card = document.createElement('div');
     this.card.id = 'havoccard';
     this.card.hidden = true;
-    root.append(this.bar, this.pops, this.card);
+    root.append(this.glow, this.bar, this.pops, this.card);
   }
 
   get active(): boolean {
@@ -26,6 +30,8 @@ export class HavocHud {
 
   show(on: boolean): void {
     this.bar.hidden = !on;
+    this.glow.style.opacity = '0';
+    this.lastMult = 0;
     if (!on) {
       this.pops.innerHTML = '';
       this.card.hidden = true;
@@ -57,6 +63,24 @@ export class HavocHud {
     const live = chainLeft(c, run.t);
     (this.bar.querySelector('.hv-score') as HTMLElement).textContent = `${run.score.toLocaleString('en')}`;
     (this.bar.querySelector('.hv-meter i') as HTMLElement).style.width = `${Math.round(live * 100)}%`;
+    // the chain cue: a big multiplier that pops when it rises, a meter that turns red as it runs out, and a glow around the screen
+    const mult = live > 0 ? c.mult : 0;
+    const badge = this.bar.querySelector('.hv-mult') as HTMLElement;
+    const chain = this.bar.querySelector('.hv-chain') as HTMLElement;
+    chain.classList.toggle('on', mult > 0);
+    if (mult !== this.lastMult) {
+      if (mult > 0) {
+        badge.textContent = `x${mult}`;
+        badge.classList.remove('pop');
+        void badge.offsetWidth;
+        badge.classList.add('pop');
+      }
+      this.lastMult = mult;
+    }
+    this.bar.classList.toggle('hot', mult >= 4);
+    this.bar.classList.toggle('fading', live > 0 && live < 0.3);
+    this.glow.style.opacity = mult > 1 ? `${Math.min(0.85, 0.15 + mult * 0.1) * Math.min(1, live * 2)}` : '0';
+    this.glow.style.boxShadow = `inset 0 0 ${60 + mult * 14}px ${10 + mult * 4}px ${mult >= 6 ? 'rgba(255,90,150,.8)' : mult >= 3 ? 'rgba(255,170,60,.8)' : 'rgba(255,220,110,.7)'}`;
     const rank = rankFor(run.score);
     (this.bar.querySelector('.hv-line') as HTMLElement).textContent = `${live > 0 ? `CHAIN x${c.mult} · ` : ''}${run.started ? formatClock(run.left) : 'move to start'} · ${rank.name}`;
   }

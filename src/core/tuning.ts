@@ -36,8 +36,8 @@ export const tuning = {
     flapCost: p(8, 0, 40, 0.5),
     airAccel: p(10, 1, 50, 0.5),
     airDrag: p(4, 0.5, 30, 0.5),
-    airTurnRate: p(3.8, 0.5, 8, 0.1), // rad/s
-    airTurnSlow: p(0.8, 0, 2, 0.05), // extra turning authority when flying slowly (flaring turns on a coin)
+    airTurnRate: p(3.0, 0.5, 8, 0.1), // rad/s (was 3.8 after M16; eased back after playtest: a bit too fast)
+    airTurnSlow: p(0.65, 0, 2, 0.05), // extra turning authority when flying slowly (flaring turns on a coin)
     staminaMax: p(100, 20, 300, 1),
     glideRegen: p(8, 0, 60, 0.5),
     groundRegen: p(35, 0, 150, 1),

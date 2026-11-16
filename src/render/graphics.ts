@@ -17,6 +17,8 @@ export class Graphics {
   /** Pixel ratio on the low preset (1 on desktop; phones get a little more so text and edges stay readable). */
   lowPixelRatio = 1;
   private sunDir = new THREE.Vector3(30, 50, 20).normalize();
+  /** The sky (if any) says how bright the lights are and where the sun is. */
+  sky: { light: number; sunDir: THREE.Vector3 } | null = null;
 
   constructor(private renderer: THREE.WebGLRenderer, private scene: THREE.Scene) {
     this.hemi = scene.getObjectByName('hemi') as THREE.HemisphereLight;
@@ -47,8 +49,10 @@ export class Graphics {
   update(focus: THREE.Vector3): void {
     const r = tuning.render;
     this.renderer.toneMappingExposure = r.exposure.value;
-    this.hemi.intensity = r.hemi.value;
-    this.sun.intensity = r.sun.value;
+    const k = this.sky?.light ?? 1;
+    this.hemi.intensity = r.hemi.value * k;
+    this.sun.intensity = r.sun.value * k;
+    if (this.sky) this.sunDir.copy(this.sky.sunDir);
     if (!this.sun.castShadow) return;
     const ext = r.shadowArea.value;
     const cam = this.sun.shadow.camera;

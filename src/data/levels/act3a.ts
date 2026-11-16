@@ -22,6 +22,7 @@ const students = Array.from({ length: 14 }, (_, i) => ({
 export const BENCH_ZONE = { minX: LUNCH_BENCH.x - 3.5, maxX: LUNCH_BENCH.x + 3.5, minZ: LUNCH_BENCH.z - 3.5, maxZ: LUNCH_BENCH.z + 3.5, maxY: 3 };
 export const VAPPU_EVE: LevelDef = {
   id: 'vappu-eve',
+  sky: 'golden',
   name: '15. Vappu Eve',
   blurb: 'Students, balloons, and a cap that belongs on the wrong head.',
   district: 'kauppatori',
@@ -73,6 +74,7 @@ export const VAPPU_EVE: LevelDef = {
 export const JUDGE = { x: 10, z: -18 };
 export const HERRING_MARKET: LevelDef = {
   id: 'herring-market',
+  sky: 'morning',
   name: '16. Herring Market',
   blurb: 'Swap the jars so grandma beats the champion.',
   district: 'kauppatori',
@@ -130,6 +132,7 @@ export const HERRING_MARKET: LevelDef = {
 export const ALTAR = { x: -20, z: -14 };
 export const WEDDING_BELLS: LevelDef = {
   id: 'wedding-bells',
+  sky: 'noon',
   name: '17. Wedding Bells',
   blurb: 'A wedding, a lost ring, and a very helpful gull.',
   district: 'kauppatori',

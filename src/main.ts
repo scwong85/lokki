@@ -82,7 +82,8 @@ import { OptionsStore, applyOptions } from './core/options';
 import { StreetLife } from './world/streetLife';
 import { Snow } from './render/snow';
 import { KalleView } from './world/kalle';
-import { setNight } from './render/scene';
+import { Sky } from './render/sky';
+import { SKIES, skyById } from './data/skies';
 import { LockMarker } from './render/lockMarker';
 import { nextLock, rankCandidates, resolveLock, type LockCandidate } from './gameplay/lock';
 import { POOP_TARGET_TAGS, PROPS, restY } from './data/props';
@@ -113,6 +114,8 @@ const phys = new PhysicsWorld(RAPIER);
 
 const scene = createScene();
 const graphics = new Graphics(renderer, scene);
+const sky = new Sky(scene);
+graphics.sky = sky;
 // `?greybox` loads the M1 test course instead of the city
 const greybox = new URLSearchParams(location.search).has('greybox');
 const store = new SaveStore();
@@ -196,7 +199,10 @@ const quests = new QuestLog(greybox ? [] : setup.quests);
   quests.onEvent = (type) => {
     runLog.add(simTime, type);
     const r = havoc?.feed(type);
-    if (r) havocHud.pop(r);
+    if (r) {
+      havocHud.pop(r);
+      if (!r.repeat && r.mult > 1) audio.play('chime'); // a rising multiplier gets a bell
+    }
     return raw(type);
   };
 }
@@ -300,7 +306,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -1140,7 +1146,7 @@ function applyLevelRules(): void {
   skills.grantForLevel(level.skills ?? []);
   showThermals();
   applySeaRules();
-  setNight(scene, !!level.night);
+  sky.apply(skyById(level.sky ?? (level.night ? 'night' : 'noon')));
   setupKalle();
   setupSenate();
   setupEsplanadi();
@@ -2122,6 +2128,7 @@ startLoop({
     cam.update(gull.position, frameDt, { vx: s.vx, vy: s.vy, vz: s.vz, diving: s.mode === 'dive', turnRate: s.turnRate });
     audio.setAir(Math.hypot(s.vx, s.vy, s.vz) / tuning.dive.speed.value, s.mode !== 'ground');
     graphics.update(gull.position);
+    sky.update(frameDt, cam.camera.position, simTime);
     water?.update(simTime);
     ripples.update(frameDt);
     if (havoc) havocHud.update(havoc);

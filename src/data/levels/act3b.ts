@@ -12,6 +12,7 @@ export const KALLE_PERCH = { x: 30, z: -12 };
  */
 export const THE_RIVAL: LevelDef = {
   id: 'the-rival',
+  sky: 'golden',
   name: '19. The Rival',
   blurb: 'Another gull wants your snacks. First to three.',
   district: 'kauppatori',
@@ -168,6 +169,7 @@ const FINALE = { ...QUESTS.find((q) => q.id === 'finale')!, requires: undefined 
  */
 export const GRAND_FINALE: LevelDef = {
   id: 'grand-finale',
+  sky: 'dusk',
   name: '22. The Great Kauppatori Heist',
   blurb: 'Everything you learned. The city at full alert.',
   district: 'kauppatori',
