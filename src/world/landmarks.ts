@@ -307,7 +307,33 @@ function library(l: LandmarkSrc): LandmarkOut {
   };
 }
 
-const BUILDERS: Record<string, (l: LandmarkSrc) => LandmarkOut> = { cathedral, statue, tents, ferry, lamps, clock, toy, goods, bins, cafe, steps, emperor, cart, stage, library };
+/** The Poet (Esplanadi): a bronze figure on a tall plinth, with a perchable head. */
+function poet(l: LandmarkSrc): LandmarkOut {
+  const { x, z } = l;
+  return {
+    prisms: [
+      prism(rect(x, z, 4, 4), 0, 0.5, 0xb8b2a4, 0xd8d2c4),
+      prism(rect(x, z, 2.2, 2.2), 0.5, 2.6, 0xc9c3b4, 0xe3ddce),
+      prism(ngon(x, z, 0.55, 8), 2.6, 4.4, 0x6e8f7f, 0x8fb09f, 'perch'),
+    ],
+    targets: [],
+  };
+}
+
+/** A row of lime trees (Esplanadi): trunks and round canopies, which are hiding perches. `count` trees, `dx` apart along x. */
+function treerow(l: LandmarkSrc): LandmarkOut {
+  const n = l.count ?? 10;
+  const dx = l.dx ?? 8;
+  const prisms: PrismDef[] = [];
+  for (let i = 0; i < n; i++) {
+    const x = l.x + i * dx;
+    prisms.push(prism(ngon(x, l.z, 0.35, 6), 0, 3.5, 0x8b6f4e, 0x8b6f4e));
+    prisms.push(prism(ngon(x, l.z, 3.4, 8), 3.5, 8.2, 0x8fcf9a, 0xa8e0b0, 'perch'));
+  }
+  return { prisms, targets: [] };
+}
+
+const BUILDERS: Record<string, (l: LandmarkSrc) => LandmarkOut> = { poet, treerow, cathedral, statue, tents, ferry, lamps, clock, toy, goods, bins, cafe, steps, emperor, cart, stage, library };
 
 export function buildLandmarks(list: readonly LandmarkSrc[]): Required<LandmarkOut> {
   const out: Required<LandmarkOut> = { prisms: [], targets: [], props: [], mats: [], decor: [] };

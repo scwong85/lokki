@@ -51,7 +51,10 @@ import { HeatMeter } from './ui/heatMeter';
 import { Announce } from './ui/announce';
 import { Tram } from './gameplay/tram';
 import { PigeonGang } from './gameplay/pigeons';
-import { TramView, PigeonView } from './world/senateFx';
+import { Sunbathers } from './gameplay/sunbathers';
+import { Dog } from './gameplay/dogs';
+import { Sprinklers } from './gameplay/sprinklers';
+import { TramView, PigeonView, SunbatherView, DogView, SprinklerView } from './world/senateFx';
 import { TriggerSystem, type PropView } from './gameplay/triggers';
 import { TRIGGERS } from './data/triggers';
 import { WRONG_FERRY } from './data/places';
@@ -275,7 +278,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -756,6 +759,131 @@ function stepSenate(dt: number): void {
   }
 }
 
+/** Esplanadi: sunbathers (your shadow wakes them), park dogs (chase gulls on the ground, fetch balls) and the lawn sprinklers. */
+let sunbathers: Sunbathers | null = null;
+let sunView: SunbatherView | null = null;
+let dogs: { dog: Dog; view: DogView; ball: ReturnType<typeof interaction.props.byId> }[] = [];
+let sprinklers: Sprinklers | null = null;
+let sprayView: SprinklerView | null = null;
+let sprayScareCd = 0;
+function clearEspa(): void {
+  if (sunView) scene.remove(sunView.group);
+  if (sprayView) scene.remove(sprayView.group);
+  for (const d of dogs) scene.remove(d.view.group);
+  sunbathers = null;
+  sunView = null;
+  dogs = [];
+  sprinklers = null;
+  sprayView = null;
+  sprayScareCd = 0;
+}
+function setupEsplanadi(): void {
+  clearEspa();
+  if (greybox) return;
+  if (level.sunbathers) {
+    sunbathers = new Sunbathers(level.sunbathers);
+    sunView = new SunbatherView(sunbathers);
+    scene.add(sunView.group);
+  }
+  for (const d of level.dogs ?? []) {
+    const dog = new Dog(d.x, d.z, d.ownerX, d.ownerZ);
+    const view = new DogView(dog);
+    scene.add(view.group);
+    dogs.push({ dog, view, ball: undefined });
+  }
+  if (level.sprinklers) {
+    sprinklers = new Sprinklers(level.sprinklers.zones);
+    sprayView = new SprinklerView(sprinklers);
+    scene.add(sprayView.group);
+  }
+}
+function startSprinklers(): void {
+  if (!sprinklers) return;
+  for (const e of sprinklers.start()) if (e.type === 'on') {
+    hud.toast('Psssshhh! The sprinklers come on!', 2);
+    audio.play('chime');
+    notes(quests.onEvent('sprinklersOn'));
+  }
+}
+function stepEsplanadi(dt: number): void {
+  const free = interaction.props.props.filter((p) => !p.broken && !p.carried && p.heldBy === null);
+  const gullsNow = players.map((pl) => ({ x: pl.gull.state.x, y: pl.gull.state.y, z: pl.gull.state.z, grounded: pl.gull.state.mode === 'ground' }));
+  if (sunbathers) {
+    const sunGulls = players.map((pl) => {
+      const s = pl.gull.state;
+      const h = Math.max(0, s.y - 0.4);
+      return { x: s.x, y: h, z: s.z, cloud: s.mode !== 'ground' && s.y > 5 && !pl.remote && skills.has('cloudglide') };
+    });
+    const r = sunbathers.update(dt, sunGulls);
+    for (const e of r.events) {
+      if (e.type === 'woke') {
+        hud.toast('Hey! Someone is blocking the sun!', 1.6);
+        audio.play('pop');
+        notes(quests.onEvent('sunbatherWoke'));
+        heat('noticed');
+      } else if (e.type === 'allAwake') {
+        hud.toast('Everyone sits up at once. Synchronised screaming!', 2.2);
+        notes(quests.onEvent('allAwake'));
+      }
+    }
+    for (const sh of r.shoves) players[sh.gull]?.gull.carry(sh.x, sh.z);
+    sunView?.update();
+  }
+  for (const d of dogs) {
+    const balls = free.filter((p) => p.type === 'ball' || PROPS[p.type].tags.includes('hat')).map((p) => ({ id: p.id, x: p.cur.p.x, y: p.cur.p.y, z: p.cur.p.z }));
+    const ev = d.dog.update(dt, gullsNow, balls);
+    for (const e of ev) {
+      if (e.type === 'pickup') {
+        const prop = interaction.props.byId(e.id);
+        if (prop) {
+          interaction.props.grab(prop);
+          d.ball = prop;
+          if (prop.type !== 'ball') notes(quests.onEvent('dogFetchedHat'));
+        }
+      } else if (e.type === 'drop') {
+        if (d.ball) interaction.props.release(d.ball, { x: 0, y: 1, z: 0 });
+        d.ball = undefined;
+        hud.toast('Good boy! He brings it back.', 1.4);
+        notes(quests.onEvent('dogFetched'));
+      } else if (e.type === 'bark') {
+        audio.play('crow');
+        noise(d.dog.x, d.dog.z, 1.2);
+      } else if (e.type === 'bite') {
+        players[0]?.gull.carry(Math.sign(e.x) * 1.5, Math.sign(e.z) * 1.5);
+        hud.toast('The dog chases you off!', 1.4);
+      }
+    }
+    if (d.ball) interaction.props.setCarryTarget(d.ball, { x: d.dog.x + Math.sin(d.dog.heading) * 0.5, y: 0.8, z: d.dog.z + Math.cos(d.dog.heading) * 0.5 }, d.dog.heading);
+    if (d.dog.running) {
+      let scattered = false;
+      for (const p of free) {
+        if (!PROPS[p.type].tags.includes('edible') || p.cur.p.y > 1.3) continue;
+        if (Math.hypot(p.cur.p.x - d.dog.x, p.cur.p.z - d.dog.z) < tuning.dog.scatterRadius.value) {
+          interaction.props.release(p, { x: Math.sin(d.dog.heading) * 2.5, y: 3, z: Math.cos(d.dog.heading) * 2.5 });
+          scattered = true;
+        }
+      }
+      if (scattered) {
+        noise(d.dog.x, d.dog.z, 1.6);
+        hud.toast('The dog tears through the picnic!', 1.6);
+        notes(quests.onEvent('dogScatter'));
+      }
+    }
+    d.view.update(dt);
+  }
+  if (sprinklers && level.sprinklers) {
+    const v = level.sprinklers.valve;
+    for (const g of gullsNow) if (g.grounded && g.y < 3 && Math.hypot(g.x - v.x, g.z - v.z) <= v.r) startSprinklers();
+    for (const e of sprinklers.update(dt)) if (e.type === 'off') hud.toast('The sprinklers switch off.', 1.2);
+    sprayScareCd -= dt;
+    if (sprinklers.running && sprayScareCd <= 0) {
+      sprayScareCd = 1.5;
+      for (const z of sprinklers.zones) for (let k = npcs?.scareNear(z.x, z.z, z.r + 1, false).length ?? 0; k > 0; k--) notes(quests.onEvent('sprinkled'));
+    }
+    sprayView?.update(dt);
+  }
+}
+
 const snow = new Snow();
 scene.add(snow.points);
 /** The sea: you swim in it and things float, except in winter levels when it is frozen ice (walk on it). */
@@ -816,6 +944,7 @@ function applyLevelRules(): void {
   setNight(scene, !!level.night);
   setupKalle();
   setupSenate();
+  setupEsplanadi();
   skillsPanel.refresh(skills, save);
   interaction.props.drift = level.drift ?? null;
   if (defense) defense.hiddenLines = !!level.hiddenLines;
@@ -1663,6 +1792,7 @@ startLoop({
     snow.update(dt, gull.state, simTime);
     if (!isGuest()) stepKalleGame(dt);
     if (!isGuest()) stepSenate(dt);
+    if (!isGuest()) stepEsplanadi(dt);
     updateTargets(targets, dt);
     input.endStep();
   },

@@ -7,7 +7,7 @@ export type Shape =
   | { kind: 'cyl'; hh: number; r: number }
   | { kind: 'capsule'; hh: number; r: number };
 
-export type PropType = 'icecream' | 'fish' | 'bun' | 'cap' | 'tophat' | 'bottle' | 'bin' | 'crate' | 'chair' | 'candy' | 'salmiakki' | 'map' | 'toy' | 'flowers' | 'sign' | 'soup' | 'herring' | 'owl' | 'balloon' | 'ring' | 'battery' | 'cheese' | 'glasses' | 'scarf' | 'baton';
+export type PropType = 'icecream' | 'fish' | 'bun' | 'cap' | 'tophat' | 'bottle' | 'bin' | 'crate' | 'chair' | 'candy' | 'salmiakki' | 'map' | 'toy' | 'flowers' | 'sign' | 'soup' | 'herring' | 'owl' | 'balloon' | 'ring' | 'battery' | 'cheese' | 'glasses' | 'scarf' | 'baton' | 'berries' | 'ball' | 'sausage' | 'sunscreen';
 
 export interface PropDef {
   name: string;
@@ -35,6 +35,10 @@ export const PROPS: Record<PropType, PropDef> = {
   map: { name: 'tourist map', tags: ['paper', 'throwable'], mass: 0.1, shape: { kind: 'box', hx: 0.18, hy: 0.02, hz: 0.13 }, radius: 0.3 },
   toy: { name: 'teddy bear', tags: ['throwable'], mass: 0.3, shape: { kind: 'box', hx: 0.28, hy: 0.32, hz: 0.2 }, radius: 0.5 },
   glasses: { name: 'sunglasses', tags: ['shiny', 'throwable'], mass: 0.1, shape: { kind: 'box', hx: 0.13, hy: 0.05, hz: 0.07 }, radius: 0.3 },
+  berries: { name: 'strawberries', tags: ['edible', 'throwable'], mass: 0.25, shape: { kind: 'cyl', hh: 0.06, r: 0.14 }, radius: 0.35 },
+  ball: { name: 'ball', tags: ['throwable'], mass: 0.2, shape: { kind: 'ball', r: 0.16 }, radius: 0.35 },
+  sausage: { name: 'sausage', tags: ['edible', 'throwable'], mass: 0.12, shape: { kind: 'box', hx: 0.12, hy: 0.04, hz: 0.04 }, radius: 0.3 },
+  sunscreen: { name: 'sunscreen', tags: ['throwable'], mass: 0.2, shape: { kind: 'cyl', hh: 0.1, r: 0.05 }, radius: 0.28 },
   baton: { name: 'baton', tags: ['throwable', 'shiny'], mass: 0.05, shape: { kind: 'box', hx: 0.2, hy: 0.02, hz: 0.02 }, radius: 0.3 },
   scarf: { name: 'scarf', tags: ['throwable'], mass: 0.15, shape: { kind: 'box', hx: 0.2, hy: 0.05, hz: 0.1 }, radius: 0.32 },
   flowers: { name: 'bouquet', tags: ['throwable'], mass: 0.2, shape: { kind: 'box', hx: 0.12, hy: 0.2, hz: 0.12 }, radius: 0.35 },

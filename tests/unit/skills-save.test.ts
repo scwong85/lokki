@@ -20,11 +20,12 @@ const fakeStorage = (): StorageLike & { map: Map<string, string> } => {
 describe('skills', () => {
   it('every skill maps to one real quest and vice versa', () => {
     const ids = new Set(QUESTS.map((q) => q.id));
-    for (const s of SKILLS) {
+    const sandbox = SKILLS.filter((s) => s.quest !== 'none'); // level-only skills (Cloud Glide) have no sandbox quest
+    for (const s of sandbox) {
       expect(ids.has(s.quest)).toBe(true);
       expect(skillForQuest(s.quest)?.id).toBe(s.id);
     }
-    expect(new Set(SKILLS.map((s) => s.quest)).size).toBe(SKILLS.length);
+    expect(new Set(sandbox.map((s) => s.quest)).size).toBe(sandbox.length);
   });
 
   it('unlocks once and applies multipliers; clear resets', () => {

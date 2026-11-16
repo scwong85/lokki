@@ -14,13 +14,19 @@ export interface LevelDef {
   /** Shown on the level select. */
   name: string;
   blurb: string;
-  district: 'kauppatori' | 'senaatintori';
+  district: 'kauppatori' | 'senaatintori' | 'esplanadi';
   /** Where the gull starts (default: the Market Square). */
   start?: { x: number; z: number };
   /** A tram running back and forth along a straight track (Senate Square). */
   tram?: { z: number; x0: number; x1: number; stopX: number; length: number; width: number; roofY: number };
   /** The Pigeon Gang living on a statue at this spot. */
   pigeons?: { x: number; z: number };
+  /** Esplanadi: sunbathers who wake when your shadow crosses their face (towel centre). */
+  sunbathers?: { x: number; z: number }[];
+  /** Esplanadi: park dogs (home spot and the owner's feet). */
+  dogs?: { x: number; z: number; ownerX: number; ownerZ: number }[];
+  /** Esplanadi: lawn sprinklers (spray zones) and the valve that starts them. */
+  sprinklers?: { zones: { x: number; z: number; r: number }[]; valve: { x: number; z: number; r: number } };
   /** A quiet zone (the library): flying or diving inside makes a racket that everyone hears. */
   quiet?: { x: number; z: number; r: number };
   /** The concert falls silent now and then: calling (Mimic) in the quiet bit sets off every phone. */
