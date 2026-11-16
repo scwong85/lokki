@@ -84,3 +84,37 @@ test('level 14: gliding into a thermal counts as riding it', async ({ page }) =>
   });
   await expect.poll(() => L((l) => l.quests.quests.find((q) => q.id === 'riders')!.objectives[0].count), { timeout: 120_000 }).toBeGreaterThanOrEqual(1);
 });
+
+test('level 14: the gold collar round the Uspenski dome is a roomy perch to land on', async ({ page }) => {
+  test.setTimeout(200_000);
+  await page.goto('/?level=thermal-express&play');
+  await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 90_000 });
+  const surf = await page.evaluate(() => {
+    const w = (window as unknown as { __lokki: { world: { surfaceBelow: (x: number, z: number, y: number) => { y: number; kind: string | null } } } }).__lokki.world;
+    // the collar is about 5 m wide around the little onion (dome at 272.5, -160.4); probe a ring of points 4 m out from the middle
+    return [0, 1, 2, 3, 4, 5].map((k) => w.surfaceBelow(272.5 + Math.cos(k) * 4.2, -160.4 + Math.sin(k) * 4.2, 60));
+  });
+  for (const s of surf) {
+    expect(s.kind).toBe('perch');
+    expect(s.y).toBeGreaterThan(24); // far above the 18 m roof, where the level asks the bun to land (20 m and up)
+  }
+});
+
+test('level 14: standing on the dome collar with the bun delivers it', async ({ page }) => {
+  test.setTimeout(300_000);
+  await page.goto('/?level=thermal-express&play');
+  await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 90_000 });
+  await page.evaluate(() => {
+    type L = { gull: { state: Record<string, number | string> }; interaction: { props: { spawn: (s: { type: string; x: number; y: number; z: number; tag?: string }) => { id: number } & object; props: { id: number }[] }; catchProp: (id: number, p: unknown) => unknown } };
+    const l = (window as unknown as { __lokki: L }).__lokki;
+    const p = l.interaction.props.spawn({ type: 'bun', x: 276.7, y: 40, z: -160.4, tag: 'warmBun' });
+    // standing on the collar (its top is about 27.6 m up, four metres from the middle of the big onion)
+    Object.assign(l.gull.state, { x: 276.7, y: 28.1, z: -160.4, vx: 0, vy: 0, vz: 0, mode: 'ground', heading: 0 });
+    l.interaction.catchProp(0, p);
+    const k = (window as unknown as { __lokki: { notes: (n: unknown) => void; quests: { onEvent: (e: string) => unknown } } }).__lokki;
+    k.notes(k.quests.onEvent('grab:warmBun')); // the grab starts the timed quest
+  });
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { __lokki: { quests: { quests: { id: string; objectives: { done: boolean }[] }[] } } }).__lokki.quests.quests.find((q) => q.id === 'express')!.objectives[0].done), { timeout: 200_000 })
+    .toBe(true);
+});

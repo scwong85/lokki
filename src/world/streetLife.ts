@@ -16,7 +16,7 @@ const part = (g: THREE.BufferGeometry, c: number, x = 0, y = 0, z = 0, rx = 0, r
 };
 
 /** A cyclist from primitives: bike with two spinning wheels, a leaning rider and a helmet. */
-class Cyclist {
+export class Cyclist {
   readonly root = new THREE.Group();
   private wheels: THREE.Object3D[] = [];
 
@@ -48,7 +48,7 @@ class Cyclist {
 
   apply(w: Walker): void {
     this.root.position.set(w.x, 0, w.z);
-    this.root.rotation.y = w.heading + Math.PI; // the model faces +z, headings face -z
+    this.root.rotation.y = w.heading; // the bike's front (handlebars, rider's head) is its -z side, and headings face -z
     for (const wheel of this.wheels) wheel.rotation.x = w.phase;
   }
 }

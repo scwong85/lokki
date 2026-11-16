@@ -205,7 +205,8 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M26 Co-op controls on touch and gamepad
 - [x] M27 Havoc Hour prototype: chain scoring on the Market Square — **decision gate 3** (merged; playtest says OK, chain cue made bigger in M28)
 - [x] M28 World enrichment W1: sky and light, horizon backdrop, fewer draw calls
-- [ ] M29 World enrichment W2: district colours, mansard roofs, courtyards, lit windows (built on `m29-world-w2`, awaiting playtest)
+- [x] M29 World enrichment W2: district colours, mansard roofs, courtyards, lit windows
+- [ ] M30 Roads (start of W3) and playtest fixes: Thermal Express dome, backwards bike (built on `m30-roads-fixes`, awaiting playtest)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -362,7 +363,10 @@ Sky dome with sun and clouds, sky presets as level data, tinted lighting, a hori
 ### M29 — World enrichment W2: roofs and colour (M)
 District palettes, mansard roofs with landing slabs, courtyard yards, lit windows at dusk and night. Details: `docs/milestones/M29.md`.
 
-### After M29 (backlog)
+### M30 — Roads and playtest fixes (S–M)
+Streets drawn as roads (asphalt, pavements, kerbs, dashed centre lines); the Thermal Express dome landing and the backwards bike fixed. Details: `docs/milestones/M30.md`.
+
+### After M30 (backlog)
  World enrichment rest of W2, then W3 to W6 (`docs/design/world-enrichment.md`): streets and squares, things that move, a busier city, landmark kit.
  Plans: `docs/design/fun-todos.md` (F2–F6), `docs/design/graphics-refresh.md` (G2–G6).
  Esplanadi E4–E10 (`docs/design/levels-esplanadi.md`), Katajanokka (`docs/design/levels-katajanokka.md`), each level designed with a co-op variant; the shared systems they need (moving platforms, NPC schedules, Kalle the rival gull, the drone, seasons); local split-screen co-op (optional); optional WebGPU renderer.

@@ -315,7 +315,8 @@ export const COO_COO: LevelDef = {
  * Level 14: Thermal Express (Strong wings are yours). Headline puzzle ("Express Delivery"): deliver a warm cinnamon bun to the top
  * of the Uspenski dome before it goes cold. Warm rooftops make rising air: glide into the pale columns and rise.
  */
-export const DOME = { x: 252.7, z: -150.25 };
+/** The big onion of the Uspenski restyle (the corner average of the building's footprint, see `building()` in world/city.ts). It was 20 m off before M30, so the landing zone missed the dome. */
+export const DOME = { x: 272.5, z: -160.4 };
 export const THERMAL_EXPRESS: LevelDef = {
   id: 'thermal-express',
   name: '14. Thermal Express',
