@@ -46,6 +46,14 @@ export interface LevelDef {
   wardenLunch?: { at: number; duration: number; x: number; z: number; repeat?: number };
   /** Things in the sea tagged 'note' (a message in a bottle) are carried by the current toward this spot. */
   drift?: { x: number; z: number };
+  /** Skills the level hands you for its duration (the skill levels). */
+  skills?: SkillId[];
+  /** The scare lines are invisible until you use hawk-eye. */
+  hiddenLines?: boolean;
+  /** Disguised, you must act like a pigeon: flying or running breaks the disguise. */
+  pigeonRules?: boolean;
+  /** Rising warm air over rooftops: a gull gliding inside gets a lift (m/s^2). */
+  thermals?: { x: number; z: number; r: number; lift: number }[];
   /** Par time in seconds for the third star. */
   parTime?: number;
   /** Skill earned by clearing the level the first time. */

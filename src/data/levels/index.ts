@@ -7,6 +7,7 @@ import { CITY_STRIKES } from './cityStrikes';
 import { OWL_BE_BACK } from './owlBeBack';
 import { THE_WARDEN } from './theWarden';
 import { HARBOUR_DAY } from './harbourDay';
+import { CAW_OF_THE_WILD, INVISIBLE_MAZE, HEAVY_LIFTING, GULLS_ELEVEN, COO_COO, THERMAL_EXPRESS } from './act2';
 
 /** Free play: today's full Market Square (the eight-quest pack, the extras, the finale). */
 export const SANDBOX: LevelDef = {
@@ -21,8 +22,9 @@ export const SANDBOX: LevelDef = {
   defense: true,
 };
 
+export { CAW_OF_THE_WILD, INVISIBLE_MAZE, HEAVY_LIFTING, GULLS_ELEVEN, COO_COO, THERMAL_EXPRESS };
 export { SNACK_ATTACK, BOMBS_AWAY, NOSY_PARKERS, BUTTERFINGERS, CITY_STRIKES, OWL_BE_BACK, THE_WARDEN, HARBOUR_DAY };
 
-export const LEVELS: LevelDef[] = [SNACK_ATTACK, BOMBS_AWAY, NOSY_PARKERS, BUTTERFINGERS, CITY_STRIKES, OWL_BE_BACK, THE_WARDEN, HARBOUR_DAY, SANDBOX];
+export const LEVELS: LevelDef[] = [SNACK_ATTACK, BOMBS_AWAY, NOSY_PARKERS, BUTTERFINGERS, CITY_STRIKES, OWL_BE_BACK, THE_WARDEN, HARBOUR_DAY, CAW_OF_THE_WILD, INVISIBLE_MAZE, HEAVY_LIFTING, GULLS_ELEVEN, COO_COO, THERMAL_EXPRESS, SANDBOX];
 
 export const levelById = (id: string | null | undefined): LevelDef => LEVELS.find((l) => l.id === id) ?? SANDBOX;

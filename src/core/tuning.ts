@@ -220,6 +220,7 @@ export const tuning = {
     capTime: p(45, 10, 200, 5), // cap heist, starts when you take the cap
     finaleTime: p(120, 30, 400, 5), // grand finale, starts when you ring the ferry horn
     retryDelay: p(3, 0, 20, 0.5), // a failed timed quest resets itself after this
+    expressTime: p(95, 30, 300, 5), // thermal express: seconds before the bun goes cold
     bottleTime: p(40, 10, 120, 5), // message in a bottle: seconds from picking it up until the ferry horn
     escapeDistance: p(30, 10, 80, 1),
     escapeTime: p(3, 0.5, 15, 0.5),
@@ -242,6 +243,7 @@ export const tuning = {
   deter: {
     sprayRange: p(9, 2, 15, 0.5),
     sprayConeDeg: p(70, 20, 180, 5),
+    vendorDistract: p(3, 0.5, 10, 0.5), // seconds a vendor stares at a noise (crow call, decoy flock) and ignores gulls
     sprayWindup: p(0.6, 0.2, 2, 0.05), // the vendor aims, then fires: you can dodge
     sprayCooldown: p(3, 0.5, 10, 0.5),
     sprayStun: p(0.7, 0, 3, 0.05),

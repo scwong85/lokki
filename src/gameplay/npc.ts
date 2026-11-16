@@ -269,6 +269,14 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
   // ---- senses ----
   n.seesGull = canSee(n, g, ctx.world);
   for (const s of noises) {
+    if (n.role === 'tour' && calm && Math.hypot(s.x - n.x, s.z - n.z) <= t.hearRange.value * s.loud) {
+      // a tour-group member follows a sound: they walk over to see what it is
+      n.goal = { x: s.x, z: s.z, name: 'lure' };
+      n.targetX = s.x;
+      n.targetZ = s.z;
+      if (n.mode !== 'walk') enter(n, 'walk');
+      continue;
+    }
     if (Math.hypot(s.x - n.x, s.z - n.z) <= t.hearRange.value * s.loud && (calm || n.mode === 'shield' || n.mode === 'notice')) {
       n.noiseX = s.x;
       n.noiseZ = s.z;

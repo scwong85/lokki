@@ -53,6 +53,8 @@ export interface FlightInput {
   aimPitch: number;
   /** kg in the beak: weakens flapping. */
   carryMass?: number;
+  /** Rising warm air under the gull right now (m/s^2), from a level's thermals. */
+  lift?: number;
   /** A locked target (Tab): dives home in on it. */
   lock?: { x: number; y: number; z: number } | null;
 }
@@ -325,6 +327,7 @@ export function stepFlight(
       sp = sp < target ? Math.min(target, sp + f.airAccel.value * dt) : Math.max(target, sp - f.airDrag.value * dt);
 
       s.vy -= f.gravity.value * dt;
+      if (ctl.lift) s.vy = Math.min(s.vy + ctl.lift * dt, Math.max(s.vy, f.maxClimb.value * 0.7)); // a thermal lifts a gliding gull (never past 70% of the climb limit)
       if (ctl.flap && s.flapCd <= 0) {
         s.flapCd = f.flapInterval.value;
         if (s.stamina >= f.flapCost.value) {

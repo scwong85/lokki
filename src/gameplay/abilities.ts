@@ -30,6 +30,11 @@ export class Abilities {
     return true;
   }
 
+  /** The disguise is over right now (acting like a gull in a pigeon level). */
+  breakDisguise(): void {
+    this.disguiseT = 0;
+  }
+
   /** 0 = just used, 1 = ready. */
   fraction(id: AbilityId): number {
     const t = id === 'disguise' ? total(id) + tuning.skills.disguiseTime.value : total(id);

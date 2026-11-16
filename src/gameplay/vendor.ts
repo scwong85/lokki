@@ -1,6 +1,6 @@
 import { tuning } from '../core/tuning';
 import type { World } from '../world/collision';
-import { bearing, canSee, type GullInfo } from './npc';
+import { bearing, canSee, type GullInfo, type Noise } from './npc';
 
 /**
  * Market vendor with a spray bottle: stands at the stall, wakes up when the city is on alert (or the gull
@@ -26,17 +26,22 @@ export interface Vendor {
   aimZ: number;
   /** For the model's mode field. */
   moving: boolean;
+  /** Looking at a noise (a decoy flock, a crow call): ignores the gull for a moment. */
+  distractT: number;
+  noiseX: number;
+  noiseZ: number;
 }
 
 export type VendorEvent =
   | { type: 'noticed'; vendor: Vendor }
   | { type: 'spray'; vendor: Vendor; hit: boolean; dx: number; dz: number }
-  | { type: 'dodged'; vendor: Vendor };
+  | { type: 'dodged'; vendor: Vendor }
+  | { type: 'distracted'; vendor: Vendor };
 
 const angleDiff = (a: number, b: number) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
 
 export function newVendor(id: number, x: number, z: number, heading: number): Vendor {
-  return { id, x, z, homeHeading: heading, heading, mode: 'idle', t: 0, cd: 0, seesGull: false, lostT: 0, aimX: 0, aimZ: 0, moving: false };
+  return { id, x, z, homeHeading: heading, heading, mode: 'idle', t: 0, cd: 0, seesGull: false, lostT: 0, aimX: 0, aimZ: 0, moving: false, distractT: 0, noiseX: 0, noiseZ: 0 };
 }
 
 /** Is the gull inside the spray cone and range if the vendor aims at (aimX,aimZ)? */
@@ -48,14 +53,24 @@ export function inSpray(v: Vendor, g: { x: number; y: number; z: number }, aimX:
   return Math.abs(angleDiff(bearing(g.x - v.x, g.z - v.z), aim)) <= (d.sprayConeDeg.value * Math.PI) / 360;
 }
 
-export function stepVendor(v: Vendor, g: GullInfo, alert: boolean, dt: number, world: World): VendorEvent[] {
+export function stepVendor(v: Vendor, g: GullInfo, alert: boolean, dt: number, world: World, noises: readonly Noise[] = []): VendorEvent[] {
   const ev: VendorEvent[] = [];
   const d = tuning.deter;
   v.t += dt;
   v.cd = Math.max(0, v.cd - dt);
+  v.distractT = Math.max(0, v.distractT - dt);
+  for (const s of noises) {
+    if (v.mode !== 'windup' && v.mode !== 'recover' && Math.hypot(s.x - v.x, s.z - v.z) <= tuning.npc.hearRange.value * s.loud) {
+      if (v.distractT <= 0) ev.push({ type: 'distracted', vendor: v });
+      v.distractT = tuning.deter.vendorDistract.value;
+      v.noiseX = s.x;
+      v.noiseZ = s.z;
+      if (v.mode === 'alert') v.mode = 'idle';
+    }
+  }
   const dist = Math.hypot(g.x - v.x, g.z - v.z);
   const wasSeeing = v.seesGull;
-  v.seesGull = canSee(v, g, world);
+  v.seesGull = v.distractT <= 0 && canSee(v, g, world); // looking at the noise: the gull goes unseen
   const turn = tuning.npc.turnRate.value * dt;
   const face = (x: number, z: number) => {
     v.heading += Math.max(-turn, Math.min(turn, angleDiff(bearing(x - v.x, z - v.z), v.heading)));
@@ -63,7 +78,8 @@ export function stepVendor(v: Vendor, g: GullInfo, alert: boolean, dt: number, w
 
   switch (v.mode) {
     case 'idle':
-      v.heading += Math.max(-turn, Math.min(turn, angleDiff(v.homeHeading, v.heading)));
+      if (v.distractT > 0) face(v.noiseX, v.noiseZ);
+      else v.heading += Math.max(-turn, Math.min(turn, angleDiff(v.homeHeading, v.heading)));
       if (v.seesGull && (alert || dist < 6)) {
         v.mode = 'alert';
         v.t = 0;

@@ -25,6 +25,7 @@ export type DefenseEvent =
   | { type: 'spray'; x: number; z: number; aimX: number; aimZ: number }
   | { type: 'lunch'; on: boolean }
   | { type: 'vendorsScared'; count: number }
+  | { type: 'vendorDistracted' }
   | { type: 'poopVendor' }
   | { type: 'poopWarden' }
   | { type: 'umbrella' };
@@ -73,6 +74,8 @@ export class CityDefense {
   private hawkCd = 0;
   /** The Warden's lunch break (a level may schedule one): from `from` to `to` seconds after the level started he sits at (x, z) with his umbrella down. */
   lunch: { x: number; z: number; from: number; to: number; repeat?: number } | null = null;
+  /** The lines are only visible with hawk-eye (a level setting). */
+  hiddenLines = false;
   private clock = 0;
   private lunchOn = false;
   private scareCd = 0;
@@ -235,8 +238,9 @@ export class CityDefense {
     if (this.response.deployed.has('vendors')) {
       for (const v of this.vendors) {
         const target = nearestGull(v, views);
-        for (const e of stepVendor(v, infoFor(target), alert, dt, this.world)) {
+        for (const e of stepVendor(v, infoFor(target), alert, dt, this.world, noises)) {
           if (e.type === 'noticed') ev.push({ type: 'noticed', who: 'vendor' });
+          else if (e.type === 'distracted') ev.push({ type: 'vendorDistracted' });
           else if (e.type === 'spray') {
             ev.push({ type: 'spray', x: v.x, z: v.z, aimX: v.aimX, aimZ: v.aimZ });
             this.spawnSpray(v);
@@ -449,7 +453,7 @@ export class CityDefense {
     const lines = this.response.deployed.has('lines');
     const lf = this.install.lines;
     for (const m of this.lineMeshes) {
-      m.visible = lines;
+      m.visible = lines && (!this.hiddenLines || hawk);
       if (!m.userData.post) m.scale.set(hawk ? 3 : 1, lf, hawk ? 3 : 1); // grows into place while being installed
     }
     this.lineMat.color.setHex(hawk ? HAWK_COLOR : LINE_COLOR);
