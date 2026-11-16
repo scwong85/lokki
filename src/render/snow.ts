@@ -36,13 +36,12 @@ export class Snow {
     this.n = Math.min(this.pos.length / 3, Math.round(tuning.winter.snowCount.value));
     this.points.geometry.setDrawRange(0, this.n);
     for (let i = 0; i < this.n; i++) {
-      let x = this.pos[i * 3], y = this.pos[i * 3 + 1], z = this.pos[i * 3 + 2];
+      let x = this.pos[i * 3], y = this.pos[i * 3 + 1];
       y -= (1.6 + (i % 5) * 0.25) * dt;
       x += Math.sin(time * 0.7 + i) * 0.4 * dt;
       if (y < 0) y += 30;
       this.pos[i * 3] = x;
       this.pos[i * 3 + 1] = y;
-      this.pos[i * 3 + 2] = z;
     }
     this.points.position.set(Math.round(at.x / 35) * 35, 0, Math.round(at.z / 35) * 35); // the cloud hops with the gull in big steps so flakes do not slide
     (this.points.geometry.attributes.position as THREE.BufferAttribute).needsUpdate = true;
