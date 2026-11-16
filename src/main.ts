@@ -87,7 +87,7 @@ import { tickMotion } from './render/motion';
 import { districtOf } from './world/districts';
 import { Birds } from './world/birds';
 import { TRAM as SENATE_TRAM } from './data/levels/senate2';
-import { counter } from './data/places';
+import { STATUE, counter } from './data/places';
 import { SKIES, skyById } from './data/skies';
 import { LockMarker } from './render/lockMarker';
 import { nextLock, rankCandidates, resolveLock, type LockCandidate } from './gameplay/lock';
@@ -807,6 +807,7 @@ function stepSenate(dt: number): void {
 /** Ambient puffs near the player: steam above the market stalls and blossom drifting down in the Esplanadi park. */
 let steamT = 0;
 let petalT = 0;
+let fountainT = 0;
 function ambientStep(dt: number): void {
   if (greybox || !(tuning.juice.puffs.value > 0)) return;
   const g = gull.state;
@@ -817,6 +818,13 @@ function ambientStep(dt: number): void {
       const s = counter(c, r);
       if (Math.hypot(g.x - s.x, g.z - s.z) < 70) puffs.burst('steam', { x: s.x + (Math.random() - 0.5) * 1.5, y: 1.5, z: s.z + (Math.random() - 0.5) * 1.5 }, 0.4);
     }
+  }
+  // the Havis Amanda fountain sprays round the basin when you are near
+  fountainT += dt;
+  if (fountainT > 0.18 && Math.hypot(g.x - STATUE.x, g.z - STATUE.z) < 80) {
+    fountainT = 0;
+    const a = Math.random() * Math.PI * 2;
+    puffs.burst('splash', { x: STATUE.x + Math.cos(a) * 3.0, y: 0.7, z: STATUE.z + Math.sin(a) * 3.0 }, 0.3);
   }
   petalT += dt;
   if (petalT > 0.3 && tuning.motion.petals.value > 0 && districtOf(g.x, g.z) === 'esplanadi') {

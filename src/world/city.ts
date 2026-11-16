@@ -172,8 +172,8 @@ function flatLayer(polys: { rings: number[][]; color?: number; dy?: number }[], 
 }
 
 /** Landmark styles applied to registry buildings (set by `restyle` entries in data/landmarks.json). */
-const STYLE_WALLS: Record<string, number> = { uspenski: 0xc4705a };
-const STYLE_ROOFS: Record<string, number> = { uspenski: 0x8fc4ad };
+const STYLE_WALLS: Record<string, number> = { uspenski: 0xc4705a, empire: 0xf6e7b0 };
+const STYLE_ROOFS: Record<string, number> = { uspenski: 0x8fc4ad, empire: 0x8fc4ad };
 
 /** Wall quad with window/shop UVs (u = bays across, v = floors up) and darker feet (baked ambient occlusion). */
 function wallQuad(buf: Buf, x1: number, z1: number, x2: number, z2: number, y0: number, y1: number, out: boolean, color: THREE.Color, foot: THREE.Color, u: number, v: number, v0 = 0): void {
@@ -375,6 +375,27 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
               for (const sd of [-0.93, 0.93]) decoBox(upper, px - outZ * sd + outX * 0.45, pz + outX * sd + outZ * 0.45, outX, outZ, 0.05, 0.9, y0 + 0.14, y0 + 0.95, rail);
             }
           }
+        }
+      }
+      // Empire style (Senate Square): white pilasters up the long walls and a pediment over the middle of the longest one
+      if (style === 'empire' && ri === 0 && len >= 14) {
+        const white = new THREE.Color(0xfdfaf2);
+        const nP = Math.floor(len / 4.4);
+        for (let k = 0; k < nP; k++) {
+          const t = (k + 0.5) / nP;
+          decoBox(upper, x1 + (x2 - x1) * t + outX * 0.25, z1 + (z2 - z1) * t + outZ * 0.25, outX, outZ, 0.75, 0.5, 0.4, h - 0.7, white);
+        }
+        if (i === longest) {
+          const cx = (x1 + x2) / 2, cz = (z1 + z2) / 2, ux = (x2 - x1) / len, uz = (z2 - z1) / len;
+          const hw = 5, apex = 2.6, off = 0.7;
+          const L1 = [cx - ux * hw + outX * off, h, cz - uz * hw + outZ * off], R1 = [cx + ux * hw + outX * off, h, cz + uz * hw + outZ * off];
+          const T = [cx + outX * off, h + apex, cz + outZ * off];
+          faceTri(upper, L1, R1, T, white, [outX, 0, outZ]);
+          const L0 = [L1[0] - outX * off, h, L1[2] - outZ * off], R0 = [R1[0] - outX * off, h, R1[2] - outZ * off], T0 = [T[0] - outX * off, T[1], T[2] - outZ * off];
+          faceTri(upper, L0, L1, T, trim, [0, 1, 0]);
+          faceTri(upper, L0, T, T0, trim, [0, 1, 0]);
+          faceTri(upper, R1, R0, T0, trim, [0, 1, 0]);
+          faceTri(upper, R1, T0, T, trim, [0, 1, 0]);
         }
       }
       // cornice: a lighter ledge that sticks out at the top of taller flat-roofed buildings
