@@ -80,7 +80,7 @@ export class TriggerSystem {
         continue;
       }
       if (this.fired.has(d.id) || !wanted.has(d.event)) continue;
-      let hit = false;
+      let hit: boolean;
       if (d.kind === 'carryLanded') hit = !!ctx.carried && ctx.carried.type === d.propType && ctx.gull.grounded && ctx.gull.y >= d.minY && (!d.zone || inZone(d.zone, ctx.gull.x, ctx.gull.y, ctx.gull.z));
       else if (d.kind === 'npcsInZone') hit = (ctx.npcs ?? []).filter((n) => n.role === d.role && inZone(d.zone, n.x, 0, n.z)).length >= d.count;
       else if (d.kind === 'swim') {
