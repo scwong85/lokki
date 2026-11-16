@@ -204,7 +204,8 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M25 Co-op synergy core + juice pass
 - [x] M26 Co-op controls on touch and gamepad
 - [x] M27 Havoc Hour prototype: chain scoring on the Market Square — **decision gate 3** (merged; playtest says OK, chain cue made bigger in M28)
-- [ ] M28 World enrichment W1: sky and light, horizon backdrop, fewer draw calls (built on `m28-world-w1`, awaiting playtest)
+- [x] M28 World enrichment W1: sky and light, horizon backdrop, fewer draw calls
+- [ ] M29 World enrichment W2: district colours, mansard roofs, courtyards, lit windows (built on `m29-world-w2`, awaiting playtest)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -358,8 +359,11 @@ A three-minute chaos run with chain scoring and a results card. Details: `docs/m
 ### M28 — World enrichment W1: sky and light (M)
 Sky dome with sun and clouds, sky presets as level data, tinted lighting, a horizon backdrop, one mesh per building chunk (about 30 fewer draw calls), a render-budget test; plus the turning and Havoc cue fixes. Details: `docs/milestones/M28.md`. Plan: `docs/design/world-enrichment.md`.
 
-### After M28 (backlog)
- World enrichment W2 to W6 (`docs/design/world-enrichment.md`): roofs and district colours, streets and squares, things that move, a busier city, landmark kit.
+### M29 — World enrichment W2: roofs and colour (M)
+District palettes, mansard roofs with landing slabs, courtyard yards, lit windows at dusk and night. Details: `docs/milestones/M29.md`.
+
+### After M29 (backlog)
+ World enrichment rest of W2, then W3 to W6 (`docs/design/world-enrichment.md`): streets and squares, things that move, a busier city, landmark kit.
  Plans: `docs/design/fun-todos.md` (F2–F6), `docs/design/graphics-refresh.md` (G2–G6).
  Esplanadi E4–E10 (`docs/design/levels-esplanadi.md`), Katajanokka (`docs/design/levels-katajanokka.md`), each level designed with a co-op variant; the shared systems they need (moving platforms, NPC schedules, Kalle the rival gull, the drone, seasons); local split-screen co-op (optional); optional WebGPU renderer.
 

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { SkyPreset } from '../data/skies';
 import { windAt } from '../gull/wind';
+import { windowGlow } from './facadeTextures';
 
 const VERT = `
 varying vec3 vDir;
@@ -91,6 +92,7 @@ export class Sky {
     u.uSunSize.value = p.sunSize;
     this.sunDir.set(...p.sunDir).normalize();
     this.light = p.light;
+    windowGlow.value = p.windowGlow;
     this.cloudMat.color.setHex(p.cloud);
     this.clouds.count = Math.round(this.spots.length * Math.min(1, Math.max(0, p.cloudAmount)));
     if (this.scene.fog) (this.scene.fog as THREE.Fog).color.setHex(p.fog);
