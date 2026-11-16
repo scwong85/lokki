@@ -84,6 +84,8 @@ import { Snow } from './render/snow';
 import { KalleView } from './world/kalle';
 import { Sky } from './render/sky';
 import { tickMotion } from './render/motion';
+import { districtOf } from './world/districts';
+import { counter } from './data/places';
 import { SKIES, skyById } from './data/skies';
 import { LockMarker } from './render/lockMarker';
 import { nextLock, rankCandidates, resolveLock, type LockCandidate } from './gameplay/lock';
@@ -792,6 +794,27 @@ function stepSenate(dt: number): void {
       }
     }
     gangView?.update(dt);
+  }
+}
+
+/** Ambient puffs near the player: steam above the market stalls and blossom drifting down in the Esplanadi park. */
+let steamT = 0;
+let petalT = 0;
+function ambientStep(dt: number): void {
+  if (greybox || !(tuning.juice.puffs.value > 0)) return;
+  const g = gull.state;
+  steamT += dt;
+  if (steamT > 0.55 && tuning.motion.steam.value > 0) {
+    steamT = 0;
+    for (const [c, r] of [[1, 1], [3, 1], [5, 1], [7, 1]] as const) {
+      const s = counter(c, r);
+      if (Math.hypot(g.x - s.x, g.z - s.z) < 70) puffs.burst('steam', { x: s.x + (Math.random() - 0.5) * 1.5, y: 1.5, z: s.z + (Math.random() - 0.5) * 1.5 }, 0.4);
+    }
+  }
+  petalT += dt;
+  if (petalT > 0.3 && tuning.motion.petals.value > 0 && districtOf(g.x, g.z) === 'esplanadi') {
+    petalT = 0;
+    puffs.burst('petals', { x: g.x + (Math.random() - 0.5) * 18, y: Math.max(g.y, 3) + 4 + Math.random() * 3, z: g.z + (Math.random() - 0.5) * 18 }, 0.25);
   }
 }
 
@@ -2053,6 +2076,7 @@ startLoop({
     if (!isGuest()) stepKalleGame(dt);
     if (!isGuest()) stepSenate(dt);
     if (!isGuest()) stepEsplanadi(dt);
+    ambientStep(dt);
     if (!isGuest()) coopStep(dt);
     if (havoc && !havoc.done) {
       if (!havoc.started && (Math.hypot(gull.state.vx, gull.state.vz) > 1.5 || simTime > tuning.havoc.startDelay.value + 10)) havoc.start();

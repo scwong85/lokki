@@ -18,6 +18,8 @@ export const PUFFS = {
   stars: { colors: [0xffd43b, 0xfff3bf, 0xff922b], count: 10, speed: 4.5, up: 3.5, gravity: 6, life: 0.7, size: 0.12 },
   splash: { colors: [0xbfe8ff, 0xffffff, 0x9ad5f5], count: 12, speed: 3, up: 4.5, gravity: 13, life: 0.8, size: 0.09 },
   hearts: { colors: [0xff8fab, 0xffc2d1], count: 6, speed: 1.2, up: 2.4, gravity: -0.5, life: 1.1, size: 0.13 },
+  steam: { colors: [0xffffff, 0xf3f0ec, 0xe9e6e2], count: 5, speed: 0.35, up: 1.6, gravity: -0.9, life: 1.8, size: 0.26 },
+  petals: { colors: [0xffd6e4, 0xffe8b8, 0xf6c1d2, 0xe8f5c8], count: 10, speed: 0.6, up: -0.2, gravity: 0.35, life: 5, size: 0.1 },
   confetti: { colors: [0xff6b6b, 0xffd43b, 0x69db7c, 0x74c0fc, 0xda77f2], count: 40, speed: 5, up: 7, gravity: 6, life: 2.2, size: 0.11 },
 } satisfies Record<string, PuffStyle>;
 

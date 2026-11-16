@@ -2,6 +2,7 @@ import { buildBackdrop, planBackdrop } from './backdrop';
 import { districtOf, paletteAt } from './districts';
 import { planMansard } from './roofs';
 import { TRAM_LINE, planRoads, planTrack } from './roads';
+import { cloudShadowPatch, flagMesh } from '../render/motion';
 import * as THREE from 'three';
 import earcut from 'earcut';
 import { World, pointInRings, type Box, type Prism } from './collision';
@@ -164,6 +165,7 @@ function flatLayer(polys: { rings: number[][]; color?: number; dy?: number }[], 
     }
   }
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true, map: map ?? null, polygonOffset: true, polygonOffsetFactor: -layer, polygonOffsetUnits: -layer });
+  mat.onBeforeCompile = cloudShadowPatch; // slow cloud shadows drift over the ground
   const m = buf.mesh(mat);
   m.receiveShadow = true;
   return m;
@@ -670,6 +672,7 @@ export function buildCity(): City {
   const upperMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, map: windowAtlas(), emissive: 0xffffff, emissiveMap: windowGlowAtlas() });
   // lit windows: only some bays glow (a hash of where the window is), and how many follows the sky (windowGlow: 0 by day)
   upperMat.onBeforeCompile = (shader) => {
+    cloudShadowPatch(shader); // ...and over the roofs
     shader.uniforms.uGlow = windowGlow;
     shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWinPos;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvWinPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
     shader.fragmentShader = shader.fragmentShader
@@ -700,6 +703,9 @@ export function buildCity(): City {
   keepClear.push(...lm.props.map((p) => ({ x: p.x, z: p.z, r: 2.5 })));
   const dressing = buildDressing(planDressing({ parks: data.parks, land: data.land, streets: data.streets, isLand, solid: (x, z) => probe.solidAt(x, 0.9, z), keepClear }));
   group.add(dressing.group);
+  // flags on poles: along the market quay, Senate Square and the Esplanadi end (they flutter in the vertex shader)
+  const flags = flagMesh([-30, -12, 12, 30].map((x, i) => ({ x, z: -13, rot: -0.6 + i * 0.07 })).concat([{ x: -185, z: -292, rot: -0.5 }, { x: -128, z: -292, rot: -0.6 }, { x: -136, z: -58, rot: -0.55 }]));
+  if (flags) group.add(flags);
   defs.push(...dressing.prisms);
 
   const prisms: Prism[] = defs;
