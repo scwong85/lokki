@@ -56,6 +56,16 @@ export interface LevelDef {
   thermals?: { x: number; z: number; r: number; lift: number }[];
   /** Winter: the sea is frozen (you walk on it instead of swimming), it snows. */
   winter?: boolean;
+  /** Dusk: darker sky and lights (the night market). */
+  night?: boolean;
+  /** Vendors sleep at their stalls until a loud noise or a gull right beside them wakes them. */
+  sleepingVendors?: boolean;
+  /** The gull-hunting drone is loose, starting here. */
+  drone?: { x: number; z: number };
+  /** The rival gull Kalle, with his perch (where he brings his loot) and how many snacks win the duel. */
+  kalle?: { x: number; z: number; goal: number };
+  /** A line added to the level-complete card (the ending of the last level). */
+  endingNote?: string;
   /** Par time in seconds for the third star. */
   parTime?: number;
   /** Skill earned by clearing the level the first time. */

@@ -6,6 +6,7 @@ import { DEFENSE_ZONE as ZONE, LINES, LINE_POSTS, LINE_ZONE, NET_POSTS, NET_Y, N
 import { CityResponse, ZoneTracker, segmentHit, type DeterrentId, type GullHit } from './deterrents';
 import { Heat, type HeatReason, type TierChange } from './heat';
 import { newVendor, stepVendor, vendorPooped, type Vendor } from './vendor';
+import { newDrone, stepDrone, type Drone } from './drone';
 import { newWarden, stepWarden, umbrellaUp, wardenPooped, type Warden } from './warden';
 import type { GullInfo, Noise } from './npc';
 import { nearestGull, wardenTarget } from './focus';
@@ -26,6 +27,10 @@ export type DefenseEvent =
   | { type: 'lunch'; on: boolean }
   | { type: 'vendorsScared'; count: number }
   | { type: 'vendorDistracted' }
+  | { type: 'vendorWoke' }
+  | { type: 'droneDodged' }
+  | { type: 'droneBonk' }
+  | { type: 'droneDown'; x: number; z: number }
   | { type: 'poopVendor' }
   | { type: 'poopWarden' }
   | { type: 'umbrella' };
@@ -53,6 +58,10 @@ export class CityDefense {
   readonly group = new THREE.Group();
   vendors: Vendor[] = [];
   warden: Warden | null = null;
+  /** The gull-hunting drone (a level may set it loose). */
+  drone: Drone | null = null;
+  private droneModel = new THREE.Group();
+  private rotors: THREE.Mesh[] = [];
 
   private vendorModels: NpcModel[] = [];
   private wardenModel: NpcModel;
@@ -99,6 +108,17 @@ export class CityDefense {
       this.vendorModels.push(m);
     });
 
+    // the drone: a flat dark body, four rotor discs and a red light
+    const dBody = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.22, 0.9), new THREE.MeshLambertMaterial({ color: 0x3d424d, flatShading: true }));
+    this.droneModel.add(dBody, new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 5), new THREE.MeshBasicMaterial({ color: 0xff4d4d })));
+    for (const [x, z] of [[-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.6, 0.6]]) {
+      const r = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.03, 10), new THREE.MeshBasicMaterial({ color: 0xcfd6e0, transparent: true, opacity: 0.45 }));
+      r.position.set(x, 0.2, z);
+      this.droneModel.add(r);
+      this.rotors.push(r);
+    }
+    this.droneModel.visible = false;
+    this.group.add(this.droneModel);
     this.wardenModel = new NpcModel(0xd6f23c, 3, { hat: 'cap', hatColor: 0x2f3442, umbrella: true });
     this.wardenModel.root.visible = false;
     this.group.add(this.wardenModel.root);
@@ -175,6 +195,22 @@ export class CityDefense {
     return this.tierEvents(this.heat.add(reason));
   }
 
+  /** Night market: vendors doze at their stalls (they wake at noise and close gulls). */
+  setSleepy(on: boolean): void {
+    for (const v of this.vendors) {
+      v.sleepy = on;
+      if (on) v.mode = 'asleep';
+    }
+  }
+
+  spawnDrone(x: number, z: number): void {
+    this.drone = newDrone(x, z);
+  }
+
+  removeDrone(): void {
+    this.drone = null;
+  }
+
   /** Put these deterrents up right away (a level's starting situation), without touching the heat. */
   deployNow(ids: readonly DeterrentId[]): DefenseEvent[] {
     const ev: DefenseEvent[] = [];
@@ -240,6 +276,7 @@ export class CityDefense {
         const target = nearestGull(v, views);
         for (const e of stepVendor(v, infoFor(target), alert, dt, this.world, noises)) {
           if (e.type === 'noticed') ev.push({ type: 'noticed', who: 'vendor' });
+          else if (e.type === 'woke') ev.push({ type: 'vendorWoke' });
           else if (e.type === 'distracted') ev.push({ type: 'vendorDistracted' });
           else if (e.type === 'spray') {
             ev.push({ type: 'spray', x: v.x, z: v.z, aimX: v.aimX, aimZ: v.aimZ });
@@ -275,6 +312,17 @@ export class CityDefense {
       this.world.collide(p, 0.42);
       w.x = p.x;
       w.z = p.z;
+    }
+
+    // the drone
+    if (this.drone) {
+      const target = nearestGull(this.drone, views);
+      for (const e of stepDrone(this.drone, { ...infoFor(target), y: target ? target.y : 60 }, dt)) {
+        if (e.type === 'hit' && target) ev.push({ type: 'hit', gull: target.id, hit: { kind: 'drone', dx: e.dx, dz: e.dz, strength: 1 } });
+        else if (e.type === 'dodged') ev.push({ type: 'droneDodged' });
+        else if (e.type === 'bonk') ev.push({ type: 'droneBonk' });
+        else if (e.type === 'landed') ev.push({ type: 'droneDown', x: e.x, z: e.z });
+      }
     }
 
     // scare lines and nets (harmless until put up): any gull can get caught
@@ -392,7 +440,7 @@ export class CityDefense {
       if (!vend) return;
       const view: NpcView = {
         x: v.x, z: v.z, heading: v.heading, moving: false, walkPhase: 0, t: v.t, holding: false, distracted: false,
-        mode: v.mode === 'idle' ? 'idle' : v.mode === 'alert' ? 'notice' : v.mode === 'windup' ? 'shield' : 'recover',
+        mode: v.mode === 'idle' || v.mode === 'asleep' ? 'idle' : v.mode === 'alert' ? 'notice' : v.mode === 'windup' ? 'shield' : 'recover',
         hand: v.mode === 'windup' ? { x: v.x - Math.sin(v.heading) * 0.9, y: 1.45, z: v.z - Math.cos(v.heading) * 0.9 } : undefined,
       };
       m.applyView(view, time);
@@ -449,6 +497,13 @@ export class CityDefense {
       this.wardenModel.setUmbrella(umbrellaUp(w));
     }
 
+    this.droneModel.visible = !!this.drone;
+    if (this.drone) {
+      const dr = this.drone;
+      this.droneModel.position.set(dr.x, dr.y, dr.z);
+      this.droneModel.rotation.y += dt * 0.5;
+      for (const r of this.rotors) r.visible = dr.mode !== 'down' || Math.sin(time * 40) > 0; // blades flicker, stop when it lands
+    }
     const hawk = this.hawkT > 0;
     const lines = this.response.deployed.has('lines');
     const lf = this.install.lines;
@@ -501,6 +556,7 @@ export class CityDefense {
       v: this.vendors.map((v) => [r(v.x), r(v.z), r(v.heading, 1000), v.mode, r(v.aimX), r(v.aimZ)]),
       w: w ? [r(w.x), r(w.z), r(w.heading, 1000), w.mode, w.moving ? 1 : 0, r(w.walkPhase), w.distractT > 0 ? 1 : 0, w.exposedT > 0 ? 1 : 0, r(w.aimX), r(w.aimZ)] : null,
       hawk: r(this.hawkT, 10),
+      dr: this.drone ? [r(this.drone.x), r(this.drone.y), r(this.drone.z), ['hunt', 'windup', 'recover', 'down'].indexOf(this.drone.mode)] : null,
     };
   }
 
@@ -533,6 +589,11 @@ export class CityDefense {
       w.t += dt;
     }
     this.hawkT = d.hawk;
+    if (d.dr) {
+      const dr = this.drone ?? (this.drone = newDrone(d.dr[0], d.dr[2]));
+      [dr.x, dr.y, dr.z] = [d.dr[0], d.dr[1], d.dr[2]];
+      dr.mode = (['hunt', 'windup', 'recover', 'down'] as const)[d.dr[3]] ?? 'hunt';
+    } else this.drone = null;
   }
 
   /** Take the vendors, lines and nets out of the scene (loading another level). */
@@ -554,6 +615,7 @@ export class CityDefense {
     this.pending.length = 0;
     this.hawkT = 0;
     this.hawkCd = 0;
+    this.drone = null;
     this.clock = 0;
     this.lunchOn = false;
     this.scareCd = 0;

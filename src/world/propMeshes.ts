@@ -77,6 +77,10 @@ function buildParts(type: PropType, g: THREE.Group): void {
       g.add(mesh(new THREE.BoxGeometry(0.12, 0.08, 0.12), 0x6b3f5e, 0, 0, 0));
       g.add(mesh(new THREE.TorusGeometry(0.04, 0.012, 5, 10), 0xffd23f, 0, 0.07, 0));
       break;
+    case 'battery':
+      g.add(mesh(new THREE.BoxGeometry(0.24, 0.12, 0.36), 0x3d424d, 0, 0, 0));
+      g.add(mesh(new THREE.BoxGeometry(0.1, 0.04, 0.12), 0x6bd66b, 0, 0.08, 0));
+      break;
     case 'soup':
       g.add(mesh(new THREE.CylinderGeometry(0.17, 0.11, 0.14, 12), 0xf5efe6));
       g.add(mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.03, 12), 0xf2a35e, 0, 0.065, 0));

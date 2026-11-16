@@ -136,7 +136,7 @@ export function segmentHit(p: { x: number; y: number; z: number }, r: number, s:
   return hl > 1e-4 ? { dx: hx / hl, dz: hz / hl } : { dx: 0, dz: 1 };
 }
 
-export type HitKind = 'spray' | 'swat' | 'line' | 'net';
+export type HitKind = 'spray' | 'swat' | 'line' | 'net' | 'drone';
 
 export interface GullHit {
   kind: HitKind;
@@ -155,6 +155,7 @@ export function applyHit(s: FlightState, h: GullHit): boolean {
     h.kind === 'spray' ? { stun: d.sprayStun.value, knock: d.sprayKnock.value, stam: d.sprayStamina.value }
     : h.kind === 'swat' ? { stun: d.swatStun.value, knock: d.swatKnock.value, stam: d.swatStamina.value }
     : h.kind === 'line' ? { stun: d.lineStun.value, knock: d.lineKnock.value, stam: d.lineStamina.value }
+    : h.kind === 'drone' ? { stun: d.droneStun.value, knock: d.droneKnock.value, stam: d.droneStamina.value }
     : { stun: d.netStun.value, knock: 0, stam: d.netStamina.value };
   s.stunT = Math.max(s.stunT, base.stun * h.strength);
   s.stamina = Math.max(0, s.stamina - base.stam * h.strength);

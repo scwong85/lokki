@@ -68,9 +68,11 @@ import { MusicDirector } from './gameplay/musicDirector';
 import { OptionsStore, applyOptions } from './core/options';
 import { StreetLife } from './world/streetLife';
 import { Snow } from './render/snow';
+import { KalleView } from './world/kalle';
+import { setNight } from './render/scene';
 import { LockMarker } from './render/lockMarker';
 import { nextLock, rankCandidates, resolveLock, type LockCandidate } from './gameplay/lock';
-import { POOP_TARGET_TAGS } from './data/props';
+import { POOP_TARGET_TAGS, PROPS, restY } from './data/props';
 import { OptionsPanel, TitleScreen } from './ui/menus';
 import { LevelSelect } from './ui/levelSelect';
 import { Tutorial } from './gameplay/tutorial';
@@ -270,7 +272,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -396,7 +398,7 @@ function onNetEvent(e: GameEvent): void {
       const h = e.hit as Parameters<typeof applyHit>[1];
       if (applyHit(gull.state, h)) {
         cam.shake(h.kind === 'swat' ? 0.7 : 0.45);
-        hud.flash({ spray: '#7ec8ff', swat: '#ffb347', line: '#ffffff', net: '#ffffff' }[h.kind]);
+        hud.flash({ spray: '#7ec8ff', swat: '#ffb347', line: '#ffffff', net: '#ffffff', drone: '#ff6b6b' }[h.kind]);
         gull.openBeak(0.7);
       }
       break;
@@ -560,6 +562,57 @@ function pickSkin(id: string): void {
 }
 
 /** Restart the level (R) or start a speedrun (Z). Skills and best times are kept. */
+/** The rival gull Kalle (levels with one). */
+let kalleView: KalleView | null = null;
+let kalleProp: ReturnType<typeof interaction.props.byId> = undefined;
+function setupKalle(): void {
+  if (kalleView) scene.remove(kalleView.group);
+  kalleView = null;
+  kalleProp = undefined;
+  if (!level.kalle || greybox) return;
+  kalleView = new KalleView({ x: level.kalle.x, z: level.kalle.z }, level.kalle.goal);
+  scene.add(kalleView.group);
+}
+const KALLE_MODES = ['perch', 'seek', 'carry', 'flee'] as const;
+/** Run Kalle one step (host / single player): which snacks are free, his grabs, deliveries and drops. */
+function stepKalleGame(dt: number): void {
+  const kv = kalleView;
+  if (!kv) return;
+  const snacks = interaction.props.props
+    .filter((p) => PROPS[p.type].tags.includes('edible') && !p.broken && !p.carried && p.heldBy === null && p.cur.p.y < 2.2 && !p.tag?.startsWith('kalleHome'))
+    .map((p) => ({ id: p.id, x: p.cur.p.x, y: p.cur.p.y, z: p.cur.p.z }));
+  const gulls = players.map((p) => ({ x: p.gull.state.x, y: p.gull.state.y, z: p.gull.state.z, diving: p.gull.state.mode === 'dive' }));
+  for (const e of kv.step(dt, snacks, gulls)) {
+    const prop = interaction.props.byId(e.id);
+    if (!prop) continue;
+    if (e.type === 'grab') {
+      interaction.props.grab(prop);
+      kalleProp = prop;
+      hud.toast('Kalle snatched a snack!', 1.1);
+    } else if (e.type === 'deliver') {
+      interaction.props.destroy(prop);
+      kalleProp = undefined;
+      hud.toast(`Kalle ate it: ${kv.kalle.score} / ${kv.goal}`, 1.4);
+      if (kv.kalle.score >= kv.goal) {
+        announce.show('Kalle wins the snack duel!', 'He got there first. Try again (R) and be faster.', 'alert');
+        notes(quests.onEvent('kalleWins'));
+        setTimeout(() => {
+          if (kalleView === kv) {
+            restartLevel('normal');
+            if (isHost()) levelRev++;
+          }
+        }, 2600);
+      }
+    } else {
+      interaction.props.release(prop, { x: 0, y: 2, z: 0 });
+      kalleProp = undefined;
+      hud.toast('Kalle dropped his snack!', 1.2);
+      notes(quests.onEvent('kalleDrop'));
+    }
+  }
+  if (kv.kalle.carrying !== null && kalleProp) interaction.props.setCarryTarget(kalleProp, kv.beak(), kv.kalle.heading);
+}
+
 const snow = new Snow();
 scene.add(snow.points);
 /** The sea: you swim in it and things float, except in winter levels when it is frozen ice (walk on it). */
@@ -602,12 +655,16 @@ function applyLevelRules(): void {
   skills.grantForLevel(level.skills ?? []);
   showThermals();
   applySeaRules();
+  setNight(scene, !!level.night);
+  setupKalle();
   skillsPanel.refresh(skills, save);
   interaction.props.drift = level.drift ?? null;
   if (defense) defense.hiddenLines = !!level.hiddenLines;
   if (!defense || isGuest()) return; // a guest's city is the host's
   defense.lunch = level.wardenLunch ? { x: level.wardenLunch.x, z: level.wardenLunch.z, from: level.wardenLunch.at, to: level.wardenLunch.at + level.wardenLunch.duration, repeat: level.wardenLunch.repeat } : null;
   if (level.deploy) onDefense(defense.deployNow(level.deploy));
+  if (level.sleepingVendors) defense.setSleepy(true);
+  if (level.drone) defense.spawnDrone(level.drone.x, level.drone.z);
   if (level.startHeat) onDefense(defense.ensureHeat(level.startHeat));
 }
 
@@ -693,6 +750,7 @@ function checkLevelDone(): void {
   const notes = [
     `${'★'.repeat(n)}${'☆'.repeat(3 - n)}  ·  ${stars[0] ? '★' : '☆'} cleared  ·  ${stars[1] ? '★' : '☆'} every to-do (secrets too)  ·  ${stars[2] ? '★' : '☆'} under ${fmtClear(level.parTime ?? 0)}`,
   ];
+  if (level.endingNote) notes.push(level.endingNote);
   if (level.reward) {
     const sk = skills.unlock(level.reward);
     if (sk) {
@@ -736,6 +794,7 @@ function guestStep(dt: number): void {
     quests.applyRemote(snap.quests);
     defense?.heat.setRemote(snap.heat);
     if (snap.d) defense?.applyRemote(snap.d, 0.05);
+    if (snap.k && kalleView) kalleView.setRemote(snap.k[0], snap.k[1], snap.k[2], snap.k[3], KALLE_MODES[snap.k[4]] ?? 'perch');
   }
   interaction.props.stepRemote(dt);
   interaction.stepGhosts(dt, simTime);
@@ -757,6 +816,7 @@ function captureSnapshot(): Snapshot {
     npcs: (npcs?.npcs ?? []).map((n) => ({ id: n.id, x: n.x, z: n.z, heading: n.heading, mode: n.mode, holding: n.holding, handAngle: n.handAngle, selfie: n.selfie, selfieCount: n.selfieCount, cleanT: n.cleanT, shieldFrom: n.shieldFrom })),
     heat: defense?.heat.value ?? 0,
     d: defense?.remoteSnap(),
+    k: kalleView ? [kalleView.kalle.x, kalleView.kalle.y, kalleView.kalle.z, kalleView.kalle.heading, KALLE_MODES.indexOf(kalleView.kalle.mode)] : undefined,
     quests: quests.quests.map((q) => ({ id: q.id, status: q.status, timeLeft: q.timeLeft, timed: q.timed, objectives: q.objectives })),
   });
 }
@@ -816,12 +876,12 @@ function onDefense(evs: DefenseEvent[]): void {
           break;
         }
         const lost = interaction.dropCarried(victim.state, e.gull);
-        const what = { spray: 'Sprayed by a vendor!', swat: 'Swatted by the Warden!', line: 'Tangled in a scare line!', net: 'Caught in the net!' }[e.hit.kind];
+        const what = { spray: 'Sprayed by a vendor!', swat: 'Swatted by the Warden!', line: 'Tangled in a scare line!', net: 'Caught in the net!', drone: 'Hit by the drone!' }[e.hit.kind];
         hud.toast(lost ? `${what} Dropped the ${lost.def.name}!` : what, 1.4);
         audio.play(e.hit.kind === 'spray' ? 'splat' : e.hit.kind === 'swat' ? 'bonk' : 'twang');
         if (e.gull === 0) cam.shake(e.hit.kind === 'swat' ? 0.7 : 0.45);
         interaction.debris.burst({ x: victim.state.x, y: victim.state.y + 0.3, z: victim.state.z }, 0xffffff, 14); // feathers
-        if (e.gull === 0) hud.flash({ spray: '#7ec8ff', swat: '#ffb347', line: '#ffffff', net: '#ffffff' }[e.hit.kind]);
+        if (e.gull === 0) hud.flash({ spray: '#7ec8ff', swat: '#ffb347', line: '#ffffff', net: '#ffffff', drone: '#ff6b6b' }[e.hit.kind]);
         victim.openBeak(0.7);
         break;
       }
@@ -831,6 +891,23 @@ function onDefense(evs: DefenseEvent[]): void {
         if (npcs) for (const n of npcs.soakCone(e.x, e.z, e.aimX, e.aimZ)) hud.toast(n.role === 'rich' ? 'The rich tourist is soaked!' : 'Soaked!', 1.4);
         break;
       }
+      case 'vendorWoke':
+        hud.toast('A vendor woke up!', 1.3);
+        notes(quests.onEvent('vendorWoke'));
+        break;
+      case 'droneDodged':
+        hud.toast('Dodged the drone!', 1.1);
+        notes(quests.onEvent('droneDodged'));
+        break;
+      case 'droneBonk':
+        audio.play('bonk');
+        hud.toast('Bonk! The drone\'s battery is draining.', 1.5);
+        notes(quests.onEvent('droneBonk'));
+        break;
+      case 'droneDown':
+        announce.show('The drone ran out of battery!', 'It landed. Steal its battery to stop it for good.', 'learned');
+        interaction.props.spawn({ type: 'battery', x: e.x, y: restY('battery'), z: e.z, tag: 'droneBattery' });
+        break;
       case 'vendorDistracted':
         notes(quests.onEvent('vendorDistract'));
         break;
@@ -846,6 +923,7 @@ function onDefense(evs: DefenseEvent[]): void {
         if (e.who === 'warden') hud.toast('The Warden spotted you!', 1.2);
         break;
       case 'poopVendor':
+        notes(quests.onEvent('poopVendor'));
         audio.play('splat');
         hud.toast('Splat! That vendor is out of action for a bit', 1.4);
         break;
@@ -1032,6 +1110,11 @@ function onGags(gags: GagEvent[]): void {
         (players[g.by ?? 0]?.gull ?? gull).openBeak(0.25);
         hud.toast(`Got the ${g.prop.def.name}!`, 0.7);
         if (g.prop.tag) notes(quests.onEvent(`grab:${g.prop.tag}`));
+        if (g.prop.tag === 'droneBattery') {
+          defense?.removeDrone();
+          hud.toast('You took its battery: the drone is dead.', 1.8);
+        }
+        if (PROPS[g.prop.type].tags.includes('edible')) notes(quests.onEvent('snack'));
         if (g.prop.tag === 'wardenSandwich' && defense?.warden?.mode === 'lunch') notes(quests.onEvent('sandwichUnseen')); // took it while he was still eating
         notes(quests.onEvent(`grab:${g.prop.type}`));
         if (players.length > 1) {
@@ -1060,6 +1143,7 @@ function onGags(gags: GagEvent[]): void {
         hud.toast('Snatched!', 1);
         notes(quests.onEvent(`snatch:${g.prop.type}`));
         notes(quests.onEvent('snatch'));
+        notes(quests.onEvent('snack'));
         if (players.length > 1 && combo.hit('snatch', g.by ?? 0, simTime, 5)) notes(quests.onEvent('coop:snatch'));
         if (simTime - lastSnatchAt < 8) {
           hud.toast('Double snatch!', 1.6);
@@ -1398,6 +1482,7 @@ startLoop({
     }
     streetLife?.update(dt, gull.state);
     snow.update(dt, gull.state, simTime);
+    if (!isGuest()) stepKalleGame(dt);
     updateTargets(targets, dt);
     input.endStep();
   },
@@ -1407,6 +1492,7 @@ startLoop({
     interaction.render(alpha, gull.state, simTime, cam.camera.quaternion);
     npcs?.render(simTime, interaction.beakPos(gull.state), cam.camera.quaternion);
     streetLife?.render(simTime, gull.state);
+    kalleView?.render(frameDt);
     defense?.render(simTime, frameDt);
     if (defense && heatMeter) heatMeter.update(defense.heat, defense.response, defense.hawkReady, defense.hawkActive);
     // quest spots, plus a marker on any item that was knocked out of the beak (so it can never be lost)
