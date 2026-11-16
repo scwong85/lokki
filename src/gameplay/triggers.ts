@@ -15,7 +15,7 @@ export type TriggerDef =
   /** At least `count` people with this role stand in the zone. */
   | { id: string; kind: 'npcsInZone'; event: string; role: string; zone: Zone3; count: number }
   /** The gull stands/flies in the zone. */
-  | { id: string; kind: 'gullInZone'; event: string; zone: Zone3; grounded?: boolean }
+  | { id: string; kind: 'gullInZone'; event: string; zone: Zone3; grounded?: boolean; /** Fires every time the gull enters, not just once. */ repeat?: boolean }
   /** The gull has paddled on the sea for this many seconds in total. */
   | { id: string; kind: 'swim'; event: string; seconds: number }
   /** The gull stands on something at least `minY` high (any rooftop) while carrying a prop of this type. */
@@ -57,6 +57,7 @@ export class TriggerSystem {
   private fired = new Set<string>();
   private index = new Map<string, number>();
   private swimT = new Map<string, number>();
+  private inside = new Map<string, boolean>();
 
   constructor(private defs: readonly TriggerDef[]) {}
 
@@ -79,14 +80,27 @@ export class TriggerSystem {
         }
         continue;
       }
-      if (this.fired.has(d.id) || !wanted.has(d.event)) continue;
+      if (this.fired.has(d.id) || !wanted.has(d.event)) {
+        if (d.kind === 'gullInZone' && d.repeat) this.inside.set(d.id, inZone(d.zone, ctx.gull.x, ctx.gull.y, ctx.gull.z) && (!d.grounded || ctx.gull.grounded)); // keep track while nobody wants it
+        continue;
+      }
       let hit: boolean;
       if (d.kind === 'carryLanded') hit = !!ctx.carried && ctx.carried.type === d.propType && ctx.gull.grounded && ctx.gull.y >= d.minY && (!d.zone || inZone(d.zone, ctx.gull.x, ctx.gull.y, ctx.gull.z));
       else if (d.kind === 'npcsInZone') hit = (ctx.npcs ?? []).filter((n) => n.role === d.role && inZone(d.zone, n.x, 0, n.z)).length >= d.count;
       else if (d.kind === 'swim') {
         if (ctx.gull.grounded && !ctx.isLand(ctx.gull.x, ctx.gull.z) && ctx.gull.y < 1.5) this.swimT.set(d.id, (this.swimT.get(d.id) ?? 0) + (ctx.dt ?? 0));
         hit = (this.swimT.get(d.id) ?? 0) >= d.seconds;
-      } else if (d.kind === 'gullInZone') hit = inZone(d.zone, ctx.gull.x, ctx.gull.y, ctx.gull.z) && (!d.grounded || ctx.gull.grounded);
+      } else if (d.kind === 'gullInZone') {
+        const now = inZone(d.zone, ctx.gull.x, ctx.gull.y, ctx.gull.z) && (!d.grounded || ctx.gull.grounded);
+        if (d.repeat) {
+          hit = now && !this.inside.get(d.id);
+          this.inside.set(d.id, now);
+          if (hit) {
+            out.push(d.event); // every entry counts: it never becomes "fired"
+            continue;
+          }
+        } else hit = now;
+      }
       else {
         let n = 0;
         for (const p of ctx.props) {
@@ -107,5 +121,6 @@ export class TriggerSystem {
     this.fired.clear();
     this.index.clear();
     this.swimT.clear();
+    this.inside.clear();
   }
 }

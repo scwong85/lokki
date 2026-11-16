@@ -89,6 +89,25 @@
       "lon": 24.95955,
       "lat": 60.16835,
       "height": 18
+    },
+    {
+      "id": "senate-steps",
+      "type": "steps",
+      "x": -156.5,
+      "z": -326,
+      "count": 40
+    },
+    {
+      "id": "alexander",
+      "type": "emperor",
+      "x": -156.5,
+      "z": -300
+    },
+    {
+      "id": "hotdog-cart",
+      "type": "cart",
+      "x": -146.8,
+      "z": -322
     }
   ]
 }

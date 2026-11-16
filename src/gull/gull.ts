@@ -37,6 +37,11 @@ export class Gull {
     this.shadow.rotation.x = -Math.PI / 2;
   }
 
+  /** Where this gull starts (and returns to on a restart): a level in another district starts elsewhere. */
+  setStart(x: number, z: number): void {
+    this.start = { x, z };
+  }
+
   /** Wear a gull look (colours per slot). */
   setSkin(colours: Record<GullSlot, number>): void {
     this.model.setSkin(colours);

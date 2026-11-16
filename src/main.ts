@@ -272,7 +272,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -642,6 +642,19 @@ function showThermals(): void {
     thermalFx.add(col);
   }
 }
+/** The cathedral bell: rings on a schedule (and when you ring it yourself); while it rings, people look up at the tower. */
+let bellClock = 0;
+let bellLeft = 0;
+let bellLastNoise = 0;
+function ringBell(): void {
+  const b = level.bells;
+  if (!b) return;
+  bellLeft = b.duration;
+  bellLastNoise = 0;
+  audio.play('chime');
+  hud.toast('BONG! Everyone looks up at the tower.', 1.6);
+  notes(quests.onEvent('bell'));
+}
 let heat60Fired = false;
 let altitudeFired = false;
 const thermalsSeen = new Set<number>();
@@ -649,6 +662,8 @@ let owlCd = 0;
 /** What a level adds to the city when it starts: the city's heat, the Warden's lunch, a current for the message bottle. */
 function applyLevelRules(): void {
   heat60Fired = false;
+  bellClock = 0;
+  bellLeft = 0;
   altitudeFired = false;
   thermalsSeen.clear();
   owlCd = 0;
@@ -670,6 +685,7 @@ function applyLevelRules(): void {
 
 function restartLevel(mode: 'normal' | 'speedrun'): void {
   levelCleared = false;
+  for (const p of players) p.gull.setStart(level.start?.x ?? start.x, level.start?.z ?? start.z);
   lockId = null;
   combo.reset();
   lastHolder.clear();
@@ -1144,6 +1160,7 @@ function onGags(gags: GagEvent[]): void {
         notes(quests.onEvent(`snatch:${g.prop.type}`));
         notes(quests.onEvent('snatch'));
         notes(quests.onEvent('snack'));
+        if (bellLeft > 0) notes(quests.onEvent('bellSnatch'));
         if (players.length > 1 && combo.hit('snatch', g.by ?? 0, simTime, 5)) notes(quests.onEvent('coop:snatch'));
         if (simTime - lastSnatchAt < 8) {
           hud.toast('Double snatch!', 1.6);
@@ -1451,6 +1468,7 @@ startLoop({
       );
       for (const ev of fired) {
         notes(quests.onEvent(ev));
+        if (ev === 'bellRung') ringBell();
         if (ev === 'mapInSea') {
           const map = views.find((v) => v.type === 'map' && v.free && !isLand(v.x, v.z));
           if (map?.id !== undefined) npcs.sendVictimTo(map.id, WRONG_FERRY.x, WRONG_FERRY.z, 'ferry');
@@ -1479,6 +1497,19 @@ startLoop({
     if (!altitudeFired && gull.state.y > 80) {
       altitudeFired = true;
       notes(quests.onEvent('altitude80'));
+    }
+    // the cathedral bell
+    if (level.bells && !isGuest()) {
+      bellClock += dt;
+      if (bellClock >= level.bells.first && (bellClock - level.bells.first) % level.bells.every < dt) ringBell();
+      if (bellLeft > 0) {
+        bellLeft -= dt;
+        bellLastNoise -= dt;
+        if (bellLastNoise <= 0) {
+          bellLastNoise = 1; // a fresh "everybody look" each second while it rings
+          noise(level.bells.x, level.bells.z, 3);
+        }
+      }
     }
     streetLife?.update(dt, gull.state);
     snow.update(dt, gull.state, simTime);
