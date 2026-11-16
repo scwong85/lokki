@@ -65,6 +65,8 @@ export interface DefenseSnap {
   /** The Warden, if out: [x, z, heading, mode, moving, walkPhase, distracted, exposed, aimX, aimZ]. */
   w: [number, number, number, string, number, number, number, number, number, number] | null;
   hawk: number;
+  /** The drone, if any: [x, y, z, mode index]. */
+  dr?: [number, number, number, number] | null;
 }
 
 export interface Snapshot {
@@ -77,6 +79,8 @@ export interface Snapshot {
   quests: QuestSnap[];
   /** Present when the level has a city defence. */
   d?: DefenseSnap;
+  /** The rival gull, if the level has one: x, y, z, heading, mode index. */
+  k?: [number, number, number, number, number];
 }
 
 /** Live game objects, described just enough for a snapshot (the game passes adapters). */
@@ -87,6 +91,8 @@ export interface SnapshotSource {
   npcs: { id: number; x: number; z: number; heading: number; mode: string; holding: number | null; handAngle?: number; selfie?: string; selfieCount?: number; cleanT?: number; shieldFrom?: number }[];
   heat: number;
   d?: DefenseSnap;
+  /** The rival gull, if the level has one: x, y, z, heading, mode index. */
+  k?: [number, number, number, number, number];
   quests: { id: string; status: string; timeLeft: number; timed: boolean; objectives: { done: boolean; count: number }[] }[];
 }
 
@@ -95,6 +101,7 @@ const r = (v: number, k = 100) => Math.round(v * k) / k || 0; // `|| 0` turns -0
 export function makeSnapshot(s: SnapshotSource): Snapshot {
   return {
     ...(s.d ? { d: s.d } : {}),
+    ...(s.k ? { k: s.k } : {}),
     t: r(s.time, 1000),
     gulls: s.gulls.map((g) => ({ id: g.id, p: [r(g.x), r(g.y), r(g.z)], v: [r(g.vx), r(g.vy), r(g.vz)], h: r(g.heading, 1000), mode: g.mode, carry: g.carry, fa: r(g.flapAnim ?? 0, 100), ha: r(g.heightAbove ?? 0, 10), tr: r(g.turnRate ?? 0, 100), dg: g.disguised ? 1 : 0 })),
     props: s.props.map((p) => {

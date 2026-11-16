@@ -211,6 +211,23 @@ export const tuning = {
     diveTurn: p(6, 1, 15, 0.5), // how hard a locked dive bends toward its target (rad/s)
     poopAssist: p(45, 5, 100, 1), // a locked target pulls droppings in from this far (m)
   },
+  kalle: {
+    speed: p(9, 3, 20, 0.5), // m/s
+    thinkTime: p(2.2, 0.5, 8, 0.1), // seconds he waits on his perch before the next snack
+    range: p(70, 15, 200, 5), // he only goes after snacks this close to his perch
+    scareRange: p(4.5, 1, 10, 0.5), // a diving gull this close makes him drop his snack
+  },
+  drone: {
+    speed: p(7, 2, 15, 0.5), // m/s
+    height: p(2.2, 0.5, 6, 0.1), // hovers this far above the gull
+    battery: p(50, 15, 180, 5), // seconds of flight
+    attackRange: p(7, 3, 20, 0.5), // starts a dive when the gull is this close
+    windup: p(0.7, 0.3, 2, 0.05), // aim time before the dive (dodge it)
+    hitRange: p(1.8, 0.5, 4, 0.1), // a dive hits a gull this close to where it ends up
+    cooldown: p(2.2, 0.5, 8, 0.1),
+    bonkRange: p(2.3, 0.5, 5, 0.1), // a diving gull this close bonks the drone
+    bonkDrain: p(14, 0, 40, 1), // battery seconds lost per bonk
+  },
   winter: {
     snowCount: p(420, 0, 600, 10), // snowflakes around you in winter levels
   },
@@ -247,6 +264,12 @@ export const tuning = {
     sprayRange: p(9, 2, 15, 0.5),
     sprayConeDeg: p(70, 20, 180, 5),
     vendorDistract: p(3, 0.5, 10, 0.5), // seconds a vendor stares at a noise (crow call, decoy flock) and ignores gulls
+    wakeLoud: p(0.5, 0.1, 1.5, 0.05), // a sleeping vendor wakes at a noise this loud (clatter 1, splat 0.4) within half the hearing range
+    wakeDistance: p(2.2, 0.5, 6, 0.1), // ...or a gull this close
+    sleepAfter: p(9, 2, 30, 1), // seconds of quiet before a woken vendor dozes off again
+    droneStun: p(1.3, 0, 4, 0.1),
+    droneKnock: p(6, 0, 15, 0.5),
+    droneStamina: p(18, 0, 60, 1),
     sprayWindup: p(0.6, 0.2, 2, 0.05), // the vendor aims, then fires: you can dodge
     sprayCooldown: p(3, 0.5, 10, 0.5),
     sprayStun: p(0.7, 0, 3, 0.05),
@@ -300,6 +323,7 @@ export const tuning = {
   render: {
     fogNear: p(150, 0, 400, 1),
     fogFar: p(700, 100, 1500, 1),
+    nightLight: p(0.38, 0.1, 1, 0.02), // how bright the lights are at dusk (the night market)
     hemi: p(1.9, 0, 4, 0.05), // sky/ground fill light
     sun: p(1.9, 0, 5, 0.05), // sun (casts the shadows)
     exposure: p(1.0, 0.3, 2.5, 0.05), // tone-mapping exposure

@@ -195,7 +195,8 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M16 Controls and flow polish
 - [x] M17 Market Square Act 1, part 2: levels 5–8
 - [x] M18 Market Square Act 2: skill levels 9–14
-- [ ] M19 Act 3, themed days, part 1: levels 15–18 (built on `m19-act3a`, awaiting playtest)
+- [x] M19 Act 3, themed days, part 1: levels 15–18
+- [ ] M20 Act 3, part 2: levels 19–22, the end of the Market Square (built on `m20-act3b`, awaiting playtest)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -322,8 +323,11 @@ Each level lends you the skill it teaches (Mimic, Hawk-eye, Fat bird, Flock call
 ### M19 — Act 3, themed days, part 1: levels 15–18 (M–L)
 Vappu Eve, Herring Market, Wedding Bells, Frozen Harbour. Details: `docs/milestones/M19.md`.
 
-### After M19 (backlog)
-Act 3 part 2 (The Rival, Night Market, The Drone, the Grand Finale); Senate Square (`docs/design/levels-senaatintori.md`), Esplanadi (`docs/design/levels-esplanadi.md`), Katajanokka (`docs/design/levels-katajanokka.md`), each level designed with a co-op variant; the shared systems they need (moving platforms, NPC schedules, Kalle the rival gull, the drone, seasons); local split-screen co-op (optional); optional WebGPU renderer.
+### M20 — Act 3, part 2: levels 19–22 (L)
+The Rival (Kalle), Night Market (dusk, sleeping vendors), The Drone, and the Great Kauppatori Heist. Details: `docs/milestones/M20.md`.
+
+### After M20 (backlog)
+ Senate Square (`docs/design/levels-senaatintori.md`), Esplanadi (`docs/design/levels-esplanadi.md`), Katajanokka (`docs/design/levels-katajanokka.md`), each level designed with a co-op variant; the shared systems they need (moving platforms, NPC schedules, Kalle the rival gull, the drone, seasons); local split-screen co-op (optional); optional WebGPU renderer.
 
 ---
 

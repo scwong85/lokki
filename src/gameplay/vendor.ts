@@ -6,7 +6,7 @@ import { bearing, canSee, type GullInfo, type Noise } from './npc';
  * Market vendor with a spray bottle: stands at the stall, wakes up when the city is on alert (or the gull
  * gets close), aims, then fires. The windup gives the gull time to dodge; a poop in the face disables the vendor for a while.
  */
-export type VendorMode = 'idle' | 'alert' | 'windup' | 'recover';
+export type VendorMode = 'idle' | 'alert' | 'windup' | 'recover' | 'asleep';
 
 export interface Vendor {
   id: number;
@@ -30,18 +30,23 @@ export interface Vendor {
   distractT: number;
   noiseX: number;
   noiseZ: number;
+  /** Night market: goes back to sleep when it has been quiet for a while. */
+  sleepy: boolean;
+  /** Seconds of quiet since waking. */
+  quietT: number;
 }
 
 export type VendorEvent =
   | { type: 'noticed'; vendor: Vendor }
   | { type: 'spray'; vendor: Vendor; hit: boolean; dx: number; dz: number }
   | { type: 'dodged'; vendor: Vendor }
-  | { type: 'distracted'; vendor: Vendor };
+  | { type: 'distracted'; vendor: Vendor }
+  | { type: 'woke'; vendor: Vendor };
 
 const angleDiff = (a: number, b: number) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
 
 export function newVendor(id: number, x: number, z: number, heading: number): Vendor {
-  return { id, x, z, homeHeading: heading, heading, mode: 'idle', t: 0, cd: 0, seesGull: false, lostT: 0, aimX: 0, aimZ: 0, moving: false, distractT: 0, noiseX: 0, noiseZ: 0 };
+  return { id, x, z, homeHeading: heading, heading, mode: 'idle', t: 0, cd: 0, seesGull: false, lostT: 0, aimX: 0, aimZ: 0, moving: false, distractT: 0, noiseX: 0, noiseZ: 0, sleepy: false, quietT: 0 };
 }
 
 /** Is the gull inside the spray cone and range if the vendor aims at (aimX,aimZ)? */
@@ -59,6 +64,25 @@ export function stepVendor(v: Vendor, g: GullInfo, alert: boolean, dt: number, w
   v.t += dt;
   v.cd = Math.max(0, v.cd - dt);
   v.distractT = Math.max(0, v.distractT - dt);
+  if (v.mode === 'asleep') {
+    // asleep: ignores a gull flying past, wakes at a loud noise nearby or a gull right next to him
+    const woken = noises.some((s) => s.loud >= tuning.deter.wakeLoud.value && Math.hypot(s.x - v.x, s.z - v.z) <= tuning.npc.hearRange.value * s.loud * 0.5) || Math.hypot(g.x - v.x, g.z - v.z) < tuning.deter.wakeDistance.value;
+    if (woken) {
+      v.mode = 'idle';
+      v.t = 0;
+      v.quietT = 0;
+      ev.push({ type: 'woke', vendor: v });
+    }
+    return ev;
+  }
+  if (v.sleepy && v.mode === 'idle' && v.seesGull === false) {
+    v.quietT += dt;
+    if (v.quietT > tuning.deter.sleepAfter.value) {
+      v.mode = 'asleep';
+      v.quietT = 0;
+      return ev;
+    }
+  }
   for (const s of noises) {
     if (v.mode !== 'windup' && v.mode !== 'recover' && Math.hypot(s.x - v.x, s.z - v.z) <= tuning.npc.hearRange.value * s.loud) {
       if (v.distractT <= 0) ev.push({ type: 'distracted', vendor: v });
