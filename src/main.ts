@@ -559,13 +559,37 @@ function pickSkin(id: string): void {
 }
 
 /** Restart the level (R) or start a speedrun (Z). Skills and best times are kept. */
+/** Rising warm air (a level's thermals): the lift a gull at this spot gets, in m/s^2. */
+function thermalLift(s: { x: number; y: number; z: number }): number {
+  for (const t of level.thermals ?? []) if (Math.hypot(s.x - t.x, s.z - t.z) <= t.r && s.y < 60) return t.lift;
+  return 0;
+}
+const thermalFx = new THREE.Group();
+scene.add(thermalFx);
+/** Pale columns of warm air over the thermals, so they can be found from afar. */
+function showThermals(): void {
+  thermalFx.clear();
+  for (const t of level.thermals ?? []) {
+    const col = new THREE.Mesh(new THREE.CylinderGeometry(t.r * 0.8, t.r, 60, 14, 1, true), new THREE.MeshBasicMaterial({ color: 0xffd9a0, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide }));
+    col.position.set(t.x, 30, t.z);
+    thermalFx.add(col);
+  }
+}
 let heat60Fired = false;
+let altitudeFired = false;
+const thermalsSeen = new Set<number>();
 let owlCd = 0;
 /** What a level adds to the city when it starts: the city's heat, the Warden's lunch, a current for the message bottle. */
 function applyLevelRules(): void {
   heat60Fired = false;
+  altitudeFired = false;
+  thermalsSeen.clear();
   owlCd = 0;
+  skills.grantForLevel(level.skills ?? []);
+  showThermals();
+  skillsPanel.refresh(skills, save);
   interaction.props.drift = level.drift ?? null;
+  if (defense) defense.hiddenLines = !!level.hiddenLines;
   if (!defense || isGuest()) return; // a guest's city is the host's
   defense.lunch = level.wardenLunch ? { x: level.wardenLunch.x, z: level.wardenLunch.z, from: level.wardenLunch.at, to: level.wardenLunch.at + level.wardenLunch.duration, repeat: level.wardenLunch.repeat } : null;
   if (level.deploy) onDefense(defense.deployNow(level.deploy));
@@ -770,6 +794,7 @@ function onDefense(evs: DefenseEvent[]): void {
         stats.add('sprayed');
         const victim = players[e.gull]?.gull ?? gull;
         if (isHost() && players[e.gull]?.remote) net!.sendEvent({ k: 'hit', hit: e.hit }); // the guest flies its own gull: it feels the hit there
+        if (e.hit.kind === 'line') notes(quests.onEvent('lineHit'));
         const dropped = applyHit(victim.state, e.hit);
         if (!dropped) {
           hud.toast('Slipped through!', 0.8);
@@ -791,6 +816,9 @@ function onDefense(evs: DefenseEvent[]): void {
         if (npcs) for (const n of npcs.soakCone(e.x, e.z, e.aimX, e.aimZ)) hud.toast(n.role === 'rich' ? 'The rich tourist is soaked!' : 'Soaked!', 1.4);
         break;
       }
+      case 'vendorDistracted':
+        notes(quests.onEvent('vendorDistract'));
+        break;
       case 'lunch':
         if (e.on) {
           announce.show('The Warden goes for lunch', 'His umbrella is down and his sandwich is on the bench. Now is your chance.', 'alert');
@@ -872,8 +900,8 @@ function notes(list: QuestNote[]): void {
       audio.play('win');
     } else if (n.type === 'retry') {
       hud.toast(`${q.title}: ready to try again`, 1.4);
-      if (q.id === 'bottle') {
-        interaction.restock((pr) => pr.tag === 'note'); // the bottle is back on the quay
+      if (q.id === 'bottle' || q.id === 'heist' || q.id === 'express') {
+        interaction.restock((pr) => pr.tag === 'note' || pr.tag === 'warmBun' || !!pr.tag?.startsWith('heist')); // the bottle, the bun, the stolen goods come back for another try
         triggers.reset();
       }
     }
@@ -959,6 +987,7 @@ function mimic(g: Gull, yaw: number): void {
   noise(at.x, at.z, tuning.skills.mimicLoud.value);
   pings.add(at.x, at.z);
   audio.play('crow');
+  notes(quests.onEvent('caw'));
   g.openBeak(0.5);
   hud.toast('Caw! Caw!', 0.8);
 }
@@ -968,6 +997,7 @@ function flockCall(g: Gull, yaw: number): void {
   flock.start({ x: g.state.x, y: g.state.y, z: g.state.z }, at);
   pings.add(at.x, at.z);
   audio.play('screech');
+  notes(quests.onEvent('flock'));
   g.openBeak(0.6);
   hud.toast('Flock call!', 0.9);
 }
@@ -1140,7 +1170,10 @@ startLoop({
     if (input.wasPressed('Enter') && levelComplete.visible && !levelComplete.goNext()) levelComplete.hide();
     if (input.wasPressed('KeyH') && !menuOpen()) {
       if (isGuest()) net!.tap('KeyH');
-      else if (defense?.activateHawk()) hud.toast('Hawk-eye!', 0.8);
+      else if (defense?.activateHawk()) {
+        hud.toast('Hawk-eye!', 0.8);
+        notes(quests.onEvent('hawk'));
+      }
     }
     if (input.wasPressed('KeyM')) {
       hud.toast(audio.toggleMute() ? 'Sound off' : 'Sound on', 0.8);
@@ -1155,8 +1188,15 @@ startLoop({
     }
     // active skills
     if (abilities.tick(dt)) {
+      notes(quests.onEvent('disguiseEnded'));
       gull.setDisguise(false);
       hud.toast('The disguise is over', 1.2);
+    }
+    // pigeon levels: a disguised gull must walk like a pigeon: flying or running gives it away
+    if (level.pigeonRules && abilities.disguised && !blocked && (gull.state.mode !== 'ground' || Math.hypot(gull.state.vx, gull.state.vz) > tuning.walk.speed.value * 1.25)) {
+      abilities.breakDisguise();
+      gull.setDisguise(false);
+      hud.toast('Pigeons do not fly! Your disguise is blown.', 1.8);
     }
     if (!blocked && input.wasPressed('KeyV') && skills.has('mimic') && abilities.use('mimic')) {
       if (isGuest()) net!.tap('KeyV'); // the host makes the noise
@@ -1204,6 +1244,7 @@ startLoop({
         aimPitch: cam.pitch,
         carryMass: isGuest() ? guestCarryMass : interaction.carriedMass(0),
         lock: lockPoint,
+        lift: thermalLift(gull.state),
       },
       cam.yaw,
       dt,
@@ -1296,6 +1337,7 @@ startLoop({
           props: views,
           gull: { x: g.x, y: g.y, z: g.z, grounded: g.mode === 'ground' },
           carried: car ? { type: car.type, tag: car.tag, x: car.cur.p.x, y: car.cur.p.y, z: car.cur.p.z, free: false } : null,
+          npcs: npcs.npcs.map((n) => ({ role: n.role, x: n.x, z: n.z })),
           isLand,
           dt,
         },
@@ -1319,6 +1361,18 @@ startLoop({
         audio.play('chime');
         hud.toast(got.length > 1 ? `Double hit! x${got.length}` : 'Got it!', 0.8);
       }
+    }
+    // flying events: riding a new thermal, reaching a great height
+    (level.thermals ?? []).forEach((t, i) => {
+      if (!thermalsSeen.has(i) && Math.hypot(gull.state.x - t.x, gull.state.z - t.z) <= t.r && gull.state.mode !== 'ground') {
+        thermalsSeen.add(i);
+        hud.toast('A thermal! Spread your wings and rise.', 1.4);
+        notes(quests.onEvent('thermal'));
+      }
+    });
+    if (!altitudeFired && gull.state.y > 80) {
+      altitudeFired = true;
+      notes(quests.onEvent('altitude80'));
     }
     streetLife?.update(dt, gull.state);
     updateTargets(targets, dt);

@@ -11,13 +11,15 @@ export interface Zone3 {
 
 export type TriggerDef =
   /** A loose prop (not in the beak or a hand) of this type/tag lies in the zone (or floats in the sea). */
-  | { id: string; kind: 'propInZone'; event: string; propType?: PropType; tag?: string; zone: Zone3 | 'sea' }
+  | { id: string; kind: 'propInZone'; event: string; propType?: PropType; tag?: string; zone: Zone3 | 'sea'; count?: number }
+  /** At least `count` people with this role stand in the zone. */
+  | { id: string; kind: 'npcsInZone'; event: string; role: string; zone: Zone3; count: number }
   /** The gull stands/flies in the zone. */
   | { id: string; kind: 'gullInZone'; event: string; zone: Zone3; grounded?: boolean }
   /** The gull has paddled on the sea for this many seconds in total. */
   | { id: string; kind: 'swim'; event: string; seconds: number }
   /** The gull stands on something at least `minY` high (any rooftop) while carrying a prop of this type. */
-  | { id: string; kind: 'carryLanded'; event: string; propType: PropType; minY: number }
+  | { id: string; kind: 'carryLanded'; event: string; propType: PropType; minY: number; zone?: Zone3 }
   /** The gull carries a prop of this type through the points in order; each point fires its own event. */
   | { id: string; kind: 'carryCheckpoints'; propType: PropType; points: { x: number; z: number; r: number }[]; events: string[]; maxY?: number };
 
@@ -36,6 +38,8 @@ export interface TriggerCtx {
   props: readonly PropView[];
   gull: { x: number; y: number; z: number; grounded: boolean };
   carried: PropView | null;
+  /** People (for 'npcsInZone'). */
+  npcs?: readonly { role: string; x: number; z: number }[];
   isLand: (x: number, z: number) => boolean;
   /** Seconds since the last step (for triggers that count time). */
   dt?: number;
@@ -76,20 +80,20 @@ export class TriggerSystem {
         continue;
       }
       if (this.fired.has(d.id) || !wanted.has(d.event)) continue;
-      let hit = false;
-      if (d.kind === 'carryLanded') hit = !!ctx.carried && ctx.carried.type === d.propType && ctx.gull.grounded && ctx.gull.y >= d.minY;
+      let hit: boolean;
+      if (d.kind === 'carryLanded') hit = !!ctx.carried && ctx.carried.type === d.propType && ctx.gull.grounded && ctx.gull.y >= d.minY && (!d.zone || inZone(d.zone, ctx.gull.x, ctx.gull.y, ctx.gull.z));
+      else if (d.kind === 'npcsInZone') hit = (ctx.npcs ?? []).filter((n) => n.role === d.role && inZone(d.zone, n.x, 0, n.z)).length >= d.count;
       else if (d.kind === 'swim') {
         if (ctx.gull.grounded && !ctx.isLand(ctx.gull.x, ctx.gull.z) && ctx.gull.y < 1.5) this.swimT.set(d.id, (this.swimT.get(d.id) ?? 0) + (ctx.dt ?? 0));
         hit = (this.swimT.get(d.id) ?? 0) >= d.seconds;
       } else if (d.kind === 'gullInZone') hit = inZone(d.zone, ctx.gull.x, ctx.gull.y, ctx.gull.z) && (!d.grounded || ctx.gull.grounded);
       else {
+        let n = 0;
         for (const p of ctx.props) {
           if (!p.free || (d.propType && p.type !== d.propType) || (d.tag && p.tag !== d.tag)) continue;
-          if (d.zone === 'sea' ? !ctx.isLand(p.x, p.z) && p.y < 1.5 : inZone(d.zone, p.x, p.y, p.z)) {
-            hit = true;
-            break;
-          }
+          if (d.zone === 'sea' ? !ctx.isLand(p.x, p.z) && p.y < 1.5 : inZone(d.zone, p.x, p.y, p.z)) n++;
         }
+        hit = n >= (d.count ?? 1);
       }
       if (hit) {
         this.fired.add(d.id);

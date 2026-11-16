@@ -6,9 +6,17 @@ export class SkillSet {
   private owned = new Set<string>();
   /** Skills lent by the host for one online session: usable, but never saved. */
   private lent = new Set<string>();
+  /** Skills a level hands you for that level only (the skill levels of Act 2): usable, never saved. */
+  private granted = new Set<string>();
 
   has(id: string): boolean {
-    return this.owned.has(id) || this.lent.has(id);
+    return this.owned.has(id) || this.lent.has(id) || this.granted.has(id);
+  }
+
+  /** This level lends these skills (an empty list ends the loan). */
+  grantForLevel(ids: readonly string[]): void {
+    this.granted = new Set(ids.filter((id) => skillById(id)));
+    this.apply();
   }
 
   /** Online co-op: use the host's skills for this session (they are not saved to your own progress). */
