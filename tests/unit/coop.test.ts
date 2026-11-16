@@ -141,3 +141,25 @@ describe('gamepad source', () => {
     }
   });
 });
+
+describe('co-op gamepad buttons', () => {
+  const mk = (pressed: number[]) => ({
+    axes: [0, 0, 0, 0],
+    buttons: Array.from({ length: 17 }, (_, i) => ({ pressed: pressed.includes(i), value: pressed.includes(i) ? 1 : 0 })),
+  });
+  it('the right stick click holds the taunt and the left stick click is an emote tap', () => {
+    const r = readPad(mk([PAD.R3, PAD.L3]), [], 0.18, 900);
+    expect(r.frame.held.has('KeyT')).toBe(true);
+    expect(r.frame.taps).toContain('Emote');
+    // held again next poll: still taunting, no new emote
+    const r2 = readPad(mk([PAD.R3, PAD.L3]), r.pressed, 0.18, 900);
+    expect(r2.frame.held.has('KeyT')).toBe(true);
+    expect(r2.frame.taps).not.toContain('Emote');
+  });
+  it('the controller help lists both', async () => {
+    const { padHelp } = await import('../../src/core/gamepad');
+    const rows = padHelp().map((x) => `${x.button}: ${x.action}`).join('\n');
+    expect(rows).toMatch(/Right stick click: Taunt/);
+    expect(rows).toMatch(/Left stick click: Emote/);
+  });
+});

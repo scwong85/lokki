@@ -201,7 +201,8 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M22 Senate Square, part 2: levels S4–S6
 - [x] M23 Senate Square, part 3: levels S7–S10, the end of the district
 - [x] M24 Esplanadi, part 1: levels E1–E3
-- [ ] M25 Co-op synergy core + juice pass (built on `m25-coop-juice`, awaiting playtest)
+- [x] M25 Co-op synergy core + juice pass
+- [ ] M26 Co-op controls on touch and gamepad (built on `m26-coop-controls`, awaiting playtest)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -346,7 +347,10 @@ Don't Block My Sun (shadows wake sunbathers), Who's a Good Boy? (dogs and fetch)
 ### M25 — Co-op synergy core + juice pass (M–L)
 Taunt (decoy and thief), mid-air passes, spotter and bomber, rescue, emotes; district actors synced to online guests; squash and stretch, emotes over heads, particles, slow motion. Details: `docs/milestones/M25.md`.
 
-### After M25 (backlog)
+### M26 — Co-op controls on touch and gamepad (S)
+Taunt and emote buttons for phones, stick clicks on the controller. Details: `docs/milestones/M26.md`.
+
+### After M26 (backlog)
  Plans: `docs/design/fun-todos.md` (F2–F6), `docs/design/graphics-refresh.md` (G2–G6).
  Esplanadi E4–E10 (`docs/design/levels-esplanadi.md`), Katajanokka (`docs/design/levels-katajanokka.md`), each level designed with a co-op variant; the shared systems they need (moving platforms, NPC schedules, Kalle the rival gull, the drone, seasons); local split-screen co-op (optional); optional WebGPU renderer.
 

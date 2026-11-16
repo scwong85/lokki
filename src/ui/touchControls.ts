@@ -40,6 +40,8 @@ export class TouchControls {
   private toss: HTMLElement;
   private abilities = new Map<string, HTMLElement>();
   private hand: Hand = 'right';
+  private emoteN = 0;
+  private coopBtns: HTMLElement[] = [];
   private saved: SavedLayouts = loadLayouts();
   private arranging = false;
   private arrangeBar: HTMLElement;
@@ -58,6 +60,8 @@ export class TouchControls {
       <button class="t-btn t-hud" data-code="KeyU" data-mode="tap" aria-label="Show or hide the HUD">HUD</button>
       <button class="t-btn t-hawk" data-code="KeyH" data-mode="tap" aria-label="Hawk-eye">👁</button>
       <button class="t-btn t-lock" data-code="Tab" data-mode="tap" aria-label="Lock onto a target">⌖</button>
+      <button class="t-btn t-taunt" data-code="KeyT" data-mode="hold" aria-label="Taunt (hold)" hidden>Taunt</button>
+      <button class="t-btn t-emote" data-code="Emote" data-mode="tap" aria-label="Emote" hidden>😀</button>
       <div class="t-abil">
         <button class="t-btn t-ab" data-code="KeyV" data-mode="tap" hidden>Caw</button>
         <button class="t-btn t-ab" data-code="KeyG" data-mode="tap" hidden>Flock</button>
@@ -93,6 +97,7 @@ export class TouchControls {
     this.menu = panel;
     this.grab = el.querySelector('.t-grab')!;
     this.toss = el.querySelector('.t-toss')!;
+    this.coopBtns = [...el.querySelectorAll<HTMLElement>('.t-taunt, .t-emote')];
     for (const b of el.querySelectorAll<HTMLElement>('[data-mode]')) this.buttons.push({ code: b.dataset.code!, mode: b.dataset.mode as Btn['mode'], el: b });
     for (const b of el.querySelectorAll<HTMLElement>('.t-ab')) this.abilities.set(b.dataset.code!, b);
 
@@ -162,7 +167,7 @@ export class TouchControls {
       p.kind = 'button';
       btn.el.classList.add('down');
       if (btn.mode === 'hold') this.input.setVirtual(btn.code, true);
-      else this.input.tap(btn.code);
+      else this.input.tap(btn.code === 'Emote' ? `Digit${(this.emoteN++ % 4) + 1}` : btn.code);
     } else if (this.hand === 'right' ? e.clientX < innerWidth * tuning.touch.stickZone.value : e.clientX > innerWidth * (1 - tuning.touch.stickZone.value)) {
       p.kind = 'stick';
       this.stickBase.style.left = `${e.clientX}px`;
@@ -222,7 +227,8 @@ export class TouchControls {
   }
 
   /** Per frame: context labels and which buttons exist right now. */
-  update(prompt: string, carrying: boolean, owned: { V: boolean; G: boolean; B: boolean }, abilityReady: (code: string) => number): void {
+  update(prompt: string, carrying: boolean, owned: { V: boolean; G: boolean; B: boolean }, abilityReady: (code: string) => number, coop = false): void {
+    for (const b of this.coopBtns) b.hidden = !coop; // taunt and emote only matter with a partner
     const g = grabLabel(prompt);
     if (this.grab.textContent !== g.text) this.grab.textContent = g.text;
     this.grab.classList.toggle('dim', !g.enabled);

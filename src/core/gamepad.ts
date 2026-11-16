@@ -7,13 +7,14 @@ export interface PadState {
 }
 
 /** Standard-mapping button indices (Xbox names; PlayStation is the same positions). */
-export const PAD = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, BACK: 8, START: 9, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 } as const;
+export const PAD = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, BACK: 8, START: 9, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15, L3: 10, R3: 11 } as const;
 
 /** Held buttons -> key codes the game already understands. */
 const HOLD: [number, string][] = [
   [PAD.A, 'Space'], // flap / hop
   [PAD.RB, 'Space'],
   [PAD.RT, 'ShiftLeft'], // dive
+  [PAD.R3, 'KeyT'], // taunt (co-op decoy)
 ];
 /** Pressed buttons -> one-off key taps. */
 const TAP: [number, string][] = [
@@ -27,11 +28,12 @@ const TAP: [number, string][] = [
   [PAD.LB, 'Tab'], // lock onto a target
   [PAD.BACK, 'KeyK'], // skills
   [PAD.START, 'KeyO'], // options
+  [PAD.L3, 'Emote'], // emote: wave, laugh, point, facepalm in turn
 ];
 
-const BUTTON_NAMES: Record<number, string> = { 0: 'A', 1: 'B', 2: 'X', 3: 'Y', 4: 'LB', 5: 'RB', 6: 'LT', 7: 'RT', 8: 'Back', 9: 'Start', 12: 'D-pad up', 13: 'D-pad down', 14: 'D-pad left', 15: 'D-pad right' };
+const BUTTON_NAMES: Record<number, string> = { 0: 'A', 1: 'B', 2: 'X', 3: 'Y', 4: 'LB', 5: 'RB', 6: 'LT', 7: 'RT', 8: 'Back', 9: 'Start', 10: 'Left stick click', 11: 'Right stick click', 12: 'D-pad up', 13: 'D-pad down', 14: 'D-pad left', 15: 'D-pad right' };
 const KEY_ACTIONS: Record<string, string> = {
-  Space: 'Hop and flap', ShiftLeft: 'Dive', KeyE: 'Grab or drop', KeyQ: 'Toss', KeyF: 'Poop', KeyV: 'Crow call (skill)', KeyG: 'Flock call (skill)', KeyB: 'Pigeon disguise (skill)', KeyH: 'Hawk-eye', Tab: 'Lock onto a target (press again: next, then off)', KeyK: 'Skills and gull looks', KeyO: 'Options',
+  Space: 'Hop and flap', ShiftLeft: 'Dive', KeyE: 'Grab or drop', KeyQ: 'Toss', KeyF: 'Poop', KeyV: 'Crow call (skill)', KeyG: 'Flock call (skill)', KeyB: 'Pigeon disguise (skill)', KeyH: 'Hawk-eye', Tab: 'Lock onto a target (press again: next, then off)', KeyK: 'Skills and gull looks', KeyO: 'Options', KeyT: 'Taunt (hold): in co-op, people watch you instead of your partner', Emote: 'Emote (wave, laugh, point, facepalm in turn)',
 };
 
 /** The controller buttons and what they do, built from the real mapping so the help can never drift from it. */
@@ -103,6 +105,7 @@ export class GamepadSource {
   private prev: boolean[] = [];
   private held = new Set<string>();
   private stickActive = false;
+  private emoteN = 0;
   connected = false;
   /** While a menu is open the pad drives the menu instead of the game. */
   menuOpen: () => boolean = () => false;
@@ -132,7 +135,7 @@ export class GamepadSource {
     for (const c of frame.held) if (!this.held.has(c)) this.input.setVirtual(c, true);
     for (const c of this.held) if (!frame.held.has(c)) this.input.setVirtual(c, false);
     this.held = frame.held;
-    for (const t of frame.taps) this.input.tap(t);
+    for (const t of frame.taps) this.input.tap(t === 'Emote' ? `Digit${(this.emoteN++ % 4) + 1}` : t);
     // only drive the stick while the pad is actually used, so keys and touch keep working with a pad plugged in
     if (frame.stick.x || frame.stick.y || this.stickActive) this.input.setStick(frame.stick.x, frame.stick.y);
     this.stickActive = frame.stick.x !== 0 || frame.stick.y !== 0;
