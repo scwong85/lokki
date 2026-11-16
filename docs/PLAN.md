@@ -200,7 +200,8 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M21 Senate Square, part 1: levels S1–S3
 - [x] M22 Senate Square, part 2: levels S4–S6
 - [x] M23 Senate Square, part 3: levels S7–S10, the end of the district
-- [ ] M24 Esplanadi, part 1: levels E1–E3 (built on `m24-esplanadi-a`, awaiting playtest)
+- [x] M24 Esplanadi, part 1: levels E1–E3
+- [ ] M25 Co-op synergy core + juice pass (built on `m25-coop-juice`, awaiting playtest)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -342,7 +343,11 @@ Concert Night, Christmas Market, The Library Rule, and the finale The Key to the
 ### M24 — Esplanadi, part 1: E1–E3 (M–L)
 Don't Block My Sun (shadows wake sunbathers), Who's a Good Boy? (dogs and fetch), Splash Zone (sprinklers), plus the Cloud Glide skill. Details: `docs/milestones/M24.md`.
 
-### After M24 (backlog)
+### M25 — Co-op synergy core + juice pass (M–L)
+Taunt (decoy and thief), mid-air passes, spotter and bomber, rescue, emotes; district actors synced to online guests; squash and stretch, emotes over heads, particles, slow motion. Details: `docs/milestones/M25.md`.
+
+### After M25 (backlog)
+ Plans: `docs/design/fun-todos.md` (F2–F6), `docs/design/graphics-refresh.md` (G2–G6).
  Esplanadi E4–E10 (`docs/design/levels-esplanadi.md`), Katajanokka (`docs/design/levels-katajanokka.md`), each level designed with a co-op variant; the shared systems they need (moving platforms, NPC schedules, Kalle the rival gull, the drone, seasons); local split-screen co-op (optional); optional WebGPU renderer.
 
 ---

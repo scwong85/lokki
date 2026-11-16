@@ -22,6 +22,8 @@ export class FixedStepper {
 export interface LoopHandlers {
   update(dt: number): void;
   render(alpha: number, frameDt: number): void;
+  /** Slow motion: the simulation advances at this fraction of real time (1 = normal). */
+  timeScale?(): number;
 }
 
 export const SIM_HZ = 60;
@@ -36,7 +38,7 @@ export function startLoop(h: LoopHandlers): () => void {
     const dt = (now - last) / 1000;
     last = now;
     try {
-      const { steps, alpha } = stepper.advance(dt);
+      const { steps, alpha } = stepper.advance(dt * (h.timeScale?.() ?? 1));
       for (let i = 0; i < steps; i++) h.update(stepper.step);
       h.render(alpha, dt);
     } catch (err) {

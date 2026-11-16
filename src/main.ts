@@ -49,6 +49,10 @@ import type { HeatReason } from './gameplay/heat';
 import type { Noise } from './gameplay/npc';
 import { HeatMeter } from './ui/heatMeter';
 import { Announce } from './ui/announce';
+import type { DistrictSnap } from './net/snapshot';
+import { PassTracker, Tangle, decoyCovers, spotterHit } from './gameplay/coopPlay';
+import { Emotes, type EmoteKind } from './render/emotes';
+import { Puffs, type PuffKind } from './render/puffs';
 import { Tram } from './gameplay/tram';
 import { PigeonGang } from './gameplay/pigeons';
 import { Sunbathers } from './gameplay/sunbathers';
@@ -278,7 +282,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -409,6 +413,12 @@ function onNetEvent(e: GameEvent): void {
       }
       break;
     }
+    case 'fx':
+      puffs.burst(e.kind as PuffKind, { x: e.p[0], y: e.p[1], z: e.p[2] }, e.scale ?? 1);
+      break;
+    case 'emote':
+      emoteOver(playerByNetId(e.g), e.e as EmoteKind, false);
+      break;
     case 'clear': {
       // the guest's own progress: stars and the level's skill go to its own save
       const def = LEVELS.find((l) => l.id === e.level);
@@ -523,11 +533,11 @@ function onFlightEvents(evs: FlightEvent[]): void {
       hud.toast('Splash!', 0.6);
       audio.play('splat');
       ripples.add(gull.state.x, gull.state.z, 1.6);
-      interaction.debris.burst({ x: gull.state.x, y: 0.2, z: gull.state.z }, 0xdff4fb, 10);
+      puffs.burst('splash', { x: gull.state.x, y: 0.2, z: gull.state.z });
     } else if (e.type === 'land' && e.quality === 'hard') {
       hud.toast('Oof!');
       cam.shake(0.7);
-      interaction.debris.burst(gull.state, 0xe9dcc8, 10); // dust
+      puffs.burst('dust', gull.state, 1.5);
       audio.play('thud');
       gull.openBeak(0.8);
     } else if (e.type === 'land' && e.quality === 'rough') {
@@ -751,6 +761,7 @@ function stepSenate(dt: number): void {
         if (gone) interaction.props.destroy(gone);
         hud.toast(e.type === 'befriended' ? 'The Pigeon Gang loves you. You are an honorary pigeon!' : 'Pfft! The pigeons hate salmiakki and scatter!', 2);
         audio.play(e.type === 'befriended' ? 'pop' : 'chime');
+        fx(e.type === 'befriended' ? 'hearts' : 'feathers', { x: gang.def.x, y: 1, z: gang.def.z }, 1.5);
         notes(quests.onEvent(e.type === 'befriended' ? 'pigeonsFriends' : 'pigeonsScattered'));
         notes(quests.onEvent('pigeonsSettled'));
       }
@@ -818,6 +829,7 @@ function stepEsplanadi(dt: number): void {
     for (const e of r.events) {
       if (e.type === 'woke') {
         hud.toast('Hey! Someone is blocking the sun!', 1.6);
+        emoteAt('anger', sunbathers.list[e.index], sunbathers.list[e.index].x, 1.3, sunbathers.list[e.index].z);
         audio.play('pop');
         notes(quests.onEvent('sunbatherWoke'));
         heat('noticed');
@@ -847,6 +859,7 @@ function stepEsplanadi(dt: number): void {
         notes(quests.onEvent('dogFetched'));
       } else if (e.type === 'bark') {
         audio.play('crow');
+        emotes.show('alert', d.dog, () => ({ x: d.dog.x, y: 1.3, z: d.dog.z }));
         noise(d.dog.x, d.dog.z, 1.2);
       } else if (e.type === 'bite') {
         players[0]?.gull.carry(Math.sign(e.x) * 1.5, Math.sign(e.z) * 1.5);
@@ -882,6 +895,174 @@ function stepEsplanadi(dt: number): void {
     }
     sprayView?.update(dt);
   }
+}
+
+/** What a guest needs to draw the district cast (tram, pigeons, sunbathers, dogs, sprinklers). */
+const TRAM_MODES = ['run', 'dwell', 'blocked'] as const;
+const GANG_MODES = ['guarding', 'friends', 'scattered'] as const;
+function districtSnap(): DistrictSnap | undefined {
+  if (!tram && !gang && !sunbathers && !dogs.length && !sprinklers) return undefined;
+  const r2 = (v: number) => Math.round(v * 100) / 100;
+  return {
+    ...(tram ? { tr: [r2(tram.x), tram.dir, TRAM_MODES.indexOf(tram.mode)] as [number, number, number] } : {}),
+    ...(gang ? { pg: GANG_MODES.indexOf(gang.mode) } : {}),
+    ...(sunbathers ? { sb: sunbathers.list.map((s) => (s.state === 'awake' ? 1 : 0)) } : {}),
+    ...(dogs.length ? { dg: dogs.map((d) => [r2(d.dog.x), r2(d.dog.z), r2(d.dog.heading), d.dog.running ? 1 : 0] as [number, number, number, number]) } : {}),
+    ...(sprinklers ? { sp: r2(sprinklers.remaining) } : {}),
+  };
+}
+let districtRemote: DistrictSnap | null = null;
+/** On a guest: ease the district cast toward the host's news, and ride the tram roof locally. */
+function stepDistrictRemote(dt: number): void {
+  const d = districtRemote;
+  if (!d) return;
+  if (tram && d.tr) {
+    const before = tram.x;
+    const gap = d.tr[0] - tram.x;
+    tram.x = Math.abs(gap) > 12 ? d.tr[0] : tram.x + Math.max(-1, Math.min(1, gap / (tuning.tram.speed.value * dt * 1.6 || 1))) * tuning.tram.speed.value * dt * 1.6;
+    if (Math.abs(d.tr[0] - tram.x) < 0.02) tram.x = d.tr[0];
+    tram.dir = d.tr[1] >= 0 ? 1 : -1;
+    tram.mode = TRAM_MODES[d.tr[2]] ?? 'run';
+    tram.vx = dt > 0 ? (tram.x - before) / dt : 0;
+    placeRoof();
+    const s = gull.state;
+    if (tram.onRoof(s.x, s.z, -0.2) && s.mode === 'ground' && s.y <= tram.def.roofY + 1.6) gull.carry(tram.x - before, 0);
+    tramView?.update();
+  }
+  if (gang && d.pg !== undefined) {
+    gang.mode = GANG_MODES[d.pg] ?? 'guarding';
+    gangView?.update(dt);
+  }
+  if (sunbathers && d.sb) {
+    sunbathers.list.forEach((s, i) => (s.state = d.sb![i] ? 'awake' : 'asleep'));
+    sunView?.update();
+  }
+  if (d.dg) dogs.forEach((dg, i) => {
+    const t = d.dg![i];
+    if (!t) return;
+    const k = Math.min(1, dt * 12);
+    dg.dog.x += (t[0] - dg.dog.x) * k;
+    dg.dog.z += (t[1] - dg.dog.z) * k;
+    dg.dog.heading = t[2];
+    dg.dog.running = !!t[3];
+    dg.view.update(dt);
+  });
+  if (sprinklers && d.sp !== undefined) {
+    sprinklers.setRemaining(d.sp);
+    sprayView?.update(dt);
+  }
+}
+
+/** Juice (G1) and co-op teamwork (F1): emotes over heads, particles, slow motion, taunt, passes, spotter, rescue. */
+const emotes = new Emotes();
+const puffs = new Puffs();
+scene.add(emotes.group, puffs.mesh);
+const passes = new PassTracker();
+const tangle = new Tangle();
+let slowmoT = 0;
+const tauntT: number[] = [];
+const npcModeSeen = new Map<number, string>();
+const EMOTE_KEYS: EmoteKind[] = ['wave', 'laugh', 'point', 'facepalm'];
+/** A player by network id, on either side (a guest keeps itself first in its own list). */
+const playerByNetId = (id: number): Player | undefined => (isGuest() ? players[id === 1 ? 0 : 1] : players[id]);
+const netIdOf = (pl: Player): number => (isGuest() ? (pl === players[0] ? 1 : 0) : pl.id);
+/** Particles here, and on the guest's screen too. */
+function fx(kind: PuffKind, at: { x: number; y: number; z: number }, scale = 1): void {
+  puffs.enabled = tuning.juice.puffs.value > 0;
+  puffs.burst(kind, at, scale);
+  if (isHost()) net!.sendEvent({ k: 'fx', kind, p: [at.x, at.y, at.z], scale });
+}
+function emoteOver(pl: Player | undefined, kind: EmoteKind, tell = true): void {
+  if (!pl) return;
+  const g = pl.gull;
+  emotes.show(kind, g, () => ({ x: g.position.x, y: g.position.y + 0.75, z: g.position.z }), tuning.juice.emoteSeconds.value);
+  g.wiggleT = Math.max(g.wiggleT, 0.5);
+  if (tell && isHost()) net!.sendEvent({ k: 'emote', g: netIdOf(pl), e: kind });
+}
+function emoteAt(kind: EmoteKind, key: unknown, x: number, y: number, z: number): void {
+  emotes.show(kind, key, () => ({ x, y, z }), tuning.juice.emoteSeconds.value);
+}
+function resetCoopJuice(): void {
+  districtRemote = null;
+  passes.reset();
+  tangle.reset();
+  emotes.clear();
+  npcModeSeen.clear();
+  slowmoT = 0;
+  for (const p of players) p.gull.taunting = p.gull.tangled = false;
+}
+const NPC_EMOTE: Record<string, EmoteKind | undefined> = { notice: 'alert', shield: 'anger', chase: 'anger', panic: 'sweat', yuck: 'facepalm', cheer: 'heart' };
+/** Every machine: reactions show over people's heads when their mood changes, and taunting gulls show off. */
+function juiceStep(dt: number): void {
+  for (const n of npcs?.npcs ?? []) {
+    const was = npcModeSeen.get(n.id);
+    if (was !== n.mode) {
+      npcModeSeen.set(n.id, n.mode);
+      const k = was === undefined ? undefined : NPC_EMOTE[n.mode];
+      if (k) emotes.show(k, n, () => ({ x: n.x, y: 2.05, z: n.z }), tuning.juice.emoteSeconds.value);
+    }
+  }
+  players.forEach((pl, i) => {
+    const g = pl.gull;
+    tauntT[i] = Math.max(0, (tauntT[i] ?? 0) - dt);
+    if (g.taunting && tauntT[i] <= 0) {
+      tauntT[i] = tuning.coop.tauntEvery.value;
+      emoteOver(pl, 'note', false);
+      g.openBeak(0.35);
+      g.wiggleT = 0.6;
+      if (!pl.remote) audio.play('screech');
+      if (!isGuest()) {
+        noise(g.state.x, g.state.z, tuning.coop.tauntLoud.value);
+        notes(quests.onEvent('taunt'));
+      }
+    }
+    if (g.tangled && Math.floor(simTime * 1.2) !== Math.floor((simTime - dt) * 1.2)) emoteOver(pl, 'sweat', false);
+  });
+}
+/** Host / single player: passes fly into the partner's beak, caught gulls wait for a rescue. */
+function coopStep(dt: number): void {
+  if (players.length < 2) return;
+  for (const id of passes.fresh(simTime)) {
+    const prop = interaction.props.byId(id);
+    if (!prop || prop.carried || prop.heldBy !== null || prop.broken) continue;
+    for (const pl of players) {
+      const s = pl.gull.state;
+      if (interaction.beak(pl.id).carried) continue;
+      const d = Math.hypot(prop.cur.p.x - s.x, prop.cur.p.y - s.y, prop.cur.p.z - s.z);
+      if (passes.autoCatch(id, pl.id, simTime, d, s.mode !== 'ground')) {
+        onGags(interaction.catchProp(pl.id, prop));
+        break;
+      }
+    }
+  }
+  const freed = tangle.update(dt, players.map((pl) => pl.gull.state));
+  players.forEach((pl, i) => {
+    pl.gull.tangled = tangle.stuck(i);
+    if (pl.gull.tangled && !pl.remote) pl.gull.state.stunT = Math.max(pl.gull.state.stunT, 0.3);
+  });
+  for (const [who, by] of freed) {
+    const v = players[who].gull.state;
+    hud.toast('Pecked free! Teamwork.', 1.4);
+    audio.play('pop');
+    fx('feathers', { x: v.x, y: v.y + 0.3, z: v.z });
+    emoteOver(players[who], 'heart');
+    emoteOver(players[by], 'star');
+    if (!players[who].remote) players[who].gull.state.stunT = 0;
+    notes(quests.onEvent('coop:rescue'));
+  }
+}
+const spotAssist = (mine: number) => {
+  const l = partnerLock(mine);
+  return l ? { ...l, r: tuning.coop.spotAssist.value } : null;
+};
+/** The partner's lock as a bomb sight, when this gull has no lock of its own. */
+function partnerLock(mine: number): { x: number; y: number; z: number } | null {
+  if (players.length < 2 || !isHost()) return null;
+  if (mine === 0) {
+    const lk = net!.guestFrame?.s.lk;
+    return lk ? { x: lk[0], y: lk[1], z: lk[2] } : null;
+  }
+  return lockNow ? { x: lockNow.x, y: lockNow.y, z: lockNow.z } : null;
 }
 
 const snow = new Snow();
@@ -945,6 +1126,7 @@ function applyLevelRules(): void {
   setupKalle();
   setupSenate();
   setupEsplanadi();
+  resetCoopJuice();
   skillsPanel.refresh(skills, save);
   interaction.props.drift = level.drift ?? null;
   if (defense) defense.hiddenLines = !!level.hiddenLines;
@@ -1084,7 +1266,12 @@ function guestStep(dt: number): void {
     defense?.heat.setRemote(snap.heat);
     if (snap.d) defense?.applyRemote(snap.d, 0.05);
     if (snap.k && kalleView) kalleView.setRemote(snap.k[0], snap.k[1], snap.k[2], snap.k[3], KALLE_MODES[snap.k[4]] ?? 'perch');
+    if (snap.x) districtRemote = snap.x;
+    gull.tangled = !!snap.gulls.find((g) => g.id === 1)?.tg;
+    if (players[1]) players[1].gull.tangled = !!host?.tg;
   }
+  if (gull.tangled) gull.state.stunT = Math.max(gull.state.stunT, 0.3);
+  stepDistrictRemote(dt);
   interaction.props.stepRemote(dt);
   interaction.stepGhosts(dt, simTime);
   npcs?.stepRemote(dt);
@@ -1092,7 +1279,7 @@ function guestStep(dt: number): void {
   const { x, y } = input.axes();
   n.sendInput({
     ax: x, ay: y, flap: input.isDown('Space'), dive: input.isDown('ShiftLeft') || input.isDown('ShiftRight'), yaw: cam.yaw, pitch: cam.pitch,
-    s: { id: 1, p: [s.x, s.y, s.z], v: [s.vx, s.vy, s.vz], h: s.heading, mode: s.mode, carry: null, fa: s.flapAnim, ha: s.heightAbove, tr: s.turnRate, dg: abilities.disguised ? 1 : 0, lk: lockNow ? [lockNow.x, lockNow.y, lockNow.z] : undefined },
+    s: { id: 1, p: [s.x, s.y, s.z], v: [s.vx, s.vy, s.vz], h: s.heading, mode: s.mode, carry: null, fa: s.flapAnim, ha: s.heightAbove, tr: s.turnRate, dg: abilities.disguised ? 1 : 0, tn: gull.taunting ? 1 : 0, lk: lockNow ? [lockNow.x, lockNow.y, lockNow.z] : undefined },
   });
 }
 
@@ -1100,12 +1287,13 @@ function guestStep(dt: number): void {
 function captureSnapshot(): Snapshot {
   return makeSnapshot({
     time: simTime,
-    gulls: players.map((p) => ({ id: p.id, ...pickXYZ(p.gull.state), vx: p.gull.state.vx, vy: p.gull.state.vy, vz: p.gull.state.vz, heading: p.gull.state.heading, mode: p.gull.state.mode, carry: interaction.beak(p.id).carried?.id ?? null, flapAnim: p.gull.state.flapAnim, heightAbove: p.gull.state.heightAbove, turnRate: p.gull.state.turnRate, disguised: p.remote ? p.gull.remoteDisguised : abilities.disguised })),
+    gulls: players.map((p) => ({ id: p.id, ...pickXYZ(p.gull.state), vx: p.gull.state.vx, vy: p.gull.state.vy, vz: p.gull.state.vz, heading: p.gull.state.heading, mode: p.gull.state.mode, carry: interaction.beak(p.id).carried?.id ?? null, flapAnim: p.gull.state.flapAnim, heightAbove: p.gull.state.heightAbove, turnRate: p.gull.state.turnRate, disguised: p.remote ? p.gull.remoteDisguised : abilities.disguised, taunt: p.gull.taunting, tangled: p.gull.tangled })),
     props: interaction.props.props.map((pr) => ({ id: pr.id, x: pr.cur.p.x, y: pr.cur.p.y, z: pr.cur.p.z, qx: pr.cur.q.x, qy: pr.cur.q.y, qz: pr.cur.q.z, qw: pr.cur.q.w, by: interaction.carrierOf(pr), held: pr.heldBy, broken: pr.broken })),
     npcs: (npcs?.npcs ?? []).map((n) => ({ id: n.id, x: n.x, z: n.z, heading: n.heading, mode: n.mode, holding: n.holding, handAngle: n.handAngle, selfie: n.selfie, selfieCount: n.selfieCount, cleanT: n.cleanT, shieldFrom: n.shieldFrom })),
     heat: defense?.heat.value ?? 0,
     d: defense?.remoteSnap(),
     k: kalleView ? [kalleView.kalle.x, kalleView.kalle.y, kalleView.kalle.z, kalleView.kalle.heading, KALLE_MODES.indexOf(kalleView.kalle.mode)] : undefined,
+    x: districtSnap(),
     quests: quests.quests.map((q) => ({ id: q.id, status: q.status, timeLeft: q.timeLeft, timed: q.timed, objectives: q.objectives })),
   });
 }
@@ -1169,7 +1357,11 @@ function onDefense(evs: DefenseEvent[]): void {
         hud.toast(lost ? `${what} Dropped the ${lost.def.name}!` : what, 1.4);
         audio.play(e.hit.kind === 'spray' ? 'splat' : e.hit.kind === 'swat' ? 'bonk' : 'twang');
         if (e.gull === 0) cam.shake(e.hit.kind === 'swat' ? 0.7 : 0.45);
-        interaction.debris.burst({ x: victim.state.x, y: victim.state.y + 0.3, z: victim.state.z }, 0xffffff, 14); // feathers
+        fx('feathers', { x: victim.state.x, y: victim.state.y + 0.3, z: victim.state.z });
+        if (players.length > 1 && (e.hit.kind === 'net' || e.hit.kind === 'line' || e.hit.kind === 'spray')) {
+          tangle.caught(e.gull);
+          hud.toast('Caught! Your partner can peck you free.', 1.8);
+        }
         if (e.gull === 0) hud.flash({ spray: '#7ec8ff', swat: '#ffb347', line: '#ffffff', net: '#ffffff', drone: '#ff6b6b' }[e.hit.kind]);
         victim.openBeak(0.7);
         break;
@@ -1244,6 +1436,8 @@ function notes(list: QuestNote[]): void {
     } else if (n.type === 'objective') {
       const text = q.objectives.find((o) => o.id === n.objective)!.text;
       hud.toast(`✓ ${text}`, 1.6);
+      gull.wiggleT = 0.8;
+      fx('stars', { x: gull.state.x, y: gull.state.y + 0.8, z: gull.state.z }, 0.6);
       if (n.quest === 'date' && n.objective === 'splat') {
         // the ruined date storms off in opposite directions
         npcs?.sendRole('dater', [{ x: 36, z: -9, name: 'stormoff' }, { x: -37, z: -9, name: 'stormoff' }]);
@@ -1251,7 +1445,7 @@ function notes(list: QuestNote[]): void {
       }
     } else if (n.type === 'won') {
       audio.play('win');
-      for (const c of [0xffd36e, 0xff9ec4, 0x9bd8ff, 0xb5e8b0]) interaction.debris.burst({ x: gull.state.x, y: gull.state.y + 1.2, z: gull.state.z }, c, 8); // confetti
+      fx('confetti', { x: gull.state.x, y: gull.state.y + 1.2, z: gull.state.z });
       hud.toast(n.quest === 'extras' ? 'All extras done!' : n.quest === 'bonus' ? 'All extra objectives done!' : `Quest complete: ${q.title}!`, 2.4);
       const skill = level.sandbox ? skills.unlockForQuest(n.quest) : null; // levels give their skill when cleared
       if (skill) {
@@ -1410,18 +1604,28 @@ function onGags(gags: GagEvent[]): void {
         if (PROPS[g.prop.type].tags.includes('edible')) notes(quests.onEvent('snack'));
         if (g.prop.tag === 'wardenSandwich' && defense?.warden?.mode === 'lunch') notes(quests.onEvent('sandwichUnseen')); // took it while he was still eating
         notes(quests.onEvent(`grab:${g.prop.type}`));
+        if (PROPS[g.prop.type].tags.includes('edible')) fx('crumbs', g.prop.cur.p, 0.7);
         if (players.length > 1) {
           const by = g.by ?? 0;
+          if (passes.grabbed(g.prop.id, by, simTime, players[by]?.gull.state.mode !== 'ground')) {
+            hud.toast(passes.chain > 1 ? `Caught! Pass x${passes.chain}` : 'Caught in mid-air!', 1.2);
+            fx('stars', g.prop.cur.p);
+            emoteOver(players[by], 'star');
+            notes(quests.onEvent('coop:pass'));
+            if (passes.chain >= 3) notes(quests.onEvent('coop:volley'));
+          }
           const was = lastHolder.get(g.prop.id);
           if (was && was.by !== by && simTime - was.t <= 6) notes(quests.onEvent('coop:handover'));
           lastHolder.set(g.prop.id, { by, t: simTime });
         }
         break;
       case 'drop':
+        passes.released(g.prop.id, g.by ?? 0, simTime);
         lastHolder.set(g.prop.id, { by: g.by ?? 0, t: simTime });
         break;
       case 'toss':
         audio.play('hop');
+        passes.released(g.prop.id, g.by ?? 0, simTime);
         lastHolder.set(g.prop.id, { by: g.by ?? 0, t: simTime });
         break;
       case 'heavy':
@@ -1439,6 +1643,17 @@ function onGags(gags: GagEvent[]): void {
         notes(quests.onEvent('snack'));
         if (bellLeft > 0) notes(quests.onEvent('bellSnatch'));
         if (players.length > 1 && combo.hit('snatch', g.by ?? 0, simTime, 5)) notes(quests.onEvent('coop:snatch'));
+        {
+          const thief = players[g.by ?? 0] ?? players[0];
+          fx('stars', g.prop.cur.p);
+          thief.gull.squash.kick(tuning.juice.snatchStretch.value);
+          if (players.length === 1) slowmoT = tuning.juice.snatchSlowmo.value;
+          else if (decoyCovers(g.by ?? 0, thief.gull.state, players.map((pl) => ({ x: pl.gull.state.x, z: pl.gull.state.z, taunt: pl.gull.taunting })))) {
+            hud.toast('Perfect decoy! They never looked.', 1.6);
+            emoteOver(players.find((pl) => pl !== thief && pl.gull.taunting), 'laugh');
+            notes(quests.onEvent('coop:decoy'));
+          }
+        }
         if (simTime - lastSnatchAt < 8) {
           hud.toast('Double snatch!', 1.6);
           notes(quests.onEvent('doubleSnatch'));
@@ -1453,6 +1668,11 @@ function onGags(gags: GagEvent[]): void {
         hud.toast('Splat! Right on a tourist!', 1.1);
         notes(quests.onEvent('poopNpc'));
         if (players.length > 1 && combo.hit('poopNpc', g.by ?? 0, simTime, 5)) notes(quests.onEvent('coop:poopNpc'));
+        if (g.x !== undefined && g.z !== undefined && spotterHit(partnerLock(g.by ?? 0), { x: g.x, z: g.z })) {
+          hud.toast('Spotted and splatted! Nice teamwork.', 1.6);
+          fx('stars', { x: g.x, y: 1.8, z: g.z });
+          notes(quests.onEvent('coop:spotted'));
+        }
         if (g.role) notes(quests.onEvent(`poopNpc:${g.role}`));
         stats.add('poopPerson');
         heat('poopNpc');
@@ -1504,6 +1724,7 @@ function onGags(gags: GagEvent[]): void {
 applyLevelRules(); // the first level's own rules (heat, lunch, current)
 
 startLoop({
+  timeScale: () => (slowmoT > 0 ? tuning.juice.slowmoScale.value : 1),
   update(dt) {
     simTime += dt;
     music.setTier(musicDirector.update(dt, defense?.heat.tier ?? 0, quests.quests.some((q) => q.id === 'finale' && q.status === 'active')));
@@ -1586,6 +1807,13 @@ startLoop({
       input.endStep();
       return;
     }
+    // co-op: hold T to taunt (people nearby watch you, not your partner); 1-4 are emotes
+    gull.taunting = !blocked && !tutorial.running && input.isDown('KeyT') && gull.state.stunT <= 0;
+    if (!blocked && !skillsPanel.visible) EMOTE_KEYS.forEach((k, i) => {
+      if (!input.wasPressed(`Digit${i + 1}`)) return;
+      emoteOver(players[0], k);
+      if (isGuest()) net!.tap(`Digit${i + 1}`);
+    });
     // active skills
     if (abilities.tick(dt)) {
       notes(quests.onEvent('disguiseEnded'));
@@ -1663,7 +1891,7 @@ startLoop({
       if (!blocked && input.wasPressed('KeyE')) net!.tap('KeyE');
       if (!blocked && input.wasPressed('KeyQ')) net!.tap('KeyQ');
       if (!blocked && (input.wasPressed('KeyF') || input.wasClicked())) net!.tap('KeyF');
-    } else onGags(interaction.updateGull(0, gull.state, { grab: !blocked && input.wasPressed('KeyE'), toss: !blocked && input.wasPressed('KeyQ'), poop: !blocked && (input.wasPressed('KeyF') || input.wasClicked()), lock: lockPoint ? { ...lockPoint, r: lockNow!.radius } : null }, dt, simTime));
+    } else onGags(interaction.updateGull(0, gull.state, { grab: !blocked && input.wasPressed('KeyE'), toss: !blocked && input.wasPressed('KeyQ'), poop: !blocked && (input.wasPressed('KeyF') || input.wasClicked()), lock: lockPoint ? { ...lockPoint, r: lockNow!.radius } : spotAssist(0) }, dt, simTime));
     // other players: their own flight and beak (the camera stays on player 1)
     for (const p of players) {
       if (p.id === 0) continue;
@@ -1674,13 +1902,15 @@ startLoop({
           p.gull.stepRemote(dt);
           const taps = net!.takeTaps();
           const yaw = net!.guestFrame?.yaw ?? 0;
+          EMOTE_KEYS.forEach((k, i) => taps.includes(`Digit${i + 1}`) && emoteOver(p, k));
           if (taps.includes('KeyV')) mimic(p.gull, yaw);
           if (taps.includes('KeyG')) flockCall(p.gull, yaw);
           if (taps.includes('KeyH') && defense?.activateHawk()) hud.toast('Hawk-eye!', 0.8);
-          onGags(interaction.updateGull(p.id, p.gull.state, { grab: taps.includes('KeyE'), toss: taps.includes('KeyQ'), poop: taps.includes('KeyF'), lock: net!.guestFrame?.s.lk ? { x: net!.guestFrame.s.lk[0], y: net!.guestFrame.s.lk[1], z: net!.guestFrame.s.lk[2], r: 0.9 } : null }, dt, simTime));
+          onGags(interaction.updateGull(p.id, p.gull.state, { grab: taps.includes('KeyE'), toss: taps.includes('KeyQ'), poop: taps.includes('KeyF'), lock: net!.guestFrame?.s.lk ? { x: net!.guestFrame.s.lk[0], y: net!.guestFrame.s.lk[1], z: net!.guestFrame.s.lk[2], r: 0.9 } : spotAssist(p.id) }, dt, simTime));
         } else p.gull.stepRemote(dt); // on a guest this is the host's gull
         continue;
       }
+      p.gull.taunting = p.input.isDown('KeyT');
       const look = p.input.consumeMouse();
       p.yaw -= look.dx * tuning.camera.mouseSensitivity.value;
       p.pitch = Math.min(1.2, Math.max(-0.3, p.pitch + look.dy * tuning.camera.mouseSensitivity.value));
@@ -1700,7 +1930,7 @@ startLoop({
     else onGags(interaction.step(dt, simTime, gull.state));
     if (npcs && !isGuest()) {
       const g = gull.state;
-      onNpcEvents(npcs.update(dt, players.map((p) => ({ x: p.gull.state.x, y: p.gull.state.y, z: p.gull.state.z, diving: p.gull.state.mode === 'dive' }))));
+      onNpcEvents(npcs.update(dt, players.map((p) => ({ x: p.gull.state.x, y: p.gull.state.y, z: p.gull.state.z, diving: p.gull.state.mode === 'dive', taunt: p.gull.taunting }))));
       const stolen = players.some((p) => interaction.beak(p.id).carried?.stolen === true);
       notes(quests.tick({ dt, carryingStolen: stolen, nearestNpc: Math.min(...players.map((p) => npcs.nearestDistance(p.gull.state))) }));
       if (defense) {
@@ -1793,6 +2023,8 @@ startLoop({
     if (!isGuest()) stepKalleGame(dt);
     if (!isGuest()) stepSenate(dt);
     if (!isGuest()) stepEsplanadi(dt);
+    if (!isGuest()) coopStep(dt);
+    juiceStep(dt);
     updateTargets(targets, dt);
     input.endStep();
   },
@@ -1854,6 +2086,9 @@ startLoop({
     graphics.update(gull.position);
     water?.update(simTime);
     ripples.update(frameDt);
+    emotes.update(frameDt);
+    puffs.update(frameDt);
+    slowmoT = Math.max(0, slowmoT - frameDt);
     rippleT -= frameDt;
     if (s.mode === 'ground' && s.overWater && rippleT <= 0) {
       rippleT = Math.hypot(s.vx, s.vz) > 0.4 ? 0.45 : 1.6; // paddling makes more rings than floating

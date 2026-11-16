@@ -26,6 +26,11 @@ export class Sprinklers {
     return Math.max(0, this.left);
   }
 
+  /** A guest is told how long they still run. */
+  setRemaining(seconds: number): void {
+    this.left = seconds;
+  }
+
   start(): SprinklerEvent[] {
     if (this.left > 0) return [];
     this.left = tuning.sprinkler.seconds.value;

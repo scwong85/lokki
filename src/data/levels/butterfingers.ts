@@ -56,7 +56,7 @@ export const BUTTERFINGERS: LevelDef = {
       id: 'duoPass',
       title: 'Pass the parcel',
       timed: false,
-      objectives: [{ id: 'duoPass', text: 'Pass an item from one gull to the other', kind: 'event', event: 'coop:handover', hint: 'One gull drops or tosses something, the other grabs it within a few seconds.' }],
+      objectives: [{ id: 'duoPass', text: 'Mid-air passes: toss an item (Q) and the other gull catches it in flight, three times', kind: 'event', event: 'coop:pass', count: 3, hint: 'Toss with Q toward your partner. If they are flying close with an empty beak, it jumps into their beak.' }],
     },
   ],
   secret: ['photobomb'],

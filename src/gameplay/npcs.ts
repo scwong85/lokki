@@ -1,3 +1,4 @@
+import { watchedGull } from './coopPlay';
 import * as THREE from 'three';
 import type { NpcSnap } from '../net/snapshot';
 import { easeAngle, easeTo } from '../net/remote';
@@ -92,7 +93,7 @@ export class NpcManager implements NpcHooks {
     for (const n of this.npcs) {
       if (n.role === 'selfie' || n.role === 'blogger') ev.push(...this.selfieStep(n, gulls)); // the blogger photographs her dish on the same rhythm
       if (n.role === 'cleaner') this.cleanStep(n, dt);
-      const near = gulls.length === 1 ? gulls[0] : gulls.reduce((a, b) => ((a.x - n.x) ** 2 + (a.z - n.z) ** 2 <= (b.x - n.x) ** 2 + (b.z - n.z) ** 2 ? a : b));
+      const near = gulls.length === 1 ? gulls[0] : watchedGull(n, gulls);
       ev.push(...stepNpc(n, near, this.noises, dt, ctx));
       ev.push(...this.wantedItems(n));
       ev.push(...this.reclaim(n));

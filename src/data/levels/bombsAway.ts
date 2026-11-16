@@ -60,9 +60,9 @@ export const BOMBS_AWAY: LevelDef = {
   coopQuests: [
     {
       id: 'duoSplat',
-      title: 'Splat squad',
+      title: 'Laser guided',
       timed: false,
-      objectives: [{ id: 'duoSplat', text: 'Both gulls poop on people within five seconds', kind: 'event', event: 'coop:poopNpc', hint: 'One gull each: poop on someone within five seconds of each other.' }],
+      objectives: [{ id: 'duoSplat', text: 'Spotter and bomber: one gull locks a person (Tab), the other splats them', kind: 'event', event: 'coop:spotted', count: 2, hint: 'One gull locks onto someone with Tab and keeps the lock. The other, with no lock of its own, drops: the poop homes in on the marked person. Do it twice.' }],
     },
   ],
   secret: ['frantic'],
