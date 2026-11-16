@@ -206,7 +206,9 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M27 Havoc Hour prototype: chain scoring on the Market Square — **decision gate 3** (merged; playtest says OK, chain cue made bigger in M28)
 - [x] M28 World enrichment W1: sky and light, horizon backdrop, fewer draw calls
 - [x] M29 World enrichment W2: district colours, mansard roofs, courtyards, lit windows
-- [ ] M30 Roads (start of W3) and playtest fixes: Thermal Express dome, backwards bike (built on `m30-roads-fixes`, awaiting playtest)
+- [x] M30 Roads (start of W3) and playtest fixes: Thermal Express dome, backwards bike
+- [x] M31 Roads part 2: tram line, zebra crossings, manholes
+- [ ] M32 World enrichment W4 start: swaying trees, bobbing boats, glowing lamps (built on `m32-world-w4`, awaiting playtest)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -366,7 +368,13 @@ District palettes, mansard roofs with landing slabs, courtyard yards, lit window
 ### M30 — Roads and playtest fixes (S–M)
 Streets drawn as roads (asphalt, pavements, kerbs, dashed centre lines); the Thermal Express dome landing and the backwards bike fixed. Details: `docs/milestones/M30.md`.
 
-### After M30 (backlog)
+### M31 — Roads, part 2 (S)
+Tram rails and sleepers on Senate Square, zebra crossings and manholes. Details: `docs/milestones/M31.md`.
+
+### M32 — World enrichment W4 (start): things that move (S)
+Trees sway, boats bob, street lamps glow at dusk, all in shaders or one hidden-by-day mesh. Details: `docs/milestones/M32.md`.
+
+### After M32 (backlog)
  World enrichment rest of W2, then W3 to W6 (`docs/design/world-enrichment.md`): streets and squares, things that move, a busier city, landmark kit.
  Plans: `docs/design/fun-todos.md` (F2–F6), `docs/design/graphics-refresh.md` (G2–G6).
  Esplanadi E4–E10 (`docs/design/levels-esplanadi.md`), Katajanokka (`docs/design/levels-katajanokka.md`), each level designed with a co-op variant; the shared systems they need (moving platforms, NPC schedules, Kalle the rival gull, the drone, seasons); local split-screen co-op (optional); optional WebGPU renderer.
