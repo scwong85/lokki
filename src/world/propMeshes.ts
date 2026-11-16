@@ -81,6 +81,10 @@ function buildParts(type: PropType, g: THREE.Group): void {
       g.add(mesh(new THREE.BoxGeometry(0.24, 0.12, 0.36), 0x3d424d, 0, 0, 0));
       g.add(mesh(new THREE.BoxGeometry(0.1, 0.04, 0.12), 0x6bd66b, 0, 0.08, 0));
       break;
+    case 'cheese':
+      g.add(mesh(new THREE.SphereGeometry(0.26, 10, 8), 0xf2d27a, 0, 0, 0));
+      g.add(mesh(new THREE.SphereGeometry(0.16, 8, 6), 0xc98f3c, 0, 0.12, 0.1)); // the toasted spots
+      break;
     case 'soup':
       g.add(mesh(new THREE.CylinderGeometry(0.17, 0.11, 0.14, 12), 0xf5efe6));
       g.add(mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.03, 12), 0xf2a35e, 0, 0.065, 0));

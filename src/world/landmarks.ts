@@ -234,7 +234,54 @@ function cafe(l: LandmarkSrc): LandmarkOut {
   return { prisms: [], targets: [], props };
 }
 
-const BUILDERS: Record<string, (l: LandmarkSrc) => LandmarkOut> = { cathedral, statue, tents, ferry, lamps, clock, toy, goods, bins, cafe };
+/**
+ * The Cathedral steps (Senate Square): a wide stairway of `count` treads (0.45 m deep, 0.17 m high) rising northward (-Z)
+ * from (x, z) to the cathedral wall, with low rails that split it into three lanes for rolling things (the middle lane
+ * centred on x, the others 9.7 m to either side). The top tread is a perch.
+ */
+export const STEPS = { depth: 0.45, rise: 0.17, width: 29, laneOffset: 9.7, laneHalf: 1.3, landing: 3 };
+function steps(l: LandmarkSrc): LandmarkOut {
+  const n = l.count ?? 40;
+  const { depth, rise, width, laneOffset, laneHalf, landing } = STEPS;
+  const stairsEnd = l.z - n * depth;
+  const backZ = stairsEnd - landing; // the cathedral wall
+  const prisms: PrismDef[] = [prism(rect(l.x, (stairsEnd + backZ) / 2, width, landing), 0, n * rise, 0xece6dc, 0xf4efe6, 'perch')]; // the landing at the top
+  for (let i = 0; i < n; i++) {
+    const zFront = l.z - i * depth;
+    const top = (i + 1) * rise;
+    prisms.push(prism(rect(l.x, (zFront + backZ) / 2, width, zFront - backZ), 0, top, 0xece6dc, 0xf4efe6, 'prop'));
+    for (const lane of [-1, 0, 1]) for (const side of [-1, 1]) prisms.push(prism(rect(l.x + lane * laneOffset + side * laneHalf, zFront - depth / 2, 0.3, depth), top, top + 0.55, 0xd6cfc3, 0xd6cfc3));
+  }
+  return { prisms, targets: [] };
+}
+
+/** Alexander II, the emperor on his plinth in the middle of Senate Square (a famous pigeon hangout). */
+function emperor(l: LandmarkSrc): LandmarkOut {
+  const { x, z } = l;
+  return {
+    prisms: [
+      prism(rect(x, z, 7, 7), 0, 0.6, 0xe8e2d6, 0xf0ebe0),
+      prism(rect(x, z, 2.6, 2.6), 0.6, 3.4, 0xd9d2c4, 0xe8e2d6, 'perch'),
+      prism(ngon(x, z, 0.85, 10), 3.4, 5.8, 0x8fbfa8, 0x8fbfa8, 'perch'),
+    ],
+    targets: [],
+  };
+}
+
+/** The hot-dog cart at the foot of the steps. */
+function cart(l: LandmarkSrc): LandmarkOut {
+  const { x, z } = l;
+  return {
+    prisms: [
+      prism(rect(x, z, 2.4, 1.3), 0, 1.0, 0xffa95c, 0xfdfaf2),
+      prism(ngon(x, z + 0.9, 0.06, 5), 1.0, 2.4, 0x8a8fa0, 0x8a8fa0),
+      prism(ngon(x, z + 0.9, 1.5, 12), 2.4, 2.6, 0xff6b6b, 0xff9a9a),
+    ],
+    targets: [],
+  };
+}
+
+const BUILDERS: Record<string, (l: LandmarkSrc) => LandmarkOut> = { cathedral, statue, tents, ferry, lamps, clock, toy, goods, bins, cafe, steps, emperor, cart };
 
 export function buildLandmarks(list: readonly LandmarkSrc[]): Required<LandmarkOut> {
   const out: Required<LandmarkOut> = { prisms: [], targets: [], props: [], mats: [], decor: [] };

@@ -196,7 +196,8 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M17 Market Square Act 1, part 2: levels 5–8
 - [x] M18 Market Square Act 2: skill levels 9–14
 - [x] M19 Act 3, themed days, part 1: levels 15–18
-- [ ] M20 Act 3, part 2: levels 19–22, the end of the Market Square (built on `m20-act3b`, awaiting playtest)
+- [x] M20 Act 3, part 2: levels 19–22, the end of the Market Square
+- [ ] M21 Senate Square, part 1: levels S1–S3 (built on `m21-senate-a`, awaiting playtest)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -326,7 +327,10 @@ Vappu Eve, Herring Market, Wedding Bells, Frozen Harbour. Details: `docs/milesto
 ### M20 — Act 3, part 2: levels 19–22 (L)
 The Rival (Kalle), Night Market (dusk, sleeping vendors), The Drone, and the Great Kauppatori Heist. Details: `docs/milestones/M20.md`.
 
-### After M20 (backlog)
+### M21 — Senate Square, part 1: S1–S3 (M–L)
+Cheese Run, Say Pigeon!, Ding Dong, plus the Cathedral steps and the bell system. Details: `docs/milestones/M21.md`.
+
+### After M21 (backlog)
  Senate Square (`docs/design/levels-senaatintori.md`), Esplanadi (`docs/design/levels-esplanadi.md`), Katajanokka (`docs/design/levels-katajanokka.md`), each level designed with a co-op variant; the shared systems they need (moving platforms, NPC schedules, Kalle the rival gull, the drone, seasons); local split-screen co-op (optional); optional WebGPU renderer.
 
 ---

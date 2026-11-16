@@ -14,7 +14,11 @@ export interface LevelDef {
   /** Shown on the level select. */
   name: string;
   blurb: string;
-  district: 'kauppatori';
+  district: 'kauppatori' | 'senaatintori';
+  /** Where the gull starts (default: the Market Square). */
+  start?: { x: number; z: number };
+  /** A cathedral bell that rings now and then: everyone within hearing looks up at the tower. */
+  bells?: { x: number; z: number; first: number; every: number; duration: number };
   /** Free play: the whole quest pack, no stars, skills per quest (the M7/M8 game). */
   sandbox?: boolean;
   /** Ids of existing quests (from `QUESTS`) used as to-dos, in list order. */
