@@ -49,6 +49,9 @@ import type { HeatReason } from './gameplay/heat';
 import type { Noise } from './gameplay/npc';
 import { HeatMeter } from './ui/heatMeter';
 import { Announce } from './ui/announce';
+import { Tram } from './gameplay/tram';
+import { PigeonGang } from './gameplay/pigeons';
+import { TramView, PigeonView } from './world/senateFx';
 import { TriggerSystem, type PropView } from './gameplay/triggers';
 import { TRIGGERS } from './data/triggers';
 import { WRONG_FERRY } from './data/places';
@@ -272,7 +275,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -613,6 +616,111 @@ function stepKalleGame(dt: number): void {
   if (kv.kalle.carrying !== null && kalleProp) interaction.props.setCarryTarget(kalleProp, kv.beak(), kv.kalle.heading);
 }
 
+/** Senate Square: the tram (a moving roof to ride, stopped by a bottle on the track) and the Pigeon Gang on the statue. */
+let tram: Tram | null = null;
+let tramView: TramView | null = null;
+let gang: PigeonGang | null = null;
+let gangView: PigeonView | null = null;
+let rideT = 0;
+let onRoofBefore = false;
+const roofBox: import('./world/collision').Box = { min: [0, 0, 0], max: [0, 0, 0], kind: 'perch', color: 0xb9c4cf };
+function setupSenate(): void {
+  if (tramView) scene.remove(tramView.group);
+  if (gangView) scene.remove(gangView.group);
+  tramView = null;
+  gangView = null;
+  tram = null;
+  gang = null;
+  rideT = 0;
+  onRoofBefore = false;
+  world.movers.length = 0;
+  if (greybox) return;
+  if (level.tram) {
+    tram = new Tram(level.tram);
+    tramView = new TramView(tram, level.tram);
+    scene.add(tramView.group);
+    world.movers.push(roofBox);
+    placeRoof();
+  }
+  if (level.pigeons) {
+    gang = new PigeonGang(level.pigeons);
+    gangView = new PigeonView(gang, Math.round(tuning.pigeons.count.value));
+    scene.add(gangView.group);
+  }
+}
+function placeRoof(): void {
+  if (!tram) return;
+  const d = tram.def;
+  roofBox.min = [tram.x - d.length / 2, d.roofY - 0.5, d.z - d.width / 2];
+  roofBox.max = [tram.x + d.length / 2, d.roofY + 0.2, d.z + d.width / 2];
+}
+function stepSenate(dt: number): void {
+  const free = interaction.props.props.filter((p) => !p.broken && !p.carried && p.heldBy === null);
+  if (tram) {
+    const blocker = free.find((p) => p.type === 'bottle' && p.cur.p.y < 1.6 && tram!.trackAhead(p.cur.p.x, p.cur.p.z, tuning.tram.brakeDistance.value));
+    const ev = tram.update(dt, !!blocker);
+    placeRoof();
+    for (const e of ev) {
+      if (e.type === 'blocked') {
+        hud.toast('The tram stops. The driver climbs out to clear the track...', 2.2);
+        audio.play('chime');
+        notes(quests.onEvent('tramBlocked'));
+        if (blocker) npcs?.sendRole('driver', [{ x: blocker.cur.p.x, z: blocker.cur.p.z, name: 'the bottle' }]);
+      } else if (e.type === 'cleared') {
+        for (const p of free) if (p.type === 'bottle' && tram.trackAhead(p.cur.p.x, p.cur.p.z, tuning.tram.brakeDistance.value + 4)) interaction.props.destroy(p);
+        npcs?.sendRole('driver', [{ x: tram.def.stopX - 7, z: tram.def.z + 3, name: 'the tram' }]);
+      } else {
+        audio.play('chime');
+        noise(tram.x, tram.def.z, 1.2);
+      }
+    }
+    // riders: a gull standing on the roof is carried along
+    let riding = false;
+    for (const pl of players) {
+      const s = pl.gull.state;
+      if (tram.onRoof(s.x, s.z, -0.2) && s.mode === 'ground' && s.y <= tram.def.roofY + 1.6) {
+        pl.gull.carry(tram.vx * dt, 0);
+        if (!pl.remote) riding = true;
+      }
+    }
+    if (riding && !onRoofBefore) notes(quests.onEvent('tramBoard'));
+    onRoofBefore = riding;
+    rideT = riding && tram.mode === 'run' ? rideT + dt : 0;
+    if (rideT >= 8) {
+      rideT = -1e9;
+      notes(quests.onEvent('tramRide'));
+    }
+    tramView?.update();
+  }
+  if (gang) {
+    const gulls = players.filter((p) => !(p.remote ? p.gull.remoteDisguised : abilities.disguised));
+    let near: { x: number; y: number; z: number } | null = null;
+    let nd = Infinity;
+    for (const pl of gulls) {
+      const d = Math.hypot(pl.gull.state.x - gang.def.x, pl.gull.state.z - gang.def.z);
+      if (d < nd) { nd = d; near = pl.gull.state; }
+    }
+    const dropped = free.filter((p) => (p.type === 'bun' || p.type === 'salmiakki') && p.cur.p.y < 1.4).map((p) => ({ type: p.type, x: p.cur.p.x, z: p.cur.p.z }));
+    const r = gang.update(dt, near && near.y < 7 ? near : null, dropped);
+    if (r.shove) {
+      const pl = gulls.find((q) => q.gull.state === near);
+      if (pl) pl.gull.carry(r.shove.x, r.shove.z);
+    }
+    for (const e of r.events) {
+      if (e.type === 'chase') hud.toast('The Pigeon Gang mobs you! Bring them a bun.', 1.8);
+      else if (e.type === 'befriended' || e.type === 'scattered') {
+        const gone = free.find((p) => p.type === (e.type === 'befriended' ? 'bun' : 'salmiakki') && Math.hypot(p.cur.p.x - gang!.def.x, p.cur.p.z - gang!.def.z) < tuning.pigeons.guardRadius.value + tuning.pigeons.feedRadius.value);
+        if (gone) interaction.props.destroy(gone);
+        hud.toast(e.type === 'befriended' ? 'The Pigeon Gang loves you. You are an honorary pigeon!' : 'Pfft! The pigeons hate salmiakki and scatter!', 2);
+        audio.play(e.type === 'befriended' ? 'pop' : 'chime');
+        notes(quests.onEvent(e.type === 'befriended' ? 'pigeonsFriends' : 'pigeonsScattered'));
+        notes(quests.onEvent('pigeonsSettled'));
+      }
+    }
+    gangView?.update(dt);
+  }
+}
+
 const snow = new Snow();
 scene.add(snow.points);
 /** The sea: you swim in it and things float, except in winter levels when it is frozen ice (walk on it). */
@@ -672,6 +780,7 @@ function applyLevelRules(): void {
   applySeaRules();
   setNight(scene, !!level.night);
   setupKalle();
+  setupSenate();
   skillsPanel.refresh(skills, save);
   interaction.props.drift = level.drift ?? null;
   if (defense) defense.hiddenLines = !!level.hiddenLines;
@@ -1514,6 +1623,7 @@ startLoop({
     streetLife?.update(dt, gull.state);
     snow.update(dt, gull.state, simTime);
     if (!isGuest()) stepKalleGame(dt);
+    if (!isGuest()) stepSenate(dt);
     updateTargets(targets, dt);
     input.endStep();
   },

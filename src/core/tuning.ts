@@ -245,6 +245,22 @@ export const tuning = {
     escapeDistance: p(30, 10, 80, 1),
     escapeTime: p(3, 0.5, 15, 0.5),
   },
+  tram: {
+    speed: p(7, 2, 20, 0.5), // m/s along the track
+    dwellSeconds: p(9, 2, 30, 0.5), // waiting at the stop
+    endSeconds: p(6, 1, 30, 0.5), // waiting at the end of the line
+    startDelay: p(4, 0, 30, 0.5),
+    blockedSeconds: p(14, 4, 40, 1), // halted while the driver clears the track
+    brakeDistance: p(9, 3, 30, 0.5), // something on the track this far ahead stops the tram
+    trackSlack: p(1.5, 0, 4, 0.1), // how far beside the rails still counts as on the track
+  },
+  pigeons: {
+    guardRadius: p(7, 2, 20, 0.5), // gulls this close to the statue get chased off
+    shove: p(9, 1, 30, 0.5), // how hard the gang shoves a gull away
+    feedRadius: p(4, 1, 10, 0.5), // a bun or salmiakki this close to the gang counts
+    scatterSeconds: p(20, 5, 60, 1), // how long they stay away after salmiakki
+    count: p(9, 3, 20, 1),
+  },
   heat: {
     gainNoticed: p(4, 0, 30, 0.5), // a tourist spots you
     gainSnatch: p(25, 0, 60, 1),

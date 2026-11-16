@@ -80,6 +80,8 @@ type Item = { box: Box } | { prism: Prism };
 export class World {
   readonly boxes: Box[];
   readonly prisms: Prism[];
+  /** Moving boxes (a tram roof): mutate min/max each tick; not in the spatial grid, so always tested. */
+  readonly movers: Box[] = [];
   private grid = new Map<number, Item[]>();
   private readonly cell: number;
   private stamp = 0;
@@ -135,6 +137,13 @@ export class World {
     const contacts: Contact[] = [];
     for (let pass = 0; pass < 3; pass++) {
       let any = false;
+      for (const m of this.movers) {
+        const c = collideBox(m, p, r);
+        if (c) {
+          contacts.push(c);
+          any = true;
+        }
+      }
       for (const it of this.query(p.x - r, p.z - r, p.x + r, p.z + r)) {
         const c = 'box' in it ? collideBox(it.box, p, r) : collidePrism(it.prism, p, r);
         if (c) {
@@ -163,6 +172,13 @@ export class World {
   surfaceBelow(x: number, z: number, yFrom: number, margin = 0.3): { y: number; kind: Kind | null } {
     let best = 0;
     let kind: Kind | null = null;
+    for (const b of this.movers) {
+      if (x < b.min[0] - margin || x > b.max[0] + margin || z < b.min[2] - margin || z > b.max[2] + margin) continue;
+      if (b.max[1] <= yFrom + 0.01 && b.max[1] > best) {
+        best = b.max[1];
+        kind = b.kind;
+      }
+    }
     for (const it of this.query(x - margin, z - margin, x + margin, z + margin)) {
       if ('box' in it) {
         const b = it.box;
