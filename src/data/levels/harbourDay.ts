@@ -14,6 +14,7 @@ export const FERRY_HULL_POINT = { x: FERRY.x, z: FERRY.z - 3 };
  */
 export const HARBOUR_DAY: LevelDef = {
   id: 'harbour-day',
+  sky: 'morning',
   name: '8. Harbour Day',
   blurb: 'Float a message to the ferry before the horn.',
   district: 'kauppatori',

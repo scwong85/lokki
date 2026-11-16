@@ -1,3 +1,4 @@
+import { buildBackdrop, planBackdrop } from './backdrop';
 import * as THREE from 'three';
 import earcut from 'earcut';
 import { World, pointInRings, type Box, type Prism } from './collision';
@@ -6,8 +7,8 @@ import { createTargetMeshes } from './targetMeshes';
 import type { Target } from '../gameplay/targets';
 import type { PropSpawn } from '../gameplay/props';
 import cityJson from '../../data/generated/kauppatori.json';
-import { FACADES, FLAT_ROOFS, PITCHED_ROOFS, WINDOW_STYLES, bays, hash, pitchedRoof, rectInfo, roofRise, storeys, wantsPitched, windowPlan, type V3 } from './facade';
-import { shopTexture, windowAtlas } from '../render/facadeTextures';
+import { FACADES, FLAT_ROOFS, PITCHED_ROOFS, bays, hash, pitchedRoof, rectInfo, roofRise, storeys, wantsPitched, windowPlan, type V3 } from './facade';
+import { ATLAS_ROWS, windowAtlas } from '../render/facadeTextures';
 import { tuning } from '../core/tuning';
 import { planDressing } from './dressingPlan';
 import { buildDressing } from './dressing';
@@ -166,9 +167,9 @@ const STYLE_WALLS: Record<string, number> = { uspenski: 0xc4705a };
 const STYLE_ROOFS: Record<string, number> = { uspenski: 0x8fc4ad };
 
 /** Wall quad with window/shop UVs (u = bays across, v = floors up) and darker feet (baked ambient occlusion). */
-function wallQuad(buf: Buf, x1: number, z1: number, x2: number, z2: number, y0: number, y1: number, out: boolean, color: THREE.Color, foot: THREE.Color, u: number, v: number): void {
+function wallQuad(buf: Buf, x1: number, z1: number, x2: number, z2: number, y0: number, y1: number, out: boolean, color: THREE.Color, foot: THREE.Color, u: number, v: number, v0 = 0): void {
   const A = [x1, y0, z1], B = [x2, y0, z2], C = [x2, y1, z2], D = [x1, y1, z1];
-  const uA: [number, number] = u ? [0, 0] : PLAIN, uB: [number, number] = u ? [u, 0] : PLAIN, uC: [number, number] = u ? [u, v] : PLAIN, uD: [number, number] = u ? [0, v] : PLAIN;
+  const uA: [number, number] = u ? [0, v0] : PLAIN, uB: [number, number] = u ? [u, v0] : PLAIN, uC: [number, number] = u ? [u, v0 + v] : PLAIN, uD: [number, number] = u ? [0, v0 + v] : PLAIN;
   if (out) {
     buf.tri(A, C, B, foot, uA, uC, uB, color, foot);
     buf.tri(A, D, C, foot, uA, uD, uC, color, color);
@@ -184,7 +185,8 @@ function wallQuad(buf: Buf, x1: number, z1: number, x2: number, z2: number, y0: 
  */
 function wallBand(buf: Buf, x1: number, z1: number, x2: number, z2: number, y0: number, y1: number, out: boolean, color: THREE.Color, u: number, style: number): void {
   const A = [x1, y0, z1], B = [x2, y0, z2], C = [x2, y1, z2], D = [x1, y1, z1];
-  const v0 = 1 - (style + 1) / WINDOW_STYLES, v1 = 1 - style / WINDOW_STYLES;
+  const row = style + 1; // the shop row is first in the atlas
+  const v0 = 1 - (row + 1) / ATLAS_ROWS, v1 = 1 - row / ATLAS_ROWS;
   const uA: [number, number] = [0, v0], uB: [number, number] = [u, v0], uC: [number, number] = [u, v1], uD: [number, number] = [0, v1];
   if (out) {
     buf.triR(A, C, B, color, uA, uC, uB);
@@ -264,7 +266,7 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
       const x1 = ring[i * 2], z1 = ring[i * 2 + 1], x2 = ring[j * 2], z2 = ring[j * 2 + 1];
       const len = Math.hypot(x2 - x1, z2 - z1);
       const nb = bays(len, plan.bayW);
-      wallQuad(ground, x1, z1, x2, z2, 0, st.ground, sign > 0, wall, foot, bays(len), 1);
+      wallQuad(ground, x1, z1, x2, z2, 0, st.ground, sign > 0, wall, foot, bays(len), 1 / ATLAS_ROWS, 1 - 1 / ATLAS_ROWS); // the shop row is the top cell of the atlas
       if (st.upperFloors) {
         const blank = ri !== 0 || plan.blank(i);
         if (blank || nb === 0) wallQuad(upper, x1, z1, x2, z2, st.ground, h, sign > 0, wall, wall, 0, 0);
@@ -446,6 +448,8 @@ export function buildCity(): City {
   const isLand = (x: number, z: number) => data.land.some((l) => pointInRings(l.rings, x, z));
   const water = new Water(data.land, isLand);
   group.add(water.group);
+  const backdrop = buildBackdrop(planBackdrop(isLand, data.half));
+  if (backdrop) group.add(backdrop);
   group.add(flatLayer(data.land, 0.02, LAND, 1, pavingTexture(), 3), flatLayer(data.streets, 0.03, STREET, 2, asphaltTexture(), 6), flatLayer(data.parks, 0.04, PARK, 3, grassTexture(), 5));
 
   // landmarks keep the plain prism look; registry buildings get facades, roofs and roof clutter
@@ -453,7 +457,7 @@ export function buildCity(): City {
   for (const m of lm.mats) group.add(flatLayer([{ rings: m.rings }], 0.05, m.color, 4));
   const defs: PrismDef[] = [...lm.prisms];
 
-  // chunked, merged meshes (two draw calls per ~160 m cell: upper floors + ground floors) so frustum culling works
+  // chunked, merged meshes (one draw call per ~160 m cell) so frustum culling works
   const chunks = new Map<string, { upper: Buf; ground: Buf }>();
   const chunkFor = (ring: number[]) => {
     let cx = 0, cz = 0;
@@ -465,7 +469,10 @@ export function buildCity(): City {
     cz /= ring.length / 2;
     const key = `${Math.floor(cx / CHUNK)},${Math.floor(cz / CHUNK)}`;
     let c = chunks.get(key);
-    if (!c) chunks.set(key, (c = { upper: new Buf(), ground: new Buf() }));
+    if (!c) {
+      const buf = new Buf(); // shops and windows share one atlas, so a chunk is one mesh
+      chunks.set(key, (c = { upper: buf, ground: buf }));
+    }
     return c;
   };
   for (const d of lm.prisms) if (!d.hidden) extrude(chunkFor(d.rings[0]).upper, d);
@@ -476,12 +483,11 @@ export function buildCity(): City {
     defs.push(...building(c.upper, c.ground, b));
   }
   const upperMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, map: windowAtlas() });
-  const groundMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, map: shopTexture() });
   const phys: number[] = [];
-  for (const { upper, ground } of chunks.values()) {
-    for (const [buf, m] of [[upper, upperMat], [ground, groundMat]] as const) {
+  for (const { upper } of chunks.values()) {
+    for (const buf of [upper]) {
       if (buf.empty) continue;
-      const mesh = buf.mesh(m);
+      const mesh = buf.mesh(upperMat);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       group.add(mesh);

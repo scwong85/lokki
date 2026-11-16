@@ -76,8 +76,10 @@ export interface LevelDef {
   thermals?: { x: number; z: number; r: number; lift: number }[];
   /** Winter: the sea is frozen (you walk on it instead of swimming), it snows. */
   winter?: boolean;
-  /** Dusk: darker sky and lights (the night market). */
+  /** Dusk: darker sky and lights (the night market). Same as `sky: 'night'`. */
   night?: boolean;
+  /** Time of day: sky, fog, sun and light colours (data/skies). Default noon. */
+  sky?: import('../skies').SkyId;
   /** Vendors sleep at their stalls until a loud noise or a gull right beside them wakes them. */
   sleepingVendors?: boolean;
   /** The gull-hunting drone is loose, starting here. */

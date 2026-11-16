@@ -19,6 +19,7 @@ export const BELL_TOWER = { x: -138.95, z: -370.49 };
  */
 export const CHEESE_RUN: LevelDef = {
   id: 'cheese-run',
+  sky: 'morning',
   name: 'S1. Cheese Run',
   blurb: 'Senate Square: roll the cheese down the right lane.',
   district: 'senaatintori',
