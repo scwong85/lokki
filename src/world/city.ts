@@ -1,4 +1,6 @@
 import { buildBackdrop, planBackdrop } from './backdrop';
+import { paletteAt } from './districts';
+import { planMansard } from './roofs';
 import * as THREE from 'three';
 import earcut from 'earcut';
 import { World, pointInRings, type Box, type Prism } from './collision';
@@ -7,8 +9,8 @@ import { createTargetMeshes } from './targetMeshes';
 import type { Target } from '../gameplay/targets';
 import type { PropSpawn } from '../gameplay/props';
 import cityJson from '../../data/generated/kauppatori.json';
-import { FACADES, FLAT_ROOFS, PITCHED_ROOFS, bays, hash, pitchedRoof, rectInfo, roofRise, storeys, wantsPitched, windowPlan, type V3 } from './facade';
-import { ATLAS_ROWS, windowAtlas } from '../render/facadeTextures';
+import { bays, hash, pitchedRoof, rectInfo, roofRise, storeys, wantsPitched, windowPlan, type V3 } from './facade';
+import { ATLAS_ROWS, windowAtlas, windowGlow, windowGlowAtlas } from '../render/facadeTextures';
 import { tuning } from '../core/tuning';
 import { planDressing } from './dressingPlan';
 import { buildDressing } from './dressing';
@@ -239,7 +241,14 @@ function onion(buf: Buf, cx: number, cz: number, base: number, k: number): Prism
 /** One registry building: walls with windows and shopfronts, a cornice, a pitched or flat roof, roof clutter. Returns its collision prisms. */
 function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): PrismDef[] {
   const style = b.style;
-  const wallHex = style ? STYLE_WALLS[style] ?? 0xfdfaf2 : b.c === 4 ? 0xfdfaf2 : FACADES[hash(b.id) % FACADES.length];
+  // where it stands decides its colours (districts), and whether it gets a mansard roof
+  let mx = 0, mz = 0;
+  for (let i = 0; i < b.rings[0].length; i += 2) {
+    mx += b.rings[0][i];
+    mz += b.rings[0][i + 1];
+  }
+  const pal = paletteAt(mx / (b.rings[0].length / 2), mz / (b.rings[0].length / 2));
+  const wallHex = style ? STYLE_WALLS[style] ?? 0xfdfaf2 : b.c === 4 ? 0xfdfaf2 : pal.walls[hash(b.id) % pal.walls.length];
   const wall = new THREE.Color(wallHex);
   const foot = wall.clone().multiplyScalar(1 - tuning.render.ao.value);
   const trim = wall.clone().lerp(new THREE.Color(0xffffff), 0.45);
@@ -247,6 +256,8 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
   const st = storeys(h);
   const r = b.rings.length === 1 ? rectInfo(b.rings[0]) : null;
   const pitched = !style && wantsPitched(r, b.id, h);
+  // a low mansard instead of a flat lid on big irregular blocks (7 in 10), courtyards included; a visual skirt plus a landing slab on top
+  const mansard = !style && !pitched && h >= 8 && hash(b.id, 7) % 10 < 7 ? planMansard(b.rings) : null;
   const prisms: PrismDef[] = [{ rings: b.rings, y0: 0, y1: h, kind: 'building', wall: wallHex, roof: wallHex }];
 
   // each building gets its own window rhythm: bay width, a main style, accent floors and a few blank walls
@@ -279,6 +290,7 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
       }
       // cornice: a lighter ledge that sticks out at the top of taller flat-roofed buildings
       if (ri === 0 && !pitched && h >= 6) {
+        const parapet = !mansard;
         const len = Math.hypot(x2 - x1, z2 - z1) || 1;
         let nx = (z2 - z1) / len, nz = -(x2 - x1) / len;
         if (sign < 0) {
@@ -302,7 +314,8 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
           upper.tri(U1, P2, P1, trim);
           upper.tri(U1, U2, P2, trim);
         }
-        // parapet: a low wall around the roof edge (outer face, cap, inner face)
+        // parapet: a low wall around the roof edge (outer face, cap, inner face); a mansard has its skirt instead
+        if (!parapet) continue;
         const ph = 0.55, pw = 0.3;
         const ix1 = x1 - nx * pw, iz1 = z1 - nz * pw, ix2 = x2 - nx * pw, iz2 = z2 - nz * pw;
         wallQuad(upper, x1, z1, x2, z2, h, h + ph, sign > 0, wall, wall, 0, 0);
@@ -318,6 +331,16 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
       }
     }
   });
+
+  // courtyards: the inner yards get gravel or a lawn instead of the street cobbles showing through (draw-only, in the chunk mesh)
+  for (let k = 1; k < b.rings.length; k++) {
+    const yard = new THREE.Color([0xd6ccb8, 0xcdc4b1, 0xbfdcae, 0xd9d0bf][hash(b.id, 31 + k) % 4]);
+    for (const [ax, az, bx, bz, cx, cz] of triangulate([b.rings[k]])) {
+      const A = [ax, 0.07, az], B = [bx, 0.07, bz], C = [cx, 0.07, cz];
+      if ((bz - az) * (cx - ax) - (bx - ax) * (cz - az) > 0) upper.triR(A, B, C, yard, PLAIN, PLAIN, PLAIN);
+      else upper.triR(A, C, B, yard, PLAIN, PLAIN, PLAIN);
+    }
+  }
 
   if (style === 'uspenski') {
     // a big central onion dome and smaller ones around it (where the footprint allows)
@@ -337,7 +360,7 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
   if (pitched && r) {
     const rise = roofRise(r.short);
     const hip = r.long / r.short < 1.3;
-    const roofHex = style ? STYLE_ROOFS[style] ?? PITCHED_ROOFS[0] : PITCHED_ROOFS[hash(b.id, 3) % PITCHED_ROOFS.length];
+    const roofHex = style ? STYLE_ROOFS[style] ?? pal.pitched[0] : pal.pitched[hash(b.id, 3) % pal.pitched.length];
     const roofC = new THREE.Color(roofHex);
     const roof = pitchedRoof(r, h, rise, hip);
     for (const [p, q, t] of roof.slopes) upper.tri(p, q, t, roofC);
@@ -380,15 +403,40 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
     }
   } else {
     // flat roof
-    const roofC = new THREE.Color(style ? STYLE_ROOFS[style] ?? FLAT_ROOFS[0] : FLAT_ROOFS[hash(b.id, 11) % FLAT_ROOFS.length]);
-    for (const [ax, az, bx, bz, cx, cz] of triangulate(b.rings)) {
-      const up = (bz - az) * (cx - ax) - (bx - ax) * (cz - az) > 0;
-      const A = [ax, h, az], B = [bx, h, bz], C = [cx, h, cz];
-      if (up) upper.tri(A, B, C, roofC);
-      else upper.tri(A, C, B, roofC);
-    }
+    const roofHex = style ? STYLE_ROOFS[style] ?? pal.flat[0] : pal.flat[hash(b.id, 11) % pal.flat.length];
+    const roofC = new THREE.Color(roofHex);
+    const rh = mansard ? h + mansard.rise : h; // the height of the roof top (clutter stands on it)
+    const roofRings = mansard ? mansard.top : b.rings;
+    const flatTop = (rings: number[][], y: number, col: THREE.Color) => {
+      for (const [ax, az, bx, bz, cx, cz] of triangulate(rings)) {
+        const up = (bz - az) * (cx - ax) - (bx - ax) * (cz - az) > 0;
+        const A = [ax, y, az], B = [bx, y, bz], C = [cx, y, cz];
+        if (up) upper.tri(A, B, C, col);
+        else upper.tri(A, C, B, col);
+      }
+    };
+    if (mansard) {
+      const skirtC = roofC.clone().multiplyScalar(0.86);
+      for (const [o, n2] of mansard.pairs) {
+        const m = o.length / 2;
+        for (let k = 0; k < m; k++) {
+          const l = (k + 1) % m;
+          const O1 = [o[k * 2], h, o[k * 2 + 1]], O2 = [o[l * 2], h, o[l * 2 + 1]];
+          const N1 = [n2[k * 2], rh, n2[k * 2 + 1]], N2 = [n2[l * 2], rh, n2[l * 2 + 1]];
+          for (const [A, B, C] of [[O1, O2, N2], [O1, N2, N1]]) {
+            // the skirt faces up and outwards: flip a triangle that came out facing down
+            const ny = (B[2] - A[2]) * (C[0] - A[0]) - (B[0] - A[0]) * (C[2] - A[2]);
+            if (ny > 0) upper.tri(A, B, C, skirtC);
+            else upper.tri(A, C, B, skirtC);
+          }
+        }
+      }
+      flatTop(mansard.top, rh, roofC);
+      // landing slab: the flat top is solid (the sloping skirt keeps the wall's height, so it is only a visual)
+      prisms.push({ rings: mansard.top, y0: h, y1: rh, kind: 'building', wall: roofHex, roof: roofHex });
+    } else flatTop(b.rings, h, roofC);
     // roof clutter: stairwell boxes and vents on bigger flat roofs
-    const outer = b.rings[0];
+    const outer = roofRings[0];
     let minx = Infinity, maxx = -Infinity, minz = Infinity, maxz = -Infinity;
     for (let i = 0; i < outer.length; i += 2) {
       minx = Math.min(minx, outer[i]);
@@ -401,21 +449,21 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
       const fx = (hash(b.id, 20 + i) % 1000) / 1000, fz = (hash(b.id, 40 + i) % 1000) / 1000;
       const w = 1.4 + (hash(b.id, 60 + i) % 100) / 60, d = 1.4 + (hash(b.id, 80 + i) % 100) / 60;
       const cx = minx + (0.2 + fx * 0.6) * (maxx - minx), cz = minz + (0.2 + fz * 0.6) * (maxz - minz);
-      const inside = [[-1, -1], [1, -1], [1, 1], [-1, 1]].every(([sx, sz]) => pointInRings(b.rings, cx + (sx * w) / 2 + sx * 0.5, cz + (sz * d) / 2 + sz * 0.5));
-      if (inside) prisms.push(box(upper, cx, cz, w, d, h, h + 1 + (hash(b.id, 99 + i) % 10) / 8, 0xc9c4bd));
+      const inside = [[-1, -1], [1, -1], [1, 1], [-1, 1]].every(([sx, sz]) => pointInRings(roofRings, cx + (sx * w) / 2 + sx * 0.5, cz + (sz * d) / 2 + sz * 0.5));
+      if (inside) prisms.push(box(upper, cx, cz, w, d, rh, rh + 1 + (hash(b.id, 99 + i) % 10) / 8, 0xc9c4bd));
     }
     if (h >= 6) {
       const at = (k: number, pad: number): [number, number] | null => {
         const fx = (hash(b.id, 200 + k) % 1000) / 1000, fz = (hash(b.id, 300 + k) % 1000) / 1000;
         const x = minx + (0.1 + fx * 0.8) * (maxx - minx), z = minz + (0.1 + fz * 0.8) * (maxz - minz);
-        return [[-1, -1], [1, -1], [1, 1], [-1, 1]].every(([sx, sz]) => pointInRings(b.rings, x + sx * pad, z + sz * pad)) ? [x, z] : null;
+        return [[-1, -1], [1, -1], [1, 1], [-1, 1]].every(([sx, sz]) => pointInRings(roofRings, x + sx * pad, z + sz * pad)) ? [x, z] : null;
       };
       // chimney stacks (brick, with a cap)
       for (let i = 0; i < 1 + (hash(b.id, 13) % 3); i++) {
         const p = at(i, 1);
         if (!p) continue;
-        const top = h + 1.4 + (hash(b.id, 400 + i) % 10) / 10;
-        prisms.push(box(upper, p[0], p[1], 0.7, 1.1, h, top, 0xc27d66));
+        const top = rh + 1.4 + (hash(b.id, 400 + i) % 10) / 10;
+        prisms.push(box(upper, p[0], p[1], 0.7, 1.1, rh, top, 0xc27d66));
         box(upper, p[0], p[1], 0.9, 1.3, top, top + 0.15, 0x8f8a86);
       }
       // skylights (dark glass panes lying on the roof)
@@ -423,7 +471,7 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
         const p = at(10 + i, 1.4);
         if (!p) continue;
         const g = new THREE.Color(0x6c829b);
-        const y = h + 0.06;
+        const y = rh + 0.06;
         upper.tri([p[0] - 0.9, y, p[1] - 0.6], [p[0] - 0.9, y, p[1] + 0.6], [p[0] + 0.9, y, p[1] + 0.6], g);
         upper.tri([p[0] - 0.9, y, p[1] - 0.6], [p[0] + 0.9, y, p[1] + 0.6], [p[0] + 0.9, y, p[1] - 0.6], g);
       }
@@ -431,9 +479,9 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
       if (hash(b.id, 19) % 3 === 0) {
         const p = at(20, 0.5);
         if (p) {
-          box(upper, p[0], p[1], 0.07, 0.07, h, h + 2.6, 0x6d717a);
-          box(upper, p[0], p[1], 1.2, 0.05, h + 2.2, h + 2.26, 0x6d717a);
-          box(upper, p[0], p[1], 0.8, 0.05, h + 2.45, h + 2.5, 0x6d717a);
+          box(upper, p[0], p[1], 0.07, 0.07, rh, rh + 2.6, 0x6d717a);
+          box(upper, p[0], p[1], 1.2, 0.05, rh + 2.2, rh + 2.26, 0x6d717a);
+          box(upper, p[0], p[1], 0.8, 0.05, rh + 2.45, rh + 2.5, 0x6d717a);
         }
       }
     }
@@ -482,7 +530,18 @@ export function buildCity(): City {
     const c = chunkFor(b.rings[0]);
     defs.push(...building(c.upper, c.ground, b));
   }
-  const upperMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, map: windowAtlas() });
+  const upperMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, map: windowAtlas(), emissive: 0xffffff, emissiveMap: windowGlowAtlas() });
+  // lit windows: only some bays glow (a hash of where the window is), and how many follows the sky (windowGlow: 0 by day)
+  upperMat.onBeforeCompile = (shader) => {
+    shader.uniforms.uGlow = windowGlow;
+    shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWinPos;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvWinPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vWinPos;\nuniform float uGlow;')
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+        vec3 cellId = floor(vec3(vWinPos.x * 0.34 + vWinPos.z * 0.29, vWinPos.y / 3.1, vWinPos.z * 0.34 - vWinPos.x * 0.29));
+        float lit = step(0.42, fract(sin(dot(cellId, vec3(12.9898, 78.233, 37.719))) * 43758.5453));
+        totalEmissiveRadiance *= uGlow * lit;`);
+  };
   const phys: number[] = [];
   for (const { upper } of chunks.values()) {
     for (const buf of [upper]) {

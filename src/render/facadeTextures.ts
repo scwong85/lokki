@@ -95,3 +95,35 @@ export const windowAtlas = (): THREE.Texture => {
   t.anisotropy = 4;
   return t;
 };
+
+/** How strongly the windows glow (0 by day, up to 1 at night). Set from the sky preset; shared by every facade material. */
+export const windowGlow = { value: 0 };
+
+/**
+ * Emissive twin of the facade atlas: the glass areas glow warm, everything else is black. Same layout (see `windowAtlas`).
+ * Cell 0 is the shopfront, cells 1 to 6 the window styles.
+ */
+export const windowGlowAtlas = (): THREE.Texture => {
+  const N = ATLAS_ROWS;
+  const c = document.createElement('canvas');
+  c.width = 64;
+  c.height = 64 * N;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#000000';
+  g.fillRect(0, 0, c.width, c.height);
+  const OFF = 64;
+  const W = '#ffcf85', W2 = '#ffe2b0';
+  const R = (col: string, x: number, y: number, w: number, h: number, cell: number) => rect(g, col, x, cell * 64 + y + OFF, w, h);
+  rect(g, W, 8, 17, 48, 35); // the shop window
+  rect(g, W2, 8, 17, 48, 9);
+  R(W, 24, 15, 16, 27, 0);
+  R(W, 26, 16, 12, 32, 1);
+  R(W, 8, 20, 48, 20, 2);
+  R(W, 11, 23, 14, 16, 3); R(W, 39, 23, 14, 16, 3);
+  R(W, 26, 16, 12, 26, 4);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.ClampToEdgeWrapping;
+  return t;
+};
