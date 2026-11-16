@@ -31,7 +31,7 @@ export interface InteractionInput {
 export type GagEvent =
   | { type: 'grab'; prop: Prop; by?: number }
   | { type: 'snatch'; prop: Prop; by?: number }
-  | { type: 'poopNpc'; role?: string; by?: number }
+  | { type: 'poopNpc'; role?: string; by?: number; x?: number; z?: number }
   | { type: 'drop'; prop: Prop; by?: number }
   | { type: 'toss'; prop: Prop; by?: number }
   | { type: 'heavy'; prop: Prop }
@@ -131,6 +131,14 @@ export class Interaction {
   /** Where the beak holds things. */
   beakPos(s: FlightState): { x: number; y: number; z: number } {
     return { x: s.x - Math.sin(s.heading) * 0.85, y: s.y + 0.05, z: s.z - Math.cos(s.heading) * 0.85 };
+  }
+
+  /** A partner's throw lands in this gull's (empty) beak. */
+  catchProp(id: number, p: Prop): GagEvent[] {
+    const b = this.beak(id);
+    const ev: GagEvent[] = [];
+    if (!b.carried && !p.carried && p.heldBy === null && !p.broken) this.takeInBeak(p, ev, b);
+    return ev;
   }
 
   private takeInBeak(p: Prop, ev: GagEvent[], b: Beak): void {
@@ -254,7 +262,7 @@ export class Interaction {
       if (hit.prop !== null && hit.prop >= propSpheres.length) {
         const role = this.npcs?.onPooped(hit.prop - propSpheres.length);
         this.decals.add({ x: hit.x, y: 0, z: hit.z }, { x: 0, y: 1, z: 0 }, 0.5);
-        if (!lp.decoy) ev.push({ type: 'poopNpc', role, by: lp.by });
+        if (!lp.decoy) ev.push({ type: 'poopNpc', role, by: lp.by, x: hit.x, z: hit.z });
       } else if (hit.prop !== null) {
         const p = props[hit.prop];
         p.dirty++;

@@ -91,6 +91,8 @@ export interface GullInfo {
   y: number;
   z: number;
   diving: boolean;
+  /** Taunting: holds the attention of everyone nearby (co-op decoy). */
+  taunt?: boolean;
 }
 
 export interface Noise {

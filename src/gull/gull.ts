@@ -1,3 +1,4 @@
+import { Squash } from '../gameplay/squash';
 import * as THREE from 'three';
 import type { GullSlot } from '../data/gullSkins';
 import { newFlightState, stepFlight, GULL_RADIUS, type FlightEvent, type FlightInput, type FlightState } from './flight';
@@ -16,6 +17,11 @@ export class Gull {
   readonly position = new THREE.Vector3();
   readonly model = new GullModel();
   state: FlightState;
+  readonly squash = new Squash();
+  private lastMode = 'ground';
+  /** Extra vertical wobble for a moment (taunt, emote, a finished to-do). */
+  wiggleT = 0;
+
   /** Slide the whole gull sideways (standing on a moving tram roof). */
   carry(dx: number, dz: number): void {
     this.state.x += dx;
@@ -70,12 +76,16 @@ export class Gull {
 
   /** The other player is in pigeon disguise (their news says so). */
   remoteDisguised = false;
+  /** Taunting (holding everyone's attention) and tangled (caught, waiting for the partner). */
+  taunting = false;
+  tangled = false;
 
   setRemote(s: GullSnap): void {
     if (!!s.dg !== this.remoteDisguised) {
       this.remoteDisguised = !!s.dg;
       this.model.setDisguise(this.remoteDisguised);
     }
+    this.taunting = !!s.tn;
     const t = { x: s.p[0], y: s.p[1], z: s.p[2], vx: s.v[0], vy: s.v[1], vz: s.v[2], heading: s.h, mode: s.mode, fa: s.fa ?? 0, ha: s.ha ?? 0, tr: s.tr ?? 0 };
     if (!this.remoteT) Object.assign(this.state, { x: t.x, y: t.y, z: t.z, heading: t.heading }); // first news: appear there
     this.remoteT = t;
@@ -133,7 +143,18 @@ export class Gull {
     this.pitch += (targetPitch - this.pitch) * k;
     this.roll += (targetRoll - this.roll) * k;
     this.mesh.rotation.set(this.pitch, p.heading + dh * alpha, this.roll);
-    this.mesh.scale.y = s.stunT > 0 ? 0.85 : 1;
+    // squash on landing, stretch on take-off; a wiggle when showing off
+    if (s.mode !== this.lastMode) {
+      if (s.mode === 'ground') this.squash.kick(-tuning.juice.landSquash.value);
+      else if (this.lastMode === 'ground') this.squash.kick(tuning.juice.hopStretch.value);
+      this.lastMode = s.mode;
+    }
+    this.squash.update(Math.min(frameDt, 0.05));
+    this.wiggleT = Math.max(0, this.wiggleT - frameDt);
+    const wig = this.wiggleT > 0 ? Math.sin(this.time * 22) * 0.07 : 0;
+    const sy = this.squash.y * (s.stunT > 0 ? 0.85 : 1) + wig;
+    this.mesh.scale.set(this.squash.xz, sy, this.squash.xz);
+    if (this.wiggleT > 0) this.mesh.rotation.z += Math.sin(this.time * 16) * 0.18;
 
     this.walkPhase += hs * frameDt * 2.4;
     this.model.apply(

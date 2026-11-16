@@ -146,6 +146,13 @@ export const tuning = {
     runArms: p(0.1, 0, 1, 0.05), // how much the panic/cheer arm raise overrides the run clip (0 = the clip's own arms)
   },
   juice: {
+    landSquash: p(0.22, 0, 0.5, 0.01),
+    hopStretch: p(0.2, 0, 0.5, 0.01),
+    snatchStretch: p(0.3, 0, 0.6, 0.01),
+    snatchSlowmo: p(0.16, 0, 0.5, 0.01), // seconds of slow motion on a snatch (single player only)
+    slowmoScale: p(0.35, 0.1, 1, 0.05),
+    emoteSeconds: p(1.6, 0.5, 4, 0.1),
+    puffs: p(1, 0, 1, 1), // particles on/off
     shake: p(1, 0, 1, 0.1), // screen shake strength (0 = off)
     shakeDecay: p(5, 1, 20, 0.5), // how fast a shake dies down
     shakeAmount: p(0.35, 0, 1.5, 0.05), // metres of camera offset at full strength
@@ -253,6 +260,18 @@ export const tuning = {
     blockedSeconds: p(14, 4, 40, 1), // halted while the driver clears the track
     brakeDistance: p(9, 3, 30, 0.5), // something on the track this far ahead stops the tram
     trackSlack: p(1.5, 0, 4, 0.1), // how far beside the rails still counts as on the track
+  },
+  coop: {
+    tauntRadius: p(16, 4, 40, 1), // people this close to a taunting gull watch it and nobody else
+    tauntLoud: p(1.3, 0.3, 3, 0.1), // how loud a taunt is (people turn to look)
+    tauntEvery: p(0.9, 0.3, 3, 0.1), // seconds between taunt squawks while held
+    passWindow: p(2.5, 0.5, 6, 0.1), // a thrown item counts as "in flight" this long
+    catchRadius: p(2.6, 0.8, 6, 0.1), // a partner's throw this close jumps into your beak
+    chainWindow: p(8, 2, 20, 0.5), // seconds between passes that still count as one volley
+    spotRadius: p(3, 1, 8, 0.1), // a splat this close to the partner's lock counts as spotted
+    spotAssist: p(1.8, 0.5, 5, 0.1), // lock radius a bomber gets from the partner's mark
+    tangleSeconds: p(6, 2, 15, 0.5), // how long a caught gull is stuck without help
+    rescueRadius: p(2.2, 1, 6, 0.1), // the partner frees you from this close
   },
   sun: {
     shadowDx: p(-0.45, -2, 2, 0.05), // the shadow falls this far in x per metre of height (the sun is south-east)

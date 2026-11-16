@@ -61,9 +61,9 @@ export const NOSY_PARKERS: LevelDef = {
   coopQuests: [
     {
       id: 'duoSnatch',
-      title: 'Double trouble',
+      title: 'Good cop, bad gull',
       timed: false,
-      objectives: [{ id: 'duoSnatch', text: 'Both gulls snatch within five seconds', kind: 'event', event: 'coop:snatch', hint: 'One gull each: snatch within five seconds of each other.' }],
+      objectives: [{ id: 'duoSnatch', text: 'Decoy and thief: one gull taunts (hold T), the other snatches', kind: 'event', event: 'coop:decoy', hint: 'One gull holds T near the tourists: everyone watches it. The other snatches from behind while they stare.' }],
     },
   ],
   secret: ['double'],

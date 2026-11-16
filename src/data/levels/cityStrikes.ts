@@ -60,9 +60,9 @@ export const CITY_STRIKES: LevelDef = {
   coopQuests: [
     {
       id: 'duoSpray',
-      title: 'Crossfire',
+      title: 'Wet wingman',
       timed: false,
-      objectives: [{ id: 'duoSpray', text: 'Both gulls snatch within five seconds', kind: 'event', event: 'coop:snatch', hint: 'One gull each.' }],
+      objectives: [{ id: 'duoSpray', text: 'Rescue: peck your sprayed partner free', kind: 'event', event: 'coop:rescue', hint: 'A sprayed or netted gull is stuck for six seconds. Fly right up to it and it is free at once.' }],
     },
   ],
   triggers: ['bunRing'],

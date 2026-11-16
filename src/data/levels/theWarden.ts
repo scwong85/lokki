@@ -68,9 +68,9 @@ export const THE_WARDEN: LevelDef = {
   coopQuests: [
     {
       id: 'duoWarden',
-      title: 'Pincer',
+      title: 'In his face',
       timed: false,
-      objectives: [{ id: 'duoWarden', text: 'Both gulls poop on people within five seconds', kind: 'event', event: 'coop:poopNpc', hint: 'One gull each.' }],
+      objectives: [{ id: 'duoWarden', text: 'One gull taunts (hold T) while the other snatches', kind: 'event', event: 'coop:decoy', hint: 'The taunting gull holds everyone\'s attention.' }],
     },
   ],
   triggers: [],

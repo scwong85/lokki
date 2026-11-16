@@ -31,7 +31,9 @@ export type GameEvent =
   | { k: 'poop'; p: [number, number, number]; v: [number, number, number] }
   | { k: 'hit'; hit: unknown }
   | { k: 'clear'; level: string; stars: [boolean, boolean, boolean]; seconds: number }
-  | { k: 'hideComplete' };
+  | { k: 'hideComplete' }
+  | { k: 'fx'; kind: string; p: [number, number, number]; scale?: number }
+  | { k: 'emote'; g: number; e: string };
 
 export type Msg =
   | { t: 'hello'; v: number; name: string; look: string }

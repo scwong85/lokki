@@ -17,6 +17,9 @@ export interface GullSnap {
   tr?: number;
   /** Pigeon disguise on. */
   dg?: number;
+  /** Taunting (co-op decoy) and tangled (stuck until the partner pecks it free). */
+  tn?: number;
+  tg?: number;
   /** Where the gull's target lock is (the host uses it to aim this player's droppings). */
   lk?: [number, number, number];
 }
@@ -81,12 +84,28 @@ export interface Snapshot {
   d?: DefenseSnap;
   /** The rival gull, if the level has one: x, y, z, heading, mode index. */
   k?: [number, number, number, number, number];
+  /** District actors (tram, pigeons, sunbathers, dogs, sprinklers), when the level has them. */
+  x?: DistrictSnap;
+}
+
+/** The moving cast of the Senate Square and Esplanadi levels, as a guest needs it to draw them. */
+export interface DistrictSnap {
+  /** Tram: x, direction, mode index. */
+  tr?: [number, number, number];
+  /** Pigeon Gang mode index. */
+  pg?: number;
+  /** Sunbathers awake (1) or asleep (0). */
+  sb?: number[];
+  /** Dogs: x, z, heading, running. */
+  dg?: [number, number, number, number][];
+  /** Sprinklers: seconds left. */
+  sp?: number;
 }
 
 /** Live game objects, described just enough for a snapshot (the game passes adapters). */
 export interface SnapshotSource {
   time: number;
-  gulls: { id: number; x: number; y: number; z: number; vx: number; vy: number; vz: number; heading: number; mode: string; carry: number | null; flapAnim?: number; heightAbove?: number; turnRate?: number; disguised?: boolean }[];
+  gulls: { id: number; x: number; y: number; z: number; vx: number; vy: number; vz: number; heading: number; mode: string; carry: number | null; flapAnim?: number; heightAbove?: number; turnRate?: number; disguised?: boolean; taunt?: boolean; tangled?: boolean }[];
   props: { id: number; x: number; y: number; z: number; qx: number; qy: number; qz: number; qw: number; by: number | null; held: number | null; broken: boolean }[];
   npcs: { id: number; x: number; z: number; heading: number; mode: string; holding: number | null; handAngle?: number; selfie?: string; selfieCount?: number; cleanT?: number; shieldFrom?: number }[];
   heat: number;
@@ -94,6 +113,7 @@ export interface SnapshotSource {
   /** The rival gull, if the level has one: x, y, z, heading, mode index. */
   k?: [number, number, number, number, number];
   quests: { id: string; status: string; timeLeft: number; timed: boolean; objectives: { done: boolean; count: number }[] }[];
+  x?: DistrictSnap;
 }
 
 const r = (v: number, k = 100) => Math.round(v * k) / k || 0; // `|| 0` turns -0 into 0 (JSON cannot tell them apart)
@@ -102,8 +122,9 @@ export function makeSnapshot(s: SnapshotSource): Snapshot {
   return {
     ...(s.d ? { d: s.d } : {}),
     ...(s.k ? { k: s.k } : {}),
+    ...(s.x ? { x: s.x } : {}),
     t: r(s.time, 1000),
-    gulls: s.gulls.map((g) => ({ id: g.id, p: [r(g.x), r(g.y), r(g.z)], v: [r(g.vx), r(g.vy), r(g.vz)], h: r(g.heading, 1000), mode: g.mode, carry: g.carry, fa: r(g.flapAnim ?? 0, 100), ha: r(g.heightAbove ?? 0, 10), tr: r(g.turnRate ?? 0, 100), dg: g.disguised ? 1 : 0 })),
+    gulls: s.gulls.map((g) => ({ id: g.id, p: [r(g.x), r(g.y), r(g.z)], v: [r(g.vx), r(g.vy), r(g.vz)], h: r(g.heading, 1000), mode: g.mode, carry: g.carry, fa: r(g.flapAnim ?? 0, 100), ha: r(g.heightAbove ?? 0, 10), tr: r(g.turnRate ?? 0, 100), dg: g.disguised ? 1 : 0, ...(g.taunt ? { tn: 1 } : {}), ...(g.tangled ? { tg: 1 } : {}) })),
     props: s.props.map((p) => {
       const o: PropSnap = { id: p.id, p: [r(p.x), r(p.y), r(p.z)], q: [r(p.qx, 1000), r(p.qy, 1000), r(p.qz, 1000), r(p.qw, 1000)], by: p.by, held: p.held };
       if (p.broken) o.broken = true;

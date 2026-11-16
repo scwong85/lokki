@@ -79,7 +79,7 @@
       #todo .teaser { font-size: 12px; color: #8a7b5c; margin: 0 0 2px 2px; line-height: 1.25; } #todo .locked, #todo .won { opacity: .6; } #todo li.later { opacity: .55; }
       #todo { max-height: 78vh; overflow: hidden; }
       @media (max-height: 820px) { #todo .teaser { display: none; } #todo { font-size: 13px; } }
-      #todo .ok { color: #3f9a62; } #todo .bad { color: #d6453d; }
+      #todo .ok { color: #3f9a62; display: inline-block; animation: todo-pop .5s cubic-bezier(.3,1.8,.5,1); } @keyframes todo-pop { 0% { transform: scale(0) rotate(-20deg); } 100% { transform: scale(1) rotate(0); } } #todo .bad { color: #d6453d; }
       #heat { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); width: 240px; background: rgba(255,255,255,.78); padding: 5px 10px 6px; border-radius: 8px; font: 12px/1.3 system-ui, sans-serif; color: #3a3a4a; pointer-events: none; text-align: center; }
       #heat .name { font-weight: 700; } #heat .mood { color: #6a6a7a; }
       #heat .hb { position: relative; height: 8px; background: rgba(0,0,0,.12); border-radius: 5px; margin: 3px 0; overflow: hidden; }
