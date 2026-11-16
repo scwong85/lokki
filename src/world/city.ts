@@ -1,6 +1,7 @@
 import { buildBackdrop, planBackdrop } from './backdrop';
 import { paletteAt } from './districts';
 import { planMansard } from './roofs';
+import { planRoads } from './roads';
 import * as THREE from 'three';
 import earcut from 'earcut';
 import { World, pointInRings, type Box, type Prism } from './collision';
@@ -31,7 +32,10 @@ const data = cityJson as unknown as CityData;
 const CHUNK = 160;
 
 const LAND = 0xefe4cf;
-const STREET = 0xd8d3e3;
+const STREET = 0xe6dfd2; // pavement (the asphalt is drawn on top of it, see roads.ts)
+const ASPHALT = 0xa4a7bb;
+const KERB = 0xfaf6ec;
+const LINE = 0xfffbea;
 const PARK = 0xbfe3b0;
 
 export interface City {
@@ -147,11 +151,11 @@ function extrude(buf: Buf, p: PrismDef | { rings: number[][]; y0: number; y1: nu
 }
 
 /** Flat polygon layer (land, streets, parks) at height y; `map` tiles every `tileM` metres in world space. */
-function flatLayer(polys: { rings: number[][] }[], y: number, color: number, layer: number, map?: THREE.Texture, tileM = 4): THREE.Mesh {
+function flatLayer(polys: { rings: number[][]; color?: number }[], y: number, color: number, layer: number, map?: THREE.Texture, tileM = 4): THREE.Mesh {
   const buf = new Buf();
-  const c = new THREE.Color(color);
   const uv = (x: number, z: number): [number, number] => [x / tileM, z / tileM];
   for (const poly of polys) {
+    const c = new THREE.Color(poly.color ?? color);
     for (const [ax, az, bx, bz, cx, cz] of triangulate(poly.rings)) {
       const up = (bz - az) * (cx - ax) - (bx - ax) * (cz - az) > 0;
       if (up) buf.tri([ax, y, az], [bx, y, bz], [cx, y, cz], c, uv(ax, az), uv(bx, bz), uv(cx, cz));
@@ -232,6 +236,7 @@ function onion(buf: Buf, cx: number, cz: number, base: number, k: number): Prism
   layer(2.5, 3.2, 3.6, 0xfdfaf2);
   layer(2.7, 3.6, 4.6, GOLD);
   layer(2.4, 4.6, 5.4, GOLD);
+  layer(3.2, 5.4, 5.65, GOLD, 'perch'); // a gold collar round the neck of the little onion: a roomy ledge to land on (Thermal Express)
   layer(1.7, 5.4, 6.0, GOLD);
   layer(0.9, 6.0, 6.6, GOLD);
   layer(0.25, 6.6, 8.2, GOLD, 'perch');
@@ -498,7 +503,10 @@ export function buildCity(): City {
   group.add(water.group);
   const backdrop = buildBackdrop(planBackdrop(isLand, data.half));
   if (backdrop) group.add(backdrop);
-  group.add(flatLayer(data.land, 0.02, LAND, 1, pavingTexture(), 3), flatLayer(data.streets, 0.03, STREET, 2, asphaltTexture(), 6), flatLayer(data.parks, 0.04, PARK, 3, grassTexture(), 5));
+  group.add(flatLayer(data.land, 0.02, LAND, 1, pavingTexture(), 3), flatLayer(data.streets, 0.03, STREET, 2, pavingTexture(), 3), flatLayer(data.parks, 0.04, PARK, 3, grassTexture(), 5));
+  // roads: asphalt inset from the street edge (a pavement is left), a kerb line and a dashed centre line, all in one mesh
+  const roads = planRoads(data.streets as { name?: string; rings: number[][] }[]);
+  group.add(flatLayer([...roads.asphalt.map((rings) => ({ rings, color: ASPHALT })), ...roads.kerb.map((rings) => ({ rings, color: KERB })), ...roads.dashes.map((r) => ({ rings: [r], color: LINE }))], 0.06, ASPHALT, 6, asphaltTexture(), 6));
 
   // landmarks keep the plain prism look; registry buildings get facades, roofs and roof clutter
   const lm = buildLandmarks(data.landmarks);
