@@ -1,7 +1,7 @@
 import type { Mods } from '../core/skillMods';
 
 /** Skills (PLAN §3.6): each is earned by finishing a quest. Plain data. */
-export type SkillId = 'flight' | 'mimic' | 'hawkeye' | 'fatbird' | 'flock' | 'disguise' | 'quickpoop';
+export type SkillId = 'flight' | 'mimic' | 'hawkeye' | 'fatbird' | 'flock' | 'disguise' | 'quickpoop' | 'cloudglide';
 
 export interface SkillDef {
   id: SkillId;
@@ -22,6 +22,7 @@ export const SKILLS: SkillDef[] = [
   { id: 'fatbird', name: 'Fat bird', quest: 'bun', blurb: 'Carry heavier things, up to 5 kg (chairs!).', mods: { carryMax: 5 } },
   { id: 'flock', name: 'Flock call', quest: 'map', key: 'G', blurb: 'Summon a few gulls to make a racket somewhere ahead.' },
   { id: 'disguise', name: 'Disguise', quest: 'date', key: 'B', blurb: 'Look like a pigeon: vendors and the Warden ignore you for a while.' },
+  { id: 'cloudglide', name: 'Cloud Glide', quest: 'none', blurb: 'Gliding high, your shadow shrinks to almost nothing: sneak over sunbathers.' },
   { id: 'quickpoop', name: 'Quick bowels', quest: 'toy', blurb: 'Poop twice as often.', mods: { poopCooldown: 0.5 } },
 ];
 

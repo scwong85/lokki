@@ -5,6 +5,10 @@ type Lk = {
   quests: { quests: { id: string; status: string; objectives: { id: string; done: boolean; count: number }[] }[]; onEvent: (e: string) => unknown };
   bell: { clock: number; left: number };
   quiet: { clock: number; left: number };
+  gull: { state: { x: number; y: number; z: number; vx: number; vy: number; vz: number; mode: string } };
+  sunbathers: { list: { state: string }[] } | null;
+  dogs: { mode: string }[];
+  sprinklers: { running: boolean } | null;
   tram: { x: number; mode: string; frontX: number } | null;
   gang: { mode: string } | null;
   interaction: { props: { props: { type: string; tag?: string }[]; spawn: (s: { type: string; x: number; y: number; z: number }) => unknown } };
@@ -96,4 +100,32 @@ test('S10: the finale has the tram, the pigeons and the key', async ({ page }) =
   expect(await L((l) => l.tram !== null && l.gang !== null)).toBe(true);
   expect(await L((l) => l.interaction.props.props.some((p) => p.tag === 'key'))).toBe(true);
   expect(errors).toEqual([]);
+});
+
+test('E1: a shadow across a sleeper\'s face wakes them', async ({ page }) => {
+  test.setTimeout(300_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  const L = await open(page, 'dont-block-my-sun');
+  expect(await L((l) => l.sunbathers!.list.every((x) => x.state === 'asleep'))).toBe(true);
+  await L((l) => { Object.assign(l.gull.state, { x: -167.5, y: 6, z: -80.6, vx: 0, vy: 0, vz: 0, mode: 'air' }); });
+  await expect.poll(() => L((l) => l.sunbathers!.list[0].state), { timeout: 120_000 }).toBe('awake');
+  expect(errors).toEqual([]);
+});
+
+test('E2: the dog runs across the picnic to fetch a thrown ball', async ({ page }) => {
+  test.setTimeout(400_000);
+  const L = await open(page, 'good-boy');
+  expect(await L((l) => l.dogs.length)).toBe(1);
+  await L((l) => l.interaction.props.spawn({ type: 'ball', x: -205, y: 0.4, z: -52 }));
+  await expect.poll(() => L((l) => l.quests.quests.find((q) => q.id === 'fetch')!.objectives[0].done), { timeout: 250_000 }).toBe(true);
+});
+
+test('E3: standing on the valve starts the sprinklers', async ({ page }) => {
+  test.setTimeout(300_000);
+  const L = await open(page, 'splash-zone');
+  expect(await L((l) => l.sprinklers!.running)).toBe(false);
+  await L((l) => { Object.assign(l.gull.state, { x: -152, y: 0.4, z: -44, vx: 0, vy: 0, vz: 0, mode: 'ground' }); });
+  await expect.poll(() => L((l) => l.sprinklers!.running), { timeout: 120_000 }).toBe(true);
+  await expect.poll(() => L((l) => l.quests.quests.find((q) => q.id === 'clear')!.objectives[0].done), { timeout: 60_000 }).toBe(true);
 });

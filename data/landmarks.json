@@ -120,6 +120,28 @@
       "type": "library",
       "x": -133,
       "z": -300
+    },
+    {
+      "id": "poet",
+      "type": "poet",
+      "x": -200,
+      "z": -65
+    },
+    {
+      "id": "espa-trees-n",
+      "type": "treerow",
+      "x": -140,
+      "z": -96,
+      "count": 14,
+      "dx": -8
+    },
+    {
+      "id": "espa-trees-s",
+      "type": "treerow",
+      "x": -140,
+      "z": -34,
+      "count": 14,
+      "dx": -8
     }
   ]
 }

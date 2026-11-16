@@ -199,7 +199,8 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M20 Act 3, part 2: levels 19–22, the end of the Market Square
 - [x] M21 Senate Square, part 1: levels S1–S3
 - [x] M22 Senate Square, part 2: levels S4–S6
-- [ ] M23 Senate Square, part 3: levels S7–S10, the end of the district (built on `m23-senate-c`, awaiting playtest)
+- [x] M23 Senate Square, part 3: levels S7–S10, the end of the district
+- [ ] M24 Esplanadi, part 1: levels E1–E3 (built on `m24-esplanadi-a`, awaiting playtest)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -338,8 +339,11 @@ Tram Surfing, Turf War, The Emperor's New Look, plus trams (a moving roof) and t
 ### M23 — Senate Square, part 3: S7–S10 (M–L)
 Concert Night, Christmas Market, The Library Rule, and the finale The Key to the City. Details: `docs/milestones/M23.md`.
 
-### After M23 (backlog)
- Esplanadi (`docs/design/levels-esplanadi.md`), Katajanokka (`docs/design/levels-katajanokka.md`), each level designed with a co-op variant; the shared systems they need (moving platforms, NPC schedules, Kalle the rival gull, the drone, seasons); local split-screen co-op (optional); optional WebGPU renderer.
+### M24 — Esplanadi, part 1: E1–E3 (M–L)
+Don't Block My Sun (shadows wake sunbathers), Who's a Good Boy? (dogs and fetch), Splash Zone (sprinklers), plus the Cloud Glide skill. Details: `docs/milestones/M24.md`.
+
+### After M24 (backlog)
+ Esplanadi E4–E10 (`docs/design/levels-esplanadi.md`), Katajanokka (`docs/design/levels-katajanokka.md`), each level designed with a co-op variant; the shared systems they need (moving platforms, NPC schedules, Kalle the rival gull, the drone, seasons); local split-screen co-op (optional); optional WebGPU renderer.
 
 ---
 

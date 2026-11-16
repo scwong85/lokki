@@ -86,6 +86,21 @@ function buildParts(type: PropType, g: THREE.Group): void {
       g.add(mesh(new THREE.BoxGeometry(0.12, 0.08, 0.025), 0x1d1f2a, 0.07, 0, 0));
       g.add(mesh(new THREE.BoxGeometry(0.28, 0.02, 0.02), 0xf2b65c, 0, 0.03, 0));
       break;
+    case 'berries':
+      g.add(mesh(new THREE.CylinderGeometry(0.14, 0.11, 0.12, 10), 0xf5efe6, 0, 0, 0));
+      for (const [x, z] of [[0, 0], [0.06, 0.04], [-0.06, 0.03], [0.02, -0.06]]) g.add(mesh(new THREE.SphereGeometry(0.055, 6, 5), 0xe5384f, x, 0.08, z));
+      break;
+    case 'ball':
+      g.add(mesh(new THREE.SphereGeometry(0.16, 10, 8), 0xff7a59, 0, 0, 0));
+      g.add(mesh(new THREE.BoxGeometry(0.34, 0.04, 0.04), 0xfff1d6, 0, 0, 0));
+      break;
+    case 'sausage':
+      g.add(mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.24, 8), 0xc4724a, 0, 0, 0).rotateZ(Math.PI / 2));
+      break;
+    case 'sunscreen':
+      g.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.18, 8), 0xffd23f, 0, 0, 0));
+      g.add(mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.05, 8), 0xffffff, 0, 0.11, 0));
+      break;
     case 'baton':
       g.add(mesh(new THREE.BoxGeometry(0.4, 0.035, 0.035), 0xf6efe0, 0, 0, 0));
       g.add(mesh(new THREE.SphereGeometry(0.035, 6, 5), 0xf2b65c, -0.2, 0, 0));

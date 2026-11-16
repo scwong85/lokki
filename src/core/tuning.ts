@@ -254,6 +254,28 @@ export const tuning = {
     brakeDistance: p(9, 3, 30, 0.5), // something on the track this far ahead stops the tram
     trackSlack: p(1.5, 0, 4, 0.1), // how far beside the rails still counts as on the track
   },
+  sun: {
+    shadowDx: p(-0.45, -2, 2, 0.05), // the shadow falls this far in x per metre of height (the sun is south-east)
+    shadowDz: p(-0.35, -2, 2, 0.05),
+    wakeRadius: p(1.5, 0.5, 4, 0.1), // a shadow this close to a sleeper's face wakes them
+    fadeHeight: p(22, 6, 60, 1), // above this the shadow is too faint to matter
+    cloudFactor: p(0.25, 0, 1, 0.05), // Cloud Glide: the shadow shrinks to this fraction while gliding high
+    awakeSeconds: p(12, 3, 40, 1), // how long a woken sunbather stays sitting up
+    shove: p(6, 1, 20, 0.5), // an awake sunbather swats you away from the towel
+    guardRadius: p(2.8, 1, 6, 0.1),
+  },
+  dog: {
+    speed: p(7.5, 2, 14, 0.5),
+    chaseRadius: p(11, 3, 30, 1), // park dogs chase gulls on the ground this close
+    fetchRadius: p(45, 10, 100, 1), // a ball this close is fetched
+    biteShove: p(7, 1, 20, 0.5),
+    scatterRadius: p(1.5, 0.5, 4, 0.1), // food within this of the running dog flies
+    idleWander: p(2.5, 0, 8, 0.5),
+  },
+  sprinkler: {
+    seconds: p(16, 4, 60, 1), // how long they run after the valve is pecked
+    scare: p(1, 0, 3, 0.1), // how loudly people flee the spray
+  },
   quiet: {
     loud: p(1.6, 0.5, 4, 0.1), // how loud flying in the quiet zone is
     interval: p(1.2, 0.3, 5, 0.1), // seconds between racket noises while you fly there

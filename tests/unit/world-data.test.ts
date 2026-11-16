@@ -14,7 +14,7 @@ describe('generated Kauppatori data', () => {
     expect(d.buildings.length).toBeGreaterThan(200);
     expect(d.land.length).toBeGreaterThan(0);
     expect(d.streets.length).toBeGreaterThan(50);
-    expect(d.landmarks.map((l: { type: string }) => l.type).sort()).toEqual(['bins', 'cafe', 'cart', 'cathedral', 'clock', 'emperor', 'ferry', 'goods', 'lamps', 'library', 'restyle', 'stage', 'statue', 'steps', 'tents', 'toy']);
+    expect(d.landmarks.map((l: { type: string }) => l.type).sort()).toEqual(['bins', 'cafe', 'cart', 'cathedral', 'clock', 'emperor', 'ferry', 'goods', 'lamps', 'library', 'poet', 'restyle', 'stage', 'statue', 'steps', 'tents', 'toy', 'treerow', 'treerow']);
     // the Uspenski restyle found its registry building
     expect(d.buildings.filter((b: { style?: string }) => b.style === 'uspenski')).toHaveLength(1);
   });
