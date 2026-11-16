@@ -7,7 +7,7 @@ describe('Senate Square levels', () => {
   it('are registered in order after Market Square, before the sandbox', () => {
     const ids = LEVELS.map((l) => l.id);
     expect(ids.indexOf('cheese-run')).toBeGreaterThan(ids.indexOf('harbour-day'));
-    expect(ids.slice(-1)[0]).toBe('sandbox');
+    expect(ids.slice(-2)).toEqual(['sandbox', 'havoc-hour']);
     for (const l of [CHEESE_RUN, SAY_PIGEON, DING_DONG]) {
       expect(l.district).toBe('senaatintori');
       expect(levelById(l.id)).toBe(l);

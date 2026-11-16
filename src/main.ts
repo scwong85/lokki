@@ -53,6 +53,9 @@ import type { DistrictSnap } from './net/snapshot';
 import { PassTracker, Tangle, decoyCovers, spotterHit } from './gameplay/coopPlay';
 import { Emotes, type EmoteKind } from './render/emotes';
 import { Puffs, type PuffKind } from './render/puffs';
+import { HavocRun } from './gameplay/havoc/scoring';
+import { RunLog } from './gameplay/runLog';
+import { HavocHud } from './ui/havocHud';
 import { Tram } from './gameplay/tram';
 import { PigeonGang } from './gameplay/pigeons';
 import { Sunbathers } from './gameplay/sunbathers';
@@ -187,6 +190,16 @@ if (npcs) {
   };
 }
 const quests = new QuestLog(greybox ? [] : setup.quests);
+// every game event passes through here: it goes in the run log, and scores in Havoc Hour
+{
+  const raw = quests.onEvent.bind(quests);
+  quests.onEvent = (type) => {
+    runLog.add(simTime, type);
+    const r = havoc?.feed(type);
+    if (r) havocHud.pop(r);
+    return raw(type);
+  };
+}
 // progress: skills, finished quests, best times (localStorage; every call is safe if storage is blocked)
 // gull looks: the ones already earned don't get a "new look" banner again; wear the saved one if it is still unlocked
 const knownSkins = new Set(unlockedSkins(skinProgress(save)));
@@ -215,6 +228,11 @@ todo.defs = setup.quests;
 todo.secret = setup.secret;
 const skillsPanel = new SkillsPanel(document.body, (id) => pickSkin(id));
 const runHud = new RunHud(document.body);
+/** Havoc Hour: the chain scorer for a timed chaos run (null in normal levels), the log of everything that happened, and its screen. */
+const havocHud = new HavocHud(document.body);
+const runLog = new RunLog();
+let havoc: HavocRun | null = null;
+let havocShown = false;
 const flock = new FlockSystem(scene);
 const pings = new PingFx(scene);
 const poopReticle = new Reticle();
@@ -282,7 +300,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -1127,6 +1145,10 @@ function applyLevelRules(): void {
   setupSenate();
   setupEsplanadi();
   resetCoopJuice();
+  havoc = level.havoc && !isGuest() ? new HavocRun(level.havoc.seconds) : null;
+  havocShown = false;
+  runLog.clear();
+  havocHud.show(!!havoc);
   skillsPanel.refresh(skills, save);
   interaction.props.drift = level.drift ?? null;
   if (defense) defense.hiddenLines = !!level.hiddenLines;
@@ -1358,6 +1380,7 @@ function onDefense(evs: DefenseEvent[]): void {
         audio.play(e.hit.kind === 'spray' ? 'splat' : e.hit.kind === 'swat' ? 'bonk' : 'twang');
         if (e.gull === 0) cam.shake(e.hit.kind === 'swat' ? 0.7 : 0.45);
         fx('feathers', { x: victim.state.x, y: victim.state.y + 0.3, z: victim.state.z });
+        if (e.gull === 0 && havoc) havocHud.broken(havoc.hit());
         if (players.length > 1 && (e.hit.kind === 'net' || e.hit.kind === 'line' || e.hit.kind === 'spray')) {
           tangle.caught(e.gull);
           hud.toast('Caught! Your partner can peck you free.', 1.8);
@@ -2024,6 +2047,21 @@ startLoop({
     if (!isGuest()) stepSenate(dt);
     if (!isGuest()) stepEsplanadi(dt);
     if (!isGuest()) coopStep(dt);
+    if (havoc && !havoc.done) {
+      if (!havoc.started && (Math.hypot(gull.state.vx, gull.state.vz) > 1.5 || simTime > tuning.havoc.startDelay.value + 10)) havoc.start();
+      havoc.update(dt);
+    }
+    if (havoc?.done && !havocShown) {
+      havocShown = true;
+      const prev = save.havocBest;
+      const newBest = havoc.score > prev;
+      if (newBest) save = { ...save, havocBest: havoc.score };
+      persist();
+      havocHud.results(havoc, Math.max(prev, havoc.score), newBest, `${runLog.events.length} things happened`);
+      audio.play('win');
+      fx('confetti', { x: gull.state.x, y: gull.state.y + 1.2, z: gull.state.z });
+      if (players.length === 1) slowmoT = 0.8;
+    }
     juiceStep(dt);
     updateTargets(targets, dt);
     input.endStep();
@@ -2086,6 +2124,7 @@ startLoop({
     graphics.update(gull.position);
     water?.update(simTime);
     ripples.update(frameDt);
+    if (havoc) havocHud.update(havoc);
     emotes.update(frameDt);
     puffs.update(frameDt);
     slowmoT = Math.max(0, slowmoT - frameDt);

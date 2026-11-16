@@ -261,6 +261,13 @@ export const tuning = {
     brakeDistance: p(9, 3, 30, 0.5), // something on the track this far ahead stops the tram
     trackSlack: p(1.5, 0, 4, 0.1), // how far beside the rails still counts as on the track
   },
+  havoc: {
+    runSeconds: p(180, 60, 600, 10), // length of a Havoc Hour run
+    chainSeconds: p(6, 2, 20, 0.5), // a chain stays alive this long after the last mischief
+    maxMult: p(8, 2, 20, 1),
+    repeatFactor: p(0.5, 0, 1, 0.05), // doing the same thing again in a chain scores this fraction
+    startDelay: p(4, 0, 20, 1), // the clock starts on your first move, or after this
+  },
   coop: {
     tauntRadius: p(16, 4, 40, 1), // people this close to a taunting gull watch it and nobody else
     tauntLoud: p(1.3, 0.3, 3, 0.1), // how loud a taunt is (people turn to look)

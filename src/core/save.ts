@@ -36,9 +36,11 @@ export interface SaveData {
   levels: Record<string, LevelRecord>;
   /** The level last played (the level select opens on it). */
   level: string;
+  /** Best Havoc Hour score. */
+  havocBest: number;
 }
 
-export const blankSave = (): SaveData => ({ version: 1, skills: [], questsWon: [], replayUnlocked: false, extrasOn: false, bestTime: null, speedrunBest: null, clears: 0, muted: false, skin: 'herring', levels: {}, level: 'sandbox' });
+export const blankSave = (): SaveData => ({ version: 1, skills: [], questsWon: [], replayUnlocked: false, extrasOn: false, bestTime: null, speedrunBest: null, clears: 0, muted: false, skin: 'herring', levels: {}, level: 'sandbox', havocBest: 0 });
 
 /** The small part of the Storage API we need (so tests can pass a fake). */
 export interface StorageLike {
@@ -65,6 +67,7 @@ export function sanitize(raw: unknown): SaveData {
   d.muted = r.muted === true;
   d.levels = sanitizeLevels(r.levels);
   d.level = typeof r.level === 'string' ? r.level : 'sandbox';
+  d.havocBest = typeof r.havocBest === 'number' && Number.isFinite(r.havocBest) && r.havocBest > 0 ? Math.floor(r.havocBest) : 0;
   d.skin = typeof r.skin === 'string' && GULL_SKINS.some((s) => s.id === r.skin) ? r.skin : 'herring';
   return d;
 }

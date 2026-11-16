@@ -28,6 +28,22 @@ export const SANDBOX: LevelDef = {
   defense: true,
 };
 
+/** Havoc Hour (prototype): three minutes in the Market Square, everything scores, chains multiply. */
+export const HAVOC_HOUR: LevelDef = {
+  id: 'havoc-hour',
+  name: 'Havoc Hour',
+  blurb: 'Three minutes of chaos. Chain different mischief for big multipliers.',
+  district: 'kauppatori',
+  sandbox: true,
+  havoc: { seconds: 180 },
+  skills: ['flight', 'mimic', 'hawkeye', 'fatbird', 'flock', 'disguise', 'quickpoop'],
+  quests: [],
+  triggers: [],
+  tourists: 'all',
+  defense: true,
+  startHeat: 15,
+};
+
 export { CHEESE_RUN, SAY_PIGEON, DING_DONG };
 export { TRAM_SURFING, TURF_WAR, NEW_LOOK };
 export { DONT_BLOCK_MY_SUN, GOOD_BOY, SPLASH_ZONE };
@@ -37,6 +53,6 @@ export { VAPPU_EVE, HERRING_MARKET, WEDDING_BELLS, FROZEN_HARBOUR };
 export { CAW_OF_THE_WILD, INVISIBLE_MAZE, HEAVY_LIFTING, GULLS_ELEVEN, COO_COO, THERMAL_EXPRESS };
 export { SNACK_ATTACK, BOMBS_AWAY, NOSY_PARKERS, BUTTERFINGERS, CITY_STRIKES, OWL_BE_BACK, THE_WARDEN, HARBOUR_DAY };
 
-export const LEVELS: LevelDef[] = [SNACK_ATTACK, BOMBS_AWAY, NOSY_PARKERS, BUTTERFINGERS, CITY_STRIKES, OWL_BE_BACK, THE_WARDEN, HARBOUR_DAY, CAW_OF_THE_WILD, INVISIBLE_MAZE, HEAVY_LIFTING, GULLS_ELEVEN, COO_COO, THERMAL_EXPRESS, VAPPU_EVE, HERRING_MARKET, WEDDING_BELLS, FROZEN_HARBOUR, THE_RIVAL, NIGHT_MARKET, THE_DRONE, GRAND_FINALE, CHEESE_RUN, SAY_PIGEON, DING_DONG, TRAM_SURFING, TURF_WAR, NEW_LOOK, CONCERT_NIGHT, CHRISTMAS_MARKET, LIBRARY_RULE, KEY_TO_THE_CITY, DONT_BLOCK_MY_SUN, GOOD_BOY, SPLASH_ZONE, SANDBOX];
+export const LEVELS: LevelDef[] = [SNACK_ATTACK, BOMBS_AWAY, NOSY_PARKERS, BUTTERFINGERS, CITY_STRIKES, OWL_BE_BACK, THE_WARDEN, HARBOUR_DAY, CAW_OF_THE_WILD, INVISIBLE_MAZE, HEAVY_LIFTING, GULLS_ELEVEN, COO_COO, THERMAL_EXPRESS, VAPPU_EVE, HERRING_MARKET, WEDDING_BELLS, FROZEN_HARBOUR, THE_RIVAL, NIGHT_MARKET, THE_DRONE, GRAND_FINALE, CHEESE_RUN, SAY_PIGEON, DING_DONG, TRAM_SURFING, TURF_WAR, NEW_LOOK, CONCERT_NIGHT, CHRISTMAS_MARKET, LIBRARY_RULE, KEY_TO_THE_CITY, DONT_BLOCK_MY_SUN, GOOD_BOY, SPLASH_ZONE, SANDBOX, HAVOC_HOUR];
 
 export const levelById = (id: string | null | undefined): LevelDef => LEVELS.find((l) => l.id === id) ?? SANDBOX;

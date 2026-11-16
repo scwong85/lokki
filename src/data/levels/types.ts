@@ -33,6 +33,8 @@ export interface LevelDef {
   quietBreaks?: { first: number; every: number; duration: number };
   /** A cathedral bell that rings now and then: everyone within hearing looks up at the tower. */
   bells?: { x: number; z: number; first: number; every: number; duration: number };
+  /** Havoc Hour: a timed chaos run with chain scoring instead of to-dos. */
+  havoc?: { seconds: number };
   /** Free play: the whole quest pack, no stars, skills per quest (the M7/M8 game). */
   sandbox?: boolean;
   /** Ids of existing quests (from `QUESTS`) used as to-dos, in list order. */
