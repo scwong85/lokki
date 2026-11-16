@@ -55,7 +55,7 @@ describe('horizon backdrop', () => {
 });
 
 describe('facade atlas', () => {
-  it('has one shop row plus the six window rows', () => {
-    expect(ATLAS_ROWS).toBe(7);
+  it('has four ground-floor rows plus the six window rows', () => {
+    expect(ATLAS_ROWS).toBe(10);
   });
 });
