@@ -16,6 +16,14 @@ export class Gull {
   readonly position = new THREE.Vector3();
   readonly model = new GullModel();
   state: FlightState;
+  /** Slide the whole gull sideways (standing on a moving tram roof). */
+  carry(dx: number, dz: number): void {
+    this.state.x += dx;
+    this.state.z += dz;
+    this.prev.x += dx;
+    this.prev.z += dz;
+  }
+
   private prev: { x: number; y: number; z: number; heading: number };
   private pitch = 0;
   private roll = 0;

@@ -197,7 +197,8 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M18 Market Square Act 2: skill levels 9–14
 - [x] M19 Act 3, themed days, part 1: levels 15–18
 - [x] M20 Act 3, part 2: levels 19–22, the end of the Market Square
-- [ ] M21 Senate Square, part 1: levels S1–S3 (built on `m21-senate-a`, awaiting playtest)
+- [x] M21 Senate Square, part 1: levels S1–S3
+- [ ] M22 Senate Square, part 2: levels S4–S6 (built on `m22-senate-b`, awaiting playtest)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -330,7 +331,10 @@ The Rival (Kalle), Night Market (dusk, sleeping vendors), The Drone, and the Gre
 ### M21 — Senate Square, part 1: S1–S3 (M–L)
 Cheese Run, Say Pigeon!, Ding Dong, plus the Cathedral steps and the bell system. Details: `docs/milestones/M21.md`.
 
-### After M21 (backlog)
+### M22 — Senate Square, part 2: S4–S6 (M–L)
+Tram Surfing, Turf War, The Emperor's New Look, plus trams (a moving roof) and the Pigeon Gang. Details: `docs/milestones/M22.md`.
+
+### After M22 (backlog)
  Senate Square (`docs/design/levels-senaatintori.md`), Esplanadi (`docs/design/levels-esplanadi.md`), Katajanokka (`docs/design/levels-katajanokka.md`), each level designed with a co-op variant; the shared systems they need (moving platforms, NPC schedules, Kalle the rival gull, the drone, seasons); local split-screen co-op (optional); optional WebGPU renderer.
 
 ---

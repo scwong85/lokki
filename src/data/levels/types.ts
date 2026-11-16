@@ -17,6 +17,10 @@ export interface LevelDef {
   district: 'kauppatori' | 'senaatintori';
   /** Where the gull starts (default: the Market Square). */
   start?: { x: number; z: number };
+  /** A tram running back and forth along a straight track (Senate Square). */
+  tram?: { z: number; x0: number; x1: number; stopX: number; length: number; width: number; roofY: number };
+  /** The Pigeon Gang living on a statue at this spot. */
+  pigeons?: { x: number; z: number };
   /** A cathedral bell that rings now and then: everyone within hearing looks up at the tower. */
   bells?: { x: number; z: number; first: number; every: number; duration: number };
   /** Free play: the whole quest pack, no stars, skills per quest (the M7/M8 game). */
