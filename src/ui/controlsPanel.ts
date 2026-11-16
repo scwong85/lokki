@@ -7,7 +7,7 @@ const KEYS: [string, string][] = [
 ];
 const TOUCH: [string, string][] = [
   ['Left thumb', 'Floating stick: move and steer'], ['Drag right side', 'Look around'], ['FLAP', 'Tap: jump. Hold: take off and flap'], ['LOCK', 'Lock onto a target (tap again: next, then off)'], ['DIVE', 'Hold and slide to aim the dive'], ['POOP', 'Poop'], ['GRAB / DROP', 'Grab or drop (context button)'],
-  ['TOSS', 'Toss what you carry'], ['Ability buttons', 'Crow call, flock call, pigeon (once earned)'], ['\u2630 menu', 'Options, levels, skills, restart'],
+  ['TOSS', 'Toss what you carry'], ['Taunt / emote (co-op)', 'Hold Taunt so people watch you instead of your partner; the face button cycles emotes'], ['Ability buttons', 'Crow call, flock call, pigeon (once earned)'], ['\u2630 menu', 'Options, levels, skills, restart'],
 ];
 
 /** The controls screen: keyboard, controller (from the real mapping) and touch. */

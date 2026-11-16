@@ -38,3 +38,28 @@ test('touch controls: the stick walks, FLAP takes off, the menu opens panels tha
   await expect(page.locator('#skills')).toBeHidden();
   expect(errors).toEqual([]);
 });
+
+test('touch controls: Taunt and Emote buttons appear only with a partner, and an emote pops a bubble', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.goto('/?touch');
+  await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 60_000 });
+  await page.waitForTimeout(800);
+  await expect(page.locator('.t-taunt')).toBeHidden(); // single player: no partner to taunt for
+  await expect(page.locator('.t-emote')).toBeHidden();
+
+  const co = await page.context().newPage();
+  await co.setViewportSize({ width: 844, height: 390 });
+  co.on('pageerror', (e) => errors.push(e.message));
+  await co.goto('/?touch&coop');
+  await co.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 60_000 });
+  await expect(co.locator('.t-taunt')).toBeVisible({ timeout: 20_000 });
+  await expect(co.locator('.t-emote')).toBeVisible();
+  const eb = (await co.locator('.t-emote').boundingBox())!;
+  await co.mouse.move(eb.x + eb.width / 2, eb.y + eb.height / 2);
+  await co.mouse.down();
+  await co.mouse.up();
+  await expect.poll(() => co.evaluate(() => (window as unknown as { __lokki: { emotes: { active: number } } }).__lokki.emotes.active), { timeout: 30_000 }).toBeGreaterThan(0);
+  expect(errors).toEqual([]);
+});
