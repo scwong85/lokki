@@ -83,6 +83,7 @@ import { StreetLife } from './world/streetLife';
 import { Snow } from './render/snow';
 import { KalleView } from './world/kalle';
 import { Sky } from './render/sky';
+import { tickMotion } from './render/motion';
 import { SKIES, skyById } from './data/skies';
 import { LockMarker } from './render/lockMarker';
 import { nextLock, rankCandidates, resolveLock, type LockCandidate } from './gameplay/lock';
@@ -2129,6 +2130,7 @@ startLoop({
     audio.setAir(Math.hypot(s.vx, s.vy, s.vz) / tuning.dive.speed.value, s.mode !== 'ground');
     graphics.update(gull.position);
     sky.update(frameDt, cam.camera.position, simTime);
+    tickMotion(simTime);
     water?.update(simTime);
     ripples.update(frameDt);
     if (havoc) havocHud.update(havoc);

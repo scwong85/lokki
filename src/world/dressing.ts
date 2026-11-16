@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeColored } from '../render/mergeMesh';
 import { ngon, type PrismDef } from './landmarks';
 import type { DressType, Placement } from './dressingPlan';
+import { bobBoats, lampGlowMesh, swayTrees } from '../render/motion';
 
 const m = (c: number) => new THREE.MeshLambertMaterial({ color: c, flatShading: true });
 const part = (g: THREE.BufferGeometry, c: number, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => {
@@ -101,6 +102,7 @@ const TINTS: Partial<Record<DressType, number[]>> = {
 /** One instanced mesh per item type (6 draw calls for all the dressing). Trees also return perch prisms for their canopies. */
 export function buildDressing(list: readonly Placement[]): { group: THREE.Group; prisms: PrismDef[] } {
   const group = new THREE.Group();
+  const bulbs: { x: number; y: number; z: number }[] = [];
   const prisms: PrismDef[] = [];
   const byType = new Map<DressType, Placement[]>();
   for (const p of list) {
@@ -113,6 +115,8 @@ export function buildDressing(list: readonly Placement[]): { group: THREE.Group;
   const col = new THREE.Color();
   for (const [type, items] of byType) {
     const base = model(type);
+    if (type === 'tree') swayTrees(base.material as THREE.Material);
+    if (type === 'boat') bobBoats(base.material as THREE.Material);
     const inst = new THREE.InstancedMesh(base.geometry, base.material, items.length);
     const tints = TINTS[type];
     items.forEach((p, i) => {
@@ -120,6 +124,10 @@ export function buildDressing(list: readonly Placement[]): { group: THREE.Group;
       mtx.compose(new THREE.Vector3(p.x, y, p.z), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), p.rot), new THREE.Vector3(p.s, p.s, p.s));
       inst.setMatrixAt(i, mtx);
       inst.setColorAt(i, col.setHex(tints ? tints[i % tints.length] : 0xffffff));
+      if (type === 'lamp') {
+        // the bulb sits 0.62 m out along the arm, 4.3 m up (see the lamp model)
+        bulbs.push({ x: p.x + Math.cos(p.rot) * 0.62 * p.s, y: 4.3 * p.s, z: p.z - Math.sin(p.rot) * 0.62 * p.s });
+      }
       if (type === 'tree') prisms.push({ rings: [ngon(p.x, p.z, 1.7 * p.s, 8)], y0: 2.6 * p.s, y1: 5.3 * p.s, kind: 'perch', wall: 0, roof: 0 });
     });
     inst.computeBoundingSphere();
@@ -128,5 +136,7 @@ export function buildDressing(list: readonly Placement[]): { group: THREE.Group;
     inst.name = `dressing-${type}`;
     group.add(inst);
   }
+  const glow = lampGlowMesh(bulbs);
+  if (glow) group.add(glow);
   return { group, prisms };
 }

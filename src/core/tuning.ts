@@ -268,6 +268,12 @@ export const tuning = {
     repeatFactor: p(0.5, 0, 1, 0.05), // doing the same thing again in a chain scores this fraction
     startDelay: p(4, 0, 20, 1), // the clock starts on your first move, or after this
   },
+  motion: {
+    treeSway: p(1, 0, 3, 0.05), // how far treetops sway in the wind (0 = still)
+    swaySpeed: p(1.6, 0.3, 4, 0.05),
+    boatBob: p(1, 0, 3, 0.05), // how much moored boats bob and roll (0 = still)
+    lampGlow: p(1, 0, 1.5, 0.05), // brightness of the street lamps at dusk and night
+  },
   coop: {
     tauntRadius: p(16, 4, 40, 1), // people this close to a taunting gull watch it and nobody else
     tauntLoud: p(1.3, 0.3, 3, 0.1), // how loud a taunt is (people turn to look)
