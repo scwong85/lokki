@@ -211,6 +211,9 @@ export const tuning = {
     diveTurn: p(6, 1, 15, 0.5), // how hard a locked dive bends toward its target (rad/s)
     poopAssist: p(45, 5, 100, 1), // a locked target pulls droppings in from this far (m)
   },
+  winter: {
+    snowCount: p(420, 0, 600, 10), // snowflakes around you in winter levels
+  },
   owl: {
     scareRange: p(6, 2, 15, 0.5), // the plastic owl frightens people (and vendors) this close
     cooldown: p(2.5, 0.5, 10, 0.5), // between scares

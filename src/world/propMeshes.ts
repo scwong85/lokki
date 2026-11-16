@@ -68,6 +68,15 @@ function buildParts(type: PropType, g: THREE.Group): void {
       }
       g.add(mesh(new THREE.ConeGeometry(0.03, 0.07, 4), 0xff9d2e, 0, 0.21, 0.15));
       break;
+    case 'balloon':
+      g.add(mesh(new THREE.SphereGeometry(0.32, 10, 8), 0xff9ec4, 0, 0.1, 0));
+      g.add(mesh(new THREE.ConeGeometry(0.06, 0.1, 6), 0xff9ec4, 0, -0.26, 0));
+      g.add(mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.7, 4), 0xbdb7a8, 0, -0.6, 0));
+      break;
+    case 'ring':
+      g.add(mesh(new THREE.BoxGeometry(0.12, 0.08, 0.12), 0x6b3f5e, 0, 0, 0));
+      g.add(mesh(new THREE.TorusGeometry(0.04, 0.012, 5, 10), 0xffd23f, 0, 0.07, 0));
+      break;
     case 'soup':
       g.add(mesh(new THREE.CylinderGeometry(0.17, 0.11, 0.14, 12), 0xf5efe6));
       g.add(mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.03, 12), 0xf2a35e, 0, 0.065, 0));

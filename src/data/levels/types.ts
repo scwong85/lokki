@@ -54,6 +54,8 @@ export interface LevelDef {
   pigeonRules?: boolean;
   /** Rising warm air over rooftops: a gull gliding inside gets a lift (m/s^2). */
   thermals?: { x: number; z: number; r: number; lift: number }[];
+  /** Winter: the sea is frozen (you walk on it instead of swimming), it snows. */
+  winter?: boolean;
   /** Par time in seconds for the third star. */
   parTime?: number;
   /** Skill earned by clearing the level the first time. */

@@ -9,6 +9,7 @@ import { tuning } from '../core/tuning';
 export class Water {
   readonly group = new THREE.Group();
   private uniforms = { uTime: { value: 0 }, uWave: { value: 1 } };
+  private mat: THREE.MeshLambertMaterial | null = null;
 
   constructor(land: { rings: number[][] }[], isLand: (x: number, z: number) => boolean) {
     const mat = new THREE.MeshLambertMaterial({ color: palette.water });
@@ -34,6 +35,7 @@ export class Water {
           diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0), glint * 0.45 * uWave);`,
         );
     };
+    this.mat = mat;
     const sea = new THREE.Mesh(new THREE.PlaneGeometry(8000, 8000), mat);
     sea.rotation.x = -Math.PI / 2;
     sea.receiveShadow = true;
@@ -41,9 +43,16 @@ export class Water {
     this.group.add(shoreStrips(land, isLand));
   }
 
+  /** Winter: the harbour is covered in pale ice (no waves). */
+  setFrozen(on: boolean): void {
+    this.mat?.color.setHex(on ? 0xdff2fa : palette.water);
+    this.frozen = on;
+  }
+  private frozen = false;
+
   update(time: number): void {
     this.uniforms.uTime.value = time;
-    this.uniforms.uWave.value = tuning.water.waves.value;
+    this.uniforms.uWave.value = this.frozen ? 0.15 : tuning.water.waves.value;
   }
 }
 

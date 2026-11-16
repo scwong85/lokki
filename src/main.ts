@@ -67,6 +67,7 @@ import { MusicPlayer } from './core/music';
 import { MusicDirector } from './gameplay/musicDirector';
 import { OptionsStore, applyOptions } from './core/options';
 import { StreetLife } from './world/streetLife';
+import { Snow } from './render/snow';
 import { LockMarker } from './render/lockMarker';
 import { nextLock, rankCandidates, resolveLock, type LockCandidate } from './gameplay/lock';
 import { POOP_TARGET_TAGS } from './data/props';
@@ -559,6 +560,19 @@ function pickSkin(id: string): void {
 }
 
 /** Restart the level (R) or start a speedrun (Z). Skills and best times are kept. */
+const snow = new Snow();
+scene.add(snow.points);
+/** The sea: you swim in it and things float, except in winter levels when it is frozen ice (walk on it). */
+function applySeaRules(): void {
+  if (greybox) return;
+  const winter = !!level.winter;
+  const wet = (x: number, z: number): boolean => !isLand(x, z);
+  for (const p of players) p.gull.isWater = winter ? null : wet;
+  interaction.props.isWater = winter ? null : wet;
+  water?.setFrozen(winter);
+  snow.on = winter;
+}
+
 /** Rising warm air (a level's thermals): the lift a gull at this spot gets, in m/s^2. */
 function thermalLift(s: { x: number; y: number; z: number }): number {
   for (const t of level.thermals ?? []) if (Math.hypot(s.x - t.x, s.z - t.z) <= t.r && s.y < 60) return t.lift;
@@ -587,6 +601,7 @@ function applyLevelRules(): void {
   owlCd = 0;
   skills.grantForLevel(level.skills ?? []);
   showThermals();
+  applySeaRules();
   skillsPanel.refresh(skills, save);
   interaction.props.drift = level.drift ?? null;
   if (defense) defense.hiddenLines = !!level.hiddenLines;
@@ -1068,6 +1083,13 @@ function onGags(gags: GagEvent[]): void {
         audio.play('splat');
         hud.toast(`Splat! ${g.prop.def.name}`, 0.9);
         if (g.prop.tag === 'cleanSign' && npcs?.signSplatted()) hud.toast('The Clean Freak drops everything to scrub!', 1.6);
+        if (g.prop.type === 'balloon') {
+          // pop!
+          interaction.props.destroy(g.prop);
+          audio.play('pop');
+          hud.toast('Pop!', 0.8);
+          notes(quests.onEvent('balloonPop'));
+        }
         break;
       case 'break': {
         audio.play('crash');
@@ -1375,6 +1397,7 @@ startLoop({
       notes(quests.onEvent('altitude80'));
     }
     streetLife?.update(dt, gull.state);
+    snow.update(dt, gull.state, simTime);
     updateTargets(targets, dt);
     input.endStep();
   },

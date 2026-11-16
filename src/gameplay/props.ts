@@ -86,8 +86,9 @@ export class PropManager {
       R.RigidBodyDesc.dynamic()
         .setTranslation(sp.x, sp.y, sp.z)
         .setRotation(yawQuat(sp.rotY ?? 0))
-        .setLinearDamping(0.05)
+        .setLinearDamping(def.floats ? 2 : 0.05)
         .setAngularDamping(0.3)
+        .setGravityScale(def.floats ? 0.03 : 1)
         .setCcdEnabled(def.mass < 1),
     );
     const collider = this.phys.world.createCollider(colliderFor(R, def.shape, def.mass), body);
