@@ -3,6 +3,10 @@ import { SNACK_ATTACK } from './snackAttack';
 import { BOMBS_AWAY } from './bombsAway';
 import { NOSY_PARKERS } from './nosyParkers';
 import { BUTTERFINGERS } from './butterfingers';
+import { CITY_STRIKES } from './cityStrikes';
+import { OWL_BE_BACK } from './owlBeBack';
+import { THE_WARDEN } from './theWarden';
+import { HARBOUR_DAY } from './harbourDay';
 
 /** Free play: today's full Market Square (the eight-quest pack, the extras, the finale). */
 export const SANDBOX: LevelDef = {
@@ -17,8 +21,8 @@ export const SANDBOX: LevelDef = {
   defense: true,
 };
 
-export { SNACK_ATTACK, BOMBS_AWAY, NOSY_PARKERS, BUTTERFINGERS };
+export { SNACK_ATTACK, BOMBS_AWAY, NOSY_PARKERS, BUTTERFINGERS, CITY_STRIKES, OWL_BE_BACK, THE_WARDEN, HARBOUR_DAY };
 
-export const LEVELS: LevelDef[] = [SNACK_ATTACK, BOMBS_AWAY, NOSY_PARKERS, BUTTERFINGERS, SANDBOX];
+export const LEVELS: LevelDef[] = [SNACK_ATTACK, BOMBS_AWAY, NOSY_PARKERS, BUTTERFINGERS, CITY_STRIKES, OWL_BE_BACK, THE_WARDEN, HARBOUR_DAY, SANDBOX];
 
 export const levelById = (id: string | null | undefined): LevelDef => LEVELS.find((l) => l.id === id) ?? SANDBOX;

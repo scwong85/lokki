@@ -128,6 +128,7 @@ export const tuning = {
     drag: p(2.5, 0, 10, 0.1), // water drag on floating items
     swimSpeed: p(0.55, 0.1, 1.5, 0.05), // swimming speed as a fraction of walking
     swimSink: p(0.2, 0, 0.5, 0.02), // how low the gull sits in the water
+    driftSpeed: p(1.6, 0, 6, 0.1), // the current that carries a message bottle (m/s)
     bobHeight: p(0.1, 0, 0.4, 0.01), // how far floating items rise and fall with the waves (m)
     bobSpeed: p(1.9, 0.3, 5, 0.1), // wave rhythm for floating items
     rock: p(0.22, 0, 0.8, 0.02), // how far floating items tilt with the waves (rad)
@@ -210,11 +211,16 @@ export const tuning = {
     diveTurn: p(6, 1, 15, 0.5), // how hard a locked dive bends toward its target (rad/s)
     poopAssist: p(45, 5, 100, 1), // a locked target pulls droppings in from this far (m)
   },
+  owl: {
+    scareRange: p(6, 2, 15, 0.5), // the plastic owl frightens people (and vendors) this close
+    cooldown: p(2.5, 0.5, 10, 0.5), // between scares
+  },
   quest: {
     timeLimit: p(60, 15, 300, 5), // ice-cream snatch, starts when the first tourist spots you
     capTime: p(45, 10, 200, 5), // cap heist, starts when you take the cap
     finaleTime: p(120, 30, 400, 5), // grand finale, starts when you ring the ferry horn
     retryDelay: p(3, 0, 20, 0.5), // a failed timed quest resets itself after this
+    bottleTime: p(40, 10, 120, 5), // message in a bottle: seconds from picking it up until the ferry horn
     escapeDistance: p(30, 10, 80, 1),
     escapeTime: p(3, 0.5, 15, 0.5),
   },

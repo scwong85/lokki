@@ -53,7 +53,7 @@ export class NpcManager implements NpcHooks {
   spawn(sp: NpcSpawn): Npc {
     const n = newNpc(this.nextId++, sp);
     this.spawns.set(n.id, sp);
-    const model = new NpcModel(sp.color, n.id);
+    const model = new NpcModel(sp.color, n.id, { hat: sp.hat, hatColor: sp.hatColor });
     model.root.scale.setScalar(sp.scale ?? 1);
     this.parent.add(model.root);
     this.models.set(n.id, model);
@@ -63,14 +63,14 @@ export class NpcManager implements NpcHooks {
     this.parent.add(ring);
     this.rings.set(n.id, ring);
     const holds = sp.holds ?? (sp.ice ? 'icecream' : undefined);
-    if (holds) this.giveItem(n, holds);
+    if (holds) this.giveItem(n, holds, sp.holdTag);
     this.npcs.push(n);
     return n;
   }
 
-  private giveItem(n: Npc, type: PropType): void {
+  private giveItem(n: Npc, type: PropType, tag?: string): void {
     const h = handPos(n);
-    const prop = this.props.spawn({ type, x: h.x, y: h.y, z: h.z });
+    const prop = this.props.spawn({ type, x: h.x, y: h.y, z: h.z, tag });
     this.props.attach(prop, n.id);
     n.holding = prop.id;
     n.holdType = type;
@@ -279,6 +279,49 @@ export class NpcManager implements NpcHooks {
       if (n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat') this.pending.push({ type: 'snatchUnseen', npc: n });
       this.pending.push(...startle(n, 'snatched'));
     }
+  }
+
+  /** Make a person let go of what is in their hand (it falls to the ground). */
+  private dropHeld(n: Npc): void {
+    const prop = n.holding !== null ? this.props.byId(n.holding) : undefined;
+    if (!prop) return;
+    this.props.release(prop, { x: (this.rng.next() - 0.5) * 1.5, y: 2, z: (this.rng.next() - 0.5) * 1.5 });
+    prop.heldBy = null;
+    n.holding = null;
+    n.holdType = null;
+  }
+
+  /** A vendor's spray lands: everyone inside its cone and range is soaked: they drop what they hold and run. */
+  soakCone(sx: number, sz: number, aimX: number, aimZ: number): Npc[] {
+    const d = tuning.deter;
+    const aim = Math.atan2(-(aimX - sx), -(aimZ - sz));
+    const out: Npc[] = [];
+    for (const n of this.npcs) {
+      if (n.mode === 'panic') continue;
+      const dist = Math.hypot(n.x - sx, n.z - sz);
+      if (dist > d.sprayRange.value + 0.8 || dist < 0.2) continue;
+      const diff = Math.atan2(Math.sin(Math.atan2(-(n.x - sx), -(n.z - sz)) - aim), Math.cos(Math.atan2(-(n.x - sx), -(n.z - sz)) - aim));
+      if (Math.abs(diff) > (d.sprayConeDeg.value * Math.PI) / 360 + 0.15) continue;
+      this.dropHeld(n);
+      this.pending.push(...startle(n, 'pooped'));
+      this.pending.push({ type: 'soaked', npc: n });
+      out.push(n);
+    }
+    return out;
+  }
+
+  /** The plastic owl frightens calm people within `range` of it: they drop what they hold and run. */
+  scareNear(x: number, z: number, range: number, carried: boolean): Npc[] {
+    const out: Npc[] = [];
+    for (const n of this.npcs) {
+      if (!(n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat')) continue;
+      if (Math.hypot(n.x - x, n.z - z) > range) continue;
+      this.dropHeld(n);
+      this.pending.push(...startle(n, 'pooped'));
+      this.pending.push({ type: 'scared', npc: n, carried });
+      out.push(n);
+    }
+    return out;
   }
 
   poopSpheres(): HitSphere[] {

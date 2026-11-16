@@ -3,6 +3,7 @@ import type { TriggerDef } from '../../gameplay/triggers';
 import type { SkillId } from '../skills';
 import type { NpcSpawn } from '../../gameplay/npc';
 import type { PropSpawn } from '../../gameplay/props';
+import type { DeterrentId } from '../../gameplay/deterrents';
 
 /**
  * One level: a short visit to a district with its own to-do list, cast and rules (M12). Plain data; the game builds
@@ -37,6 +38,14 @@ export interface LevelDef {
   requires?: string;
   /** Is the city on guard (heat, vendors, lines, nets, the Warden)? Early levels keep it calm. */
   defense: boolean;
+  /** The city has been bothering gulls for a while when the level starts: heat is at least this (vendors from 20, lines 40, nets 60, the Warden 80). */
+  startHeat?: number;
+  /** Deterrents that are up from the start (without raising the heat): 'vendors', 'lines', 'nets', 'warden'. */
+  deploy?: DeterrentId[];
+  /** The Warden's lunch break: seconds after the start, where he sits, and for how long (`repeat`: and again every this many seconds). */
+  wardenLunch?: { at: number; duration: number; x: number; z: number; repeat?: number };
+  /** Things in the sea tagged 'note' (a message in a bottle) are carried by the current toward this spot. */
+  drift?: { x: number; z: number };
   /** Par time in seconds for the third star. */
   parTime?: number;
   /** Skill earned by clearing the level the first time. */

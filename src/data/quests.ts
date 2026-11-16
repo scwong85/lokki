@@ -4,7 +4,7 @@ import { BUN_CHECKPOINTS, CAFE, CHILD_SPOT, CLOCK, FERRY, FERRY_CABIN_ROOFS, FER
 /** Quest events are plain strings emitted by the game ('snatch:icecream', 'grab:statueCap', 'tipChair', ...). */
 export type QuestEventType = string;
 
-export type TimeKey = 'timeLimit' | 'capTime' | 'finaleTime';
+export type TimeKey = 'timeLimit' | 'capTime' | 'finaleTime' | 'bottleTime';
 
 /** A spot to point the player at (ring + light pillar on the map). */
 export interface Marker {

@@ -559,6 +559,19 @@ function pickSkin(id: string): void {
 }
 
 /** Restart the level (R) or start a speedrun (Z). Skills and best times are kept. */
+let heat60Fired = false;
+let owlCd = 0;
+/** What a level adds to the city when it starts: the city's heat, the Warden's lunch, a current for the message bottle. */
+function applyLevelRules(): void {
+  heat60Fired = false;
+  owlCd = 0;
+  interaction.props.drift = level.drift ?? null;
+  if (!defense || isGuest()) return; // a guest's city is the host's
+  defense.lunch = level.wardenLunch ? { x: level.wardenLunch.x, z: level.wardenLunch.z, from: level.wardenLunch.at, to: level.wardenLunch.at + level.wardenLunch.duration, repeat: level.wardenLunch.repeat } : null;
+  if (level.deploy) onDefense(defense.deployNow(level.deploy));
+  if (level.startHeat) onDefense(defense.ensureHeat(level.startHeat));
+}
+
 function restartLevel(mode: 'normal' | 'speedrun'): void {
   levelCleared = false;
   lockId = null;
@@ -577,6 +590,7 @@ function restartLevel(mode: 'normal' | 'speedrun'): void {
   abilities.reset();
   flock.clear();
   musicDirector.reset();
+  applyLevelRules();
   if (mode === 'speedrun') runTimer.startSpeedrun();
   else runTimer.setNormal();
   persist();
@@ -771,8 +785,18 @@ function onDefense(evs: DefenseEvent[]): void {
         victim.openBeak(0.7);
         break;
       }
-      case 'spray':
+      case 'spray': {
         audio.play('hiss');
+        // anyone standing in the spray is soaked: they drop what they hold and run
+        if (npcs) for (const n of npcs.soakCone(e.x, e.z, e.aimX, e.aimZ)) hud.toast(n.role === 'rich' ? 'The rich tourist is soaked!' : 'Soaked!', 1.4);
+        break;
+      }
+      case 'lunch':
+        if (e.on) {
+          announce.show('The Warden goes for lunch', 'His umbrella is down and his sandwich is on the bench. Now is your chance.', 'alert');
+          notes(quests.onEvent('wardenLunch'));
+        }
+        else hud.toast('Lunch is over. Back to his rounds.', 1.6);
         break;
       case 'noticed':
         audio.play(e.who === 'warden' ? 'whistle' : 'gasp');
@@ -848,6 +872,10 @@ function notes(list: QuestNote[]): void {
       audio.play('win');
     } else if (n.type === 'retry') {
       hud.toast(`${q.title}: ready to try again`, 1.4);
+      if (q.id === 'bottle') {
+        interaction.restock((pr) => pr.tag === 'note'); // the bottle is back on the quay
+        triggers.reset();
+      }
     }
   }
 }
@@ -879,6 +907,13 @@ function onNpcEvents(evs: NpcEvent[]): void {
     } else if (e.type === 'review') {
       hud.toast('\u2605\u2606\u2606\u2606\u2606 "Tastes like the Baltic."', 3);
       notes(quests.onEvent('review'));
+    } else if (e.type === 'soaked') {
+      notes(quests.onEvent('soaked'));
+      notes(quests.onEvent(`soaked:${e.npc.role}`));
+    } else if (e.type === 'scared') {
+      audio.play('gasp');
+      notes(quests.onEvent(`owlScare:${e.npc.role}`));
+      if (e.carried) notes(quests.onEvent('owlScare:carried'));
     } else if (e.type === 'snatchUnseen') {
       hud.toast('They never saw it coming.', 1.6);
       notes(quests.onEvent('snatchUnseen'));
@@ -952,6 +987,7 @@ function onGags(gags: GagEvent[]): void {
         (players[g.by ?? 0]?.gull ?? gull).openBeak(0.25);
         hud.toast(`Got the ${g.prop.def.name}!`, 0.7);
         if (g.prop.tag) notes(quests.onEvent(`grab:${g.prop.tag}`));
+        if (g.prop.tag === 'wardenSandwich' && defense?.warden?.mode === 'lunch') notes(quests.onEvent('sandwichUnseen')); // took it while he was still eating
         notes(quests.onEvent(`grab:${g.prop.type}`));
         if (players.length > 1) {
           const by = g.by ?? 0;
@@ -1034,6 +1070,8 @@ function onGags(gags: GagEvent[]): void {
     }
   }
 }
+
+applyLevelRules(); // the first level's own rules (heat, lunch, current)
 
 startLoop({
   update(dt) {
@@ -1227,6 +1265,25 @@ startLoop({
       if (defense) {
         const gulls = players.map((p) => ({ id: p.id, state: p.gull.state, hidden: p.remote ? p.gull.remoteDisguised : p.id === 0 && abilities.disguised, suspicious: interaction.beak(p.id).carried?.stolen === true }));
         onDefense(defense.update(dt, gulls, stepNoises, npcs.npcs.some((n) => n.seesGull)));
+        if (!heat60Fired && defense.heat.value >= 60) {
+          heat60Fired = true;
+          notes(quests.onEvent('heat60'));
+        }
+      }
+      // the plastic owl frightens people (and vendors) near it, on the ground or in the beak
+      owlCd = Math.max(0, owlCd - dt);
+      const owl = owlCd === 0 ? interaction.props.props.find((p) => p.type === 'owl' && !p.broken && p.heldBy === null) : undefined;
+      if (owl) {
+        const range = tuning.owl.scareRange.value;
+        const sc = npcs.scareNear(owl.cur.p.x, owl.cur.p.z, range, owl.carried);
+        const vs = defense?.scareVendors(owl.cur.p.x, owl.cur.p.z, range) ?? 0;
+        if (sc.length || vs) {
+          owlCd = tuning.owl.cooldown.value;
+          if (vs) {
+            hud.toast('The vendor freezes: is that a real owl?', 1.6);
+            notes(quests.onEvent('owlScare:vendor'));
+          }
+        }
       }
       stepNoises.length = 0;
       // world triggers (delivery zones, the sea, the ferry horn, bun checkpoints) -> quest events
@@ -1240,6 +1297,7 @@ startLoop({
           gull: { x: g.x, y: g.y, z: g.z, grounded: g.mode === 'ground' },
           carried: car ? { type: car.type, tag: car.tag, x: car.cur.p.x, y: car.cur.p.y, z: car.cur.p.z, free: false } : null,
           isLand,
+          dt,
         },
         quests.wanted(),
       );
