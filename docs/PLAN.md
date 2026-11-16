@@ -210,7 +210,8 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M31 Roads part 2: tram line, zebra crossings, manholes
 - [x] M32 World enrichment W4 start: swaying trees, bobbing boats, glowing lamps
 - [x] M34 World enrichment rest of W2: ground-floor variety, awnings, balconies, corner turrets
-- [ ] M35 World enrichment rest of W4: flags, steam, petals, cloud shadows (built on `m35-world-w4b`, awaiting playtest)
+- [x] M35 World enrichment rest of W4: flags, steam, petals, cloud shadows
+- [ ] M36 World enrichment W5 start: ambient birds, the tram runs in every level (built on `m36-busy-city`, awaiting playtest)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -382,7 +383,10 @@ Doors, gateways and café fronts on ground floors, awnings, balconies, corner tu
 ### M35 — World enrichment, rest of W4 (S–M)
 Flags that flutter, steam over the stalls, blossom in the park, drifting cloud shadows. Details: `docs/milestones/M35.md`.
 
-### After M35 (backlog)
+### M36 — World enrichment W5 (start): a busier city (S)
+Circling birds, and the Senate Square tram runs in every level. Details: `docs/milestones/M36.md`.
+
+### After M36 (backlog)
  World enrichment rest of W2, then W3 to W6 (`docs/design/world-enrichment.md`): streets and squares, things that move, a busier city, landmark kit.
  Plans: `docs/design/fun-todos.md` (F2–F6), `docs/design/graphics-refresh.md` (G2–G6).
  Esplanadi E4–E10 (`docs/design/levels-esplanadi.md`), Katajanokka (`docs/design/levels-katajanokka.md`), each level designed with a co-op variant; the shared systems they need (moving platforms, NPC schedules, Kalle the rival gull, the drone, seasons); local split-screen co-op (optional); optional WebGPU renderer.

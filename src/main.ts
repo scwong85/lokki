@@ -85,6 +85,8 @@ import { KalleView } from './world/kalle';
 import { Sky } from './render/sky';
 import { tickMotion } from './render/motion';
 import { districtOf } from './world/districts';
+import { Birds } from './world/birds';
+import { TRAM as SENATE_TRAM } from './data/levels/senate2';
 import { counter } from './data/places';
 import { SKIES, skyById } from './data/skies';
 import { LockMarker } from './render/lockMarker';
@@ -160,6 +162,9 @@ if (!greybox) {
 }
 // pedestrians and cyclists on the streets (cosmetic; fewer on the low graphics preset)
 const lowGfx = new OptionsStore().load().graphics === 'low' || new URLSearchParams(location.search).has('touch');
+// small white birds circling over the harbour, the parks and the squares (fewer on the low preset)
+const birds = greybox ? null : new Birds(lowGfx ? 8 : 16);
+if (birds) scene.add(birds.mesh);
 const streetLife = greybox ? null : new StreetLife(scene, walkable, keepClearSpots, Math.round(tuning.street.walkers.value * (lowGfx ? 0.5 : 1)), Math.round(tuning.street.cyclists.value * (lowGfx ? 0.5 : 1)));
 const ripples = new Ripples();
 scene.add(ripples.group);
@@ -683,9 +688,11 @@ function setupSenate(): void {
   onRoofBefore = false;
   world.movers.length = 0;
   if (greybox) return;
-  if (level.tram) {
-    tram = new Tram(level.tram);
-    tramView = new TramView(tram, level.tram);
+  // the tram runs on its line in every level (the tram levels change what it does): it is part of the city
+  const tramDef = level.tram ?? SENATE_TRAM;
+  {
+    tram = new Tram(tramDef);
+    tramView = new TramView(tram, tramDef);
     scene.add(tramView.group);
     world.movers.push(roofBox);
     placeRoof();
@@ -732,7 +739,7 @@ function stepSenate(dt: number): void {
   }
   const free = interaction.props.props.filter((p) => !p.broken && !p.carried && p.heldBy === null);
   if (tram) {
-    const blocker = free.find((p) => p.type === 'bottle' && p.cur.p.y < 1.6 && tram!.trackAhead(p.cur.p.x, p.cur.p.z, tuning.tram.brakeDistance.value));
+    const blocker = !level.tram ? undefined : free.find((p) => p.type === 'bottle' && p.cur.p.y < 1.6 && tram!.trackAhead(p.cur.p.x, p.cur.p.z, tuning.tram.brakeDistance.value));
     const ev = tram.update(dt, !!blocker);
     placeRoof();
     for (const e of ev) {
@@ -744,8 +751,8 @@ function stepSenate(dt: number): void {
       } else if (e.type === 'cleared') {
         for (const p of free) if (p.type === 'bottle' && tram.trackAhead(p.cur.p.x, p.cur.p.z, tuning.tram.brakeDistance.value + 4)) interaction.props.destroy(p);
         npcs?.sendRole('driver', [{ x: tram.def.stopX - 7, z: tram.def.z + 3, name: 'the tram' }]);
-      } else {
-        audio.play('chime');
+      } else if (level.tram || Math.hypot(gull.state.x - tram.x, gull.state.z - tram.def.z) < 70) {
+        audio.play('chime'); // an ambient tram only rings when you are near
         noise(tram.x, tram.def.z, 1.2);
       }
     }
@@ -2155,6 +2162,7 @@ startLoop({
     graphics.update(gull.position);
     sky.update(frameDt, cam.camera.position, simTime);
     tickMotion(simTime);
+    birds?.update(simTime);
     water?.update(simTime);
     ripples.update(frameDt);
     if (havoc) havocHud.update(havoc);

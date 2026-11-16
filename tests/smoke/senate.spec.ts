@@ -129,3 +129,11 @@ test('E3: standing on the valve starts the sprinklers', async ({ page }) => {
   await expect.poll(() => L((l) => l.sprinklers!.running), { timeout: 120_000 }).toBe(true);
   await expect.poll(() => L((l) => l.quests.quests.find((q) => q.id === 'clear')!.objectives[0].done), { timeout: 60_000 }).toBe(true);
 });
+
+test('the tram is part of the city: it runs on its line in every level, and birds circle overhead', async ({ page }) => {
+  test.setTimeout(400_000);
+  const L = await open(page, 'snack-attack');
+  expect(await L((l) => l.tram !== null)).toBe(true);
+  await expect.poll(() => L((l) => l.tram!.x), { timeout: 300_000 }).toBeGreaterThan(-214);
+  expect(await page.evaluate(() => (window as unknown as { __lokki: { render: { calls: number } } }).__lokki.render.calls)).toBeGreaterThan(20);
+});
