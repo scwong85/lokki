@@ -108,6 +108,18 @@
       "type": "cart",
       "x": -146.8,
       "z": -322
+    },
+    {
+      "id": "concert-stage",
+      "type": "stage",
+      "x": -180.5,
+      "z": -303
+    },
+    {
+      "id": "library",
+      "type": "library",
+      "x": -133,
+      "z": -300
     }
   ]
 }

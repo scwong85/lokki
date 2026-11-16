@@ -21,6 +21,10 @@ export interface LevelDef {
   tram?: { z: number; x0: number; x1: number; stopX: number; length: number; width: number; roofY: number };
   /** The Pigeon Gang living on a statue at this spot. */
   pigeons?: { x: number; z: number };
+  /** A quiet zone (the library): flying or diving inside makes a racket that everyone hears. */
+  quiet?: { x: number; z: number; r: number };
+  /** The concert falls silent now and then: calling (Mimic) in the quiet bit sets off every phone. */
+  quietBreaks?: { first: number; every: number; duration: number };
   /** A cathedral bell that rings now and then: everyone within hearing looks up at the tower. */
   bells?: { x: number; z: number; first: number; every: number; duration: number };
   /** Free play: the whole quest pack, no stars, skills per quest (the M7/M8 game). */

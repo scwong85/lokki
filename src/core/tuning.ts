@@ -254,6 +254,10 @@ export const tuning = {
     brakeDistance: p(9, 3, 30, 0.5), // something on the track this far ahead stops the tram
     trackSlack: p(1.5, 0, 4, 0.1), // how far beside the rails still counts as on the track
   },
+  quiet: {
+    loud: p(1.6, 0.5, 4, 0.1), // how loud flying in the quiet zone is
+    interval: p(1.2, 0.3, 5, 0.1), // seconds between racket noises while you fly there
+  },
   pigeons: {
     guardRadius: p(7, 2, 20, 0.5), // gulls this close to the statue get chased off
     shove: p(9, 1, 30, 0.5), // how hard the gang shoves a gull away

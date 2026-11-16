@@ -198,7 +198,8 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M19 Act 3, themed days, part 1: levels 15–18
 - [x] M20 Act 3, part 2: levels 19–22, the end of the Market Square
 - [x] M21 Senate Square, part 1: levels S1–S3
-- [ ] M22 Senate Square, part 2: levels S4–S6 (built on `m22-senate-b`, awaiting playtest)
+- [x] M22 Senate Square, part 2: levels S4–S6
+- [ ] M23 Senate Square, part 3: levels S7–S10, the end of the district (built on `m23-senate-c`, awaiting playtest)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -334,8 +335,11 @@ Cheese Run, Say Pigeon!, Ding Dong, plus the Cathedral steps and the bell system
 ### M22 — Senate Square, part 2: S4–S6 (M–L)
 Tram Surfing, Turf War, The Emperor's New Look, plus trams (a moving roof) and the Pigeon Gang. Details: `docs/milestones/M22.md`.
 
-### After M22 (backlog)
- Senate Square (`docs/design/levels-senaatintori.md`), Esplanadi (`docs/design/levels-esplanadi.md`), Katajanokka (`docs/design/levels-katajanokka.md`), each level designed with a co-op variant; the shared systems they need (moving platforms, NPC schedules, Kalle the rival gull, the drone, seasons); local split-screen co-op (optional); optional WebGPU renderer.
+### M23 — Senate Square, part 3: S7–S10 (M–L)
+Concert Night, Christmas Market, The Library Rule, and the finale The Key to the City. Details: `docs/milestones/M23.md`.
+
+### After M23 (backlog)
+ Esplanadi (`docs/design/levels-esplanadi.md`), Katajanokka (`docs/design/levels-katajanokka.md`), each level designed with a co-op variant; the shared systems they need (moving platforms, NPC schedules, Kalle the rival gull, the drone, seasons); local split-screen co-op (optional); optional WebGPU renderer.
 
 ---
 

@@ -281,7 +281,33 @@ function cart(l: LandmarkSrc): LandmarkOut {
   };
 }
 
-const BUILDERS: Record<string, (l: LandmarkSrc) => LandmarkOut> = { cathedral, statue, tents, ferry, lamps, clock, toy, goods, bins, cafe, steps, emperor, cart };
+/** The concert stage (Senate Square, west side): a low platform facing east with the big screen behind it. */
+function stage(l: LandmarkSrc): LandmarkOut {
+  const { x, z } = l;
+  return {
+    prisms: [
+      prism(rect(x, z, 6, 12), 0, 1.0, 0x8a7fb0, 0xb9b0d8, 'perch'),
+      prism(rect(x - 2.7, z, 0.5, 12), 1.0, 3.2, 0x4a4660, 0x5d587a),
+      prism(rect(x - 2.7, z, 0.5, 9), 3.2, 7.2, 0x1f2430, 0x6bd6e8), // the jumbotron
+    ],
+    targets: [],
+  };
+}
+
+/** The National Library annex (a quiet zone): a pale block with steps in front. */
+function library(l: LandmarkSrc): LandmarkOut {
+  const { x, z } = l;
+  return {
+    prisms: [
+      prism(rect(x, z, 9, 16), 0, 8, 0xe8e2d4, 0xf4efe6, 'perch'),
+      prism(rect(x - 5.3, z, 1.6, 10), 0, 0.5, 0xd8d2c4, 0xece6dc),
+      prism(rect(x - 4.7, z, 0.6, 10), 0, 1.0, 0xd8d2c4, 0xece6dc),
+    ],
+    targets: [],
+  };
+}
+
+const BUILDERS: Record<string, (l: LandmarkSrc) => LandmarkOut> = { cathedral, statue, tents, ferry, lamps, clock, toy, goods, bins, cafe, steps, emperor, cart, stage, library };
 
 export function buildLandmarks(list: readonly LandmarkSrc[]): Required<LandmarkOut> {
   const out: Required<LandmarkOut> = { prisms: [], targets: [], props: [], mats: [], decor: [] };

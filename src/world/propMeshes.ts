@@ -86,6 +86,10 @@ function buildParts(type: PropType, g: THREE.Group): void {
       g.add(mesh(new THREE.BoxGeometry(0.12, 0.08, 0.025), 0x1d1f2a, 0.07, 0, 0));
       g.add(mesh(new THREE.BoxGeometry(0.28, 0.02, 0.02), 0xf2b65c, 0, 0.03, 0));
       break;
+    case 'baton':
+      g.add(mesh(new THREE.BoxGeometry(0.4, 0.035, 0.035), 0xf6efe0, 0, 0, 0));
+      g.add(mesh(new THREE.SphereGeometry(0.035, 6, 5), 0xf2b65c, -0.2, 0, 0));
+      break;
     case 'scarf':
       g.add(mesh(new THREE.BoxGeometry(0.4, 0.07, 0.18), 0xe86a8a, 0, 0, 0));
       g.add(mesh(new THREE.BoxGeometry(0.4, 0.075, 0.04), 0xf6efe0, 0, 0, 0.03));
