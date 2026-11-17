@@ -123,6 +123,8 @@ export interface Npc {
   slideX: number;
   slideZ: number;
   startleT: number;
+  /** Being tugged at by a gull: they hold on and face it (see tug.ts). */
+  tugged: boolean;
 }
 
 export interface GullInfo {
@@ -165,7 +167,7 @@ export function newNpc(id: number, sp: NpcSpawn): Npc {
     walkPhase: 0, moving: false, speed: 0, seesGull: false, suspicion: 0, nextT: 2,
     wants: sp.wants ?? [], holdType: null, goal: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false,
     mood: 'calm', moodT: 0, craves: sp.craves ?? null, station: null, buyT: 0,
-    follows: sp.follows ?? false, followT: 0, followGap: 2.5, following: false, patrol: sp.patrol ?? null, patrolI: 0, slipT: 0, slideX: 0, slideZ: 0, startleT: 0,
+    follows: sp.follows ?? false, followT: 0, followGap: 2.5, following: false, patrol: sp.patrol ?? null, patrolI: 0, slipT: 0, slideX: 0, slideZ: 0, startleT: 0, tugged: false,
   };
 }
 
@@ -443,6 +445,15 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
   const gullDist = Math.hypot(g.x - n.x, g.z - n.z);
   // the lure: someone still angry who wants comfort goes after a taunting gull again, even after they had given up the chase
   if (g.taunt && n.craves && n.buyT === 0 && (n.mood === 'angry' || n.mood === 'upset') && n.mode !== 'chase' && n.mode !== 'panic' && gullDist < tuning.mood.lureRange.value) enter(n, 'chase');
+  // ---- being tugged: they hold on tight and face the gull (a honk still startles them: see honkAt) ----
+  if (n.tugged && n.mode !== 'startle') {
+    n.handAngle = bearing(g.x - n.x, g.z - n.z) + Math.PI; // the hand is pulled back, away from the gull
+    faceToward(n, g.x, g.z, dt);
+    n.suspicion = 0;
+    n.moving = false;
+    return ev;
+  }
+
   // ---- the conga line: a follower trails a taunting gull (and for a few seconds after) ----
   if (n.follows && n.mode !== 'slip' && n.mode !== 'panic' && n.mode !== 'chase') {
     if (g.taunt && gullDist < tuning.mood.followRange.value) n.followT = tuning.mood.followHold.value;

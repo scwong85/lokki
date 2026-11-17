@@ -6,6 +6,7 @@ import { pickGrabTarget, type GrabCandidate } from './grab';
 import { spawnPoop, spawnPoopAssisted, stepPoop, predictPoop, type HitSphere, type PoopState, type PoopHit } from './poop';
 import { PropManager, type Prop } from './props';
 import { POOP_TARGET_TAGS } from '../data/props';
+import { Tug } from './tug';
 import type { PhysicsWorld } from '../physics/physics';
 import type { World } from '../world/collision';
 import { DecalPool } from '../render/decals';
@@ -16,12 +17,19 @@ export interface NpcHooks {
   snatchCandidates(beak: { x: number; y: number; z: number }): GrabCandidate[];
   blockedHint(beak: { x: number; y: number; z: number }): string | null;
   onSnatched(propId: number): void;
+  tugCandidates(beak: { x: number; y: number; z: number }): GrabCandidate[];
+  onTugStart(propId: number): void;
+  onTugEnd(propId: number, won: boolean): void;
+  pullOf(propId: number): number;
+  isTugged(propId: number): boolean;
   poopSpheres(): HitSphere[];
   onPooped(index: number): string | undefined;
 }
 
 export interface InteractionInput {
-  grab: boolean; // E: grab / drop
+  grab: boolean; // E: grab / drop (a fresh press)
+  /** E is held down (a tug of war keeps going while it is). */
+  grabHeld?: boolean;
   toss: boolean; // Q
   poop: boolean; // F / click
   /** A locked target (Tab): droppings are pulled onto it. */
@@ -31,6 +39,9 @@ export interface InteractionInput {
 export type GagEvent =
   | { type: 'grab'; prop: Prop; by?: number }
   | { type: 'snatch'; prop: Prop; by?: number }
+  | { type: 'tugStart'; prop: Prop; by?: number }
+  | { type: 'tugWin'; prop: Prop; by?: number }
+  | { type: 'tugLost'; prop: Prop; by?: number }
   | { type: 'poopNpc'; role?: string; by?: number; x?: number; z?: number }
   | { type: 'drop'; prop: Prop; by?: number }
   | { type: 'toss'; prop: Prop; by?: number }
@@ -48,6 +59,9 @@ export interface Beak {
   carried: Prop | null;
   poopCd: number;
   grabCd: number;
+  /** A tug of war in progress (on the ground, against someone's hand), and a flag set by a vendor's spray that ends it. */
+  tug: Tug | null;
+  tugInterrupt: boolean;
 }
 
 interface LivePoop {
@@ -92,7 +106,7 @@ export class Interaction {
 
   /** The beak of gull `id` (made on first use). */
   beak(id = 0): Beak {
-    return (this.beaks[id] ??= { id, carried: null, poopCd: 0, grabCd: 0 });
+    return (this.beaks[id] ??= { id, carried: null, poopCd: 0, grabCd: 0, tug: null, tugInterrupt: false });
   }
 
   /** Player 1's beak (kept for the single-player code and tests). */
@@ -155,7 +169,8 @@ export class Interaction {
   private pick(s: FlightState): { prop: Prop; tooHeavy: boolean } | null {
     const it = tuning.interaction;
     const beak = this.beakPos(s);
-    const cands = [...this.props.candidates(), ...(this.npcs?.snatchCandidates(beak) ?? [])];
+    // from the air a gull snatches what people hold; on the ground that takes a tug (see updateGull)
+    const cands = [...this.props.candidates(), ...(s.mode !== 'ground' ? this.npcs?.snatchCandidates(beak) ?? [] : [])];
     const pick = pickGrabTarget(beak, s.heading, cands, it.grabRange.value, it.grabConeDeg.value, it.carryMax.value * mods.carryMax, it.closeRange.value, { x: s.x, y: s.y, z: s.z });
     if (!pick) return null;
     const prop = this.props.byId(pick.id);
@@ -166,7 +181,12 @@ export class Interaction {
   grabPrompt(s: FlightState, id = 0): string {
     const carried = this.beak(id).carried;
     if (carried) return `E drop · Q toss ${carried.def.name}`;
+    if (this.beak(id).tug) return 'MASH E to pull! (hold E to keep hold)';
     const pick = this.pick(s);
+    if (!pick && s.mode === 'ground') {
+      const t = this.tugTarget(s);
+      if (t) return `Hold E: tug the ${t.def.name} (mash E to pull harder)`;
+    }
     if (!pick) return this.npcs?.blockedHint(this.beakPos(s)) ?? '';
     return pick.tooHeavy ? `${pick.prop.def.name}: too heavy` : `E grab ${pick.prop.def.name}`;
   }
@@ -195,8 +215,29 @@ export class Interaction {
     const stunned = s.stunT > 0;
     const forward = { x: -Math.sin(s.heading), z: -Math.cos(s.heading) };
 
+    // ---- tug of war: holding on to someone's hand while they pull back ----
+    if (b.tug) {
+      const prop = this.props.byId(b.tug.propId);
+      const ok = !!prop && !prop.broken && prop.heldBy !== null && s.mode === 'ground' && !stunned && !!this.npcs?.isTugged(prop.id);
+      const res = ok ? b.tug.step(dt, { held: !!inp.grabHeld, mash: inp.grab ? 1 : 0, pull: this.npcs!.pullOf(prop!.id), interrupted: b.tugInterrupt }) : 'cancelled';
+      b.tugInterrupt = false;
+      if (res === 'won') {
+        b.tug = null;
+        this.takeInBeak(prop!, ev, b);
+        ev.push({ type: 'tugWin', prop: prop!, by: id });
+      } else if (res === 'lost' || res === 'cancelled') {
+        const propId = b.tug.propId;
+        b.tug = null;
+        this.npcs?.onTugEnd(propId, false);
+        if (res === 'lost' && prop) {
+          b.grabCd = 1.2;
+          ev.push({ type: 'tugLost', prop, by: id });
+        }
+      }
+    }
+
     // ---- grab / drop / toss ----
-    if (!stunned && b.grabCd <= 0) {
+    if (!stunned && b.grabCd <= 0 && !b.tug) {
       if (inp.grab) {
         if (b.carried) {
           const p = b.carried;
@@ -209,6 +250,14 @@ export class Interaction {
           if (pick) {
             if (pick.tooHeavy) ev.push({ type: 'heavy', prop: pick.prop });
             else this.takeInBeak(pick.prop, ev, b);
+          } else if (s.mode === 'ground') {
+            // nothing to grab: a person holding something close by? start a tug of war
+            const target = this.tugTarget(s);
+            if (target) {
+              b.tug = new Tug(target.id);
+              this.npcs?.onTugStart(target.id);
+              ev.push({ type: 'tugStart', prop: target, by: id });
+            }
           }
         }
       } else if (!b.carried && s.mode === 'dive') {
@@ -297,6 +346,23 @@ export class Interaction {
   }
 
   /** Something knocked the item out of the beak (spray, swat, net...). */
+  /** The held item a gull on the ground would start tugging: the nearest within reach of the beak. */
+  private tugTarget(s: FlightState): Prop | null {
+    const beak = this.beakPos(s);
+    const c = (this.npcs?.tugCandidates({ x: s.x, y: s.y, z: s.z }) ?? []).sort((a, b) => Math.hypot(a.x - beak.x, a.z - beak.z) - Math.hypot(b.x - beak.x, b.z - beak.z))[0];
+    return c ? this.props.byId(c.id) ?? null : null;
+  }
+
+  /** A vendor's spray (or anything else) breaks up this gull's tug: it loses. */
+  interruptTug(id: number): void {
+    this.beak(id).tugInterrupt = true;
+  }
+
+  /** The tug meter (0..1) for the HUD, or null when this gull is not tugging. */
+  tugProgress(id = 0): number | null {
+    return this.beak(id).tug?.progress ?? null;
+  }
+
   dropCarried(s: FlightState, id = 0): Prop | null {
     const b = this.beak(id);
     const p = b.carried;

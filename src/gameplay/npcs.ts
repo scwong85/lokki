@@ -6,7 +6,8 @@ import { createRng, type Rng } from '../core/rng';
 import { tuning } from '../core/tuning';
 import { restY, type PropType } from '../data/props';
 import type { Target } from './targets';
-import { BODY_HEIGHT, BODY_RADIUS, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn, type Station, slip, honkAt } from './npc';
+import { npcPull } from './tug';
+import { BODY_HEIGHT, BODY_RADIUS, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn, type Station, slip, honkAt, setMood } from './npc';
 import type { GrabCandidate } from './grab';
 import type { HitSphere } from './poop';
 import type { NpcHooks } from './interaction';
@@ -402,16 +403,65 @@ export class NpcManager implements NpcHooks {
     for (const n of this.npcs) {
       if (n.holding === null || !snatchable(n, beak)) continue;
       const prop = this.props.byId(n.holding);
-      if (!prop) continue;
+      if (!prop || prop.def.grab === 'ground') continue; // only a tug takes this one
       const h = handPos(n);
       out.push({ id: prop.id, x: h.x, y: h.y, z: h.z, mass: prop.def.mass });
     }
     return out;
   }
 
+  /** What a gull on the ground may start tugging: held items within reach of the hand whose kind allows a tug. */
+  tugCandidates(beak: { x: number; y: number; z: number }): GrabCandidate[] {
+    const out: GrabCandidate[] = [];
+    const reach = tuning.tug.reach.value;
+    for (const n of this.npcs) {
+      if (n.holding === null || n.tugged || n.mode === 'panic' || n.mode === 'slip' || n.mode === 'yuck') continue;
+      const prop = this.props.byId(n.holding);
+      if (!prop || prop.def.grab === 'air') continue;
+      const h = handPos(n);
+      if (Math.hypot(beak.x - h.x, beak.z - h.z) > reach || Math.abs(beak.y - h.y) > 1.6) continue;
+      out.push({ id: prop.id, x: h.x, y: h.y, z: h.z, mass: prop.def.mass });
+    }
+    return out;
+  }
+
+  /** The person pulls back: they hold on and face the gull until the tug ends. */
+  onTugStart(propId: number): void {
+    const n = this.npcs.find((x) => x.holding === propId);
+    if (!n) return;
+    n.tugged = true;
+    if (n.mood === 'calm') setMood(n, 'annoyed', this.pending);
+    this.addNoise(n.x, n.z, 0.7);
+  }
+
+  /** The tug is over (won, lost or given up): they let go of being tugged; if they won they are smug and watchful. */
+  onTugEnd(propId: number, won: boolean): void {
+    const n = this.npcs.find((x) => x.holding === propId) ?? this.npcs.find((x) => x.tugged);
+    if (n) {
+      n.tugged = false;
+      if (!won && n.holding !== null) {
+        n.mode = 'notice';
+        n.t = 0;
+        n.noticeCd = 0;
+      }
+    }
+  }
+
+  /** How hard the holder of this prop pulls right now. */
+  pullOf(propId: number): number {
+    const n = this.npcs.find((x) => x.holding === propId);
+    return n ? npcPull(n) : 0;
+  }
+
+  /** Is anyone still holding this prop (and being tugged)? */
+  isTugged(propId: number): boolean {
+    return this.npcs.some((n) => n.tugged && n.holding === propId);
+  }
+
   onSnatched(propId: number): void {
     const n = this.npcs.find((x) => x.holding === propId);
     if (n) {
+      n.tugged = false;
       this.victimOf.set(propId, n.id);
       if (n.role === 'cleaner' && n.cleanT > 0) this.pending.push({ type: 'cleanerRobbed', npc: n });
       // never saw it coming: calm, and not looking at the gull (approached from behind, from above, or while distracted)

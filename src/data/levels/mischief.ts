@@ -174,3 +174,66 @@ export const SPLASH_LANDING: LevelDef = {
   defense: false,
   parTime: 200,
 };
+
+/**
+ * M5. Tug of War: two ways to take something from a person's hand. A bowl held in both hands cannot be snatched from the air:
+ * walk up, hold E and tug (mash E to pull harder). A balloon held high cannot be tugged: dive at it. A bun can be done either
+ * way, but the tug is slow, and the vendor next door will spray a gull that stays within reach of him.
+ */
+export const TUG_OF_WAR: LevelDef = {
+  id: 'tug-of-war',
+  name: 'M5. Tug of War',
+  blurb: 'Hold E and pull. Some things you tug, some you snatch.',
+  district: 'kauppatori',
+  series: 'Mischief (new)',
+  quests: [],
+  extraQuests: [
+    {
+      id: 'tugchain',
+      title: 'Tug of War',
+      teaser: 'Take a bowl, a balloon and a bun, each the right way.',
+      timed: false,
+      chain: true,
+      objectives: [
+        {
+          id: 'soup',
+          text: 'Take the soup from the man on the quay (tug it)',
+          kind: 'event',
+          event: 'grab:tugSoup',
+          hint: 'A bowl in two hands cannot be snatched from the air. Land beside him and HOLD E; mash E to pull harder. A honk makes him let go.',
+          markers: [{ x: 8, z: -18, r: 4, label: 'Soup' }],
+        },
+        {
+          id: 'balloon',
+          text: 'Take the balloon (snatch it from the air)',
+          kind: 'event',
+          event: 'grab:tugBalloon',
+          after: 'soup',
+          hint: 'It is held high, out of reach of a tug. Dive at it (Shift).',
+          markers: [{ x: 20, z: -15, r: 4, label: 'Balloon' }],
+        },
+        {
+          id: 'bun',
+          text: 'Take the bun from the man by the vendor',
+          kind: 'event',
+          event: 'grab:tugBun',
+          after: 'balloon',
+          hint: 'Snatch it from the air (safe), or tug it on the ground (the vendor sprays a gull that stays too close, and you lose the tug).',
+          markers: [{ x: -29, z: -17, r: 4, label: 'Bun' }],
+        },
+        { id: 'escape', text: 'Get away with it', kind: 'escape', after: 'bun', hint: 'Keep it and stay far from everyone until the bar fills.' },
+      ],
+    },
+  ],
+  triggers: [],
+  tourists: [],
+  extraTourists: [
+    { x: 8, z: -18, heading: 0, holds: 'soup', holdTag: 'tugSoup', role: 'soupman', stationary: true, color: 0xe8d5c0 },
+    { x: 20, z: -15, heading: Math.PI / 2, holds: 'balloon', holdTag: 'tugBalloon', role: 'balloonman', stationary: true, color: 0xf7a1c4 },
+    { x: -29, z: -17, heading: -Math.PI / 2, holds: 'bun', holdTag: 'tugBun', role: 'bunman', stationary: true, color: 0xffd36e },
+    { x: -10, z: -22, heading: 0.6, ice: true, color: 0x9ec9f0 },
+  ],
+  defense: true,
+  deploy: ['vendors'],
+  parTime: 300,
+};

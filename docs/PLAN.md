@@ -224,7 +224,8 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [ ] M47 Chains I: Vappu, Herring Market, Wedding Bells, Frozen Harbour and S6 rebuilt as chains; taunt and stuck-level fixes (built on `m47-chains`, merged)
 - [ ] M48 Mischief toys: Slip (Wet Floor) and Pied Piper levels, mechanics study (built on `m48-mischief`)
 - [ ] M49 Honk, Cannonball and environment sounds (built on `m49-honk-splash`, merged)
-- [ ] M50 Handling and comfort: comfort presets, vignette, smooth steering, camera follow, FOV and distance; escape bar, splash sound (built on `m50-handling`)
+- [ ] M50 Handling and comfort: comfort presets, vignette, smooth steering, camera follow, FOV and distance; escape bar, splash sound (built on `m50-handling`, merged)
+- [ ] M52 Tug of war: ground tug vs air snatch, items by grab mode, vendor spray interrupts (built on `m52-tug`)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -438,8 +439,11 @@ Tap T to honk, hard dives into water soak the pier, and the tram, church bell, f
 ### M50 — Handling and comfort (M)
 Comfort presets, a vignette, smooth steering, a camera that follows the gull, FOV and distance sliders; plus the escape bar and splash sound. Details: `docs/milestones/M50.md`.
 
-### After M50 (backlog)
- Tug (design in `docs/design/mischief-mechanics.md` section 12), then contagion, slam and the rest of the slate.
+### M52 — Tug of war (M)
+On the ground E starts a tug of war against someone's hand; in the air the snatch stays instant; items are air-only, ground-only or both. Details: `docs/milestones/M52.md`.
+
+### After M52 (backlog)
+ Contagion, slam and the rest of the slate (`docs/design/mischief-mechanics.md`), then convert the stall-chain levels to the new toys.
  Mischief toys next: tablecloth yank, prank button, hide and BOO, then convert the stall-chain levels to different toys (`docs/design/mischief-mechanics.md`).
  Chain levels: more rebuilds (Cheese Run, Harbour Day, the heist levels, Christmas Market, Key to the City, Coo-Coo, The Drone), then rumour and crowds, escalation events, co-op chains (`docs/design/chain-levels.md`).
  World enrichment rest of W2, then W3 to W6 (`docs/design/world-enrichment.md`): streets and squares, things that move, a busier city, landmark kit.
