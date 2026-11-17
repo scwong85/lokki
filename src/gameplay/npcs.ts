@@ -7,7 +7,7 @@ import { tuning } from '../core/tuning';
 import { restY, type PropType } from '../data/props';
 import type { Target } from './targets';
 import { npcPull } from './tug';
-import { BODY_HEIGHT, BODY_RADIUS, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn, type Station, slip, honkAt, setMood } from './npc';
+import { BODY_HEIGHT, BODY_RADIUS, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn, type Station, slip, honkAt, setMood, isCalm, scareJump, startDance } from './npc';
 import type { GrabCandidate } from './grab';
 import type { HitSphere } from './poop';
 import type { NpcHooks } from './interaction';
@@ -28,6 +28,12 @@ export class NpcManager implements NpcHooks {
   private spawns = new Map<number, NpcSpawn>();
   private noises: Noise[] = [];
   private pending: NpcEvent[] = [];
+  /** Frights waiting to reach the next people (contagion), and how many people the current cascade has reached. */
+  private frights: { x: number; z: number; gen: number; at: number; src: Npc }[] = [];
+  private cascade = 0;
+  private cascadeIdle = 0;
+  private knockCount = 0;
+  private knockIdle = 0;
   private rng: Rng;
   private nextId = 1;
   private owners: Npc[] = [];
@@ -163,6 +169,103 @@ export class NpcManager implements NpcHooks {
     return k;
   }
 
+  /** A fright reaches calm neighbours (called with this tick's events; adds its own results to `ev` after scanning). */
+  private spread(ev: NpcEvent[], dt: number): void {
+    const c = tuning.contagion;
+    const fresh = ev.slice();
+    for (const e of fresh) {
+      if ((e.type === 'panic' || e.type === 'startled' || e.type === 'slipped' || e.type === 'soaked') && e.npc.infectedT <= 0) {
+        e.npc.infectedT = c.immune.value;
+        this.frights.push({ x: e.npc.x, z: e.npc.z, gen: 0, at: this.clock + c.delay.value, src: e.npc });
+      }
+    }
+    const due = this.frights.filter((f) => f.at <= this.clock);
+    this.frights = this.frights.filter((f) => f.at > this.clock);
+    for (const f of due) {
+      for (const n of this.npcs) {
+        if (n === f.src || n.infectedT > 0 || !isCalm(n) || Math.hypot(n.x - f.x, n.z - f.z) > c.radius.value) continue;
+        n.infectedT = c.immune.value;
+        if (f.gen <= 1) {
+          this.dropHeld(n);
+          ev.push(...startle(n, 'pooped'));
+        } else scareJump(n, ev);
+        this.cascade++;
+        ev.push({ type: 'spread', count: this.cascade });
+        if (f.gen + 1 < c.maxGen.value) this.frights.push({ x: n.x, z: n.z, gen: f.gen + 1, at: this.clock + c.delay.value, src: n });
+      }
+    }
+    for (const n of this.npcs) if (n.infectedT > 0) n.infectedT -= dt;
+    if (this.frights.length === 0 && this.cascade > 0) {
+      this.cascadeIdle += dt;
+      if (this.cascadeIdle > 4) this.cascade = 0;
+    } else this.cascadeIdle = 0;
+  }
+
+  /** A fast dive through people bowls them over; a fallen person knocks over the next (the domino). Returns true if the dive hit someone. */
+  slam(s: FlightState): boolean {
+    const t = tuning.slam;
+    const speed = Math.hypot(s.vx, s.vy, s.vz);
+    if (s.mode !== 'dive' || speed < t.minSpeed.value || s.y < 0.1 || s.y > BODY_HEIGHT + 0.8) return false;
+    const dir = { x: s.vx, z: s.vz };
+    let hit = false;
+    for (const n of this.npcs) {
+      if (n.mode === 'slip' || n.tugged) continue;
+      if (Math.hypot(n.x - s.x, n.z - s.z) > t.radius.value + BODY_RADIUS) continue;
+      this.knock(n, dir, 0);
+      hit = true;
+    }
+    if (hit) {
+      s.vx *= t.speedLoss.value;
+      s.vz *= t.speedLoss.value;
+      this.pending.push({ type: 'slam' });
+    }
+    return hit;
+  }
+
+  private knock(n: Npc, dir: { x: number; z: number }, gen: number): void {
+    this.dropHeld(n);
+    const ev: NpcEvent[] = [];
+    slip(n, ev, dir, tuning.slam.slide.value);
+    n.infectedT = tuning.contagion.immune.value;
+    this.pending.push(...ev);
+    this.knockCount++;
+    this.knockIdle = 0;
+    this.pending.push({ type: 'knockdown', count: this.knockCount });
+    this.knocks.push({ src: n, gen, at: this.clock + 0.25 });
+  }
+  private knocks: { src: Npc; gen: number; at: number }[] = [];
+
+  private knockStep(dt: number): void {
+    const t = tuning.slam;
+    const due = this.knocks.filter((k) => k.at <= this.clock);
+    this.knocks = this.knocks.filter((k) => k.at > this.clock);
+    for (const k of due) {
+      if (k.gen + 1 >= t.maxGen.value) continue;
+      for (const n of this.npcs) {
+        if (n === k.src || n.mode === 'slip' || n.tugged || Math.hypot(n.x - k.src.x, n.z - k.src.z) > t.knockRadius.value) continue;
+        this.knock(n, { x: n.x - k.src.x, z: n.z - k.src.z }, k.gen + 1);
+      }
+    }
+    if (this.knockCount > 0 && this.knocks.length === 0) {
+      this.knockIdle += dt;
+      if (this.knockIdle > 4) this.knockCount = 0;
+    }
+  }
+
+  /** The jukebox plays: calm people within `r` dance for `seconds`. Returns how many. */
+  danceNear(x: number, z: number, r: number, seconds: number): NpcEvent[] {
+    const ev: NpcEvent[] = [];
+    let k = 0;
+    for (const n of this.npcs) {
+      if (Math.hypot(n.x - x, n.z - z) > r || !isCalm(n)) continue;
+      startDance(n, seconds, ev);
+      n.heading = Math.atan2(-(x - n.x), -(z - n.z)); // they turn to the music
+      k++;
+    }
+    ev.push({ type: 'dancing', count: k });
+    return ev;
+  }
+
   /** A honk at (x, z): calm people within `range` jump; someone with their back turned drops what they hold. */
   honk(x: number, z: number, range: number): NpcEvent[] {
     const ev: NpcEvent[] = [];
@@ -257,6 +360,8 @@ export class NpcManager implements NpcHooks {
         if (prop && prop.heldBy === n.id) this.props.setHoldTarget(prop, handPos(n));
       }
     }
+    this.spread(ev, dt);
+    this.knockStep(dt);
     this.noises.length = 0;
     return ev;
   }

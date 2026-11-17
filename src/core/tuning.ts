@@ -411,6 +411,24 @@ export const tuning = {
     shadowArea: p(70, 20, 200, 5), // half-size in metres of the shadow box around the player
     ao: p(0.32, 0, 0.8, 0.02), // baked darkening at the foot of walls
   },
+  contagion: {
+    radius: p(3.4, 1, 10, 0.2), // a fright spreads to calm people this close
+    delay: p(0.35, 0.05, 2, 0.05), // seconds before it reaches the next person
+    maxGen: p(4, 1, 8, 1), // how many people deep it goes
+    immune: p(6, 1, 20, 1), // seconds before the same person can be frightened again
+  },
+  slam: {
+    minSpeed: p(14, 6, 40, 1), // a dive at least this fast bowls people over
+    radius: p(1.05, 0.5, 2.5, 0.05), // how close to a person the dive must pass
+    knockRadius: p(1.5, 0.6, 4, 0.1), // a person who falls knocks over those this close
+    maxGen: p(3, 1, 6, 1), // how many people deep the domino goes
+    slide: p(3.2, 1, 8, 0.2), // how fast a knocked-down person slides
+    speedLoss: p(0.55, 0.2, 1, 0.05), // the gull keeps this share of its speed after a hit
+  },
+  dance: {
+    seconds: p(9, 2, 30, 1), // how long the jukebox makes people dance
+    range: p(20, 4, 60, 1), // how far the music carries
+  },
   tug: {
     start: p(0.3, 0.1, 0.6, 0.05), // where the meter starts (1 = yours, 0 = they keep it)
     hold: p(0.35, 0.1, 1, 0.05), // how fast holding E alone pulls (per second)

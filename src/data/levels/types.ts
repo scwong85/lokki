@@ -39,6 +39,8 @@ export interface LevelDef {
   parade?: { stops: { event: string; need: number; at?: { x: number; z: number; r: number }; text?: string; send?: { role: string; goals: { x: number; z: number; name: string }[] } }[] };
   /** A cathedral bell that rings now and then: everyone within hearing looks up at the tower. */
   bells?: { x: number; z: number; first: number; every: number; duration: number };
+  /** Things the gull can peck with E (a jukebox, a button): each starts an effect and fires `pecked:<id>`. */
+  switches?: { id: string; x: number; z: number; label: string; effect: 'dance'; cooldown?: number }[];
   /** Havoc Hour: a timed chaos run with chain scoring instead of to-dos. */
   havoc?: { seconds: number };
   /** Free play: the whole quest pack, no stars, skills per quest (the M7/M8 game). */

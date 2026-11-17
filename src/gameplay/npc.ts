@@ -21,7 +21,7 @@ export interface Station {
   goods?: { dz: number; y?: number };
 }
 
-export type NpcMode = 'idle' | 'walk' | 'eat' | 'notice' | 'shield' | 'panic' | 'chase' | 'recover' | 'yuck' | 'cheer' | 'slip' | 'startle';
+export type NpcMode = 'idle' | 'walk' | 'eat' | 'notice' | 'shield' | 'panic' | 'chase' | 'recover' | 'yuck' | 'cheer' | 'slip' | 'startle' | 'dance';
 
 export interface NpcSpawn {
   x: number;
@@ -125,6 +125,9 @@ export interface Npc {
   startleT: number;
   /** Being tugged at by a gull: they hold on and face it (see tug.ts). */
   tugged: boolean;
+  /** Seconds before a fright can spread to them again, and the dance they are in (jukebox). */
+  infectedT: number;
+  danceT: number;
 }
 
 export interface GullInfo {
@@ -143,7 +146,7 @@ export interface Noise {
   loud: number;
 }
 
-export type NpcEvent = { type: 'reclaimed'; npc: Npc; propType: PropType } | { type: 'cheer'; npc: Npc } | { type: 'arrived'; npc: Npc; goal: string } | { type: 'yuck'; npc: Npc } | { type: 'tookItem'; npc: Npc; propType: PropType } | { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc } | { type: 'selfieClick'; npc: Npc; inFrame: boolean; framed: number } | { type: 'signSplat'; npc: Npc; splats: number } | { type: 'cleanerRobbed'; npc: Npc } | { type: 'snatchUnseen'; npc: Npc } | { type: 'review'; npc: Npc } | { type: 'soaked'; npc: Npc } | { type: 'scared'; npc: Npc; carried: boolean } | { type: 'mood'; npc: Npc; mood: Mood } | { type: 'atStation'; npc: Npc; station: string } | { type: 'bought'; npc: Npc; station: string; propType: PropType } | { type: 'slipped'; npc: Npc } | { type: 'startled'; npc: Npc; dropped: boolean };
+export type NpcEvent = { type: 'reclaimed'; npc: Npc; propType: PropType } | { type: 'cheer'; npc: Npc } | { type: 'arrived'; npc: Npc; goal: string } | { type: 'yuck'; npc: Npc } | { type: 'tookItem'; npc: Npc; propType: PropType } | { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc } | { type: 'selfieClick'; npc: Npc; inFrame: boolean; framed: number } | { type: 'signSplat'; npc: Npc; splats: number } | { type: 'cleanerRobbed'; npc: Npc } | { type: 'snatchUnseen'; npc: Npc } | { type: 'review'; npc: Npc } | { type: 'soaked'; npc: Npc } | { type: 'scared'; npc: Npc; carried: boolean } | { type: 'mood'; npc: Npc; mood: Mood } | { type: 'atStation'; npc: Npc; station: string } | { type: 'bought'; npc: Npc; station: string; propType: PropType } | { type: 'slipped'; npc: Npc } | { type: 'startled'; npc: Npc; dropped: boolean } | { type: 'spread'; count: number } | { type: 'slam' } | { type: 'knockdown'; count: number } | { type: 'dancing'; count: number };
 
 export interface NpcCtx {
   world: World;
@@ -167,7 +170,7 @@ export function newNpc(id: number, sp: NpcSpawn): Npc {
     walkPhase: 0, moving: false, speed: 0, seesGull: false, suspicion: 0, nextT: 2,
     wants: sp.wants ?? [], holdType: null, goal: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false,
     mood: 'calm', moodT: 0, craves: sp.craves ?? null, station: null, buyT: 0,
-    follows: sp.follows ?? false, followT: 0, followGap: 2.5, following: false, patrol: sp.patrol ?? null, patrolI: 0, slipT: 0, slideX: 0, slideZ: 0, startleT: 0, tugged: false,
+    follows: sp.follows ?? false, followT: 0, followGap: 2.5, following: false, patrol: sp.patrol ?? null, patrolI: 0, slipT: 0, slideX: 0, slideZ: 0, startleT: 0, tugged: false, infectedT: 0, danceT: 0,
   };
 }
 
@@ -331,11 +334,17 @@ export function startle(n: Npc, kind: 'pooped' | 'snatched' | 'yuck' | 'cheer'):
 }
 
 /** They tread in a puddle (a splat, a fish): arms up, a long slide, what they hold goes flying, and they are not happy. */
-export function slip(n: Npc, ev: NpcEvent[]): void {
+export function slip(n: Npc, ev: NpcEvent[], dir?: { x: number; z: number }, speed = 3.4): void {
   enter(n, 'slip');
   n.slipT = 0;
-  n.slideX = -Math.sin(n.heading) * 3.4;
-  n.slideZ = -Math.cos(n.heading) * 3.4;
+  if (dir && Math.hypot(dir.x, dir.z) > 1e-6) {
+    const l = Math.hypot(dir.x, dir.z);
+    n.slideX = (dir.x / l) * speed; // knocked down: they slide the way they were hit
+    n.slideZ = (dir.z / l) * speed;
+  } else {
+    n.slideX = -Math.sin(n.heading) * speed;
+    n.slideZ = -Math.cos(n.heading) * speed;
+  }
   n.holding = null;
   n.holdType = null;
   n.following = false;
@@ -344,6 +353,24 @@ export function slip(n: Npc, ev: NpcEvent[]): void {
 }
 
 export const SLIP_SECONDS = 2.4;
+
+/** Can this person be frightened or knocked by what is going on around them? (busy people are not reached.) */
+export const isCalm = (n: Npc): boolean => (n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat' || n.mode === 'recover' || n.mode === 'cheer' || n.mode === 'dance') && !n.following && n.buyT === 0 && !n.tugged;
+
+/** A fright from a neighbour: a jump and a flinch (no running). */
+export function scareJump(n: Npc, ev: NpcEvent[]): void {
+  enter(n, 'startle');
+  n.startleT = 0;
+  setMood(n, angrier(n.mood === 'calm' ? 'calm' : n.mood), ev);
+  ev.push({ type: 'startled', npc: n, dropped: false });
+}
+
+/** The jukebox: they dance for `seconds`, delighted, too happy to watch their snacks. */
+export function startDance(n: Npc, seconds: number, ev: NpcEvent[]): void {
+  enter(n, 'dance');
+  n.danceT = seconds;
+  setMood(n, 'delighted', ev);
+}
 
 /**
  * A honk from a gull at (gx, gz): calm people jump. Someone who has their back to the gull is caught completely off guard: they
@@ -593,6 +620,15 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
       if (n.t >= 3) {
         enter(n, 'recover');
         n.noticeCd = 2;
+      }
+      break;
+    case 'dance':
+      n.handAngle = n.heading - Math.PI / 2;
+      n.suspicion = 0;
+      n.danceT -= dt;
+      if (n.danceT <= 0) {
+        enter(n, 'idle');
+        n.nextT = 2;
       }
       break;
     case 'startle':
