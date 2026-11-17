@@ -32,3 +32,9 @@ describe('chain levels', () => {
     }
   });
 });
+
+describe('the experimental levels are never locked', () => {
+  it('chain and mischief levels need nothing cleared first (so a fresh profile finds them)', () => {
+    for (const id of ['map-and-cone', 'wet-floor', 'pied-piper', 'honk', 'splash-landing']) expect(LEVELS.find((l) => l.id === id)!.requires, id).toBeUndefined();
+  });
+});

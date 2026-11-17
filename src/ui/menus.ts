@@ -135,8 +135,9 @@ export interface TitleLevel {
 const DISTRICT_NAMES: Record<string, string> = { kauppatori: 'Kauppatori · the Market Square', senaatintori: 'Senate Square', esplanadi: 'Esplanadi' };
 
 /** The level buttons of the title screen, with a heading where the district changes. */
-export function titleLevelRows(levels: TitleLevel[]): string {
+export function titleLevelRows(all: TitleLevel[]): string {
   let last = '';
+  const levels = [...all.filter((l) => l.series), ...all.filter((l) => !l.series)]; // the new toys come first, so they are easy to find
   return levels
     .map((l) => {
       const group = l.sandbox ? 'Free play' : l.series ?? DISTRICT_NAMES[l.district ?? 'kauppatori'] ?? '';

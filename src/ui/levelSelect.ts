@@ -30,7 +30,8 @@ export class LevelSelect {
     return !this.el.hidden;
   }
 
-  show(levels: (TitleLevel & { best?: string })[]): void {
+  show(all: (TitleLevel & { best?: string })[]): void {
+    const levels = [...all.filter((l) => l.series), ...all.filter((l) => !l.series)]; // the new toys come first, so they are easy to find
     const NAMES: Record<string, string> = { kauppatori: 'Kauppatori · the Market Square', senaatintori: 'Senate Square', esplanadi: 'Esplanadi' };
     let lastGroup = '';
     const rows = levels
