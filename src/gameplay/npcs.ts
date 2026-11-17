@@ -169,6 +169,32 @@ export class NpcManager implements NpcHooks {
     return k;
   }
 
+  /** Someone who keeps their place walks back to it after a fright or a fall, and takes back a cone that lies unclaimed. */
+  private backToPost(n: Npc, dt: number): void {
+    const sp = this.spawns.get(n.id);
+    if (!sp?.post || n.mode !== 'idle' || n.goal || n.following || n.tugged) return;
+    const dx = sp.x - n.x, dz = sp.z - n.z;
+    const d = Math.hypot(dx, dz);
+    if (d > 0.25) {
+      const step = Math.min(d, 1.5 * dt);
+      n.x += (dx / d) * step;
+      n.z += (dz / d) * step;
+      n.heading = Math.atan2(-dx, -dz);
+      n.speed = 1.2;
+      n.moving = true;
+      return;
+    }
+    n.heading = sp.heading ?? n.heading;
+    const prop = this.items.get(n.id);
+    if (n.holding === null && prop && prop.heldBy === null && !prop.carried) {
+      this.props.reset(prop);
+      this.props.attach(prop, n.id);
+      n.holding = prop.id;
+      n.holdType = sp.holds ?? (sp.ice ? 'icecream' : null);
+      this.props.setHoldTarget(prop, handPos(n));
+    }
+  }
+
   /** A fright reaches calm neighbours (called with this tick's events; adds its own results to `ev` after scanning). */
   private spread(ev: NpcEvent[], dt: number): void {
     const c = tuning.contagion;
@@ -231,9 +257,9 @@ export class NpcManager implements NpcHooks {
     this.knockCount++;
     this.knockIdle = 0;
     this.pending.push({ type: 'knockdown', count: this.knockCount });
-    this.knocks.push({ src: n, gen, at: this.clock + 0.25 });
+    this.knocks.push({ src: n, gen, at: this.clock + 0.25, x: n.x, z: n.z });
   }
-  private knocks: { src: Npc; gen: number; at: number }[] = [];
+  private knocks: { src: Npc; gen: number; at: number; x: number; z: number }[] = [];
 
   private knockStep(dt: number): void {
     const t = tuning.slam;
@@ -242,8 +268,8 @@ export class NpcManager implements NpcHooks {
     for (const k of due) {
       if (k.gen + 1 >= t.maxGen.value) continue;
       for (const n of this.npcs) {
-        if (n === k.src || n.mode === 'slip' || n.tugged || Math.hypot(n.x - k.src.x, n.z - k.src.z) > t.knockRadius.value) continue;
-        this.knock(n, { x: n.x - k.src.x, z: n.z - k.src.z }, k.gen + 1);
+        if (n === k.src || n.mode === 'slip' || n.tugged || Math.hypot(n.x - k.x, n.z - k.z) > t.knockRadius.value) continue;
+        this.knock(n, { x: n.x - k.x, z: n.z - k.z }, k.gen + 1);
       }
     }
     if (this.knockCount > 0 && this.knocks.length === 0) {
@@ -350,6 +376,7 @@ export class NpcManager implements NpcHooks {
           ev.push(...this.trip(n));
         }
       }
+      this.backToPost(n, dt);
       ev.push(...this.wantedItems(n));
       ev.push(...this.reclaim(n));
       // solid walls, counters and landmarks push the tourist out (horizontal only)

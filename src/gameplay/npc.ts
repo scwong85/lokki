@@ -54,6 +54,8 @@ export interface NpcSpawn {
   follows?: boolean;
   /** Walks this route back and forth instead of wandering. */
   patrol?: { x: number; z: number }[];
+  /** Keeps their place: after a fright or a fall they walk back, and a cone dropped nearby is theirs again (mischief levels). */
+  post?: boolean;
 }
 
 export interface Npc {
@@ -358,7 +360,7 @@ export function slip(n: Npc, ev: NpcEvent[], dir?: { x: number; z: number }, spe
 export const SLIP_SECONDS = 2.4;
 
 /** Can this person be frightened or knocked by what is going on around them? (busy people are not reached.) */
-export const isCalm = (n: Npc): boolean => (n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat' || n.mode === 'recover' || n.mode === 'cheer' || n.mode === 'dance') && !n.following && n.buyT === 0 && !n.tugged;
+export const isCalm = (n: Npc): boolean => (n.mode === 'idle' || n.mode === 'walk' || n.mode === 'notice' || n.mode === 'shield' || n.mode === 'eat' || n.mode === 'recover' || n.mode === 'cheer' || n.mode === 'dance') && !n.following && n.buyT === 0 && !n.tugged;
 
 /** A fright from a neighbour: a jump and a flinch (no running). */
 export function scareJump(n: Npc, ev: NpcEvent[]): void {
