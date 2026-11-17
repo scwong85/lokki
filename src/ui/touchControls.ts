@@ -227,12 +227,14 @@ export class TouchControls {
   }
 
   /** Per frame: context labels and which buttons exist right now. */
-  update(prompt: string, carrying: boolean, owned: { V: boolean; G: boolean; B: boolean }, abilityReady: (code: string) => number, coop = false): void {
-    for (const b of this.coopBtns) b.hidden = !coop; // taunt and emote only matter with a partner
+  update(prompt: string, carrying: boolean, owned: { V: boolean; G: boolean; B: boolean }, abilityReady: (code: string) => number, coop = false, locked: { poop?: boolean; toss?: boolean; taunt?: boolean } = {}): void {
+    for (const b of this.coopBtns) b.hidden = !coop || (!!locked.taunt && b.classList.contains('t-taunt')); // taunt and emote only matter with a partner; a locked verb has no button
+    const poopBtn = this.el.querySelector<HTMLElement>('.t-poop');
+    if (poopBtn) poopBtn.hidden = !!locked.poop;
     const g = grabLabel(prompt);
     if (this.grab.textContent !== g.text) this.grab.textContent = g.text;
     this.grab.classList.toggle('dim', !g.enabled);
-    this.toss.hidden = !carrying;
+    this.toss.hidden = !carrying || !!locked.toss;
     for (const [code, b] of this.abilities) {
       const key = code.slice(3) as 'V' | 'G' | 'B';
       b.hidden = !owned[key];

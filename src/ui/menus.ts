@@ -1,4 +1,5 @@
 import { OPTION_SLIDERS, type Options } from '../core/options';
+import { arcInfo } from '../data/arcs';
 import { HUD_NAMES, nextHudMode } from './hudMode';
 
 /** Options panel (O, or from the title screen): sliders write straight into the options object. */
@@ -130,6 +131,23 @@ export interface TitleLevel {
   district?: string;
   /** A heading of its own that replaces the district's. */
   series?: string;
+  /** Campaign position (act and stage); levels without one are the Playground. */
+  arc?: number;
+  stage?: number;
+}
+
+/** Campaign stages first (by act and stage), then the Playground (the toys, then the older levels). */
+export function orderLevels<T extends TitleLevel>(all: readonly T[]): T[] {
+  const staged = all.filter((l) => l.arc !== undefined).sort((a, b) => a.arc! - b.arc! || a.stage! - b.stage!);
+  const rest = all.filter((l) => l.arc === undefined);
+  return [...staged, ...rest.filter((l) => l.series), ...rest.filter((l) => !l.series)];
+}
+
+/** The heading a level is listed under. */
+export function levelGroup(l: TitleLevel): string {
+  if (l.arc !== undefined) return arcInfo(l.arc)?.name ?? `Act ${l.arc}`;
+  if (l.sandbox) return 'Free play';
+  return `Playground · ${l.series ?? DISTRICT_NAMES[l.district ?? 'kauppatori'] ?? ''}`;
 }
 
 const DISTRICT_NAMES: Record<string, string> = { kauppatori: 'Kauppatori · the Market Square', senaatintori: 'Senate Square', esplanadi: 'Esplanadi' };
@@ -137,10 +155,10 @@ const DISTRICT_NAMES: Record<string, string> = { kauppatori: 'Kauppatori · the 
 /** The level buttons of the title screen, with a heading where the district changes. */
 export function titleLevelRows(all: TitleLevel[]): string {
   let last = '';
-  const levels = [...all.filter((l) => l.series), ...all.filter((l) => !l.series)]; // the new toys come first, so they are easy to find
+  const levels = orderLevels(all);
   return levels
     .map((l) => {
-      const group = l.sandbox ? 'Free play' : l.series ?? DISTRICT_NAMES[l.district ?? 'kauppatori'] ?? '';
+      const group = levelGroup(l);
       const head = group !== last ? `<h4>${group}</h4>` : '';
       last = group;
       const stars = l.locked ? l.unlockHint ?? '' : l.sandbox ? 'free play' : '★'.repeat(l.stars) + '☆'.repeat(3 - l.stars);

@@ -13,7 +13,7 @@ const DT = 1 / 60;
 
 describe('Act 3, themed days (part 2)', () => {
   it('follow level 18 in order, each unlocked by the one before; the finale is last before free play', () => {
-    expect(LEVELS.map((l) => l.id).slice(18, 22)).toEqual(ids);
+    expect(LEVELS.filter((l) => l.arc === undefined).map((l) => l.id).slice(18, 22)).toEqual(ids);
     expect(LEVELS[LEVELS.length - 1].sandbox).toBe(true);
     ids.forEach((id, i) => {
       const l = levelById(id);

@@ -233,6 +233,7 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [ ] M57 Dog fixes (merged)
 - [ ] M58 Plan: 4 arcs of 5 stages, mechanic gating, physics sandbox research (`docs/design/arcs.md`, `docs/design/physics-sandbox.md`; built on `m58-arcs-plan`)
 - [ ] M59 Mechanic gating: stage gates, locked verbs do nothing (built on `m59-gating`)
+- [ ] M60 Stage framework and stage 1.1 First Light (built on `m60-stage-framework`)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -467,7 +468,10 @@ Four arcs of five five-minute stages, three chained objectives plus two co-op ob
 ### M59 — Mechanic gating (M)
 `src/gameplay/mechanics.ts`: the ladder, `LevelDef.gate`, `?gate=1.3`; locked verbs (poop, toss, honk, tug, hide, switches, taunt, slip, contagion, slam, gust, dog call, cannonball) do nothing. Details: `docs/milestones/M59.md`.
 
-### After M59 (backlog)
+### M60 — Stage framework and the first stage (M)
+Arcs and stages as data, co-op objectives required, the campaign first and the Playground after, stage intro banners, the first stage First Light. Details: `docs/milestones/M60.md`.
+
+### After M60 (backlog)
  Tablecloth yank, prank button, hide and BOO and the rest of the slate (`docs/design/mischief-mechanics.md`), then convert the stall-chain levels to the new toys.
  Mischief toys next: tablecloth yank, prank button, hide and BOO, then convert the stall-chain levels to different toys (`docs/design/mischief-mechanics.md`).
  Chain levels: more rebuilds (Cheese Run, Harbour Day, the heist levels, Christmas Market, Key to the City, Coo-Coo, The Drone), then rumour and crowds, escalation events, co-op chains (`docs/design/chain-levels.md`).

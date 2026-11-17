@@ -47,6 +47,13 @@ export interface LevelDef {
   hides?: { x: number; z: number; r: number }[];
   /** Havoc Hour: a timed chaos run with chain scoring instead of to-dos. */
   havoc?: { seconds: number };
+  /** Campaign position: act 1 to 4 and stage 1 to 5 (levels without one are the Playground). */
+  arc?: number;
+  stage?: number;
+  /** Introduction shown when the stage starts (the new place or actor; the new mechanics' tips are added automatically). */
+  intro?: { title: string; text: string };
+  /** Co-op objectives that are required when two gulls play (solo play skips them). */
+  coopRequired?: QuestDef[];
   /** Which stage's mechanics this level has (arc.stage). Without one, everything is unlocked (the Playground, the sandbox). */
   gate?: { arc: number; stage: number };
   /** Free play: the whole quest pack, no stars, skills per quest (the M7/M8 game). */
