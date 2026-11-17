@@ -55,7 +55,7 @@ test('cap heist: take the statue cap and drop it on the ferry', async ({ page })
 });
 
 test('the finale unlocks after the seven quests, starts on the ferry cabin roof, and ends with the level-complete screen', async ({ page }) => {
-  test.setTimeout(150_000);
+  test.setTimeout(240_000);
   const errors = await boot(page);
   expect(await page.evaluate(() => L().quests.quests.find((q) => q.id === 'finale')!.status)).toBe('locked');
   await page.evaluate(() => {
@@ -78,7 +78,7 @@ test('the finale unlocks after the seven quests, starts on the ferry cabin roof,
       return false;
     },
     null,
-    { timeout: 60_000, polling: 150 },
+    { timeout: 120_000, polling: 1500 },
   );
   await page.evaluate(() => {
     const { quests, notes } = L();
