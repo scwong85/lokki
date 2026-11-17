@@ -1,8 +1,8 @@
 import type { LevelDef } from './types';
-import { restY } from '../props';
+import { stallGoods } from './chains';
 
 /** The south-row ice cream stall: column 3, so customers come up from the quay side (south). */
-export const ICE_STALL = { id: 'iceStall', x: -8, z: -27, r: 5 };
+export const ICE_STALL = { id: 'iceStall', x: -8, z: -27, r: 5, goods: { dz: -3, y: 1.0 } };
 /** Where the tourist with the map starts: east end of the quay. */
 export const MAPPER_SPOT = { x: 20, z: -14 };
 
@@ -66,11 +66,8 @@ export const MAP_AND_CONE: LevelDef = {
     { x: 4, z: -22, heading: -1.2, ice: true, color: 0xffc971 },
   ],
   // the stall's cones are real: they stand on the counter (so a customer takes one, and so can you)
-  stations: [{ ...ICE_STALL, sells: 'icecream' }],
-  extraProps: [
-    { type: 'icecream', x: ICE_STALL.x - 0.7, y: restY('icecream', 1.0), z: ICE_STALL.z - 3, tag: 'stallCone' },
-    { type: 'icecream', x: ICE_STALL.x + 0.7, y: restY('icecream', 1.0), z: ICE_STALL.z - 3, tag: 'stallCone' },
-  ],
+  stations: [{ ...ICE_STALL, sells: 'icecream' as const }],
+  extraProps: stallGoods({ ...ICE_STALL, sells: 'icecream' }, 'stallCone'),
   defense: false,
   parTime: 240,
 };

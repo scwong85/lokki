@@ -4,7 +4,7 @@ import type { NpcSnap } from '../net/snapshot';
 import { easeAngle, easeTo } from '../net/remote';
 import { createRng, type Rng } from '../core/rng';
 import { tuning } from '../core/tuning';
-import type { PropType } from '../data/props';
+import { restY, type PropType } from '../data/props';
 import type { Target } from './targets';
 import { BODY_HEIGHT, BODY_RADIUS, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn, type Station } from './npc';
 import type { GrabCandidate } from './grab';
@@ -112,15 +112,22 @@ export class NpcManager implements NpcHooks {
     const goods = st
       ? this.props.free().filter((p) => p.type === type).sort((a, b) => Math.hypot(a.cur.p.x - st.x, a.cur.p.z - st.z) - Math.hypot(b.cur.p.x - st.x, b.cur.p.z - st.z))[0]
       : undefined;
-    if (!goods) {
+    let item = goods;
+    if (!item && st?.goods) item = this.props.spawn({ type, x: st.x, y: restY(type, st.goods.y), z: st.z + st.goods.dz }); // the stall had run out: a fresh one
+    if (!item) {
       n.craves = type;
       n.mood = 'upset';
       return;
     }
-    this.props.attach(goods, n.id);
-    n.holding = goods.id;
+    if (n.holding !== null) {
+      // their hands are full: they drop what they hold (it lands at their feet) to take the treat
+      const old = this.props.byId(n.holding);
+      if (old) this.props.release(old, { x: 0, y: 0, z: 0 });
+    }
+    this.props.attach(item, n.id);
+    n.holding = item.id;
     n.holdType = type;
-    this.props.setHoldTarget(goods, handPos(n));
+    this.props.setHoldTarget(item, handPos(n));
   }
 
   /** A sound the tourists can hear (clatter, crash, tipped bin...). */

@@ -413,7 +413,7 @@ export const tuning = {
   mood: {
     time: p(30, 5, 120, 1), // seconds until a mood fades back to calm (not while chasing or buying)
     buyTime: p(2.5, 0.5, 10, 0.1), // how long someone waits at a stall before they are served
-    lureRange: p(30, 10, 60, 1), // an angry person keeps following a taunting gull within this distance
+    lureRange: p(50, 10, 80, 1), // an angry person follows a taunting gull within this distance (and starts again if they had given up)
   },
   outro: {
     enabled: p(1, 0, 1, 1), // the victory run after a level (single player)

@@ -1,4 +1,5 @@
 import type { LevelDef } from './types';
+import { treatChain, stallGoods } from './chains';
 import { restY } from '../props';
 import { SENATE_START } from './senate';
 import { TRAM_LINE } from '../../world/roads';
@@ -112,27 +113,30 @@ export const TURF_WAR: LevelDef = {
  * Senate Square, level 6: The Emperor's New Look. Headline task ("Wardrobe raid"): collect the emperor's outfit: a top hat, sunglasses, a bouquet and a scarf.
  * (The statue makeover itself, dropping each item on a spot of the statue, was too fiddly and was removed.)
  */
+/** The florist's stand by the steps. */
+export const FLORIST_STAND = { id: 'floristStand', x: -166, z: -305, r: 4.5, sells: 'flowers' as const, goods: { dz: -2 } };
 export const NEW_LOOK: LevelDef = {
   id: 'new-look',
   name: 'S6. The Emperor\'s New Look',
-  blurb: 'Raid the wardrobe: hat, shades, bouquet, scarf.',
+  blurb: 'Annoy a workman, then cheer him up. For a price.',
   district: 'senaatintori',
   start: SENATE_START,
   requires: 'turf-war',
   quests: [],
   extraQuests: [
-    {
+    treatChain({
       id: 'wardrobe',
-      title: 'Wardrobe raid',
-      teaser: 'Collect the emperor\'s new outfit.',
-      timed: false,
-      objectives: [
-        { id: 'hat', text: 'Get hold of a top hat', kind: 'event', event: 'grab:tophat', hint: 'There is one lying near the statue.' },
-        { id: 'shades', text: 'Sunglasses', kind: 'event', event: 'grab:glasses', hint: 'Near the steps.' },
-        { id: 'flowers', text: 'A bouquet', kind: 'event', event: 'grab:flowers', hint: 'The florist near the steps has one.' },
-        { id: 'scarf', text: 'A scarf', kind: 'event', event: 'grab:scarf', hint: 'A tourist holds one.' },
-      ],
-    },
+      title: 'Hard Hat, Soft Heart',
+      teaser: 'Wind up a workman, then sell him flowers for his feelings.',
+      role: 'hardhat',
+      provoke: 'splat',
+      provokeText: 'Splat the foreman by the scaffolding, twice',
+      provokeHint: 'The workman with the white vest. One splat annoys him, a second one within half a minute makes him furious.',
+      provokeMarker: { x: -164, z: -310, r: 4, label: 'Foreman' },
+      station: FLORIST_STAND,
+      stallName: 'florist\'s stand',
+      goodsText: 'a bunch of flowers',
+    }),
     {
       id: 'workers',
       title: 'Hard hat area',
@@ -146,13 +150,11 @@ export const NEW_LOOK: LevelDef = {
   extraTourists: [
     { x: -146, z: -292, heading: 0.5, holds: 'scarf', role: 'tourist', color: 0xe86a8a },
     { x: -168, z: -303, heading: 1.2, holds: 'flowers', role: 'florist', stationary: true, color: 0x9bd8b0 },
-    { x: -164, z: -310, heading: 0.0, hat: 'cap', hatColor: 0xffc400, role: 'worker', stationary: true, color: 0xf2a35e },
+    { x: -164, z: -310, heading: 0.0, hat: 'cap', hatColor: 0xffc400, craves: 'flowers', role: 'hardhat', stationary: true, color: 0xf2a35e },
     { x: -162, z: -311.5, heading: 0.4, hat: 'cap', hatColor: 0xffc400, role: 'worker', stationary: true, color: 0xf2a35e },
   ],
-  extraProps: [
-    { type: 'tophat', x: -150, y: restY('tophat'), z: -290 },
-    { type: 'glasses', x: -163, y: restY('glasses'), z: -290 },
-  ],
+  stations: [FLORIST_STAND],
+  extraProps: stallGoods(FLORIST_STAND),
   defense: false,
   parTime: 330,
 };

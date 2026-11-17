@@ -220,7 +220,8 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [ ] M42 The victory run: the gull lands and runs laughing at the camera after each level; chain-level plan (built on `m42-outro`, awaiting playtest)
 - [ ] M43 Playtest fixes: Bell Heist and the scrolling title list (built on `m43-fixes`)
 - [ ] M44 Chain levels C1 to C3: mood, lure, stations, chain quests, the Map and Cone level (built on `m44-chain-slice`, merged)
-- [ ] M46 Playtest fixes: taunt works, no precision landing to-dos, level card at the side (built on `m46-fixes`)
+- [ ] M46 Playtest fixes: taunt works, no precision landing to-dos, level card at the side (built on `m46-fixes`, merged)
+- [ ] M47 Chains I: Vappu, Herring Market, Wedding Bells, Frozen Harbour and S6 rebuilt as chains; taunt and stuck-level fixes (built on `m47-chains`)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -422,8 +423,11 @@ Mood, the lure (taunt), stations where people buy comfort food, chain quests on 
 ### M46 — Playtest fixes (S)
 Taunt works in a new profile (Y skips the tips), precision landing to-dos removed, the level card moved to the side. Details: `docs/milestones/M46.md`.
 
-### After M46 (backlog)
- Chain levels C4 to C7 (`docs/design/chain-levels.md`): rebuild the fetch-heavy levels as chains, rumour and crowds, escalation events, co-op chains. Waiting for the playtest of Map and Cone.
+### M47 — Chains I (M)
+Five fetch levels rebuilt as chain levels, splatting twice angers, taunt always re-lures, stalls restock. Details: `docs/milestones/M47.md`.
+
+### After M47 (backlog)
+ Chain levels: more rebuilds (Cheese Run, Harbour Day, the heist levels, Christmas Market, Key to the City, Coo-Coo, The Drone), then rumour and crowds, escalation events, co-op chains (`docs/design/chain-levels.md`).
  World enrichment rest of W2, then W3 to W6 (`docs/design/world-enrichment.md`): streets and squares, things that move, a busier city, landmark kit.
  Plans: `docs/design/fun-todos.md` (F2–F6), `docs/design/graphics-refresh.md` (G2–G6).
  Esplanadi E4–E10 (`docs/design/levels-esplanadi.md`), Katajanokka (`docs/design/levels-katajanokka.md`), each level designed with a co-op variant; the shared systems they need (moving platforms, NPC schedules, Kalle the rival gull, the drone, seasons); local split-screen co-op (optional); optional WebGPU renderer.
