@@ -1897,7 +1897,7 @@ startLoop({
       optStore.save(options);
       hud.toast(`HUD: ${HUD_NAMES[options.hud]}`, 0.9);
     }
-    if (input.wasPressed('KeyT') && tutorial.running) {
+    if (input.wasPressed('KeyY') && tutorial.running) {
       tutorial.skip();
       options.tutorialDone = true;
       optStore.save(options);
@@ -1952,7 +1952,7 @@ startLoop({
       return;
     }
     // co-op: hold T to taunt (people nearby watch you, not your partner); 1-4 are emotes
-    gull.taunting = !blocked && !tutorial.running && input.isDown('KeyT') && gull.state.stunT <= 0;
+    gull.taunting = !blocked && input.isDown('KeyT') && gull.state.stunT <= 0; // (T used to skip the tips: that is Y now)
     if (!blocked && !skillsPanel.visible) EMOTE_KEYS.forEach((k, i) => {
       if (!input.wasPressed(`Digit${i + 1}`)) return;
       emoteOver(players[0], k);
@@ -2270,7 +2270,7 @@ startLoop({
     lockMarker.update(lockNow, lockNow?.radius ?? 1, cam.camera, simTime, lockNow ? Math.hypot(lockNow.x - s.x, lockNow.z - s.z) : 0);
     const blocked = poopHit?.tag === 'umbrella';
     poopReticle.update(poopHit, blocked);
-    touchControls?.update(interaction.grabPrompt(s), !!interaction.carried, { V: skills.has('mimic'), G: skills.has('flock'), B: skills.has('disguise') }, (code) => abilities.fraction(code === 'KeyV' ? 'mimic' : code === 'KeyG' ? 'flock' : 'disguise'), players.length > 1);
+    touchControls?.update(interaction.grabPrompt(s), !!interaction.carried, { V: skills.has('mimic'), G: skills.has('flock'), B: skills.has('disguise') }, (code) => abilities.fraction(code === 'KeyV' ? 'mimic' : code === 'KeyG' ? 'flock' : 'disguise'), players.length > 1 || setup.quests.some((q) => q.chain));
     hud.setInteraction(blocked ? 'Umbrella blocks it! Distract the Warden with a noise first (drop or throw a bottle)' : interaction.grabPrompt(s), poopReady);
     if (outro.active && outro.plan) {
       outroClock += frameDt;
@@ -2314,7 +2314,7 @@ startLoop({
     debug.frame(frameDt, `${renderer.info.render.calls} calls · ${(renderer.info.render.triangles / 1000).toFixed(0)}k tris`);
     const tip = tutorial.current;
     tipEl.hidden = !(tip || tutorial.outroShowing) || menuOpen();
-    if (!tipEl.hidden) tipEl.innerHTML = tip ? (touch ? `${tip.touch.text} <small>${tip.touch.keys} · ☰ › Skip tips</small>` : `${tip.text} <small>${tip.keys} · T skips tips</small>`) : 'That is the whole trick. The to-do list (top left) has the rest. Go be a menace!';
+    if (!tipEl.hidden) tipEl.innerHTML = tip ? (touch ? `${tip.touch.text} <small>${tip.touch.keys} · ☰ › Skip tips</small>` : `${tip.text} <small>${tip.keys} · Y skips tips</small>`) : 'That is the whole trick. The to-do list (top left) has the rest. Go be a menace!';
     hud.update(s, staminaMax(), windAt(simTime), cam.yaw, hits, targets.length, frameDt);
   },
 });

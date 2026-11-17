@@ -123,8 +123,7 @@ export const SAY_PIGEON: LevelDef = {
 
 /**
  * Senate Square, level 3: Ding Dong. The cathedral bell rings every half minute; while it rings, everyone looks up at the tower.
- * Headline puzzle ("Bell Heist"): two picnickers guard their sandwiches. Snatch both while the bell rings. Land on the tower's bell
- * rope to ring it yourself for an extra window.
+ * Headline puzzle ("Bell Heist"): two picnickers guard their sandwiches. Snatch both while the bell rings.
  */
 export const DING_DONG: LevelDef = {
   id: 'ding-dong',
@@ -143,24 +142,9 @@ export const DING_DONG: LevelDef = {
       timed: false,
       objectives: [{ id: 'both', text: 'Snatch two sandwiches while the bell is ringing', kind: 'event', event: 'bellSnatch', count: 2, hint: 'The bell rings every half minute and everybody looks up at the tower for about six seconds. Be near the picnickers when it starts.', markers: [{ x: -164, z: -314, r: 4, label: 'Picnickers' }] }],
     },
-    {
-      id: 'rope',
-      title: 'Ring it yourself',
-      teaser: 'Land on the bell rope.',
-      timed: false,
-      objectives: [{ id: 'ring', text: 'Land on the cathedral\'s corner tower (the bell rope)', kind: 'event', event: 'bellRung', hint: 'The south-east tower of the Cathedral. It rings the bell at once.', markers: [{ x: BELL_TOWER.x, z: BELL_TOWER.z, r: 5, y: 24, label: 'Bell rope' }] }],
-    },
-    {
-      id: 'ringer',
-      title: 'Bell ringer',
-      timed: false,
-      objectives: [{ id: 'three', text: 'Ring the bell yourself three times', kind: 'event', event: 'bellRung', count: 3, hint: 'Take off and land on the tower again.' }],
-    },
   ],
-  secret: ['ringer'],
   coopQuests: [{ id: 'duoDing', title: 'Chime and dash', timed: false, objectives: [{ id: 'duoDing', text: 'Both gulls snatch within five seconds', kind: 'event', event: 'coop:snatch', hint: 'One gull each.' }] }],
   triggers: [],
-  extraTriggers: [{ id: 'bellRung', kind: 'gullInZone', event: 'bellRung', zone: { minX: BELL_TOWER.x - 4, maxX: BELL_TOWER.x + 4, minZ: BELL_TOWER.z - 4, maxZ: BELL_TOWER.z + 4, minY: 21 }, grounded: true, repeat: true }],
   tourists: [],
   extraTourists: [
     { x: -164, z: -314, heading: 0, holds: 'bun', role: 'picnic', color: 0xf7a1c4 },

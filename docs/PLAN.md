@@ -219,7 +219,8 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [ ] M41 Graphics G6: polaroids, CLEARED stamp, grouped level list (built on `m41-ui-polish`, awaiting playtest)
 - [ ] M42 The victory run: the gull lands and runs laughing at the camera after each level; chain-level plan (built on `m42-outro`, awaiting playtest)
 - [ ] M43 Playtest fixes: Bell Heist and the scrolling title list (built on `m43-fixes`)
-- [ ] M44 Chain levels C1 to C3: mood, lure, stations, chain quests, the Map and Cone level (built on `m44-chain-slice`, awaiting playtest)
+- [ ] M44 Chain levels C1 to C3: mood, lure, stations, chain quests, the Map and Cone level (built on `m44-chain-slice`, merged)
+- [ ] M46 Playtest fixes: taunt works, no precision landing to-dos, level card at the side (built on `m46-fixes`)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -418,7 +419,10 @@ Bell Heist can always be completed (fresh sandwiches at each bell), the title sc
 ### M44 — Chain levels, first slice (M)
 Mood, the lure (taunt), stations where people buy comfort food, chain quests on the to-do note, and the first chain level, Map and Cone. Details: `docs/milestones/M44.md`. Plan: `docs/design/chain-levels.md`.
 
-### After M44 (backlog)
+### M46 — Playtest fixes (S)
+Taunt works in a new profile (Y skips the tips), precision landing to-dos removed, the level card moved to the side. Details: `docs/milestones/M46.md`.
+
+### After M46 (backlog)
  Chain levels C4 to C7 (`docs/design/chain-levels.md`): rebuild the fetch-heavy levels as chains, rumour and crowds, escalation events, co-op chains. Waiting for the playtest of Map and Cone.
  World enrichment rest of W2, then W3 to W6 (`docs/design/world-enrichment.md`): streets and squares, things that move, a busier city, landmark kit.
  Plans: `docs/design/fun-todos.md` (F2–F6), `docs/design/graphics-refresh.md` (G2–G6).

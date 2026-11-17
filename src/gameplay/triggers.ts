@@ -19,7 +19,7 @@ export type TriggerDef =
   /** The gull has paddled on the sea for this many seconds in total. */
   | { id: string; kind: 'swim'; event: string; seconds: number }
   /** The gull stands on something at least `minY` high (any rooftop) while carrying a prop of this type. */
-  | { id: string; kind: 'carryLanded'; event: string; propType: PropType; minY: number; zone?: Zone3 }
+  | { id: string; kind: 'carryLanded'; event: string; propType: PropType; minY: number; zone?: Zone3; /** Counts while flying (no landing needed). */ airborne?: boolean }
   /** The gull carries a prop of this type through the points in order; each point fires its own event. */
   | { id: string; kind: 'carryCheckpoints'; propType: PropType; points: { x: number; z: number; r: number }[]; events: string[]; maxY?: number };
 
@@ -85,7 +85,7 @@ export class TriggerSystem {
         continue;
       }
       let hit: boolean;
-      if (d.kind === 'carryLanded') hit = !!ctx.carried && ctx.carried.type === d.propType && ctx.gull.grounded && ctx.gull.y >= d.minY && (!d.zone || inZone(d.zone, ctx.gull.x, ctx.gull.y, ctx.gull.z));
+      if (d.kind === 'carryLanded') hit = !!ctx.carried && ctx.carried.type === d.propType && (d.airborne || ctx.gull.grounded) && ctx.gull.y >= d.minY && (!d.zone || inZone(d.zone, ctx.gull.x, ctx.gull.y, ctx.gull.z));
       else if (d.kind === 'npcsInZone') hit = (ctx.npcs ?? []).filter((n) => n.role === d.role && inZone(d.zone, n.x, 0, n.z)).length >= d.count;
       else if (d.kind === 'swim') {
         if (ctx.gull.grounded && !ctx.isLand(ctx.gull.x, ctx.gull.z) && ctx.gull.y < 1.5) this.swimT.set(d.id, (this.swimT.get(d.id) ?? 0) + (ctx.dt ?? 0));

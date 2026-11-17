@@ -43,5 +43,11 @@ test('clearing a level plays the victory run: the gull lands and runs at a camer
   await page.screenshot({ path: 'tests/__screenshots__/m42-outro.png' });
   await page.keyboard.press('Space'); // skip
   await expect(page.locator('#levelcomplete')).toBeVisible({ timeout: 10_000 });
+  // the card sits at the right edge and leaves the view free
+  const box = await page.locator('#levelcomplete .lc-card').boundingBox();
+  const vp = page.viewportSize()!;
+  expect(box!.x).toBeGreaterThan(vp.width * 0.5);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(vp.width);
+  await page.screenshot({ path: 'tests/__screenshots__/m46-card.png' });
   expect(errors).toEqual([]);
 });

@@ -208,12 +208,10 @@ export const KEY_TO_THE_CITY: LevelDef = {
     {
       id: 'ceremony',
       title: 'Ceremony Crashers',
-      teaser: 'Use everything: pigeons, bell, tram and camera.',
+      teaser: 'Win the pigeons over and crash the photo.',
       timed: false,
       objectives: [
         { id: 'pigeons', text: 'Win the Pigeon Gang over with a bun', kind: 'event', event: 'pigeonsFriends', hint: 'Put a bun down by the statue.', markers: [{ x: EMPEROR.x, z: EMPEROR.z, r: 8, label: 'Pigeon Gang' }] },
-        { id: 'bell', text: 'Ring the cathedral bell yourself', kind: 'event', event: 'bellRung', hint: 'Land on the south-east tower.', markers: [{ x: -138.95, z: -370.49, r: 5, y: 24, label: 'Bell rope' }] },
-        { id: 'tram', text: 'Ride the tram roof for eight seconds', kind: 'event', event: 'tramRide', hint: 'Land on the roof when the tram sets off.' },
         { id: 'photo', text: 'Photobomb the front-page photographer', kind: 'event', event: 'photobomb', hint: 'He counts 3, 2, 1 in front of the stage.', markers: [{ x: -156.5, z: -312, r: 3, label: 'Photographer' }] },
       ],
     },
@@ -238,7 +236,6 @@ export const KEY_TO_THE_CITY: LevelDef = {
   coopQuests: [{ id: 'duoKey', title: 'Smash and grab', timed: false, objectives: [{ id: 'duoKey', text: 'Both gulls snatch within five seconds', kind: 'event', event: 'coop:snatch', hint: 'One gull each.' }] }],
   triggers: [],
   extraTriggers: [
-    { id: 'bellRung', kind: 'gullInZone', event: 'bellRung', zone: { minX: -143, maxX: -135, minZ: -375, maxZ: -366, minY: 21 }, grounded: true, repeat: true },
     { id: 'keyNest', kind: 'propInZone', event: 'keyNest', propType: 'ring', tag: 'key', zone: zone(EMPEROR.x, EMPEROR.z, 4.2, 4) },
   ],
   tourists: [],

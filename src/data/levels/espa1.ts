@@ -5,8 +5,6 @@ import { restY } from '../props';
 export const ESPA_START = { x: -148, z: -65 };
 export const POET = { x: -200, z: -65, headTop: 4.4 };
 
-const zone = (x: number, z: number, r: number, minY: number, maxY: number) => ({ minX: x - r, maxX: x + r, minZ: z - r, maxZ: z + r, minY, maxY });
-
 /** Sunbathers' towel centres on the north lawn. The head end points north (-z); strawberries lie by each head. */
 export const TOWELS = [
   { x: -170, z: -82 },
@@ -40,11 +38,10 @@ export const DONT_BLOCK_MY_SUN: LevelDef = {
     {
       id: 'sunscreen',
       title: 'Sunscreen swap',
-      teaser: 'Put the sunscreen on the poet\'s nose.',
+      teaser: 'Nick the sunscreen from the bench.',
       timed: false,
       objectives: [
         { id: 'take', text: 'Take the sunscreen from the bench', kind: 'event', event: 'grab:sunscreen', hint: 'It is on the park bench by the east end.', markers: [{ x: -160, z: -60, r: 3, label: 'Sunscreen' }] },
-        { id: 'nose', text: 'Drop it on the poet\'s head', kind: 'event', event: 'sunscreenNose', after: 'take', hint: 'The poet statue in the middle of the park. Let it go over his head.', markers: [{ x: POET.x, z: POET.z, r: 3, y: POET.headTop, label: 'Poet' }] },
       ],
     },
     {
@@ -57,7 +54,6 @@ export const DONT_BLOCK_MY_SUN: LevelDef = {
   secret: ['wake'],
   coopQuests: [{ id: 'duoSun', title: 'Sun block', timed: false, objectives: [{ id: 'duoSun', text: 'Both gulls snatch within five seconds', kind: 'event', event: 'coop:snatch', hint: 'One gull each.' }] }],
   triggers: [],
-  extraTriggers: [{ id: 'sunscreenNose', kind: 'propInZone', event: 'sunscreenNose', propType: 'sunscreen', zone: zone(POET.x, POET.z, 1.8, 3.0, 6) }],
   tourists: [],
   extraTourists: [
     { x: -150, z: -50, heading: 0.6, ice: true, color: 0xffc971 },
