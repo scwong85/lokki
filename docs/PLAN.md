@@ -236,6 +236,7 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [ ] M60 Stage framework and stage 1.1 First Light (built on `m60-stage-framework`)
 - [ ] M61 Stage 1.2 Fish Market (built on `m61-fish-market`)
 - [ ] M62 Stages 1.3 Strings Attached and 1.4 Mood Swings, team tug and duet (built on `m62-strings-moods`)
+- [ ] M63 Stage 1.5 The Warden: Act 1 complete (built on `m63-the-warden`)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -479,7 +480,10 @@ Poop, toss, honk: three chains and two co-op objectives. Details: `docs/mileston
 ### M62 — Stages 1.3 and 1.4 (M)
 Heat, tug, hiding and buttons; moods, the lure, slip and the jukebox; team tug and duet for co-op. Details: `docs/milestones/M62.md`.
 
-### After M62 (backlog)
+### M63 — Stage 1.5 The Warden (S)
+Rush Hour, Strike!, Nemesis; the end of Act 1. Details: `docs/milestones/M63.md`.
+
+### After M63 (backlog)
  Tablecloth yank, prank button, hide and BOO and the rest of the slate (`docs/design/mischief-mechanics.md`), then convert the stall-chain levels to the new toys.
  Mischief toys next: tablecloth yank, prank button, hide and BOO, then convert the stall-chain levels to different toys (`docs/design/mischief-mechanics.md`).
  Chain levels: more rebuilds (Cheese Run, Harbour Day, the heist levels, Christmas Market, Key to the City, Coo-Coo, The Drone), then rumour and crowds, escalation events, co-op chains (`docs/design/chain-levels.md`).

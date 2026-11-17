@@ -111,3 +111,29 @@ describe('stages 1.3 and 1.4', () => {
     for (const id of ['a1s3', 'a1s4']) for (const q of setup(id).quests) expect(q.objectives.length).toBeGreaterThanOrEqual(3);
   });
 });
+
+describe('stage 1.5 The Warden (arc finale)', () => {
+  it('three chains, the Warden deployed, co-op pincer and volley; everything of act 1 is unlocked', () => {
+    const duo = setup('a1s5', true);
+    expect(duo.main).toEqual(['rushchain', 'strikechain', 'nemesis', 'pincer', 'volley']);
+    expect(duo.defense).toBe(true);
+    const def = LEVELS.find((l) => l.id === 'a1s5')!;
+    expect(def.deploy).toEqual(['warden']);
+    expect(def.requires).toBe('a1s4');
+    const g = { arc: 1, stage: 5 };
+    for (const m of ['poop', 'toss', 'honk', 'tug', 'hide', 'peck', 'taunt', 'slip', 'jukebox', 'cloth', 'domino', 'contagion', 'slam']) expect(isUnlocked(m as never, g)).toBe(true);
+    expect(isUnlocked('gust', g)).toBe(false);
+  });
+  it('the Strike line stands away from the Warden bench and the queue', () => {
+    const t = setup('a1s5').tourists.filter((x) => x.role === 'bowler');
+    expect(t.length).toBe(6);
+    expect(Math.min(...t.map((x) => x.x))).toBeGreaterThan(10);
+  });
+  it('all five stages of act 1 are in order at the front of the list', () => {
+    expect(LEVELS.slice(0, 5).map((l) => l.id)).toEqual(['a1s1', 'a1s2', 'a1s3', 'a1s4', 'a1s5']);
+    expect(LEVELS.slice(0, 5).map((l) => l.stage)).toEqual([1, 2, 3, 4, 5]);
+  });
+  it('the five stage rewards are the five skills of act 1', () => {
+    expect(LEVELS.slice(0, 5).map((l) => l.reward)).toEqual(['flight', 'fatbird', 'hawkeye', 'mimic', 'quickpoop']);
+  });
+});

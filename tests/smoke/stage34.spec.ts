@@ -46,3 +46,17 @@ test('stage 1.4: taunt, slip and the jukebox work; contagion is still locked', a
   expect(await l((x) => x.peckNow())).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('stage 1.5: everything of act 1 is unlocked, the Warden is deployed, a fright spreads', async ({ page }) => {
+  test.setTimeout(300_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  const l = await open(page, 'a1s5');
+  expect(await l((x) => x.gate)).toEqual({ arc: 1, stage: 5 });
+  expect(await l((x) => x.npcs.gates)).toEqual({ contagion: true, slam: true, slip: true });
+  expect(await l((x) => x.quests.quests.map((q) => q.id))).toEqual(['rushchain', 'strikechain', 'nemesis']);
+  type Rush = { npcs: { npcs: { role: string; x: number; z: number }[]; soakRadius: (a: number, b: number, c: number) => number }; quests: { onEvent: (e: string) => unknown; quests: { id: string; objectives: { id: string; done: boolean }[] }[] } };
+  await l((x) => { const r = x as unknown as Rush; r.quests.onEvent('poopNpc:queuer'); const q = r.npcs.npcs.find((m) => m.role === 'queuer')!; r.npcs.soakRadius(q.x, q.z, 0.5); return 0; });
+  await expect.poll(() => l((x) => (x as unknown as Rush).quests.quests.find((q) => q.id === 'rushchain')!.objectives.find((o) => o.id === 'spread')!.done), { timeout: 30_000, intervals: [1000] }).toBe(true);
+  expect(errors).toEqual([]);
+});
