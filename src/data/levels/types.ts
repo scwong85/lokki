@@ -1,7 +1,7 @@
 import type { QuestDef } from '../quests';
 import type { TriggerDef } from '../../gameplay/triggers';
 import type { SkillId } from '../skills';
-import type { NpcSpawn } from '../../gameplay/npc';
+import type { NpcSpawn, Station } from '../../gameplay/npc';
 import type { PropSpawn } from '../../gameplay/props';
 import type { DeterrentId } from '../../gameplay/deterrents';
 
@@ -15,6 +15,8 @@ export interface LevelDef {
   name: string;
   blurb: string;
   district: 'kauppatori' | 'senaatintori' | 'esplanadi';
+  /** A heading of its own in the level lists (instead of the district's), for a run of levels of one kind. */
+  series?: string;
   /** Where the gull starts (default: the Market Square). */
   start?: { x: number; z: number };
   /** A tram running back and forth along a straight track (Senate Square). */
@@ -50,6 +52,8 @@ export interface LevelDef {
   extraTriggers?: TriggerDef[];
   /** Which of the shared tourists take part: their `role`s ('any' = every tourist without a special role), or 'all'. */
   tourists: 'all' | string[];
+  /** Stalls where people who crave something can buy it (comfort food). The goods are props placed on the counter. */
+  stations?: Station[];
   /** Tourists placed just for this level. */
   extraTourists?: NpcSpawn[];
   /** Props placed just for this level (on top of the city's own). */

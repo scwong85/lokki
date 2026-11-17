@@ -410,6 +410,11 @@ export const tuning = {
     shadowArea: p(70, 20, 200, 5), // half-size in metres of the shadow box around the player
     ao: p(0.32, 0, 0.8, 0.02), // baked darkening at the foot of walls
   },
+  mood: {
+    time: p(30, 5, 120, 1), // seconds until a mood fades back to calm (not while chasing or buying)
+    buyTime: p(2.5, 0.5, 10, 0.1), // how long someone waits at a stall before they are served
+    lureRange: p(30, 10, 60, 1), // an angry person keeps following a taunting gull within this distance
+  },
   outro: {
     enabled: p(1, 0, 1, 1), // the victory run after a level (single player)
     landSeconds: p(1.0, 0.3, 3, 0.1), // the gull comes down in about this long

@@ -109,6 +109,8 @@ export interface TitleLevel {
   best?: string;
   /** Which district the level is in (the level list groups by it). */
   district?: string;
+  /** A heading of its own that replaces the district's. */
+  series?: string;
 }
 
 const DISTRICT_NAMES: Record<string, string> = { kauppatori: 'Kauppatori · the Market Square', senaatintori: 'Senate Square', esplanadi: 'Esplanadi' };
@@ -118,7 +120,7 @@ export function titleLevelRows(levels: TitleLevel[]): string {
   let last = '';
   return levels
     .map((l) => {
-      const group = l.sandbox ? 'Free play' : DISTRICT_NAMES[l.district ?? 'kauppatori'] ?? '';
+      const group = l.sandbox ? 'Free play' : l.series ?? DISTRICT_NAMES[l.district ?? 'kauppatori'] ?? '';
       const head = group !== last ? `<h4>${group}</h4>` : '';
       last = group;
       const stars = l.locked ? l.unlockHint ?? '' : l.sandbox ? 'free play' : '★'.repeat(l.stars) + '☆'.repeat(3 - l.stars);

@@ -63,7 +63,7 @@ export class Todo {
         const od = def?.objectives[i];
         const firstOpen = !o.done && q.objectives.slice(0, i).every((x) => x.done);
         const blocked = !!od?.after && !q.objectives.find((x) => x.id === od.after)?.done;
-        if (blocked && !firstOpen && !o.done) return `<li class="later"><span>&#9744;</span> ${o.text}</li>`;
+        if (blocked && !firstOpen && !o.done) return `<li class="later"><span>&#9744;</span> ${def?.chain ? '<i>?</i>' : o.text}</li>`;
         const extra = firstOpen && od?.kind === 'escape' ? ` <span class="esc" data-q="${q.id}"></span>` : '';
         const hint = firstOpen && od?.hint ? `<div class="hint">${od.hint}</div>` : '';
         return `<li class="${o.done ? 'done' : ''}"><span>${o.done ? '&#9745;' : '&#9744;'}</span> ${o.text}${(od?.count ?? 1) > 1 ? ` <b class="cnt">(${Math.min(o.count, od!.count!)}/${od!.count})</b>` : ''}${extra}${hint}</li>`;

@@ -191,7 +191,7 @@ describe('tourist items, goals and the yuck reaction', () => {
     const n = newNpc(1, { x: 0, z: 0, heading: 0, color: 0, wants: ['candy', 'salmiakki'] });
     expect(n.wants).toEqual(['candy', 'salmiakki']);
     const ev = startle(n, 'yuck');
-    expect(ev[0].type).toBe('yuck');
+    expect(ev.some((e) => e.type === 'yuck')).toBe(true);
     expect(n.mode).toBe('yuck');
     run(n, 3.2);
     expect(n.mode).toBe('recover');

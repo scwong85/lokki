@@ -35,7 +35,7 @@ export class LevelSelect {
     let lastGroup = '';
     const rows = levels
       .map((l) => {
-        const group = l.sandbox ? 'Free play' : NAMES[l.district ?? 'kauppatori'] ?? '';
+        const group = l.sandbox ? 'Free play' : l.series ?? NAMES[l.district ?? 'kauppatori'] ?? '';
         const head = group !== lastGroup ? `<h3 class="ls-district">${group}${this.progress(levels, l)}</h3>` : '';
         lastGroup = group;
         const status = l.locked ? l.unlockHint ?? 'Locked' : l.sandbox ? 'free play' : '★'.repeat(l.stars) + '☆'.repeat(3 - l.stars);
@@ -51,7 +51,8 @@ export class LevelSelect {
   /** "3/10 cleared" for the district this level opens. */
   private progress(levels: (TitleLevel & { best?: string })[], first: TitleLevel): string {
     if (first.sandbox) return '';
-    const mates = levels.filter((l) => !l.sandbox && (l.district ?? 'kauppatori') === (first.district ?? 'kauppatori'));
+    const key = (l: TitleLevel) => l.series ?? l.district ?? 'kauppatori';
+    const mates = levels.filter((l) => !l.sandbox && key(l) === key(first));
     const done = mates.filter((l) => l.stars > 0).length;
     return ` <span class="ls-count">${done}/${mates.length} cleared</span>`;
   }

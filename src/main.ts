@@ -179,6 +179,7 @@ for (const sp of [...propSpawns, ...setup.props]) interaction.props.spawn(sp);
 const npcs = greybox ? null : new NpcManager(world, interaction.props, scene, walkable);
 if (npcs) {
   for (const sp of setup.tourists) npcs.spawn(sp);
+  npcs.stations = [...(level.stations ?? [])];
   interaction.npcs = npcs;
 }
 const makeDefense = (): CityDefense | null => (greybox || !setup.defense ? null : new CityDefense(world, scene, walkable));
@@ -474,7 +475,7 @@ function onNetEvent(e: GameEvent): void {
   }
 }
 const levelRows = () =>
-  LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), district: l.district, current: l.id === level.id, sandbox: l.sandbox, locked: !levelUnlocked(l, save.levels), unlockHint: l.requires ? `Clear ${levelById(l.requires).name} first` : undefined, best: save.levels[l.id]?.best ? fmtClear(save.levels[l.id].best) : undefined }));
+  LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), district: l.district, series: l.series, current: l.id === level.id, sandbox: l.sandbox, locked: !levelUnlocked(l, save.levels), unlockHint: l.requires ? `Clear ${levelById(l.requires).name} first` : undefined, best: save.levels[l.id]?.best ? fmtClear(save.levels[l.id].best) : undefined }));
 const controlsPanel = new ControlsPanel(document.body);
 const menuNav = new MenuNav();
 pad.menuOpen = () => menuOpen() || levelComplete.visible; // the level card takes the controller too (it does not pause the game)
@@ -532,7 +533,7 @@ const title = new TitleScreen(
     best: fmtClear(save.bestTime),
     skills: skills.ids.length,
     total: SKILLS.length,
-    levels: LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), district: l.district, current: l.id === level.id, sandbox: l.sandbox, locked: !levelUnlocked(l, save.levels), unlockHint: l.requires ? `Clear ${levelById(l.requires).name} first` : undefined })),
+    levels: LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), district: l.district, series: l.series, current: l.id === level.id, sandbox: l.sandbox, locked: !levelUnlocked(l, save.levels), unlockHint: l.requires ? `Clear ${levelById(l.requires).name} first` : undefined })),
   },
 );
 if (interactive && !new URLSearchParams(location.search).has('play')) title.show();
@@ -1255,6 +1256,7 @@ function loadLevel(id: string): void {
   npcs?.clearAll();
   for (const sp of [...propSpawns, ...setup.props]) interaction.props.spawn(sp);
   if (npcs) for (const sp of setup.tourists) npcs.spawn(sp);
+  if (npcs) npcs.stations = [...(level.stations ?? [])];
   defense?.dispose();
   defense = makeDefense();
   heatMeter?.remove();
@@ -1609,6 +1611,10 @@ function notes(list: QuestNote[]): void {
   }
 }
 
+function emoteAtNpc(n: { id: number; x: number; z: number }, kind: EmoteKind | null): void {
+  if (!kind) return;
+  emotes.show(kind, `npc${n.id}`, () => ({ x: n.x, y: 2.3, z: n.z }), 1.6);
+}
 function onNpcEvents(evs: NpcEvent[]): void {
   for (const e of evs) {
     if (e.type === 'noticed') {
@@ -1619,7 +1625,20 @@ function onNpcEvents(evs: NpcEvent[]): void {
         stealTipShown = true;
         announce.show('Tip: guarded items', 'A red ring means they are guarding it. Dive at it from straight above, or make a noise to distract them and grab it with E from the open side.', 'learned');
       }
-    } else if (e.type === 'panic' || e.type === 'chase') audio.play('yelp');
+    } else if (e.type === 'mood') {
+      // a change of mood shows over their head and is what chains are built from
+      emoteAtNpc(e.npc, e.mood === 'angry' ? 'anger' : e.mood === 'annoyed' ? 'sweat' : e.mood === 'upset' ? 'facepalm' : e.mood === 'delighted' ? 'heart' : null);
+      if (e.mood !== 'calm') notes(quests.onEvent(`mood:${e.npc.role}:${e.mood}`));
+    } else if (e.type === 'atStation') {
+      notes(quests.onEvent(`atStation:${e.npc.role}:${e.station}`));
+    } else if (e.type === 'bought') {
+      audio.play('pop');
+      hud.toast('Bought a treat to feel better.', 1.8);
+      notes(quests.onEvent(`bought:${e.npc.role}`));
+    } else if (e.type === 'panic' || e.type === 'chase') {
+      audio.play('yelp');
+      if (e.type === 'chase') notes(quests.onEvent(`robbed:${e.npc.role}`)); // snatched from them
+    }
     else if (e.type === 'tookItem') {
       audio.play('pop');
       notes(quests.onEvent(`tookItem:${e.propType}`));

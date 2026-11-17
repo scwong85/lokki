@@ -6,7 +6,7 @@ import { createRng, type Rng } from '../core/rng';
 import { tuning } from '../core/tuning';
 import type { PropType } from '../data/props';
 import type { Target } from './targets';
-import { BODY_HEIGHT, BODY_RADIUS, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn } from './npc';
+import { BODY_HEIGHT, BODY_RADIUS, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn, type Station } from './npc';
 import type { GrabCandidate } from './grab';
 import type { HitSphere } from './poop';
 import type { NpcHooks } from './interaction';
@@ -103,6 +103,26 @@ export class NpcManager implements NpcHooks {
     return k;
   }
 
+  /** Places where someone who craves something can buy it (a level's stalls). The goods are real props on the counter. */
+  stations: Station[] = [];
+
+  /** Someone buys at a stall: the nearest free item of that type on the counter goes into their hand. None left: they sulk and try again later. */
+  private serve(n: Npc, stationId: string, type: PropType): void {
+    const st = this.stations.find((x) => x.id === stationId);
+    const goods = st
+      ? this.props.free().filter((p) => p.type === type).sort((a, b) => Math.hypot(a.cur.p.x - st.x, a.cur.p.z - st.z) - Math.hypot(b.cur.p.x - st.x, b.cur.p.z - st.z))[0]
+      : undefined;
+    if (!goods) {
+      n.craves = type;
+      n.mood = 'upset';
+      return;
+    }
+    this.props.attach(goods, n.id);
+    n.holding = goods.id;
+    n.holdType = type;
+    this.props.setHoldTarget(goods, handPos(n));
+  }
+
   /** A sound the tourists can hear (clatter, crash, tipped bin...). */
   addNoise(x: number, z: number, loud = 1): void {
     this.noises.push({ x, z, loud });
@@ -113,13 +133,15 @@ export class NpcManager implements NpcHooks {
   update(dt: number, gull: GullInfo | readonly GullInfo[]): NpcEvent[] {
     const gulls: readonly GullInfo[] = Array.isArray(gull) ? gull : [gull as GullInfo];
     const ev: NpcEvent[] = this.pending.splice(0);
-    const ctx = { world: this.world, walkable: this.walkable, rng: this.rng };
+    const ctx = { world: this.world, walkable: this.walkable, rng: this.rng, stations: this.stations };
     this.clock += dt;
     for (const n of this.npcs) {
       if (n.role === 'selfie' || n.role === 'blogger') ev.push(...this.selfieStep(n, gulls)); // the blogger photographs her dish on the same rhythm
       if (n.role === 'cleaner') this.cleanStep(n, dt);
       const near = gulls.length === 1 ? gulls[0] : watchedGull(n, gulls);
-      ev.push(...stepNpc(n, near, this.noises, dt, ctx));
+      const stepped = stepNpc(n, near, this.noises, dt, ctx);
+      for (const e of stepped) if (e.type === 'bought') this.serve(e.npc, e.station, e.propType);
+      ev.push(...stepped);
       ev.push(...this.wantedItems(n));
       ev.push(...this.reclaim(n));
       // solid walls, counters and landmarks push the tourist out (horizontal only)

@@ -1,6 +1,6 @@
 # Chain levels: replacing fetch quests with cause and effect
 
-Status: **proposal**, nothing built. Companion to `fun-todos.md` and `havoc-hour.md`. Written from the playtest note: "a lot of fetch quests, so it is boring. Quests should have more people and environment interaction, like the tourist map snatch, but better. Each level needs one objective made of several steps. Plan escalated events."
+Status: **C1 to C3 built (M44, Map and Cone)**; C4 to C7 are proposals. Companion to `fun-todos.md` and `havoc-hour.md`. Written from the playtest note: "a lot of fetch quests, so it is boring. Quests should have more people and environment interaction, like the tourist map snatch, but better. Each level needs one objective made of several steps. Plan escalated events."
 
 ## 1. The diagnosis
 
