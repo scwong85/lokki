@@ -22,7 +22,7 @@ const MENU: [string, string][] = [
   ['KeyX', 'Extra objectives'],
   ['KeyZ', 'Speedrun'],
   ['KeyC', 'Credits'],
-  ['KeyT', 'Skip tips'],
+  ['KeyY', 'Skip tips'],
 ];
 
 /**

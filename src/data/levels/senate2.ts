@@ -8,7 +8,6 @@ export const EMPEROR = { x: -156.5, z: -300, plinthTop: 3.4, headTop: 5.8 };
 /** The tram track runs east-west just south of the statue. */
 export const TRAM = { ...TRAM_LINE, stopX: -156.5, length: 14, width: 2.6, roofY: 3.3 };
 
-const snap = (minY: number, maxY: number) => ({ minX: EMPEROR.x - 1.6, maxX: EMPEROR.x + 1.6, minZ: EMPEROR.z - 1.6, maxZ: EMPEROR.z + 1.6, minY, maxY });
 
 /**
  * Senate Square, level 4: Tram Surfing. Headline puzzle ("Lunch Express"): the driver guards his lunch next to the stop. Drop a
@@ -17,7 +16,7 @@ const snap = (minY: number, maxY: number) => ({ minX: EMPEROR.x - 1.6, maxX: EMP
 export const TRAM_SURFING: LevelDef = {
   id: 'tram-surfing',
   name: 'S4. Tram Surfing',
-  blurb: 'Stop the tram, take the lunch, ride the roof.',
+  blurb: 'Stop the tram, take the driver\'s lunch.',
   district: 'senaatintori',
   start: SENATE_START,
   requires: 'ding-dong',
@@ -34,21 +33,7 @@ export const TRAM_SURFING: LevelDef = {
         { id: 'lunch', text: 'Grab the driver\'s lunch while he is away', kind: 'event', event: 'grab:lunch', after: 'stop', hint: 'The driver walks out to clear the track. His lunch is beside the stop.', markers: [{ x: -172, z: -272, r: 3, label: 'Lunch' }] },
       ],
     },
-    {
-      id: 'surf',
-      title: 'Surf\'s up',
-      teaser: 'Ride on the roof.',
-      timed: false,
-      objectives: [{ id: 'ride', text: 'Stand on the moving tram roof for eight seconds', kind: 'event', event: 'tramRide', hint: 'Land on the roof when the tram sets off (it rings its bell) and stay put.', markers: [{ x: TRAM.stopX, z: TRAM.z, r: 4, y: TRAM.roofY, label: 'Tram roof' }] }],
-    },
-    {
-      id: 'twice',
-      title: 'Frequent flyer',
-      timed: false,
-      objectives: [{ id: 'board', text: 'Hop on the tram roof two separate times', kind: 'event', event: 'tramBoard', count: 2, hint: 'Hop off and on again.' }],
-    },
   ],
-  secret: ['twice'],
   coopQuests: [{ id: 'duoTram', title: 'Double lunch', timed: false, objectives: [{ id: 'duoTram', text: 'Both gulls snatch within five seconds', kind: 'event', event: 'coop:snatch', hint: 'One gull each.' }] }],
   triggers: [],
   tourists: [],
@@ -87,7 +72,6 @@ export const TURF_WAR: LevelDef = {
       timed: false,
       objectives: [
         { id: 'peace', text: 'Bring the pigeons a bun (friends) or drop salmiakki (they scatter)', kind: 'event', event: 'pigeonsSettled', hint: 'Put a bun or the salmiakki down near the statue. A bun makes friends. Salmiakki makes them flee.', markers: [{ x: EMPEROR.x, z: EMPEROR.z, r: 8, label: 'Pigeon Gang' }] },
-        { id: 'head', text: 'Perch on the emperor\'s head', kind: 'event', event: 'emperorHead', after: 'peace', hint: 'Land on the top of the statue and stay a moment.', markers: [{ x: EMPEROR.x, z: EMPEROR.z, r: 3, y: EMPEROR.headTop, label: 'Head' }] },
       ],
     },
     {
@@ -109,7 +93,6 @@ export const TURF_WAR: LevelDef = {
   secret: ['both'],
   coopQuests: [{ id: 'duoTurf', title: 'Pigeon bombers', timed: false, objectives: [{ id: 'duoTurf', text: 'Both gulls splat someone within five seconds', kind: 'event', event: 'coop:poopNpc', hint: 'One gull each.' }] }],
   triggers: [],
-  extraTriggers: [{ id: 'emperorHead', kind: 'gullInZone', event: 'emperorHead', zone: snap(EMPEROR.headTop - 0.6, EMPEROR.headTop + 2.5), grounded: true }],
   tourists: [],
   extraTourists: [
     { x: -140, z: -296, heading: 0.8, holds: 'bun', role: 'picnic', color: 0xf7a1c4 },
@@ -126,28 +109,28 @@ export const TURF_WAR: LevelDef = {
 };
 
 /**
- * Senate Square, level 6: The Emperor's New Look. Headline puzzle ("Statue Makeover"): dress the emperor: a top hat on his head,
- * sunglasses on his face, a bouquet in his hand and a scarf around his neck. Each spot is a big zone.
+ * Senate Square, level 6: The Emperor's New Look. Headline task ("Wardrobe raid"): collect the emperor's outfit: a top hat, sunglasses, a bouquet and a scarf.
+ * (The statue makeover itself, dropping each item on a spot of the statue, was too fiddly and was removed.)
  */
 export const NEW_LOOK: LevelDef = {
   id: 'new-look',
   name: 'S6. The Emperor\'s New Look',
-  blurb: 'Statue makeover: hat, shades, bouquet, scarf.',
+  blurb: 'Raid the wardrobe: hat, shades, bouquet, scarf.',
   district: 'senaatintori',
   start: SENATE_START,
   requires: 'turf-war',
   quests: [],
   extraQuests: [
     {
-      id: 'makeover',
-      title: 'Statue Makeover',
-      teaser: 'Give the emperor a full outfit.',
+      id: 'wardrobe',
+      title: 'Wardrobe raid',
+      teaser: 'Collect the emperor\'s new outfit.',
       timed: false,
       objectives: [
-        { id: 'hat', text: 'Top hat on his head', kind: 'event', event: 'outfitHat', hint: 'Carry the top hat to the statue and let it go over his head.', markers: [{ x: EMPEROR.x, z: EMPEROR.z, r: 3, y: EMPEROR.headTop + 1, label: 'Head' }] },
-        { id: 'shades', text: 'Sunglasses on his face', kind: 'event', event: 'outfitGlasses', hint: 'Drop them in front of his face, a little under the hat.', markers: [{ x: EMPEROR.x, z: EMPEROR.z, r: 3, y: EMPEROR.headTop - 0.8, label: 'Face' }] },
-        { id: 'flowers', text: 'Bouquet in his hand', kind: 'event', event: 'outfitFlowers', hint: 'The florist near the steps has one. Drop it at the statue\'s chest.', markers: [{ x: EMPEROR.x, z: EMPEROR.z, r: 3, y: 4.1, label: 'Hand' }] },
-        { id: 'scarf', text: 'A scarf around his neck', kind: 'event', event: 'outfitScarf', hint: 'A tourist holds one.', markers: [{ x: EMPEROR.x, z: EMPEROR.z, r: 3, y: 5, label: 'Neck' }] },
+        { id: 'hat', text: 'Get hold of a top hat', kind: 'event', event: 'grab:tophat', hint: 'There is one lying near the statue.' },
+        { id: 'shades', text: 'Sunglasses', kind: 'event', event: 'grab:glasses', hint: 'Near the steps.' },
+        { id: 'flowers', text: 'A bouquet', kind: 'event', event: 'grab:flowers', hint: 'The florist near the steps has one.' },
+        { id: 'scarf', text: 'A scarf', kind: 'event', event: 'grab:scarf', hint: 'A tourist holds one.' },
       ],
     },
     {
@@ -156,23 +139,9 @@ export const NEW_LOOK: LevelDef = {
       timed: false,
       objectives: [{ id: 'splat', text: 'Splat a worker on his break', kind: 'event', event: 'poopNpc:worker', hint: 'Two workers are having coffee by the scaffolding.' }],
     },
-    {
-      id: 'photo',
-      title: 'Emperor\'s polaroid',
-      timed: false,
-      objectives: [{ id: 'head', text: 'Perch on the finished statue\'s head', kind: 'event', event: 'emperorHead', hint: 'Land on top.' }],
-    },
   ],
-  secret: ['photo'],
   coopQuests: [{ id: 'duoLook', title: 'Dressing room', timed: false, objectives: [{ id: 'duoLook', text: 'One gull drops an item, the other picks it up', kind: 'event', event: 'coop:handover', hint: 'Pass it.' }] }],
   triggers: [],
-  extraTriggers: [
-    { id: 'outfitHat', kind: 'propInZone', event: 'outfitHat', propType: 'tophat', zone: snap(EMPEROR.headTop, EMPEROR.headTop + 2.4) },
-    { id: 'outfitGlasses', kind: 'propInZone', event: 'outfitGlasses', propType: 'glasses', zone: snap(EMPEROR.headTop - 1.4, EMPEROR.headTop) },
-    { id: 'outfitFlowers', kind: 'propInZone', event: 'outfitFlowers', propType: 'flowers', zone: snap(EMPEROR.plinthTop + 0.2, EMPEROR.plinthTop + 1.4) },
-    { id: 'outfitScarf', kind: 'propInZone', event: 'outfitScarf', propType: 'scarf', zone: snap(EMPEROR.plinthTop + 1.4, EMPEROR.headTop - 1) },
-    { id: 'emperorHead', kind: 'gullInZone', event: 'emperorHead', zone: snap(EMPEROR.headTop - 0.6, EMPEROR.headTop + 2.5), grounded: true },
-  ],
   tourists: [],
   extraTourists: [
     { x: -146, z: -292, heading: 0.5, holds: 'scarf', role: 'tourist', color: 0xe86a8a },

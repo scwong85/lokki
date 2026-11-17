@@ -65,11 +65,12 @@ test('S5: a bun makes the Pigeon Gang friends', async ({ page }) => {
   await expect.poll(() => L((l) => l.quests.quests.find((q) => q.id === 'diplomacy')!.objectives[0].done), { timeout: 60_000 }).toBe(true);
 });
 
-test('S6: a top hat dropped over the emperor counts', async ({ page }) => {
+test('S6: the wardrobe raid counts grabbed items (no statue spots to hit)', async ({ page }) => {
   test.setTimeout(300_000);
   const L = await open(page, 'new-look');
-  await L((l) => l.interaction.props.spawn({ type: 'tophat', x: -156.5, y: 7.5, z: -300 }));
-  await expect.poll(() => L((l) => l.quests.quests.find((q) => q.id === 'makeover')!.objectives[0].done), { timeout: 120_000 }).toBe(true);
+  expect(await L((l) => l.quests.quests.map((q) => q.id))).toEqual(['wardrobe', 'workers']);
+  await L((l) => l.quests.onEvent('grab:tophat'));
+  expect(await L((l) => l.quests.quests.find((q) => q.id === 'wardrobe')!.objectives[0].done)).toBe(true);
 });
 
 test('S7: the band falls silent and a caw rings every phone', async ({ page }) => {

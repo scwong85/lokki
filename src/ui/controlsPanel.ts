@@ -2,7 +2,7 @@ import { padHelp } from '../core/gamepad';
 
 const KEYS: [string, string][] = [
   ['WASD', 'Walk and steer'], ['Space', 'Tap: jump. Hold: take off and flap'], ['Shift (hold)', 'Dive'], ['S in the air', 'Flare and brake for landings'], ['Mouse', 'Look (click the game to capture)'],
-  ['E', 'Grab or drop'], ['Q', 'Toss'], ['F or click', 'Poop'], ['V / G / B', 'Skills: crow call, flock call, pigeon disguise'], ['H', 'Hawk-eye'], ['T (hold)', 'Taunt: people nearby watch you, not your partner (co-op decoy)'], ['1 2 3 4', 'Emotes: wave, laugh, point, facepalm'], ['Tab', 'Lock onto a target: dives and droppings home in on it (again: next one, then off)'],
+  ['E', 'Grab or drop'], ['Q', 'Toss'], ['F or click', 'Poop'], ['V / G / B', 'Skills: crow call, flock call, pigeon disguise'], ['H', 'Hawk-eye'], ['T (hold)', 'Taunt: people nearby watch you (co-op decoy), and an angry person keeps following you'], ['1 2 3 4', 'Emotes: wave, laugh, point, facepalm'], ['Tab', 'Lock onto a target: dives and droppings home in on it (again: next one, then off)'],
   ['K', 'Skills and gull looks'], ['L', 'Level list'], ['N', 'Play with a friend online'], ['R', 'Restart the level'], ['U', 'HUD: full / minimal / off'], ['M', 'Mute'], ['Esc or O', 'Options'],
 ];
 const TOUCH: [string, string][] = [

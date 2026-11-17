@@ -340,7 +340,7 @@ export const THERMAL_EXPRESS: LevelDef = {
       timeKey: 'expressTime',
       startOn: ['grab:warmBun'],
       startMarkers: [{ x: 4, z: -14, r: 3, label: 'Warm bun' }],
-      objectives: [{ id: 'dome', text: 'Land on the Uspenski dome with the bun', kind: 'event', event: 'domeTop', hint: 'Follow the pale columns of warm air to the north-east: glide into one and rise, then glide on to the next.', markers: [{ x: DOME.x, z: DOME.z, r: 12, label: 'Uspenski dome', y: 26 }] }],
+      objectives: [{ id: 'dome', text: 'Fly the bun over the Uspenski dome', kind: 'event', event: 'domeTop', hint: 'Follow the pale columns of warm air to the north-east: glide into one and rise, then glide on to the next. Fly over the dome above its roofline; no landing needed.', markers: [{ x: DOME.x, z: DOME.z, r: 12, label: 'Uspenski dome', y: 26 }] }],
     },
     {
       id: 'riders',
@@ -359,7 +359,7 @@ export const THERMAL_EXPRESS: LevelDef = {
   secret: ['high'],
   coopQuests: [{ id: 'duoTherm', title: 'Pair flying', timed: false, objectives: [{ id: 'duoTherm', text: 'One gull drops it, the other grabs it', kind: 'event', event: 'coop:handover', hint: 'Pass the bun.' }] }],
   triggers: [],
-  extraTriggers: [{ id: 'domeTop', kind: 'carryLanded', event: 'domeTop', propType: 'bun', minY: 20, zone: { minX: DOME.x - 14, maxX: DOME.x + 14, minZ: DOME.z - 14, maxZ: DOME.z + 14 } }],
+  extraTriggers: [{ id: 'domeTop', kind: 'carryLanded', airborne: true, event: 'domeTop', propType: 'bun', minY: 20, zone: { minX: DOME.x - 14, maxX: DOME.x + 14, minZ: DOME.z - 14, maxZ: DOME.z + 14 } }],
   tourists: [],
   extraProps: [{ type: 'bun', x: 4, y: restY('bun'), z: -14, tag: 'warmBun' }],
   defense: false,

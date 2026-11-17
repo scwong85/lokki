@@ -50,3 +50,15 @@ test('the title screen level list scrolls (and opts back in to touch scrolling),
   expect(await list.evaluate((el) => el.scrollTop)).toBeGreaterThan(100);
   await expect(page.locator('.title-levels button').last()).toBeInViewport();
 });
+
+test('holding T taunts even in a new profile (the tips used to swallow it), and Y skips the tips', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.addInitScript(() => localStorage.setItem('lokki-options-v1', JSON.stringify({ graphics: 'low', tutorialDone: false })));
+  await page.goto('/?level=map-and-cone&play');
+  await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 90_000 });
+  const taunting = () => page.evaluate(() => (window as unknown as { __lokki: { gull: { taunting: boolean } } }).__lokki.gull.taunting);
+  await page.keyboard.down('KeyT');
+  await expect.poll(taunting, { timeout: 20_000 }).toBe(true);
+  await page.keyboard.up('KeyT');
+  await expect.poll(taunting, { timeout: 20_000 }).toBe(false);
+});

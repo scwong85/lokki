@@ -96,7 +96,9 @@ describe('levels S4-S6', () => {
     expect(ids.indexOf('tram-surfing')).toBe(ids.indexOf('ding-dong') + 1);
     expect(TRAM_SURFING.tram).toBeDefined();
     expect(TURF_WAR.pigeons).toBeDefined();
-    expect(NEW_LOOK.extraTriggers!.filter((t) => t.kind === 'propInZone').length).toBe(4);
+    // no precision landing or drops: no statue perch, no zones to drop things in
+    for (const l of [TRAM_SURFING, TURF_WAR, NEW_LOOK]) expect((l.extraTriggers ?? []).filter((t) => t.kind === 'gullInZone' || t.kind === 'propInZone')).toEqual([]);
+    expect(NEW_LOOK.extraQuests!.some((q) => q.id === 'wardrobe')).toBe(true);
     expect(TURF_WAR.requires).toBe('tram-surfing');
     expect(NEW_LOOK.requires).toBe('turf-war');
   });
