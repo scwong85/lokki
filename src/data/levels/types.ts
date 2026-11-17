@@ -33,6 +33,10 @@ export interface LevelDef {
   quiet?: { x: number; z: number; r: number };
   /** The concert falls silent now and then: calling (Mimic) in the quiet bit sets off every phone. */
   quietBreaks?: { first: number; every: number; duration: number };
+  /** Splats on the ground inside a zone count as an event (a trap being set). */
+  splatZones?: { event: string; zone: { minX: number; maxX: number; minZ: number; maxZ: number } }[];
+  /** The conga line: when enough followers (people who trail a taunting gull) are somewhere, an event fires (once). */
+  parade?: { stops: { event: string; need: number; at?: { x: number; z: number; r: number }; text?: string; send?: { role: string; goals: { x: number; z: number; name: string }[] } }[] };
   /** A cathedral bell that rings now and then: everyone within hearing looks up at the tower. */
   bells?: { x: number; z: number; first: number; every: number; duration: number };
   /** Havoc Hour: a timed chaos run with chain scoring instead of to-dos. */

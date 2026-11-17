@@ -171,6 +171,12 @@ export class PropManager {
     p.tipped = false;
   }
 
+  /** Something falls out of a person's hand (a slip, full hands): it is theirs no more, and not stolen either. */
+  drop(p: Prop, vel: { x: number; y: number; z: number }): void {
+    p.heldBy = null;
+    this.release(p, vel);
+  }
+
   release(p: Prop, vel: { x: number; y: number; z: number }): void {
     p.carried = false;
     p.ignoreGrab = 0.6;

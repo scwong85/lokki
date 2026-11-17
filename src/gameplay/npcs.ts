@@ -6,7 +6,7 @@ import { createRng, type Rng } from '../core/rng';
 import { tuning } from '../core/tuning';
 import { restY, type PropType } from '../data/props';
 import type { Target } from './targets';
-import { BODY_HEIGHT, BODY_RADIUS, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn, type Station } from './npc';
+import { BODY_HEIGHT, BODY_RADIUS, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn, type Station, slip, honkAt } from './npc';
 import type { GrabCandidate } from './grab';
 import type { HitSphere } from './poop';
 import type { NpcHooks } from './interaction';
@@ -122,12 +122,82 @@ export class NpcManager implements NpcHooks {
     if (n.holding !== null) {
       // their hands are full: they drop what they hold (it lands at their feet) to take the treat
       const old = this.props.byId(n.holding);
-      if (old) this.props.release(old, { x: 0, y: 0, z: 0 });
+      if (old) this.props.drop(old, { x: 0, y: 0, z: 0 });
     }
     this.props.attach(item, n.id);
     n.holding = item.id;
     n.holdType = type;
     this.props.setHoldTarget(item, handPos(n));
+  }
+
+  /** Wet patches on the ground (a splat): whoever walks through one slips. */
+  hazards: { x: number; z: number; ttl: number; r: number }[] = [];
+
+  /** A puddle for `ttl` seconds: it makes anyone who walks into it slip. */
+  addHazard(x: number, z: number, ttl = 40, r = 1.7): void {
+    this.hazards.push({ x, z, ttl, r });
+    if (this.hazards.length > 24) this.hazards.shift();
+  }
+
+  /** How many followers are trailing the gull now. */
+  followingCount(): number {
+    return this.npcs.filter((n) => n.following).length;
+  }
+
+  /** Followers within `r` of a point. */
+  followersNear(x: number, z: number, r: number): number {
+    return this.npcs.filter((n) => n.following && Math.hypot(n.x - x, n.z - z) <= r).length;
+  }
+
+  /** A cannonball splash at (x, z): everyone within `r` is soaked: they drop what they hold and run. Returns how many. */
+  soakRadius(x: number, z: number, r: number): number {
+    let k = 0;
+    for (const n of this.npcs) {
+      if (n.mode === 'panic' || n.mode === 'slip' || Math.hypot(n.x - x, n.z - z) > r) continue;
+      this.dropHeld(n);
+      this.pending.push(...startle(n, 'pooped'));
+      this.pending.push({ type: 'soaked', npc: n });
+      k++;
+    }
+    return k;
+  }
+
+  /** A honk at (x, z): calm people within `range` jump; someone with their back turned drops what they hold. */
+  honk(x: number, z: number, range: number): NpcEvent[] {
+    const ev: NpcEvent[] = [];
+    for (const n of this.npcs) {
+      if (Math.hypot(n.x - x, n.z - z) > range) continue;
+      const r = honkAt(n, x, z, ev);
+      if (r === 'drop') this.dropHeld(n);
+    }
+    return ev;
+  }
+
+  /** Someone slips: what they hold goes flying. */
+  private trip(n: Npc): NpcEvent[] {
+    const ev: NpcEvent[] = [];
+    const held = n.holding;
+    slip(n, ev);
+    if (held !== null) {
+      const pr = this.props.byId(held);
+      if (pr) this.props.drop(pr, { x: 0, y: 1.6, z: 0 });
+    } else {
+      // they had nothing left to drop (it was snatched earlier): a fresh one flies out of their pocket, so a chain that wants it cannot get stuck
+      const sp = this.spawns.get(n.id);
+      const type = sp?.holds ?? (sp?.ice ? 'icecream' : undefined);
+      if (sp && type) this.props.drop(this.props.spawn({ type, x: n.x, y: 1.4, z: n.z, tag: sp.holdTag }), { x: 0, y: 1.2, z: 0 });
+    }
+    return ev;
+  }
+
+  /** Is there a puddle (a splat, or a free item tagged `slippery`, like a wet fish) under this person? */
+  private puddleAt(n: Npc): { kill?: () => void } | null {
+    for (const h of this.hazards) if (Math.hypot(h.x - n.x, h.z - n.z) < h.r) return { kill: () => (h.ttl = 0) };
+    for (const p of this.props.props) {
+      if (p.tag !== 'slippery' || p.broken || p.heldBy !== null || p.carried) continue;
+      if (Math.hypot(p.cur.p.x - n.x, p.cur.p.z - n.z) < 1.2 && p.cur.p.y < 1.0) return { kill: () => this.props.destroy(p) };
+    }
+    return null;
   }
 
   /** A sound the tourists can hear (clatter, crash, tipped bin...). */
@@ -142,6 +212,14 @@ export class NpcManager implements NpcHooks {
     const ev: NpcEvent[] = this.pending.splice(0);
     const ctx = { world: this.world, walkable: this.walkable, rng: this.rng, stations: this.stations };
     this.clock += dt;
+    for (const h of this.hazards) h.ttl -= dt;
+    this.hazards = this.hazards.filter((h) => h.ttl > 0);
+    // the conga line: followers stay behind the gull in the order they are in (nearest first)
+    const lead = gulls[0];
+    if (lead) {
+      const f = this.npcs.filter((n) => n.following).sort((a, b) => Math.hypot(a.x - lead.x, a.z - lead.z) - Math.hypot(b.x - lead.x, b.z - lead.z));
+      f.forEach((n, i) => (n.followGap = 2.4 + i * 1.2));
+    }
     for (const n of this.npcs) {
       if (n.role === 'selfie' || n.role === 'blogger') ev.push(...this.selfieStep(n, gulls)); // the blogger photographs her dish on the same rhythm
       if (n.role === 'cleaner') this.cleanStep(n, dt);
@@ -149,6 +227,13 @@ export class NpcManager implements NpcHooks {
       const stepped = stepNpc(n, near, this.noises, dt, ctx);
       for (const e of stepped) if (e.type === 'bought') this.serve(e.npc, e.station, e.propType);
       ev.push(...stepped);
+      if (n.mode !== 'slip' && n.speed > 0.6) {
+        const puddle = this.puddleAt(n);
+        if (puddle) {
+          puddle.kill?.();
+          ev.push(...this.trip(n));
+        }
+      }
       ev.push(...this.wantedItems(n));
       ev.push(...this.reclaim(n));
       // solid walls, counters and landmarks push the tourist out (horizontal only)
@@ -424,6 +509,9 @@ export class NpcManager implements NpcHooks {
       const g = goals[i++ % goals.length];
       n.goal = { ...g };
       n.stationary = false;
+      n.follows = false; // sent off: no longer in the conga line
+      n.followT = 0;
+      n.following = false;
       if (n.mode === 'idle' || n.mode === 'recover' || n.mode === 'eat') {
         n.mode = 'walk';
         n.t = 0;

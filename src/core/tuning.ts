@@ -396,6 +396,7 @@ export const tuning = {
     master: p(0.5, 0, 1, 0.05),
     sfx: p(0.8, 0, 1, 0.05),
     wind: p(0.5, 0, 1, 0.05), // air-rush loudness
+    ambient: p(0.9, 0, 1.5, 0.05), // tram rumble, sea and city murmur (times master)
     music: p(0.5, 0, 1, 0.05), // music loudness (times master)
     musicFade: p(3, 0.5, 10, 0.5), // seconds to crossfade between music tiers
     musicDownDelay: p(12, 0, 60, 1), // seconds the heat must stay lower before the music calms down
@@ -410,9 +411,23 @@ export const tuning = {
     shadowArea: p(70, 20, 200, 5), // half-size in metres of the shadow box around the player
     ao: p(0.32, 0, 0.8, 0.02), // baked darkening at the foot of walls
   },
+  cannon: {
+    minImpact: p(9, 2, 30, 0.5), // a splashdown at least this fast is a cannonball (a normal dive is much faster)
+    radiusBase: p(3, 1, 10, 0.5), // metres soaked by the smallest cannonball
+    radiusPerSpeed: p(0.15, 0, 0.5, 0.01), // and per m/s of impact
+    radiusMax: p(8, 3, 15, 0.5),
+  },
+  honk: {
+    range: p(14, 4, 40, 1), // calm people within this distance jump when you honk
+    cooldown: p(1.5, 0.2, 6, 0.1), // seconds between honks
+    tapMax: p(0.25, 0.1, 0.6, 0.01), // a press shorter than this is a honk; holding longer is a taunt
+    startleTime: p(1.2, 0.3, 3, 0.1), // how long they flail
+  },
   mood: {
     time: p(30, 5, 120, 1), // seconds until a mood fades back to calm (not while chasing or buying)
     buyTime: p(2.5, 0.5, 10, 0.1), // how long someone waits at a stall before they are served
+    followRange: p(22, 5, 50, 1), // a follower joins the conga line when you taunt within this distance
+    followHold: p(6, 0, 20, 0.5), // and keeps following this long after you let go of T
     lureRange: p(50, 10, 80, 1), // an angry person follows a taunting gull within this distance (and starts again if they had given up)
   },
   outro: {

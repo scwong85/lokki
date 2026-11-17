@@ -221,7 +221,9 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [ ] M43 Playtest fixes: Bell Heist and the scrolling title list (built on `m43-fixes`)
 - [ ] M44 Chain levels C1 to C3: mood, lure, stations, chain quests, the Map and Cone level (built on `m44-chain-slice`, merged)
 - [ ] M46 Playtest fixes: taunt works, no precision landing to-dos, level card at the side (built on `m46-fixes`, merged)
-- [ ] M47 Chains I: Vappu, Herring Market, Wedding Bells, Frozen Harbour and S6 rebuilt as chains; taunt and stuck-level fixes (built on `m47-chains`)
+- [ ] M47 Chains I: Vappu, Herring Market, Wedding Bells, Frozen Harbour and S6 rebuilt as chains; taunt and stuck-level fixes (built on `m47-chains`, merged)
+- [ ] M48 Mischief toys: Slip (Wet Floor) and Pied Piper levels, mechanics study (built on `m48-mischief`)
+- [ ] M49 Honk, Cannonball and environment sounds (built on `m49-honk-splash`)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -426,7 +428,15 @@ Taunt works in a new profile (Y skips the tips), precision landing to-dos remove
 ### M47 — Chains I (M)
 Five fetch levels rebuilt as chain levels, splatting twice angers, taunt always re-lures, stalls restock. Details: `docs/milestones/M47.md`.
 
-### After M47 (backlog)
+### M48 — Mischief toys (M)
+A study of fun mechanics (`docs/design/mischief-mechanics.md`) and the first two toys with a level each: Slip (Wet Floor) and Pied Piper. Details: `docs/milestones/M48.md`.
+
+### M49 — Honk, Cannonball and the sound of the city (M)
+Tap T to honk, hard dives into water soak the pier, and the tram, church bell, ferry horn, sea and city finally make sound. Details: `docs/milestones/M49.md`.
+
+### After M49 (backlog)
+ Tug (design in `docs/design/mischief-mechanics.md` section 12), then contagion, slam and the rest of the slate.
+ Mischief toys next: tablecloth yank, prank button, hide and BOO, then convert the stall-chain levels to different toys (`docs/design/mischief-mechanics.md`).
  Chain levels: more rebuilds (Cheese Run, Harbour Day, the heist levels, Christmas Market, Key to the City, Coo-Coo, The Drone), then rumour and crowds, escalation events, co-op chains (`docs/design/chain-levels.md`).
  World enrichment rest of W2, then W3 to W6 (`docs/design/world-enrichment.md`): streets and squares, things that move, a busier city, landmark kit.
  Plans: `docs/design/fun-todos.md` (F2–F6), `docs/design/graphics-refresh.md` (G2–G6).

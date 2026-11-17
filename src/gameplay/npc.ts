@@ -21,7 +21,7 @@ export interface Station {
   goods?: { dz: number; y?: number };
 }
 
-export type NpcMode = 'idle' | 'walk' | 'eat' | 'notice' | 'shield' | 'panic' | 'chase' | 'recover' | 'yuck' | 'cheer';
+export type NpcMode = 'idle' | 'walk' | 'eat' | 'notice' | 'shield' | 'panic' | 'chase' | 'recover' | 'yuck' | 'cheer' | 'slip' | 'startle';
 
 export interface NpcSpawn {
   x: number;
@@ -50,6 +50,10 @@ export interface NpcSpawn {
   signAt?: { x: number; z: number };
   /** What they want to buy when they are upset or angry and pass a stall that sells it (comfort food). */
   craves?: PropType;
+  /** Follows a taunting gull in a conga line (hold T) and for a few seconds after. */
+  follows?: boolean;
+  /** Walks this route back and forth instead of wandering. */
+  patrol?: { x: number; z: number }[];
 }
 
 export interface Npc {
@@ -107,6 +111,18 @@ export interface Npc {
   /** At a stall waiting to buy: the stall, and how long they have waited (0 = not buying). */
   station: Station | null;
   buyT: number;
+  follows: boolean;
+  /** Seconds left of following after the taunt stops, how far behind the gull they stay, and whether they are following now. */
+  followT: number;
+  followGap: number;
+  following: boolean;
+  patrol: { x: number; z: number }[] | null;
+  patrolI: number;
+  /** Slipping: seconds so far, and the slide they carry on with. */
+  slipT: number;
+  slideX: number;
+  slideZ: number;
+  startleT: number;
 }
 
 export interface GullInfo {
@@ -125,7 +141,7 @@ export interface Noise {
   loud: number;
 }
 
-export type NpcEvent = { type: 'reclaimed'; npc: Npc; propType: PropType } | { type: 'cheer'; npc: Npc } | { type: 'arrived'; npc: Npc; goal: string } | { type: 'yuck'; npc: Npc } | { type: 'tookItem'; npc: Npc; propType: PropType } | { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc } | { type: 'selfieClick'; npc: Npc; inFrame: boolean; framed: number } | { type: 'signSplat'; npc: Npc; splats: number } | { type: 'cleanerRobbed'; npc: Npc } | { type: 'snatchUnseen'; npc: Npc } | { type: 'review'; npc: Npc } | { type: 'soaked'; npc: Npc } | { type: 'scared'; npc: Npc; carried: boolean } | { type: 'mood'; npc: Npc; mood: Mood } | { type: 'atStation'; npc: Npc; station: string } | { type: 'bought'; npc: Npc; station: string; propType: PropType };
+export type NpcEvent = { type: 'reclaimed'; npc: Npc; propType: PropType } | { type: 'cheer'; npc: Npc } | { type: 'arrived'; npc: Npc; goal: string } | { type: 'yuck'; npc: Npc } | { type: 'tookItem'; npc: Npc; propType: PropType } | { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc } | { type: 'selfieClick'; npc: Npc; inFrame: boolean; framed: number } | { type: 'signSplat'; npc: Npc; splats: number } | { type: 'cleanerRobbed'; npc: Npc } | { type: 'snatchUnseen'; npc: Npc } | { type: 'review'; npc: Npc } | { type: 'soaked'; npc: Npc } | { type: 'scared'; npc: Npc; carried: boolean } | { type: 'mood'; npc: Npc; mood: Mood } | { type: 'atStation'; npc: Npc; station: string } | { type: 'bought'; npc: Npc; station: string; propType: PropType } | { type: 'slipped'; npc: Npc } | { type: 'startled'; npc: Npc; dropped: boolean };
 
 export interface NpcCtx {
   world: World;
@@ -149,6 +165,7 @@ export function newNpc(id: number, sp: NpcSpawn): Npc {
     walkPhase: 0, moving: false, speed: 0, seesGull: false, suspicion: 0, nextT: 2,
     wants: sp.wants ?? [], holdType: null, goal: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false,
     mood: 'calm', moodT: 0, craves: sp.craves ?? null, station: null, buyT: 0,
+    follows: sp.follows ?? false, followT: 0, followGap: 2.5, following: false, patrol: sp.patrol ?? null, patrolI: 0, slipT: 0, slideX: 0, slideZ: 0, startleT: 0,
   };
 }
 
@@ -254,6 +271,12 @@ function faceToward(n: Npc, tx: number, tz: number, dt: number): void {
 }
 
 function pickWanderTarget(n: Npc, ctx: NpcCtx): void {
+  if (n.patrol && !n.goal) {
+    const p = n.patrol[n.patrolI++ % n.patrol.length];
+    n.targetX = p.x;
+    n.targetZ = p.z;
+    return;
+  }
   if (n.goal) {
     n.targetX = n.goal.x;
     n.targetZ = n.goal.z;
@@ -303,6 +326,38 @@ export function startle(n: Npc, kind: 'pooped' | 'snatched' | 'yuck' | 'cheer'):
   }
   n.handAngle = n.heading - Math.PI / 2;
   return ev;
+}
+
+/** They tread in a puddle (a splat, a fish): arms up, a long slide, what they hold goes flying, and they are not happy. */
+export function slip(n: Npc, ev: NpcEvent[]): void {
+  enter(n, 'slip');
+  n.slipT = 0;
+  n.slideX = -Math.sin(n.heading) * 3.4;
+  n.slideZ = -Math.cos(n.heading) * 3.4;
+  n.holding = null;
+  n.holdType = null;
+  n.following = false;
+  setMood(n, angrier(n.mood), ev);
+  ev.push({ type: 'slipped', npc: n });
+}
+
+export const SLIP_SECONDS = 2.4;
+
+/**
+ * A honk from a gull at (gx, gz): calm people jump. Someone who has their back to the gull is caught completely off guard: they
+ * drop what they hold. Someone who was looking at it only flinches. Returns null for people a honk does not reach (busy, already
+ * scared, slipping, in a conga line).
+ */
+export function honkAt(n: Npc, gx: number, gz: number, ev: NpcEvent[]): 'drop' | 'flinch' | null {
+  const calm = n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat' || n.mode === 'recover' || n.mode === 'cheer';
+  if (!calm || n.following || n.buyT > 0) return null;
+  const away = Math.abs(angleDiff(bearing(gx - n.x, gz - n.z), n.heading)) > (100 * Math.PI) / 180; // the gull is behind them
+  const drop = away && n.holding !== null;
+  enter(n, 'startle');
+  n.startleT = 0;
+  setMood(n, angrier(n.mood === 'calm' ? 'calm' : n.mood), ev);
+  ev.push({ type: 'startled', npc: n, dropped: drop });
+  return drop ? 'drop' : 'flinch';
 }
 
 export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: number, ctx: NpcCtx): NpcEvent[] {
@@ -388,6 +443,29 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
   const gullDist = Math.hypot(g.x - n.x, g.z - n.z);
   // the lure: someone still angry who wants comfort goes after a taunting gull again, even after they had given up the chase
   if (g.taunt && n.craves && n.buyT === 0 && (n.mood === 'angry' || n.mood === 'upset') && n.mode !== 'chase' && n.mode !== 'panic' && gullDist < tuning.mood.lureRange.value) enter(n, 'chase');
+  // ---- the conga line: a follower trails a taunting gull (and for a few seconds after) ----
+  if (n.follows && n.mode !== 'slip' && n.mode !== 'panic' && n.mode !== 'chase') {
+    if (g.taunt && gullDist < tuning.mood.followRange.value) n.followT = tuning.mood.followHold.value;
+    else n.followT = Math.max(0, n.followT - dt);
+    if (n.followT > 0 && gullDist < tuning.mood.followRange.value * 1.5) {
+      n.following = true;
+      if (n.mode !== 'walk') enter(n, 'walk');
+      n.goal = null;
+      n.t = 0;
+      if (gullDist > n.followGap) n.moving = moveToward(n, g.x, g.z, t.walkSpeed.value * 1.2, dt, ctx);
+      else faceToward(n, g.x, g.z, dt);
+      n.handAngle += angleDiff(n.heading - Math.PI / 2, n.handAngle) * Math.min(1, 8 * dt);
+      n.moving = n.speed > 0;
+      n.walkPhase += n.speed * dt * 2.2;
+      return ev;
+    }
+    if (n.following) {
+      n.following = false;
+      enter(n, 'idle');
+      n.nextT = ctx.rng.range(1.5, 3);
+    }
+  }
+
   switch (n.mode) {
     case 'idle': {
       if (n.distractT > 0) faceToward(n, n.noiseX, n.noiseZ, dt);
@@ -506,6 +584,30 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
         n.noticeCd = 2;
       }
       break;
+    case 'startle':
+      // a jump and flailing arms, then a moment to recover
+      n.handAngle = n.heading - Math.PI / 2;
+      if (n.t >= tuning.honk.startleTime.value) {
+        enter(n, 'recover');
+        n.noticeCd = 2;
+      }
+      break;
+    case 'slip': {
+      // slides on with the speed it had, slowing down, until it stops and sits there
+      n.slipT += dt;
+      const k = Math.max(0, 1 - n.slipT / SLIP_SECONDS);
+      const nx = n.x + n.slideX * k * dt, nz = n.z + n.slideZ * k * dt;
+      if (ctx.walkable(nx, nz)) {
+        n.x = nx;
+        n.z = nz;
+      }
+      n.handAngle = n.heading - Math.PI / 2;
+      if (n.slipT >= SLIP_SECONDS) {
+        enter(n, 'recover');
+        n.noticeCd = 2;
+      }
+      break;
+    }
     case 'recover':
       faceToward(n, g.x, g.z, dt);
       if (n.t >= t.recoverTime.value) {
