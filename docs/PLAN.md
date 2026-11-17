@@ -230,6 +230,8 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [ ] M54 Prank buttons and Hide-and-BOO (built on `m54-prank-boo`)
 - [ ] M55 Tablecloth yank and Service bell (built on `m55-cloth-bell`)
 - [ ] M56 Gust, Domino, Impersonation, Dog-and-honk (built on `m56-gust-domino-disguise-dog`)
+- [ ] M57 Dog fixes (merged)
+- [ ] M58 Plan: 4 arcs of 5 stages, mechanic gating, physics sandbox research (`docs/design/arcs.md`, `docs/design/physics-sandbox.md`; built on `m58-arcs-plan`)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -458,7 +460,10 @@ Yank the cloth, ring the bell. Details: `docs/milestones/M55.md`.
 ### M56 — Gust, Domino, Impersonation, Dog-and-honk (M)
 Four more toys and a level each. Details: `docs/milestones/M56.md`.
 
-### After M56 (backlog)
+### M58 — Plan: arcs and stages, physics sandbox (S)
+Four arcs of five five-minute stages, three chained objectives plus two co-op objectives per stage, mechanics and skills that unlock once and stay; Act 1 designed in full; physics and sandbox research. Docs only. Details: `docs/design/arcs.md`, `docs/design/physics-sandbox.md`. Next (after the user's decisions): M59 mechanic gating, M60 stage framework, M61 to M63 Act 1.
+
+### After M58 (backlog)
  Tablecloth yank, prank button, hide and BOO and the rest of the slate (`docs/design/mischief-mechanics.md`), then convert the stall-chain levels to the new toys.
  Mischief toys next: tablecloth yank, prank button, hide and BOO, then convert the stall-chain levels to different toys (`docs/design/mischief-mechanics.md`).
  Chain levels: more rebuilds (Cheese Run, Harbour Day, the heist levels, Christmas Market, Key to the City, Coo-Coo, The Drone), then rumour and crowds, escalation events, co-op chains (`docs/design/chain-levels.md`).
