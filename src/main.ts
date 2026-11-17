@@ -741,6 +741,35 @@ function setupSwitches(): void {
     switchViews.push(bush);
   }
   for (const sw of level.switches ?? []) {
+    if (sw.effect === 'yank') {
+      const t = new THREE.Group();
+      const top = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.08, 14), new THREE.MeshLambertMaterial({ color: 0xffffff }));
+      top.position.y = 0.9;
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.2, 0.9, 8), new THREE.MeshLambertMaterial({ color: 0x8b6b4a }));
+      leg.position.y = 0.45;
+      const hang = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.3, 0.35, 14, 1, true), new THREE.MeshLambertMaterial({ color: 0xff8fa3, side: THREE.DoubleSide }));
+      hang.position.y = 0.75;
+      t.add(top, leg, hang);
+      for (let i = 0; i < 4; i++) {
+        const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.05, 10), new THREE.MeshLambertMaterial({ color: 0xffd36e }));
+        plate.position.set(Math.cos(i * 1.57) * 0.6, 0.97, Math.sin(i * 1.57) * 0.6);
+        t.add(plate);
+      }
+      t.position.set(sw.x, 0, sw.z);
+      t.name = `cloth:${sw.id}`;
+      scene.add(t);
+      switchViews.push(t);
+      continue;
+    }
+    if (sw.effect === 'summon') {
+      const bell = new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0xffd36e }));
+      bell.position.set(sw.x, 0.9, sw.z);
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.9, 8), new THREE.MeshLambertMaterial({ color: 0x8b6b4a }));
+      base.position.set(sw.x, 0.45, sw.z);
+      scene.add(bell, base);
+      switchViews.push(bell, base);
+      continue;
+    }
     const g = new THREE.Group();
     const body = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.5, 0.7), new THREE.MeshLambertMaterial({ color: sw.effect === 'dance' ? 0xc94f7c : sw.effect === 'alarm' ? 0xd9402f : 0x3f8fd9 }));
     body.position.y = 0.75;
@@ -766,7 +795,7 @@ function peck(sw: NonNullable<LevelDef['switches']>[number], pl: Player): void {
   const s = pl.gull.state;
   pl.gull.openBeak(0.4);
   pl.gull.wiggleT = 0.4;
-  audio.play(sw.effect === 'dance' ? 'jukebox' : sw.effect === 'alarm' ? 'alarm' : 'splash');
+  audio.play(sw.effect === 'dance' ? 'jukebox' : sw.effect === 'alarm' ? 'alarm' : sw.effect === 'yank' ? 'crash' : sw.effect === 'summon' ? 'tramBell' : 'splash');
   fx('stars', { x: sw.x, y: 1.6, z: sw.z }, 0.8);
   notes(quests.onEvent(`pecked:${sw.id}`));
   if (npcs && sw.effect === 'dance') {
@@ -778,6 +807,21 @@ function peck(sw: NonNullable<LevelDef['switches']>[number], pl: Player): void {
     npcs.soakRadius(t.x, t.z, tuning.button.soakRadius.value);
     fx('stars', { x: t.x, y: 2, z: t.z }, 1);
   }
+  if (npcs && sw.effect === 'yank') {
+    // the cloth comes off: everything on the table flies, and people near it jump
+    const gd = sw.goods;
+    const v = tuning.cloth.launch.value;
+    for (let i = 0; gd && i < gd.count; i++) {
+      const a = (i / gd.count) * Math.PI * 2;
+      const pr = interaction.props.spawn({ type: gd.type, x: sw.x + Math.cos(a) * 0.5, y: 1.1, z: sw.z + Math.sin(a) * 0.5, tag: gd.tag });
+      interaction.props.drop(pr, { x: Math.cos(a) * v, y: 2.5, z: Math.sin(a) * v });
+    }
+    for (const v2 of switchViews) if (v2.name === `cloth:${sw.id}`) v2.children.forEach((c, i) => { if (i === 2) c.visible = false; });
+    noise(sw.x, sw.z, 2);
+    fx('stars', { x: sw.x, y: 1.2, z: sw.z }, 1);
+    npcs.scareNear(sw.x, sw.z, tuning.cloth.scareRadius.value, false);
+  }
+  if (npcs && sw.effect === 'summon' && sw.role) npcs.sendRole(sw.role, [{ x: sw.x + 1.4, z: sw.z, name: 'bell' }]);
   if (npcs && sw.effect === 'alarm') noise(sw.x, sw.z, tuning.button.alarmLoud.value);
   void s;
 }
@@ -2516,7 +2560,7 @@ startLoop({
     const blocked = poopHit?.tag === 'umbrella';
     poopReticle.update(poopHit, blocked);
     touchControls?.update(interaction.grabPrompt(s), !!interaction.carried, { V: skills.has('mimic'), G: skills.has('flock'), B: skills.has('disguise') }, (code) => abilities.fraction(code === 'KeyV' ? 'mimic' : code === 'KeyG' ? 'flock' : 'disguise'), players.length > 1 || setup.quests.some((q) => q.chain));
-    hud.setInteraction(blocked ? 'Umbrella blocks it! Distract the Warden with a noise first (drop or throw a bottle)' : (!interaction.carried && switchNear(s) ? `E: peck the ${switchNear(s)!.label}` : '') || interaction.grabPrompt(s), poopReady);
+    hud.setInteraction(blocked ? 'Umbrella blocks it! Distract the Warden with a noise first (drop or throw a bottle)' : (!interaction.carried && switchNear(s) ? `E: ${({ yank: 'yank', summon: 'ring' } as Record<string, string>)[switchNear(s)!.effect] ?? 'peck'} the ${switchNear(s)!.label}` : '') || interaction.grabPrompt(s), poopReady);
     if (outro.active && outro.plan) {
       outroClock += frameDt;
       const t = tuning.outro;

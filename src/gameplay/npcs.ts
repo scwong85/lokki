@@ -649,7 +649,7 @@ export class NpcManager implements NpcHooks {
   scareNear(x: number, z: number, range: number, carried: boolean): Npc[] {
     const out: Npc[] = [];
     for (const n of this.npcs) {
-      if (!(n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat')) continue;
+      if (!isCalm(n)) continue;
       if (Math.hypot(n.x - x, n.z - z) > range) continue;
       this.dropHeld(n);
       this.pending.push(...startle(n, 'pooped'));

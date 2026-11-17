@@ -433,6 +433,10 @@ export const tuning = {
     soakRadius: p(4.5, 1, 12, 0.5), // a sprinkler button soaks everyone this close to its target
     alarmLoud: p(3, 0.5, 6, 0.5), // how loud the alarm is (hearing range multiplier)
   },
+  cloth: {
+    scareRadius: p(5, 1, 12, 0.5), // people this close to the table jump when the cloth is yanked
+    launch: p(5, 1, 12, 0.5), // how hard the goods fly off
+  },
   dance: {
     seconds: p(9, 2, 30, 1), // how long the jukebox makes people dance
     range: p(20, 4, 60, 1), // how far the music carries
