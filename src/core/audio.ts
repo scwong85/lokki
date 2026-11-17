@@ -1,6 +1,6 @@
 import { tuning } from './tuning';
 
-export type Sfx = 'flap' | 'hop' | 'screech' | 'thud' | 'bonk' | 'chime' | 'pop' | 'splat' | 'clatter' | 'crash' | 'gasp' | 'yelp' | 'win' | 'lose' | 'hiss' | 'whistle' | 'twang' | 'alarm' | 'crow';
+export type Sfx = 'flap' | 'hop' | 'screech' | 'thud' | 'bonk' | 'chime' | 'pop' | 'splat' | 'clatter' | 'crash' | 'gasp' | 'yelp' | 'win' | 'lose' | 'hiss' | 'whistle' | 'twang' | 'alarm' | 'crow' | 'bell' | 'tramBell' | 'horn' | 'honk';
 
 /**
  * Tiny audio manager. Placeholder sounds are synthesised with WebAudio (no files, no licences, fully offline).
@@ -12,6 +12,9 @@ export class AudioManager {
   private windGain!: GainNode;
   private noise!: AudioBuffer;
   muted = false;
+  /** The last sounds played (name and volume scale), for tests and the debug view. */
+  readonly log: { name: Sfx; vol: number }[] = [];
+  private ambient: { tram: GainNode; sea: GainNode; city: GainNode } | null = null;
 
   /** Call from a user gesture. Safe to call repeatedly and when WebAudio is unavailable. */
   unlock(): void {
@@ -35,6 +38,7 @@ export class AudioManager {
       this.windGain.gain.value = 0;
       src.connect(lp).connect(this.windGain).connect(this.master);
       src.start();
+      this.buildAmbient();
     }
     void this.ctx.resume();
   }
@@ -52,9 +56,12 @@ export class AudioManager {
     this.windGain.gain.setTargetAtTime(target, this.ctx.currentTime, 0.1);
   }
 
-  play(name: Sfx): void {
-    if (!this.ctx || this.muted) return;
-    const v = tuning.audio.sfx.value;
+  /** `vol`: 0..1 scale (distance); sounds are logged even when the browser has not unlocked audio yet. */
+  play(name: Sfx, vol = 1): void {
+    this.log.push({ name, vol });
+    if (this.log.length > 24) this.log.shift();
+    if (!this.ctx || this.muted || vol <= 0.01) return;
+    const v = tuning.audio.sfx.value * vol;
     switch (name) {
       case 'flap':
         this.burst(0.14, 700, 0.9, 0.5 * v, 350);
@@ -128,7 +135,97 @@ export class AudioManager {
         this.tone('sine', 880, 1100, 0.18, 0.3 * v);
         this.tone('sine', 1320, 1760, 0.22, 0.25 * v, 0.07);
         break;
+      case 'honk':
+        this.screech(1.5 * vol);
+        this.tone('sawtooth', 420, 300, 0.22, 0.28 * v);
+        break;
+      case 'bell':
+        this.churchBell(v);
+        break;
+      case 'tramBell':
+        // two quick pings: ding-ding
+        for (const d of [0, 0.2]) {
+          this.tone('sine', 1568, 1560, 0.45, 0.4 * v, d);
+          this.tone('triangle', 3136, 3100, 0.25, 0.14 * v, d);
+        }
+        break;
+      case 'horn':
+        this.horn(v);
+        break;
     }
+  }
+
+  /** A big church bell: a low strike with inharmonic partials that ring on for seconds. */
+  private churchBell(v: number): void {
+    const base = 196;
+    // partials of a real bell: hum, prime, tierce, quint, nominal... with long decays for the low ones
+    const partials: [number, number, number][] = [[0.5, 0.5, 4.5], [1, 1, 4.2], [1.19, 0.55, 3.2], [1.5, 0.45, 2.6], [2, 0.5, 2.2], [2.5, 0.3, 1.6], [3.01, 0.22, 1.2], [4.2, 0.14, 0.8]];
+    for (const [m, g, dur] of partials) this.tone('sine', base * m, base * m * 0.998, dur, 0.5 * g * v, 0, 0.004);
+    this.burst(0.08, 2200, 1, 0.35 * v, 900); // the clapper
+  }
+
+  /** A ferry horn: two low notes, a fifth apart, with a slow swell. */
+  private horn(v: number): void {
+    const ctx = this.ctx!;
+    const t0 = ctx.currentTime;
+    for (const f of [98, 147]) {
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.value = f;
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 520;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.32 * v, t0 + 0.18);
+      g.gain.setValueAtTime(0.32 * v, t0 + 1.1);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.8);
+      o.connect(lp).connect(g).connect(this.master);
+      o.start(t0);
+      o.stop(t0 + 1.9);
+    }
+  }
+
+  /** Always-on layers: a tram rumble, the sea, and a murmur of the city. Their loudness is set from the game each frame. */
+  private buildAmbient(): void {
+    const ctx = this.ctx!;
+    const layer = (freq: number, q: number, lfoHz: number, lfoDepth: number): GainNode => {
+      const src = ctx.createBufferSource();
+      src.buffer = this.noise;
+      src.loop = true;
+      const f = ctx.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.value = freq;
+      f.Q.value = q;
+      const g = ctx.createGain();
+      g.gain.value = 0;
+      if (lfoHz > 0) {
+        // a slow swell (waves) on the gain
+        const lfo = ctx.createOscillator();
+        lfo.frequency.value = lfoHz;
+        const d = ctx.createGain();
+        d.gain.value = lfoDepth;
+        lfo.connect(d).connect(g.gain);
+        lfo.start();
+      }
+      src.connect(f).connect(g).connect(this.master);
+      src.start();
+      return g;
+    };
+    const tram = layer(90, 0.9, 0, 0); // low rumble of wheels
+    const sea = layer(420, 0.6, 0.13, 0.05);
+    const city = layer(750, 0.5, 0, 0);
+    this.ambient = { tram, sea, city };
+  }
+
+  /** Set the ambient layers (each 0..1): the tram rumble, the sea, and the city murmur. */
+  setAmbient(a: { tram: number; sea: number; city: number }): void {
+    if (!this.ctx || !this.ambient) return;
+    const k = this.muted ? 0 : tuning.audio.ambient.value;
+    const t = this.ctx.currentTime;
+    this.ambient.tram.gain.setTargetAtTime(a.tram * 0.5 * k, t, 0.3);
+    this.ambient.sea.gain.setTargetAtTime(a.sea * 0.16 * k, t, 0.6);
+    this.ambient.city.gain.setTargetAtTime(a.city * 0.05 * k, t, 0.8);
   }
 
   private env(g: GainNode, t0: number, dur: number, peak: number, attack = 0.005): void {
@@ -155,7 +252,7 @@ export class AudioManager {
     src.stop(t0 + dur + 0.05);
   }
 
-  private tone(type: OscillatorType, f0: number, f1: number, dur: number, gain: number, delay = 0): void {
+  private tone(type: OscillatorType, f0: number, f1: number, dur: number, gain: number, delay = 0, attack = 0.005): void {
     const ctx = this.ctx!;
     const t0 = ctx.currentTime + delay;
     const o = ctx.createOscillator();
@@ -163,7 +260,7 @@ export class AudioManager {
     o.frequency.setValueAtTime(f0, t0);
     o.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
     const g = ctx.createGain();
-    this.env(g, t0, dur, gain);
+    this.env(g, t0, dur, gain, attack);
     o.connect(g).connect(this.master);
     o.start(t0);
     o.stop(t0 + dur + 0.05);

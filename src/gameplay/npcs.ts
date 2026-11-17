@@ -6,7 +6,7 @@ import { createRng, type Rng } from '../core/rng';
 import { tuning } from '../core/tuning';
 import { restY, type PropType } from '../data/props';
 import type { Target } from './targets';
-import { BODY_HEIGHT, BODY_RADIUS, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn, type Station, slip } from './npc';
+import { BODY_HEIGHT, BODY_RADIUS, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn, type Station, slip, honkAt } from './npc';
 import type { GrabCandidate } from './grab';
 import type { HitSphere } from './poop';
 import type { NpcHooks } from './interaction';
@@ -147,6 +147,30 @@ export class NpcManager implements NpcHooks {
   /** Followers within `r` of a point. */
   followersNear(x: number, z: number, r: number): number {
     return this.npcs.filter((n) => n.following && Math.hypot(n.x - x, n.z - z) <= r).length;
+  }
+
+  /** A cannonball splash at (x, z): everyone within `r` is soaked: they drop what they hold and run. Returns how many. */
+  soakRadius(x: number, z: number, r: number): number {
+    let k = 0;
+    for (const n of this.npcs) {
+      if (n.mode === 'panic' || n.mode === 'slip' || Math.hypot(n.x - x, n.z - z) > r) continue;
+      this.dropHeld(n);
+      this.pending.push(...startle(n, 'pooped'));
+      this.pending.push({ type: 'soaked', npc: n });
+      k++;
+    }
+    return k;
+  }
+
+  /** A honk at (x, z): calm people within `range` jump; someone with their back turned drops what they hold. */
+  honk(x: number, z: number, range: number): NpcEvent[] {
+    const ev: NpcEvent[] = [];
+    for (const n of this.npcs) {
+      if (Math.hypot(n.x - x, n.z - z) > range) continue;
+      const r = honkAt(n, x, z, ev);
+      if (r === 'drop') this.dropHeld(n);
+    }
+    return ev;
   }
 
   /** Someone slips: what they hold goes flying. */

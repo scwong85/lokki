@@ -69,6 +69,8 @@ import { LevelStats } from './gameplay/levelStats';
 import { LevelComplete } from './ui/levelComplete';
 import { Polaroids } from './ui/polaroids';
 import { Outro, outroCamera, planRun, yawFor } from './gameplay/outro';
+import { distanceGain } from './core/spatial';
+import { TapHold } from './gameplay/tapHold';
 import { activeMarkers } from './gameplay/questMarkers';
 import type { Marker } from './data/quests';
 import { MarkerPool } from './render/markers';
@@ -322,7 +324,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -575,10 +577,12 @@ function onFlightEvents(evs: FlightEvent[]): void {
       gull.openBeak(0.5);
     } else if (e.type === 'exhausted') hud.toast('Out of breath!', 0.6);
     else if (e.type === 'land' && e.water) {
-      hud.toast('Splash!', 0.6);
-      audio.play('splat');
-      ripples.add(gull.state.x, gull.state.z, 1.6);
-      puffs.burst('splash', { x: gull.state.x, y: 0.2, z: gull.state.z });
+      const big = e.impact >= tuning.cannon.minImpact.value;
+      hud.toast(big ? 'CANNONBALL!' : 'Splash!', big ? 1.2 : 0.6);
+      audio.play('splat', big ? 1.4 : 1);
+      ripples.add(gull.state.x, gull.state.z, big ? 3.4 : 1.6);
+      puffs.burst('splash', { x: gull.state.x, y: 0.2, z: gull.state.z }, big ? 2.4 : 1);
+      if (big) cannonball(gull.state.x, gull.state.z, e.impact);
     } else if (e.type === 'land' && e.quality === 'hard') {
       hud.toast('Oof!');
       cam.shake(0.7);
@@ -596,6 +600,24 @@ function onFlightEvents(evs: FlightEvent[]): void {
       audio.play('bonk');
       gull.openBeak(0.8);
     }
+  }
+}
+
+/** A hard splashdown: a wave soaks whoever stands within reach (the bigger the dive, the wider it goes). */
+function cannonball(x: number, z: number, impact: number): void {
+  cam.shake(0.45);
+  gull.wiggleT = 0.6;
+  emotes.show('laugh', 'cannon', () => ({ x: gull.position.x, y: gull.position.y + 0.9, z: gull.position.z }), 1.6);
+  if (isGuest()) return;
+  const c = tuning.cannon;
+  const r = Math.min(c.radiusMax.value, c.radiusBase.value + impact * c.radiusPerSpeed.value);
+  const soaked = npcs?.soakRadius(x, z, r) ?? 0;
+  noise(x, z, 2);
+  notes(quests.onEvent('cannonball'));
+  for (let k = 1; k <= Math.min(soaked, 6); k++) notes(quests.onEvent(`cannon${k}`));
+  if (soaked > 0) {
+    hud.toast(soaked === 1 ? 'Soaked one!' : `Soaked ${soaked}!`, 1.6);
+    polaroids.request('Cannonball!');
   }
 }
 
@@ -758,15 +780,16 @@ function stepSenate(dt: number): void {
     for (const e of ev) {
       if (e.type === 'blocked') {
         hud.toast('The tram stops. The driver climbs out to clear the track...', 2.2);
-        audio.play('chime');
+        audio.play('tramBell');
         notes(quests.onEvent('tramBlocked'));
         if (blocker) npcs?.sendRole('driver', [{ x: blocker.cur.p.x, z: blocker.cur.p.z, name: 'the bottle' }]);
       } else if (e.type === 'cleared') {
         for (const p of free) if (p.type === 'bottle' && tram.trackAhead(p.cur.p.x, p.cur.p.z, tuning.tram.brakeDistance.value + 4)) interaction.props.destroy(p);
         npcs?.sendRole('driver', [{ x: tram.def.stopX - 7, z: tram.def.z + 3, name: 'the tram' }]);
-      } else if (level.tram || Math.hypot(gull.state.x - tram.x, gull.state.z - tram.def.z) < 70) {
-        audio.play('chime'); // an ambient tram only rings when you are near
-        noise(tram.x, tram.def.z, 1.2);
+      } else {
+        const d = Math.hypot(gull.state.x - tram.x, gull.state.z - tram.def.z);
+        if (level.tram || d < 160) audio.play('tramBell', distanceGain(d, 15, 160, 0)); // ding-ding, fading with distance
+        if (level.tram || d < 70) noise(tram.x, tram.def.z, 1.2);
       }
     }
     // riders: a gull standing on the roof is carried along
@@ -1037,6 +1060,31 @@ const passes = new PassTracker();
 const tangle = new Tangle();
 let slowmoT = 0;
 const tauntT: number[] = [];
+const tapHolds: TapHold[] = [];
+/** T: a quick tap is a honk, holding it is a taunt. Returns whether the player is taunting now (held past the tap time). */
+function tauntInput(i: number, down: boolean, dt: number): boolean {
+  const th = (tapHolds[i] ??= new TapHold(() => tuning.honk.tapMax.value, () => tuning.honk.cooldown.value));
+  const r = th.update(down, dt);
+  if (r.tap && players[i]) honk(players[i]);
+  return r.holding;
+}
+/** A loud screech: calm people jump (and drop what they hold if their back is turned), sleepers wake, pigeons fly. */
+function honk(pl: Player): void {
+  const g = pl.gull;
+  const s = g.state;
+  audio.play('honk', pl.remote ? 0.6 : 1);
+  g.openBeak(0.5);
+  g.wiggleT = 0.45;
+  if (!pl.remote) cam.shake(0.2);
+  puffs.burst('feathers', { x: s.x, y: s.y + 0.4, z: s.z }, 0.5);
+  emoteOver(pl, 'alert', false);
+  if (isGuest()) return;
+  noise(s.x, s.z, 2.6);
+  notes(quests.onEvent('honk'));
+  if (npcs) onNpcEvents(npcs.honk(s.x, s.z, tuning.honk.range.value));
+  gang?.honk(s.x, s.z, tuning.honk.range.value);
+  if (sunbathers) for (const sb of sunbathers.list) if (sb.state === 'asleep' && Math.hypot(sb.x - s.x, sb.z - s.z) < tuning.honk.range.value * 0.6) { sb.state = 'awake'; sb.t = tuning.sun.awakeSeconds.value; }
+}
 const npcModeSeen = new Map<number, string>();
 const EMOTE_KEYS: EmoteKind[] = ['wave', 'laugh', 'point', 'facepalm'];
 /** A player by network id, on either side (a guest keeps itself first in its own list). */
@@ -1180,10 +1228,11 @@ function ringBell(): void {
   if (!b) return;
   bellLeft = b.duration;
   bellLastNoise = 0;
+  const g0 = gull.state;
+  audio.play('bell', distanceGain(Math.hypot(g0.x - b.x, g0.z - b.z), 30, 450, 0.4)); // a church bell carries over the whole square
   // a sandwich taken while the bell was quiet must not end the heist: the picnickers bring out fresh ones
   const fresh = npcs?.restockHeld('picnic', (pr) => interaction.restock((x) => x === pr)) ?? 0;
   if (fresh) hud.toast('The picnickers have fresh sandwiches.', 2);
-  audio.play('chime');
   hud.toast('BONG! Everyone looks up at the tower.', 1.6);
   notes(quests.onEvent('bell'));
 }
@@ -1317,6 +1366,23 @@ function endOutro(): void {
   const show = outroCard;
   outroCard = null;
   show?.();
+}
+
+/** The always-on layers: the tram's rumble by distance, the sea when you are near water, and the city murmur by how many people are close. */
+let ambientT = 0;
+let seaNear = 0;
+function ambientSound(dt: number): void {
+  const s = gull.state;
+  ambientT -= dt;
+  if (ambientT <= 0) {
+    ambientT = 0.5;
+    let wet = 0;
+    for (const r of [14, 40]) for (let i = 0; i < 8; i++) if (!isLand(s.x + Math.cos((i * Math.PI) / 4) * r, s.z + Math.sin((i * Math.PI) / 4) * r)) wet++;
+    seaNear = Math.min(1, wet / 8) * (s.y > 60 ? 0.5 : 1);
+  }
+  const tramLoud = tram ? distanceGain(Math.hypot(s.x - tram.x, s.z - tram.def.z), 10, 120, 0) * (tram.mode === 'run' ? 1 : 0.15) : 0;
+  const crowd = npcs ? Math.min(1, npcs.npcs.filter((n) => Math.hypot(n.x - s.x, n.z - s.z) < 25).length / 8) * (s.y > 30 ? 0.3 : 1) : 0;
+  audio.setAmbient({ tram: tramLoud, sea: seaNear, city: crowd });
 }
 
 /** A level is cleared when its main to-dos are done: stars, the saved result, the skill reward, the level-complete card. */
@@ -1558,6 +1624,7 @@ function notes(list: QuestNote[]): void {
     const def = setup.quests.find((d) => d.id === n.quest)!;
     if (n.type === 'started') {
       hud.toast(q.timed ? `${q.title}: ${Math.round(q.timeLeft)} seconds!` : `Quest started: ${q.title}`, 1.6);
+      if (n.quest === 'finale') audio.play('horn');
       if (n.quest === 'finale') announce.show('The ferry horn blows!', 'Chairs in the sandbox, the pastry on the south stall (yellow pillar), and the Warden. The city is on full alert.', 'alert');
       if (n.quest === 'finale') interaction.restock((pr) => pr.type === 'chair' || pr.tag === 'stallBun'); // knocked-over chairs and a taken pastry come back for the finale
       if (def.startHeat && defense) onDefense(defense.ensureHeat(def.startHeat));
@@ -1631,6 +1698,15 @@ function onNpcEvents(evs: NpcEvent[]): void {
       // a change of mood shows over their head and is what chains are built from
       emoteAtNpc(e.npc, e.mood === 'angry' ? 'anger' : e.mood === 'annoyed' ? 'sweat' : e.mood === 'upset' ? 'facepalm' : e.mood === 'delighted' ? 'heart' : null);
       if (e.mood !== 'calm') notes(quests.onEvent(`mood:${e.npc.role}:${e.mood}`));
+    } else if (e.type === 'startled') {
+      emoteAtNpc(e.npc, e.dropped ? 'alert' : 'question');
+      if (e.dropped) {
+        hud.toast('They jump and drop it!', 1.6);
+        notes(quests.onEvent(`honkDrop:${e.npc.role}`));
+        notes(quests.onEvent('honkDrop'));
+        polaroids.request('HONK!');
+      }
+      notes(quests.onEvent(`honked:${e.npc.role}`));
     } else if (e.type === 'slipped') {
       audio.play('splat');
       audio.play('yelp');
@@ -1970,7 +2046,8 @@ startLoop({
       return;
     }
     // co-op: hold T to taunt (people nearby watch you, not your partner); 1-4 are emotes
-    gull.taunting = !blocked && input.isDown('KeyT') && gull.state.stunT <= 0; // (T used to skip the tips: that is Y now)
+    const tIn = tauntInput(0, !blocked && input.isDown('KeyT'), dt);
+    gull.taunting = tIn && gull.state.stunT <= 0; // T: tap = honk, hold = taunt (T used to skip the tips: that is Y now)
     if (!blocked && !skillsPanel.visible) EMOTE_KEYS.forEach((k, i) => {
       if (!input.wasPressed(`Digit${i + 1}`)) return;
       emoteOver(players[0], k);
@@ -2103,7 +2180,7 @@ startLoop({
         } else p.gull.stepRemote(dt); // on a guest this is the host's gull
         continue;
       }
-      p.gull.taunting = p.input.isDown('KeyT');
+      p.gull.taunting = tauntInput(players.indexOf(p), p.input.isDown('KeyT'), dt);
       const look = p.input.consumeMouse();
       p.yaw -= look.dx * tuning.camera.mouseSensitivity.value;
       p.pitch = Math.min(1.2, Math.max(-0.3, p.pitch + look.dy * tuning.camera.mouseSensitivity.value));
@@ -2320,6 +2397,7 @@ startLoop({
       }
     } else cam.update(gull.position, frameDt, { vx: s.vx, vy: s.vy, vz: s.vz, diving: s.mode === 'dive', turnRate: s.turnRate });
     audio.setAir(Math.hypot(s.vx, s.vy, s.vz) / tuning.dive.speed.value, s.mode !== 'ground');
+    ambientSound(frameDt);
     graphics.update(gull.position);
     sky.update(frameDt, cam.camera.position, simTime);
     tickMotion(simTime);

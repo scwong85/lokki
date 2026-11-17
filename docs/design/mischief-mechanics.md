@@ -1,6 +1,6 @@
 # Mischief mechanics: a catalogue to diversify the levels
 
-Status: **study and plan. Two mechanics built (M48: Slip, Pied Piper)**. Round 2 (section 6 onwards) widens the study to NPC and environment interaction and to new gull verbs; nothing from round 2 is built.
+Status: **study and plan. Two mechanics built (M48: Slip, Pied Piper)**. Round 2 (section 6 onwards) widens the study to NPC and environment interaction and to new gull verbs. **Built from round 2 (M49): Honk (V1) and Cannonball (V6).** Tug (V2) is designed below (decisions from the owner), not built yet.
 
 Written from the playtest note: "the levels are too similar, the mechanics are the same. Diversify the play style; study different fun mechanics that make it fun and funny to be mischievous."
 
@@ -166,3 +166,39 @@ Existing stall-chain levels then convert to these toys (section 3 of round 1 wit
 2. Do you want the **tug-of-war** to replace the instant snatch everywhere, or only in levels that ask for it?
 3. Should I build the first slate in the order above, or start with the cheap pair (Honk and Cannonball) and look at them together?
 4. Anything to cut or add (for example: reject Hide, add a "gull sneeze")?
+
+---
+
+# Round 3: decisions and the Tug design
+
+Answers from the owner after round 2: (1) Honk on a tap of T is fine. (2) **Tug works alongside the snatch, not instead of it** (below). (3) Start with the cheap pair: **Honk and Cannonball** (built in M49). (4) **Environment sounds were missing** (tram, church bell): fixed in M49.
+
+## 12. Tug design: three ways to take an item
+
+The snatch and the tug are two verbs with different strengths; each *item* says which ones work on it.
+
+| | **Snatch** (from the air) | **Tug** (from the ground) |
+|---|---|---|
+| How | Dive or swoop at the item, press E at the right moment (today's snatch) | Walk up, hold E on the item in their hand; a struggle starts |
+| Strength | Fast, safe from sprays and from the vendor, but needs a guard gap (they must not be watching) or a distraction | Works on someone who *is* watching, and on things a swoop cannot reach (low, held close to the body) |
+| Risk | Missing the window | **The struggle takes seconds, and anything that notices you can interrupt it**: a vendor's spray soaks you and you lose; the Warden arrives; the owner pulls harder if they are angry |
+| Co-op | One taunts, one snatches | One taunts or honks to shorten the struggle, or both tug and it is won at once |
+
+Each item gets `grab: 'air' | 'ground' | 'both'`:
+- **air only**: things a person holds high or over the head, or fragile things that would tear in a tug (a balloon, a flag, a cap on a tall man, a held-up phone).
+- **ground only**: things held low or tight to the body (a handbag, a tray, a hotdog clutched in two hands, the vendor's cash box), or things guarded by a person who never lets up (the Warden's sandwich).
+- **both**: the common case (ice cream, bun, map).
+
+The struggle itself (no precision, no new button, E hold):
+1. Hold E near their hand: a meter fills while you hold; their pull drains it (stronger when they are angry, weaker when startled or taunted).
+2. **Flap** (Space) gives a burst, so the gull "pulls with its wings".
+3. Win: it is yours. Lose (meter empty or interrupted): they keep it and you get knocked back with a smug emote.
+4. **Interruptions**: a spray cone from a vendor, a honk from another gull (they flinch and let go: a *win* for you), the owner's friend arriving, the dog barking.
+5. Because it needs you on the ground next to a person, **it is the louder, riskier way**: heat rises more than for a clean snatch, and the person remembers.
+
+Effort M. It builds on the snatch code, guard states and the vendor spray cone, all of which exist.
+
+## 13. Built in M49
+- **Honk**: tap T (quick press); calm people within 14 m jump; someone with their back turned drops what they hold; sleepers within about 8 m wake; the pigeons on the statue take off. Holding T is still the taunt (it starts after 0.25 s). Level: **M3. Honk!**
+- **Cannonball**: a hard dive into the water (faster than 9 m/s) makes a wave that soaks everyone within 3 to 8 m (by speed): they drop what they hold and run. Level: **M4. Splash Landing**.
+- **Sound**: a real church bell (low strike with partials that ring on for seconds, heard at any distance but quieter far away), a tram bell (ding-ding, fading with distance up to 160 m), a ferry horn (finale), and always-on layers: the tram's rumble, the sea when you are near water, and the city murmur when people are near. The old bell and tram sounds were a tiny 880 Hz blip at one volume.

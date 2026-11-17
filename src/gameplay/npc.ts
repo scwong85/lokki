@@ -21,7 +21,7 @@ export interface Station {
   goods?: { dz: number; y?: number };
 }
 
-export type NpcMode = 'idle' | 'walk' | 'eat' | 'notice' | 'shield' | 'panic' | 'chase' | 'recover' | 'yuck' | 'cheer' | 'slip';
+export type NpcMode = 'idle' | 'walk' | 'eat' | 'notice' | 'shield' | 'panic' | 'chase' | 'recover' | 'yuck' | 'cheer' | 'slip' | 'startle';
 
 export interface NpcSpawn {
   x: number;
@@ -122,6 +122,7 @@ export interface Npc {
   slipT: number;
   slideX: number;
   slideZ: number;
+  startleT: number;
 }
 
 export interface GullInfo {
@@ -140,7 +141,7 @@ export interface Noise {
   loud: number;
 }
 
-export type NpcEvent = { type: 'reclaimed'; npc: Npc; propType: PropType } | { type: 'cheer'; npc: Npc } | { type: 'arrived'; npc: Npc; goal: string } | { type: 'yuck'; npc: Npc } | { type: 'tookItem'; npc: Npc; propType: PropType } | { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc } | { type: 'selfieClick'; npc: Npc; inFrame: boolean; framed: number } | { type: 'signSplat'; npc: Npc; splats: number } | { type: 'cleanerRobbed'; npc: Npc } | { type: 'snatchUnseen'; npc: Npc } | { type: 'review'; npc: Npc } | { type: 'soaked'; npc: Npc } | { type: 'scared'; npc: Npc; carried: boolean } | { type: 'mood'; npc: Npc; mood: Mood } | { type: 'atStation'; npc: Npc; station: string } | { type: 'bought'; npc: Npc; station: string; propType: PropType } | { type: 'slipped'; npc: Npc };
+export type NpcEvent = { type: 'reclaimed'; npc: Npc; propType: PropType } | { type: 'cheer'; npc: Npc } | { type: 'arrived'; npc: Npc; goal: string } | { type: 'yuck'; npc: Npc } | { type: 'tookItem'; npc: Npc; propType: PropType } | { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc } | { type: 'selfieClick'; npc: Npc; inFrame: boolean; framed: number } | { type: 'signSplat'; npc: Npc; splats: number } | { type: 'cleanerRobbed'; npc: Npc } | { type: 'snatchUnseen'; npc: Npc } | { type: 'review'; npc: Npc } | { type: 'soaked'; npc: Npc } | { type: 'scared'; npc: Npc; carried: boolean } | { type: 'mood'; npc: Npc; mood: Mood } | { type: 'atStation'; npc: Npc; station: string } | { type: 'bought'; npc: Npc; station: string; propType: PropType } | { type: 'slipped'; npc: Npc } | { type: 'startled'; npc: Npc; dropped: boolean };
 
 export interface NpcCtx {
   world: World;
@@ -164,7 +165,7 @@ export function newNpc(id: number, sp: NpcSpawn): Npc {
     walkPhase: 0, moving: false, speed: 0, seesGull: false, suspicion: 0, nextT: 2,
     wants: sp.wants ?? [], holdType: null, goal: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false,
     mood: 'calm', moodT: 0, craves: sp.craves ?? null, station: null, buyT: 0,
-    follows: sp.follows ?? false, followT: 0, followGap: 2.5, following: false, patrol: sp.patrol ?? null, patrolI: 0, slipT: 0, slideX: 0, slideZ: 0,
+    follows: sp.follows ?? false, followT: 0, followGap: 2.5, following: false, patrol: sp.patrol ?? null, patrolI: 0, slipT: 0, slideX: 0, slideZ: 0, startleT: 0,
   };
 }
 
@@ -341,6 +342,23 @@ export function slip(n: Npc, ev: NpcEvent[]): void {
 }
 
 export const SLIP_SECONDS = 2.4;
+
+/**
+ * A honk from a gull at (gx, gz): calm people jump. Someone who has their back to the gull is caught completely off guard: they
+ * drop what they hold. Someone who was looking at it only flinches. Returns null for people a honk does not reach (busy, already
+ * scared, slipping, in a conga line).
+ */
+export function honkAt(n: Npc, gx: number, gz: number, ev: NpcEvent[]): 'drop' | 'flinch' | null {
+  const calm = n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat' || n.mode === 'recover' || n.mode === 'cheer';
+  if (!calm || n.following || n.buyT > 0) return null;
+  const away = Math.abs(angleDiff(bearing(gx - n.x, gz - n.z), n.heading)) > (100 * Math.PI) / 180; // the gull is behind them
+  const drop = away && n.holding !== null;
+  enter(n, 'startle');
+  n.startleT = 0;
+  setMood(n, angrier(n.mood === 'calm' ? 'calm' : n.mood), ev);
+  ev.push({ type: 'startled', npc: n, dropped: drop });
+  return drop ? 'drop' : 'flinch';
+}
 
 export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: number, ctx: NpcCtx): NpcEvent[] {
   const t = tuning.npc;
@@ -562,6 +580,14 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
       // spitting out salmiakki: flail in place, then sulk
       n.handAngle = n.heading - Math.PI / 2;
       if (n.t >= 3) {
+        enter(n, 'recover');
+        n.noticeCd = 2;
+      }
+      break;
+    case 'startle':
+      // a jump and flailing arms, then a moment to recover
+      n.handAngle = n.heading - Math.PI / 2;
+      if (n.t >= tuning.honk.startleTime.value) {
         enter(n, 'recover');
         n.noticeCd = 2;
       }

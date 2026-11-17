@@ -99,3 +99,82 @@ export const PIED_PIPER: LevelDef = {
   defense: false,
   parTime: 300,
 };
+
+/** People gazing at the harbour with their backs to the quay (north is -z, so facing the sea means heading PI). */
+const sea = (x: number, z: number, color: number, tag: string) => ({ x, z, heading: Math.PI, ice: true, holdTag: tag, stationary: true, color });
+
+/**
+ * M3. Honk!: the new verb. Tap T for a loud honk: people who have their backs to you jump out of their skin and drop what they
+ * hold. Approach from behind, honk, take what falls.
+ */
+export const HONK: LevelDef = {
+  id: 'honk',
+  name: 'M3. Honk!',
+  start: { x: 0, z: -22 }, // behind the tourists, who face the sea
+  blurb: 'Tap T. Watch grown adults drop their ice creams.',
+  district: 'kauppatori',
+  series: 'Mischief (new)',
+  requires: 'snack-attack',
+  quests: [],
+  extraQuests: [
+    {
+      id: 'honkchain',
+      title: 'Honk!',
+      teaser: 'Give four tourists the fright of their lives.',
+      timed: false,
+      chain: true,
+      objectives: [
+        {
+          id: 'honk',
+          text: 'Honk at two people who have their backs to you',
+          kind: 'event',
+          event: 'honkDrop',
+          count: 2,
+          hint: 'The tourists on the quay are looking at the harbour. Land behind them, a few metres away, and TAP T (a quick press; holding it is a taunt). Someone looking at you only flinches.',
+          markers: [{ x: 0, z: -10, r: 9, label: 'Tourists' }],
+        },
+        { id: 'take', text: 'Take what they dropped', kind: 'event', event: 'grab:honkCone', after: 'honk', hint: 'It lies where they stood. Grab it before they calm down.' },
+        { id: 'escape', text: 'Get away with it', kind: 'escape', after: 'take', hint: 'Keep it and stay far from everyone until the bar fills.' },
+      ],
+    },
+  ],
+  triggers: [],
+  tourists: [],
+  extraTourists: [sea(-9, -9, 0xf7a1c4, 'honkCone'), sea(-3, -9.5, 0x9ec9f0, 'honkCone'), sea(3, -9, 0xffd36e, 'honkCone'), sea(9, -9.5, 0x9fd18f, 'honkCone'), { x: -24, z: -20, heading: 0.6, ice: true, color: 0xc7b5e0 }],
+  defense: false,
+  parTime: 180,
+};
+
+/**
+ * M4. Splash Landing: the cheap new verb. A hard dive into the harbour makes a wave that soaks everyone on the quay edge: they
+ * drop their ice creams and run.
+ */
+export const SPLASH_LANDING: LevelDef = {
+  id: 'splash-landing',
+  name: 'M4. Splash Landing',
+  blurb: 'Dive into the harbour. Soak everyone on the pier.',
+  district: 'kauppatori',
+  series: 'Mischief (new)',
+  requires: 'snack-attack',
+  quests: [],
+  extraQuests: [
+    {
+      id: 'cannon',
+      title: 'Splash Landing',
+      teaser: 'Make a wave and soak the pier.',
+      timed: false,
+      chain: true,
+      objectives: [
+        { id: 'splash', text: 'Dive into the harbour right beside the people on the pier', kind: 'event', event: 'cannon1', hint: 'Fly high over the water in front of them, then DIVE (Shift) straight down into the sea. A hard dive makes a big wave.', markers: [{ x: 0, z: -3.5, r: 6, label: 'Dive here' }] },
+        { id: 'three', text: 'Soak three people with one splash', kind: 'event', event: 'cannon3', after: 'splash', hint: 'The higher you start and the faster you dive, the wider the wave. Aim for the middle of the group.' },
+        { id: 'take', text: 'Take a dropped ice cream', kind: 'event', event: 'grab:splashCone', after: 'three', hint: 'They dropped everything on the quay.' },
+        { id: 'escape', text: 'Get away with it', kind: 'escape', after: 'take', hint: 'Keep it and stay far from everyone until the bar fills.' },
+      ],
+    },
+  ],
+  triggers: [],
+  tourists: [],
+  extraTourists: [-6, -3, 0, 3, 6].map((x, i) => sea(x, -6.8, [0xf7a1c4, 0x9ec9f0, 0xffd36e, 0x9fd18f, 0xc7b5e0][i], 'splashCone')),
+  defense: false,
+  parTime: 200,
+};

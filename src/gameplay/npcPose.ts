@@ -52,6 +52,8 @@ function basePose(i: NpcPoseInput): NpcPose {
       return { legSwing: 0, armSwing: 0, armRaise: 1, lean: 0, bob: Math.abs(Math.sin(i.time * 9)) * 0.14, indicator: 'none' };
     case 'yuck':
       return { legSwing: 0, armSwing: 0, armRaise: 0.7 + Math.sin(i.time * 18) * 0.3, lean: -0.25 + Math.sin(i.time * 12) * 0.1, bob: Math.abs(Math.sin(i.time * 10)) * 0.03, indicator: 'alarm' };
+    case 'startle':
+      return { legSwing: 0, armSwing: 0, armRaise: 1, lean: -0.3, bob: Math.abs(Math.sin(i.time * 16)) * 0.12, indicator: 'alarm' };
     case 'slip':
       return { legSwing: 0, armSwing: 0, armRaise: 1, lean: -1.35, bob: 0, indicator: 'alarm' };
     case 'recover':

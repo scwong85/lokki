@@ -35,6 +35,14 @@ export class PigeonGang {
    * Advance. `gull`: the gull's position (or null when it is disguised as a pigeon: they ignore it).
    * Returns events and, when chasing, the horizontal shove to apply to the gull.
    */
+  /** A honk: pigeons near the gull take off for a while. */
+  honk(x: number, z: number, range: number): void {
+    if (this.mode === 'scattered') return;
+    if (Math.hypot(x - this.def.x, z - this.def.z) > range) return;
+    this.mode = 'scattered';
+    this.awayT = tuning.pigeons.scatterSeconds.value * 0.5;
+  }
+
   update(dt: number, gull: { x: number; z: number } | null, dropped: Dropped[]): { events: GangEvent[]; shove: { x: number; z: number } | null } {
     const events: GangEvent[] = [];
     const t = tuning.pigeons;
