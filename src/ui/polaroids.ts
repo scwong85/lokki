@@ -37,6 +37,9 @@ export class Polaroids {
   private cooldown = 0;
   private popup: HTMLImageElement;
 
+  /** Off for software-rendered test browsers (the first capture stalls them for seconds); `?polaroid` turns it back on. */
+  enabled = !navigator.webdriver || new URLSearchParams(location.search).has('polaroid');
+
   constructor(root: HTMLElement, private readonly max = 12) {
     this.popup = document.createElement('img');
     this.popup.id = 'polaroid-pop';
@@ -48,7 +51,7 @@ export class Polaroids {
 
   /** Ask for a photo of this moment (ignored if one was taken a second ago). */
   request(caption: string): void {
-    if (this.cooldown > 0) return;
+    if (!this.enabled || this.cooldown > 0) return;
     this.pending = fitCaption(caption);
   }
 

@@ -410,6 +410,15 @@ export const tuning = {
     shadowArea: p(70, 20, 200, 5), // half-size in metres of the shadow box around the player
     ao: p(0.32, 0, 0.8, 0.02), // baked darkening at the foot of walls
   },
+  outro: {
+    enabled: p(1, 0, 1, 1), // the victory run after a level (single player)
+    landSeconds: p(1.0, 0.3, 3, 0.1), // the gull comes down in about this long
+    runSeconds: p(5, 1, 12, 0.5), // how long it runs at the camera, laughing
+    holdSeconds: p(0.6, 0, 3, 0.1), // a beat at the end before the level card
+    camDistance: p(4.2, 2, 9, 0.1), // camera distance in front of the gull
+    camHeight: p(1.0, 0.3, 4, 0.1), // camera height above the ground
+    camSway: p(1.2, 0, 4, 0.1), // how far the camera drifts side to side
+  },
   post: {
     enabled: p(1, 0, 1, 1), // the post look at all (high preset only)
     outline: p(0.55, 0, 1, 0.05), // strength of the ink outline

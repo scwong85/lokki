@@ -22,6 +22,16 @@ export class Gull {
   /** Extra vertical wobble for a moment (taunt, emote, a finished to-do). */
   wiggleT = 0;
 
+  /** Put the gull somewhere (a cutscene cut): no interpolation smear. */
+  place(x: number, y: number, z: number): void {
+    this.state.x = x;
+    this.state.y = y;
+    this.state.z = z;
+    this.prev.x = x;
+    this.prev.y = y;
+    this.prev.z = z;
+  }
+
   /** Slide the whole gull sideways (standing on a moving tram roof). */
   carry(dx: number, dz: number): void {
     this.state.x += dx;

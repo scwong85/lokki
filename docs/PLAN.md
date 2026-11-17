@@ -217,6 +217,7 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M39 Graphics G5 part 1: actor art
 - [x] M40 Graphics G5 part 2: gull model v2 (bigger blinking eyes, webbed feet; built on `m40-gull-v2`)
 - [ ] M41 Graphics G6: polaroids, CLEARED stamp, grouped level list (built on `m41-ui-polish`, awaiting playtest)
+- [ ] M42 The victory run: the gull lands and runs laughing at the camera after each level; chain-level plan (built on `m42-outro`, awaiting playtest)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -406,7 +407,11 @@ Bigger blinking eyes, rounder head, three-toed webbed feet. Details: `docs/miles
 ### M41 — Graphics G6: polaroids and level list (S)
 Polaroid photos of finished to-dos, a CLEARED stamp with photos on the level card, a district-grouped level list. Details: `docs/milestones/M41.md`.
 
-### After M41 (backlog)
+### M42 — The victory run (S)
+A camera finale after every cleared level: the gull lands and runs at the camera, laughing. Plus the chain-level content plan (`docs/design/chain-levels.md`). Details: `docs/milestones/M42.md`.
+
+### After M42 (backlog)
+ Chain levels (C1 to C7 in `docs/design/chain-levels.md`): mood, goals and lure for people, a chain runner, then rebuilt levels. Waiting for a go from the owner.
  World enrichment rest of W2, then W3 to W6 (`docs/design/world-enrichment.md`): streets and squares, things that move, a busier city, landmark kit.
  Plans: `docs/design/fun-todos.md` (F2–F6), `docs/design/graphics-refresh.md` (G2–G6).
  Esplanadi E4–E10 (`docs/design/levels-esplanadi.md`), Katajanokka (`docs/design/levels-katajanokka.md`), each level designed with a co-op variant; the shared systems they need (moving platforms, NPC schedules, Kalle the rival gull, the drone, seasons); local split-screen co-op (optional); optional WebGPU renderer.
