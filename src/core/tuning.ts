@@ -410,6 +410,15 @@ export const tuning = {
     shadowArea: p(70, 20, 200, 5), // half-size in metres of the shadow box around the player
     ao: p(0.32, 0, 0.8, 0.02), // baked darkening at the foot of walls
   },
+  post: {
+    enabled: p(1, 0, 1, 1), // the post look at all (high preset only)
+    outline: p(0.55, 0, 1, 0.05), // strength of the ink outline
+    width: p(1.2, 0.5, 3, 0.1), // outline thickness in pixels
+    threshold: p(0.06, 0.01, 0.3, 0.01), // how big a depth jump draws a line (relative to distance)
+    vignette: p(0.22, 0, 0.8, 0.02), // dark corners
+    saturation: p(1.08, 0.5, 1.5, 0.02), // colour boost
+    tilt: p(0, 0, 3, 0.1), // tilt-shift blur at the top and bottom of the screen (0 = off)
+  },
 };
 
 export type Tuning = typeof tuning;

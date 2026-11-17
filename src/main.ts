@@ -104,11 +104,14 @@ import { wantsTouch } from './core/touchMath';
 import { HUD_NAMES, hudFlags, nextHudMode, type HudMode } from './ui/hudMode';
 import { SkillsPanel, skinProgress } from './ui/skillsPanel';
 import { RunHud } from './ui/runHud';
+import { Post, postActive } from './render/post';
 
 const app = document.getElementById('app')!;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
+const post = new Post(renderer);
+post.resize();
 app.appendChild(renderer.domElement);
 
 const RAPIER = (await import('@dimforge/rapier3d-compat')).default;
@@ -329,6 +332,7 @@ if (touch && firstVisit) options.graphics = 'low'; // phones start on the fast p
 applyOptions(options);
 touchControls?.setHand(options.touchHand);
 graphics.apply(options.graphics);
+post.resize();
 let hudF = applyHud(options.hud);
 const levelSelect = new LevelSelect(document.body, (id) => goToLevel(id));
 // ---- online co-op: a host runs the game, a guest flies its own gull and sees what the host sends ----
@@ -474,7 +478,10 @@ pad.onMenu = (a) => menuNav.handle(a);
 addEventListener('pointerdown', () => menuNav.clear());
 const optionsPanel = new OptionsPanel(document.body, options, (o) => {
   applyOptions(o);
-  if (o.graphics !== graphics.level) graphics.apply(o.graphics);
+  if (o.graphics !== graphics.level) {
+    graphics.apply(o.graphics);
+    post.resize();
+  }
   hudF = applyHud(o.hud);
   touchControls?.setHand(o.touchHand);
   optStore.save(o);
@@ -546,6 +553,7 @@ events.on('tuningChanged', () => {
 
 addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
+  post.resize();
   cam.resize(innerWidth / innerHeight);
 });
 
@@ -2182,7 +2190,11 @@ startLoop({
       rippleT = Math.hypot(s.vx, s.vz) > 0.4 ? 0.45 : 1.6; // paddling makes more rings than floating
       ripples.add(s.x, s.z, 0.8);
     }
-    renderer.render(scene, cam.camera);
+    if (postActive(graphics.level, options.inkLook)) post.render(scene, cam.camera);
+    else {
+      post.release();
+      renderer.render(scene, cam.camera);
+    }
     debug.frame(frameDt, `${renderer.info.render.calls} calls · ${(renderer.info.render.triangles / 1000).toFixed(0)}k tris`);
     const tip = tutorial.current;
     tipEl.hidden = !(tip || tutorial.outroShowing) || menuOpen();
