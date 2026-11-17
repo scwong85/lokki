@@ -18,7 +18,6 @@ export const MAP_AND_CONE: LevelDef = {
   blurb: 'Make a tourist buy you an ice cream. Anger, comfort food, the lot.',
   district: 'kauppatori',
   series: 'Chain levels (new)',
-  requires: 'snack-attack',
   quests: [],
   extraQuests: [
     {

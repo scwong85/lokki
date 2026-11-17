@@ -15,7 +15,6 @@ export const WET_FLOOR: LevelDef = {
   blurb: 'Set a trap with your bottom. Watch a very serious man find out.',
   district: 'kauppatori',
   series: 'Mischief (new)',
-  requires: 'snack-attack',
   quests: [],
   extraQuests: [
     {
@@ -61,7 +60,6 @@ export const PIED_PIPER: LevelDef = {
   blurb: 'Hold T and the whole tour group follows. Take them somewhere silly.',
   district: 'kauppatori',
   series: 'Mischief (new)',
-  requires: 'snack-attack',
   quests: [],
   extraQuests: [
     {
@@ -114,7 +112,6 @@ export const HONK: LevelDef = {
   blurb: 'Tap T. Watch grown adults drop their ice creams.',
   district: 'kauppatori',
   series: 'Mischief (new)',
-  requires: 'snack-attack',
   quests: [],
   extraQuests: [
     {
@@ -155,7 +152,6 @@ export const SPLASH_LANDING: LevelDef = {
   blurb: 'Dive into the harbour. Soak everyone on the pier.',
   district: 'kauppatori',
   series: 'Mischief (new)',
-  requires: 'snack-attack',
   quests: [],
   extraQuests: [
     {
