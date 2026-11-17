@@ -142,6 +142,20 @@
       "z": -34,
       "count": 14,
       "dx": -8
+    },
+    {
+      "id": "gov-palace",
+      "type": "restyle",
+      "style": "empire",
+      "x": -15,
+      "z": -287
+    },
+    {
+      "id": "university",
+      "type": "restyle",
+      "style": "empire",
+      "x": -272,
+      "z": -275
     }
   ]
 }

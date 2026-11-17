@@ -84,6 +84,10 @@ import { Snow } from './render/snow';
 import { KalleView } from './world/kalle';
 import { Sky } from './render/sky';
 import { tickMotion } from './render/motion';
+import { districtOf } from './world/districts';
+import { Birds } from './world/birds';
+import { TRAM as SENATE_TRAM } from './data/levels/senate2';
+import { STATUE, counter } from './data/places';
 import { SKIES, skyById } from './data/skies';
 import { LockMarker } from './render/lockMarker';
 import { nextLock, rankCandidates, resolveLock, type LockCandidate } from './gameplay/lock';
@@ -158,6 +162,9 @@ if (!greybox) {
 }
 // pedestrians and cyclists on the streets (cosmetic; fewer on the low graphics preset)
 const lowGfx = new OptionsStore().load().graphics === 'low' || new URLSearchParams(location.search).has('touch');
+// small white birds circling over the harbour, the parks and the squares (fewer on the low preset)
+const birds = greybox ? null : new Birds(lowGfx ? 8 : 16);
+if (birds) scene.add(birds.mesh);
 const streetLife = greybox ? null : new StreetLife(scene, walkable, keepClearSpots, Math.round(tuning.street.walkers.value * (lowGfx ? 0.5 : 1)), Math.round(tuning.street.cyclists.value * (lowGfx ? 0.5 : 1)));
 const ripples = new Ripples();
 scene.add(ripples.group);
@@ -681,9 +688,11 @@ function setupSenate(): void {
   onRoofBefore = false;
   world.movers.length = 0;
   if (greybox) return;
-  if (level.tram) {
-    tram = new Tram(level.tram);
-    tramView = new TramView(tram, level.tram);
+  // the tram runs on its line in every level (the tram levels change what it does): it is part of the city
+  const tramDef = level.tram ?? SENATE_TRAM;
+  {
+    tram = new Tram(tramDef);
+    tramView = new TramView(tram, tramDef);
     scene.add(tramView.group);
     world.movers.push(roofBox);
     placeRoof();
@@ -730,7 +739,7 @@ function stepSenate(dt: number): void {
   }
   const free = interaction.props.props.filter((p) => !p.broken && !p.carried && p.heldBy === null);
   if (tram) {
-    const blocker = free.find((p) => p.type === 'bottle' && p.cur.p.y < 1.6 && tram!.trackAhead(p.cur.p.x, p.cur.p.z, tuning.tram.brakeDistance.value));
+    const blocker = !level.tram ? undefined : free.find((p) => p.type === 'bottle' && p.cur.p.y < 1.6 && tram!.trackAhead(p.cur.p.x, p.cur.p.z, tuning.tram.brakeDistance.value));
     const ev = tram.update(dt, !!blocker);
     placeRoof();
     for (const e of ev) {
@@ -742,8 +751,8 @@ function stepSenate(dt: number): void {
       } else if (e.type === 'cleared') {
         for (const p of free) if (p.type === 'bottle' && tram.trackAhead(p.cur.p.x, p.cur.p.z, tuning.tram.brakeDistance.value + 4)) interaction.props.destroy(p);
         npcs?.sendRole('driver', [{ x: tram.def.stopX - 7, z: tram.def.z + 3, name: 'the tram' }]);
-      } else {
-        audio.play('chime');
+      } else if (level.tram || Math.hypot(gull.state.x - tram.x, gull.state.z - tram.def.z) < 70) {
+        audio.play('chime'); // an ambient tram only rings when you are near
         noise(tram.x, tram.def.z, 1.2);
       }
     }
@@ -792,6 +801,35 @@ function stepSenate(dt: number): void {
       }
     }
     gangView?.update(dt);
+  }
+}
+
+/** Ambient puffs near the player: steam above the market stalls and blossom drifting down in the Esplanadi park. */
+let steamT = 0;
+let petalT = 0;
+let fountainT = 0;
+function ambientStep(dt: number): void {
+  if (greybox || !(tuning.juice.puffs.value > 0)) return;
+  const g = gull.state;
+  steamT += dt;
+  if (steamT > 0.55 && tuning.motion.steam.value > 0) {
+    steamT = 0;
+    for (const [c, r] of [[1, 1], [3, 1], [5, 1], [7, 1]] as const) {
+      const s = counter(c, r);
+      if (Math.hypot(g.x - s.x, g.z - s.z) < 70) puffs.burst('steam', { x: s.x + (Math.random() - 0.5) * 1.5, y: 1.5, z: s.z + (Math.random() - 0.5) * 1.5 }, 0.4);
+    }
+  }
+  // the Havis Amanda fountain sprays round the basin when you are near
+  fountainT += dt;
+  if (fountainT > 0.18 && Math.hypot(g.x - STATUE.x, g.z - STATUE.z) < 80) {
+    fountainT = 0;
+    const a = Math.random() * Math.PI * 2;
+    puffs.burst('splash', { x: STATUE.x + Math.cos(a) * 3.0, y: 0.7, z: STATUE.z + Math.sin(a) * 3.0 }, 0.3);
+  }
+  petalT += dt;
+  if (petalT > 0.3 && tuning.motion.petals.value > 0 && districtOf(g.x, g.z) === 'esplanadi') {
+    petalT = 0;
+    puffs.burst('petals', { x: g.x + (Math.random() - 0.5) * 18, y: Math.max(g.y, 3) + 4 + Math.random() * 3, z: g.z + (Math.random() - 0.5) * 18 }, 0.25);
   }
 }
 
@@ -2053,6 +2091,7 @@ startLoop({
     if (!isGuest()) stepKalleGame(dt);
     if (!isGuest()) stepSenate(dt);
     if (!isGuest()) stepEsplanadi(dt);
+    ambientStep(dt);
     if (!isGuest()) coopStep(dt);
     if (havoc && !havoc.done) {
       if (!havoc.started && (Math.hypot(gull.state.vx, gull.state.vz) > 1.5 || simTime > tuning.havoc.startDelay.value + 10)) havoc.start();
@@ -2131,6 +2170,7 @@ startLoop({
     graphics.update(gull.position);
     sky.update(frameDt, cam.camera.position, simTime);
     tickMotion(simTime);
+    birds?.update(simTime);
     water?.update(simTime);
     ripples.update(frameDt);
     if (havoc) havocHud.update(havoc);

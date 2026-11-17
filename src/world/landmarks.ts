@@ -91,6 +91,12 @@ function cathedral(l: LandmarkSrc): LandmarkOut {
     prism(ngon(x, z, 1.1), H + 15.5, H + 19, GOLD, GOLD, 'perch'),
   ];
   for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) prisms.push(prism(ngon(x + sx * 14, z + sz * 14, 3.6), H, H + 6, GREEN, GREEN, 'perch'));
+  // the portico on the south face (above the steps): six columns and a stepped pediment, so the front reads as a temple
+  const faceZ = z + 38; // the south wall of the cathedral body (the steps land against it)
+  const landing = 6.8; // the top of the steps
+  for (let k = 0; k < 6; k++) prisms.push(prism(ngon(x - 15.5 + k * 6.2, faceZ + 1.0, 0.78, 10), landing, H, WHITE, WHITE));
+  const steps: [number, number, number][] = [[38, H, H + 1.3], [30, H + 1.3, H + 2.6], [22, H + 2.6, H + 3.9], [14, H + 3.9, H + 5.2], [6, H + 5.2, H + 6.4]];
+  for (const [w, y0, y1] of steps) prisms.push(prism(rect(x, faceZ + 1.0, w, 3), y0, y1, WHITE, 0xf4efe6, y1 === H + 6.4 ? 'perch' : 'prop'));
   return { prisms, targets: [target(x, H + 19.8, z)] };
 }
 

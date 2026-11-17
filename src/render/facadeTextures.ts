@@ -46,7 +46,8 @@ export const shopTexture = (): THREE.Texture =>
   });
 
 /** Rows in the facade atlas: the shopfront row on top, then one row per window style. */
-export const ATLAS_ROWS = 7;
+export const GROUND_ROW_COUNT = 4; // shop, door, gateway, café
+export const ATLAS_ROWS = GROUND_ROW_COUNT + 6;
 
 /**
  * The facade atlas: seven 64x64 cells stacked top to bottom. Cell 0 is the ground-floor shopfront; cells 1 to 6 are the
@@ -63,9 +64,27 @@ export const windowAtlas = (): THREE.Texture => {
   const g = c.getContext('2d')!;
   g.fillStyle = '#ffffff';
   g.fillRect(0, 0, c.width, c.height);
-  const OFF = 64; // the shop row is first, so style cells start one row down
+  const OFF = 64 * GROUND_ROW_COUNT; // the ground-floor rows come first, so the window styles start below them
   const R = (col: string, x: number, y: number, w: number, h: number, cell: number) => rect(g, col, x, cell * 64 + y + OFF, w, h);
-  // shopfront: sign band, framed glass over a stone plinth
+  // door bay (row 1): a framed wooden door with a fanlight, over a stone plinth
+  rect(g, '#efe9df', 14, 76, 36, 52 - 12 + 2);
+  rect(g, '#8a6a52', 18, 84, 28, 38);
+  rect(g, '#6f5441', 31, 84, 2, 38);
+  rect(g, '#a8c4d6', 20, 78, 24, 5);
+  rect(g, '#bdb5aa', 0, 120, 64, 8);
+  // gateway (row 2): a tall arched opening, dark inside
+  rect(g, '#efe9df', 10, 136, 44, 52);
+  g.fillStyle = '#efe9df'; g.beginPath(); g.arc(32, 144, 22, Math.PI, 0); g.fill();
+  rect(g, '#4a4a58', 16, 144, 32, 42);
+  g.fillStyle = '#4a4a58'; g.beginPath(); g.arc(32, 144, 16, Math.PI, 0); g.fill();
+  rect(g, '#bdb5aa', 0, 184, 64, 8);
+  // café front (row 3): a striped blind over a big window
+  rect(g, '#efe9df', 5, 206, 54, 40);
+  rect(g, '#5c6e86', 8, 224, 48, 28);
+  rect(g, '#8ea3ba', 8, 224, 48, 7);
+  for (let k = 0; k < 8; k++) rect(g, k % 2 ? '#fdfaf2' : '#e8786a', 6 + k * 6.5, 200, 6.5, 22);
+  rect(g, '#bdb5aa', 0, 248, 64, 8);
+  // shopfront (row 0): sign band, framed glass over a stone plinth
   rect(g, '#e6dfd3', 4, 5, 56, 6);
   rect(g, '#efe9df', 5, 14, 54, 40);
   rect(g, '#5c6e86', 8, 17, 48, 35);
@@ -111,11 +130,13 @@ export const windowGlowAtlas = (): THREE.Texture => {
   const g = c.getContext('2d')!;
   g.fillStyle = '#000000';
   g.fillRect(0, 0, c.width, c.height);
-  const OFF = 64;
+  const OFF = 64 * GROUND_ROW_COUNT;
   const W = '#ffcf85', W2 = '#ffe2b0';
   const R = (col: string, x: number, y: number, w: number, h: number, cell: number) => rect(g, col, x, cell * 64 + y + OFF, w, h);
   rect(g, W, 8, 17, 48, 35); // the shop window
   rect(g, W2, 8, 17, 48, 9);
+  rect(g, W, 20, 78, 24, 5); // the fanlight over a door
+  rect(g, W, 8, 224, 48, 28); // the café window
   R(W, 24, 15, 16, 27, 0);
   R(W, 26, 16, 12, 32, 1);
   R(W, 8, 20, 48, 20, 2);

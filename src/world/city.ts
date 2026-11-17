@@ -1,7 +1,8 @@
 import { buildBackdrop, planBackdrop } from './backdrop';
-import { paletteAt } from './districts';
+import { districtOf, paletteAt } from './districts';
 import { planMansard } from './roofs';
 import { TRAM_LINE, planRoads, planTrack } from './roads';
+import { cloudShadowPatch, flagMesh } from '../render/motion';
 import * as THREE from 'three';
 import earcut from 'earcut';
 import { World, pointInRings, type Box, type Prism } from './collision';
@@ -10,8 +11,8 @@ import { createTargetMeshes } from './targetMeshes';
 import type { Target } from '../gameplay/targets';
 import type { PropSpawn } from '../gameplay/props';
 import cityJson from '../../data/generated/kauppatori.json';
-import { bays, hash, pitchedRoof, rectInfo, roofRise, storeys, wantsPitched, windowPlan, type V3 } from './facade';
-import { ATLAS_ROWS, windowAtlas, windowGlow, windowGlowAtlas } from '../render/facadeTextures';
+import { GROUND_ROWS, awningColour, balconies, groundRuns, turretCorner, bays, hash, pitchedRoof, rectInfo, roofRise, storeys, wantsPitched, windowPlan, type V3 } from './facade';
+import { ATLAS_ROWS, GROUND_ROW_COUNT, windowAtlas, windowGlow, windowGlowAtlas } from '../render/facadeTextures';
 import { tuning } from '../core/tuning';
 import { planDressing } from './dressingPlan';
 import { buildDressing } from './dressing';
@@ -164,14 +165,15 @@ function flatLayer(polys: { rings: number[][]; color?: number; dy?: number }[], 
     }
   }
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true, map: map ?? null, polygonOffset: true, polygonOffsetFactor: -layer, polygonOffsetUnits: -layer });
+  mat.onBeforeCompile = cloudShadowPatch; // slow cloud shadows drift over the ground
   const m = buf.mesh(mat);
   m.receiveShadow = true;
   return m;
 }
 
 /** Landmark styles applied to registry buildings (set by `restyle` entries in data/landmarks.json). */
-const STYLE_WALLS: Record<string, number> = { uspenski: 0xc4705a };
-const STYLE_ROOFS: Record<string, number> = { uspenski: 0x8fc4ad };
+const STYLE_WALLS: Record<string, number> = { uspenski: 0xc4705a, empire: 0xf6e7b0 };
+const STYLE_ROOFS: Record<string, number> = { uspenski: 0x8fc4ad, empire: 0x8fc4ad };
 
 /** Wall quad with window/shop UVs (u = bays across, v = floors up) and darker feet (baked ambient occlusion). */
 function wallQuad(buf: Buf, x1: number, z1: number, x2: number, z2: number, y0: number, y1: number, out: boolean, color: THREE.Color, foot: THREE.Color, u: number, v: number, v0 = 0): void {
@@ -186,13 +188,26 @@ function wallQuad(buf: Buf, x1: number, z1: number, x2: number, z2: number, y0: 
   }
 }
 
+/** A run of ground-floor wall (draw only) with its own atlas row: `u` bays across, rows `v0`..`v1`, darker feet. */
+function wallRun(buf: Buf, x1: number, z1: number, x2: number, z2: number, y0: number, y1: number, out: boolean, color: THREE.Color, foot: THREE.Color, u: number, v0: number, v1: number): void {
+  const A = [x1, y0, z1], B = [x2, y0, z2], C = [x2, y1, z2], D = [x1, y1, z1];
+  const uA: [number, number] = [0, v0], uB: [number, number] = [u, v0], uC: [number, number] = [u, v1], uD: [number, number] = [0, v1];
+  if (out) {
+    buf.triR(A, C, B, foot, uA, uC, uB, color, foot);
+    buf.triR(A, D, C, foot, uA, uD, uC, color, color);
+  } else {
+    buf.triR(A, B, C, foot, uA, uB, uC, foot, color);
+    buf.triR(A, C, D, foot, uA, uC, uD, color, color);
+  }
+}
+
 /**
  * One floor of a wall in a window style from the atlas (rows stacked top to bottom): `u` bays across, `style` picks the row.
  * Only drawn; `wallPhysics` adds the solid wall for the whole building side.
  */
 function wallBand(buf: Buf, x1: number, z1: number, x2: number, z2: number, y0: number, y1: number, out: boolean, color: THREE.Color, u: number, style: number): void {
   const A = [x1, y0, z1], B = [x2, y0, z2], C = [x2, y1, z2], D = [x1, y1, z1];
-  const row = style + 1; // the shop row is first in the atlas
+  const row = style + GROUND_ROW_COUNT; // the ground-floor rows come first in the atlas
   const v0 = 1 - (row + 1) / ATLAS_ROWS, v1 = 1 - row / ATLAS_ROWS;
   const uA: [number, number] = [0, v0], uB: [number, number] = [u, v0], uC: [number, number] = [u, v1], uD: [number, number] = [0, v1];
   if (out) {
@@ -245,6 +260,33 @@ function onion(buf: Buf, cx: number, cz: number, base: number, k: number): Prism
 }
 
 /** One registry building: walls with windows and shopfronts, a cornice, a pitched or flat roof, roof clutter. Returns its collision prisms. */
+/** A triangle that faces the way `dir` points (decorations are drawn from loose triangles, so each is turned the right way). */
+function faceTri(buf: Buf, a: number[], b: number[], c: number[], color: THREE.Color, dir: [number, number, number]): void {
+  const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+  const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+  if (nx * dir[0] + ny * dir[1] + nz * dir[2] >= 0) buf.triR(a, b, c, color, PLAIN, PLAIN, PLAIN);
+  else buf.triR(a, c, b, color, PLAIN, PLAIN, PLAIN);
+}
+
+/** A little box (render only) centred at (cx, cz), turned so its `d` side points along (nx, nz): balconies, rails. */
+function decoBox(buf: Buf, cx: number, cz: number, nx: number, nz: number, w: number, d: number, y0: number, y1: number, color: THREE.Color): void {
+  const tx = -nz, tz = nx; // along the wall
+  const pt = (a: number, b: number, y: number): number[] => [cx + tx * a + nx * b, y, cz + tz * a + nz * b];
+  const hw = w / 2, hd = d / 2;
+  const face = (p: number[][], dir: [number, number, number]) => {
+    faceTri(buf, p[0], p[1], p[2], color, dir);
+    faceTri(buf, p[0], p[2], p[3], color, dir);
+  };
+  face([pt(-hw, -hd, y1), pt(hw, -hd, y1), pt(hw, hd, y1), pt(-hw, hd, y1)], [0, 1, 0]);
+  face([pt(-hw, hd, y0), pt(hw, hd, y0), pt(hw, hd, y1), pt(-hw, hd, y1)], [nx, 0, nz]);
+  face([pt(-hw, -hd, y0), pt(hw, -hd, y0), pt(hw, -hd, y1), pt(-hw, -hd, y1)], [-nx, 0, -nz]);
+  face([pt(-hw, -hd, y0), pt(-hw, hd, y0), pt(-hw, hd, y1), pt(-hw, -hd, y1)], [-tx, 0, -tz]);
+  face([pt(hw, -hd, y0), pt(hw, hd, y0), pt(hw, hd, y1), pt(hw, -hd, y1)], [tx, 0, tz]);
+  face([pt(-hw, -hd, y0), pt(hw, -hd, y0), pt(hw, hd, y0), pt(-hw, hd, y0)], [0, -1, 0]);
+}
+
+const AWNINGS = [0xe8786a, 0x6aa0d9, 0x7bbf8a, 0xf2c14e, 0xf4efe6];
+
 function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): PrismDef[] {
   const style = b.style;
   // where it stands decides its colours (districts), and whether it gets a mansard roof
@@ -253,6 +295,7 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
     mx += b.rings[0][i];
     mz += b.rings[0][i + 1];
   }
+  const district = districtOf(mx / (b.rings[0].length / 2), mz / (b.rings[0].length / 2));
   const pal = paletteAt(mx / (b.rings[0].length / 2), mz / (b.rings[0].length / 2));
   const wallHex = style ? STYLE_WALLS[style] ?? 0xfdfaf2 : b.c === 4 ? 0xfdfaf2 : pal.walls[hash(b.id) % pal.walls.length];
   const wall = new THREE.Color(wallHex);
@@ -283,7 +326,36 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
       const x1 = ring[i * 2], z1 = ring[i * 2 + 1], x2 = ring[j * 2], z2 = ring[j * 2 + 1];
       const len = Math.hypot(x2 - x1, z2 - z1);
       const nb = bays(len, plan.bayW);
-      wallQuad(ground, x1, z1, x2, z2, 0, st.ground, sign > 0, wall, foot, bays(len), 1 / ATLAS_ROWS, 1 - 1 / ATLAS_ROWS); // the shop row is the top cell of the atlas
+      // ground floor: shop windows with a door, gateway or café front in the middle of longer walls (draw only; one solid wall for physics)
+      const nbG = bays(len);
+      let outX = (z2 - z1) / (len || 1), outZ = -(x2 - x1) / (len || 1);
+      if (sign < 0) {
+        outX = -outX;
+        outZ = -outZ;
+      }
+      if (nbG === 0) wallQuad(ground, x1, z1, x2, z2, 0, st.ground, sign > 0, wall, foot, 0, 1 / ATLAS_ROWS, 1 - 1 / ATLAS_ROWS);
+      else {
+        wallPhysics(ground, x1, z1, x2, z2, 0, st.ground, sign > 0);
+        groundRuns(nbG, b.id, i).forEach((run, ri2) => {
+          const t0 = run.from / nbG, t1 = run.to / nbG;
+          const ax = x1 + (x2 - x1) * t0, az = z1 + (z2 - z1) * t0, bx = x1 + (x2 - x1) * t1, bz = z1 + (z2 - z1) * t1;
+          const row = GROUND_ROWS.indexOf(run.kind);
+          wallRun(ground, ax, az, bx, bz, 0, st.ground, sign > 0, wall, foot, run.to - run.from, 1 - (row + 1) / ATLAS_ROWS, 1 - row / ATLAS_ROWS);
+          // an awning over some shop runs on the decorated streets
+          const aw = run.kind === 'shop' && ri === 0 && district !== 'city' && st.ground >= 3 ? awningColour(b.id, i, ri2, AWNINGS.length) : -1;
+          if (aw >= 0 && Math.hypot(bx - ax, bz - az) >= 2.6) {
+            const col = new THREE.Color(AWNINGS[aw]);
+            const lip = col.clone().multiplyScalar(0.82);
+            const yA = 2.9, yF = 2.4, dpt = 1.15;
+            const A = [ax, yA, az], B = [bx, yA, bz], C = [bx + outX * dpt, yF, bz + outZ * dpt], D = [ax + outX * dpt, yF, az + outZ * dpt];
+            faceTri(upper, A, B, C, col, [outX, 1, outZ]);
+            faceTri(upper, A, C, D, col, [outX, 1, outZ]);
+            const C2 = [C[0], yF - 0.28, C[2]], D2 = [D[0], yF - 0.28, D[2]];
+            faceTri(upper, D, C, C2, lip, [outX, 0, outZ]);
+            faceTri(upper, D, C2, D2, lip, [outX, 0, outZ]);
+          }
+        });
+      }
       if (st.upperFloors) {
         const blank = ri !== 0 || plan.blank(i);
         if (blank || nb === 0) wallQuad(upper, x1, z1, x2, z2, st.ground, h, sign > 0, wall, wall, 0, 0);
@@ -292,6 +364,38 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
           const fh = (h - st.ground) / st.upperFloors;
           for (let f = 0; f < st.upperFloors; f++) wallBand(upper, x1, z1, x2, z2, st.ground + f * fh, st.ground + (f + 1) * fh, sign > 0, wall, nb, plan.floors[f]);
           wallPhysics(upper, x1, z1, x2, z2, st.ground, h, sign > 0);
+          if (ri === 0 && district !== 'city' && district !== 'market') {
+            for (const bal of balconies(len, st.upperFloors, b.id, i)) {
+              const px = x1 + (x2 - x1) * bal.t, pz = z1 + (z2 - z1) * bal.t;
+              const y0 = st.ground + bal.floor * fh;
+              const slab = trim.clone();
+              const rail = new THREE.Color(0x5a6070);
+              decoBox(upper, px + outX * 0.45, pz + outZ * 0.45, outX, outZ, 1.9, 0.9, y0, y0 + 0.14, slab);
+              decoBox(upper, px + outX * 0.88, pz + outZ * 0.88, outX, outZ, 1.9, 0.05, y0 + 0.14, y0 + 0.95, rail);
+              for (const sd of [-0.93, 0.93]) decoBox(upper, px - outZ * sd + outX * 0.45, pz + outX * sd + outZ * 0.45, outX, outZ, 0.05, 0.9, y0 + 0.14, y0 + 0.95, rail);
+            }
+          }
+        }
+      }
+      // Empire style (Senate Square): white pilasters up the long walls and a pediment over the middle of the longest one
+      if (style === 'empire' && ri === 0 && len >= 14) {
+        const white = new THREE.Color(0xfdfaf2);
+        const nP = Math.floor(len / 4.4);
+        for (let k = 0; k < nP; k++) {
+          const t = (k + 0.5) / nP;
+          decoBox(upper, x1 + (x2 - x1) * t + outX * 0.25, z1 + (z2 - z1) * t + outZ * 0.25, outX, outZ, 0.75, 0.5, 0.4, h - 0.7, white);
+        }
+        if (i === longest) {
+          const cx = (x1 + x2) / 2, cz = (z1 + z2) / 2, ux = (x2 - x1) / len, uz = (z2 - z1) / len;
+          const hw = 5, apex = 2.6, off = 0.7;
+          const L1 = [cx - ux * hw + outX * off, h, cz - uz * hw + outZ * off], R1 = [cx + ux * hw + outX * off, h, cz + uz * hw + outZ * off];
+          const T = [cx + outX * off, h + apex, cz + outZ * off];
+          faceTri(upper, L1, R1, T, white, [outX, 0, outZ]);
+          const L0 = [L1[0] - outX * off, h, L1[2] - outZ * off], R0 = [R1[0] - outX * off, h, R1[2] - outZ * off], T0 = [T[0] - outX * off, T[1], T[2] - outZ * off];
+          faceTri(upper, L0, L1, T, trim, [0, 1, 0]);
+          faceTri(upper, L0, T, T0, trim, [0, 1, 0]);
+          faceTri(upper, R1, R0, T0, trim, [0, 1, 0]);
+          faceTri(upper, R1, T0, T, trim, [0, 1, 0]);
         }
       }
       // cornice: a lighter ledge that sticks out at the top of taller flat-roofed buildings
@@ -345,6 +449,35 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
       const A = [ax, 0.07, az], B = [bx, 0.07, bz], C = [cx, 0.07, cz];
       if ((bz - az) * (cx - ax) - (bx - ax) * (cz - az) > 0) upper.triR(A, B, C, yard, PLAIN, PLAIN, PLAIN);
       else upper.triR(A, C, B, yard, PLAIN, PLAIN, PLAIN);
+    }
+  }
+
+  // a corner turret on tall blocks in the Empire and Jugend districts: a round drum with a stepped cone roof (solid, a perch at the tip)
+  if (!style && (district === 'jugend' || district === 'senate' || district === 'esplanadi')) {
+    const k = turretCorner(b.rings[0], b.id, h);
+    if (k >= 0) {
+      const r0 = b.rings[0], n0 = r0.length / 2;
+      const vx = r0[k * 2], vz = r0[k * 2 + 1];
+      const p = (k + n0 - 1) % n0, q = (k + 1) % n0;
+      let ix = 0, iz = 0;
+      for (const o of [p, q]) {
+        const dx = r0[o * 2] - vx, dz = r0[o * 2 + 1] - vz, dl = Math.hypot(dx, dz) || 1;
+        ix += dx / dl;
+        iz += dz / dl;
+      }
+      const il = Math.hypot(ix, iz) || 1;
+      const cx = vx + (ix / il) * 0.7, cz = vz + (iz / il) * 0.7;
+      const layer = (rad: number, y0: number, y1: number, col: number, kind: PrismDef['kind'] = 'building') => {
+        const pr: PrismDef = { rings: [ngon(cx, cz, rad, 10)], y0, y1, kind, wall: col, roof: col };
+        extrude(upper, pr);
+        prisms.push(pr);
+      };
+      const roofCol = pal.pitched[hash(b.id, 470) % pal.pitched.length];
+      layer(1.75, h - 4.5, h + 2.0, trim.getHex());
+      layer(2.05, h + 2.0, h + 2.6, roofCol);
+      layer(1.4, h + 2.6, h + 3.6, roofCol);
+      layer(0.8, h + 3.6, h + 4.6, roofCol);
+      layer(0.25, h + 4.6, h + 6.0, 0xf3d37a, 'perch');
     }
   }
 
@@ -560,6 +693,7 @@ export function buildCity(): City {
   const upperMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, map: windowAtlas(), emissive: 0xffffff, emissiveMap: windowGlowAtlas() });
   // lit windows: only some bays glow (a hash of where the window is), and how many follows the sky (windowGlow: 0 by day)
   upperMat.onBeforeCompile = (shader) => {
+    cloudShadowPatch(shader); // ...and over the roofs
     shader.uniforms.uGlow = windowGlow;
     shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWinPos;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvWinPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
     shader.fragmentShader = shader.fragmentShader
@@ -590,6 +724,9 @@ export function buildCity(): City {
   keepClear.push(...lm.props.map((p) => ({ x: p.x, z: p.z, r: 2.5 })));
   const dressing = buildDressing(planDressing({ parks: data.parks, land: data.land, streets: data.streets, isLand, solid: (x, z) => probe.solidAt(x, 0.9, z), keepClear }));
   group.add(dressing.group);
+  // flags on poles: along the market quay, Senate Square and the Esplanadi end (they flutter in the vertex shader)
+  const flags = flagMesh([-30, -12, 12, 30].map((x, i) => ({ x, z: -13, rot: -0.6 + i * 0.07 })).concat([{ x: -185, z: -292, rot: -0.5 }, { x: -128, z: -292, rot: -0.6 }, { x: -136, z: -58, rot: -0.55 }]));
+  if (flags) group.add(flags);
   defs.push(...dressing.prisms);
 
   const prisms: Prism[] = defs;

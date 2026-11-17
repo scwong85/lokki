@@ -151,3 +151,84 @@ export function pitchedRoof(r: RectInfo, base: number, rise: number, hip: boolea
 
 /** Roof rise for a footprint's short side. */
 export const roofRise = (short: number): number => Math.min(5, Math.max(1.6, short * 0.38));
+
+// ---------- ground floors: shops, doors, gateways, cafés ----------
+
+export type GroundKind = 'shop' | 'door' | 'gate' | 'cafe';
+
+export interface GroundRun {
+  kind: GroundKind;
+  /** From and to, in bays along the wall. */
+  from: number;
+  to: number;
+}
+
+/** Atlas rows (top to bottom): one per ground-floor kind, then the window styles. */
+export const GROUND_ROWS: readonly GroundKind[] = ['shop', 'door', 'gate', 'cafe'];
+
+/**
+ * How the ground floor of one wall is made up: mostly shop windows, with a door, an arched gateway or a café front in the
+ * middle of longer walls, so the street level is not one tile repeated. Seeded by building and wall. Pure.
+ */
+export function groundRuns(nBays: number, id: number, wall: number): GroundRun[] {
+  if (nBays < 4) return [{ kind: 'shop', from: 0, to: Math.max(1, nBays) }];
+  const r = hash(id, 300 + wall) % 100;
+  const kind: GroundKind | null = r < 38 ? 'door' : r < 50 ? 'gate' : r < 72 ? 'cafe' : null;
+  if (!kind) return [{ kind: 'shop', from: 0, to: nBays }];
+  const w = kind === 'cafe' && nBays >= 7 ? 2 : 1;
+  const at = Math.max(1, Math.min(nBays - w - 1, Math.floor((nBays - w) / 2) + (hash(id, 320 + wall) % 3) - 1));
+  const runs: GroundRun[] = [];
+  if (at > 0) runs.push({ kind: 'shop', from: 0, to: at });
+  runs.push({ kind, from: at, to: at + w });
+  if (at + w < nBays) runs.push({ kind: 'shop', from: at + w, to: nBays });
+  return runs;
+}
+
+/** An awning over a run of shop windows: which colour, or -1 for none. */
+export function awningColour(id: number, wall: number, run: number, palette: number): number {
+  return hash(id, 340 + wall * 7 + run) % 100 < 38 ? hash(id, 360 + wall + run) % palette : -1;
+}
+
+export interface Balcony {
+  /** Position along the wall, 0..1. */
+  t: number;
+  /** Floor (0 = first above the ground floor). */
+  floor: number;
+}
+
+/** Small balconies on a long wall of a tall building: one or two bays, on one or two floors. Pure. */
+export function balconies(len: number, upperFloors: number, id: number, wall: number): Balcony[] {
+  if (len < 10 || upperFloors < 3) return [];
+  if (hash(id, 380 + wall) % 100 >= 45) return [];
+  const floor = 1 + (hash(id, 400 + wall) % Math.min(2, upperFloors - 2));
+  const n = len >= 18 ? 2 : 1;
+  const out: Balcony[] = [];
+  for (let k = 0; k < n; k++) out.push({ t: n === 1 ? 0.5 : 0.3 + k * 0.4, floor });
+  if (upperFloors >= 5 && hash(id, 420 + wall) % 100 < 40) for (let k = 0; k < n; k++) out.push({ t: n === 1 ? 0.5 : 0.3 + k * 0.4, floor: floor + 1 });
+  return out;
+}
+
+/** A convex, roughly right-angled corner where a turret can stand: the vertex index, or -1. Needs an outer ring. */
+export function turretCorner(ring: number[], id: number, h: number): number {
+  if (h < 14 || hash(id, 440) % 100 >= 55) return -1;
+  const n = ring.length / 2;
+  if (n < 4) return -1;
+  let a = 0;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    a += ring[i * 2] * ring[j * 2 + 1] - ring[j * 2] * ring[i * 2 + 1];
+  }
+  const s = a > 0 ? 1 : -1;
+  const best: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const p = (i + n - 1) % n, q = (i + 1) % n;
+    const ux = ring[i * 2] - ring[p * 2], uz = ring[i * 2 + 1] - ring[p * 2 + 1];
+    const vx = ring[q * 2] - ring[i * 2], vz = ring[q * 2 + 1] - ring[i * 2 + 1];
+    const lu = Math.hypot(ux, uz), lv = Math.hypot(vx, vz);
+    if (lu < 6 || lv < 6) continue;
+    const cross = (ux * vz - uz * vx) * s; // > 0: a convex corner
+    const dot = (ux * vx + uz * vz) / (lu * lv); // 0 for a right angle
+    if (cross > 0 && Math.abs(dot) < 0.42) best.push(i);
+  }
+  return best.length ? best[hash(id, 460) % best.length] : -1;
+}

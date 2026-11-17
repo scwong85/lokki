@@ -273,6 +273,12 @@ export const tuning = {
     swaySpeed: p(1.6, 0.3, 4, 0.05),
     boatBob: p(1, 0, 3, 0.05), // how much moored boats bob and roll (0 = still)
     lampGlow: p(1, 0, 1.5, 0.05), // brightness of the street lamps at dusk and night
+    cloudShadow: p(0.13, 0, 0.4, 0.01), // how dark the drifting cloud shadows are on ground and roofs (0 = none)
+    cloudScale: p(0.0034, 0.001, 0.01, 0.0002), // 1 / size in metres of the cloud patches
+    cloudSpeed: p(0.9, 0, 4, 0.1), // metres per second the shadows drift
+    flagFlutter: p(1, 0, 2, 0.05),
+    steam: p(1, 0, 1, 1), // steam above the market stalls (0 = off)
+    petals: p(1, 0, 1, 1) // blossom drifting down in the Esplanadi park (0 = off)
   },
   coop: {
     tauntRadius: p(16, 4, 40, 1), // people this close to a taunting gull watch it and nobody else

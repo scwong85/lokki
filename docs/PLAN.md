@@ -208,7 +208,11 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M29 World enrichment W2: district colours, mansard roofs, courtyards, lit windows
 - [x] M30 Roads (start of W3) and playtest fixes: Thermal Express dome, backwards bike
 - [x] M31 Roads part 2: tram line, zebra crossings, manholes
-- [ ] M32 World enrichment W4 start: swaying trees, bobbing boats, glowing lamps (built on `m32-world-w4`, awaiting playtest)
+- [x] M32 World enrichment W4 start: swaying trees, bobbing boats, glowing lamps
+- [x] M34 World enrichment rest of W2: ground-floor variety, awnings, balconies, corner turrets
+- [x] M35 World enrichment rest of W4: flags, steam, petals, cloud shadows
+- [ ] M36 World enrichment W5 start: ambient birds, the tram runs in every level (built on `m36-busy-city`, awaiting playtest)
+- [ ] M37 World enrichment W6: landmark kit (Cathedral portico, Empire style, fountain splash; built on `m37-landmarks`, awaiting playtest)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -374,7 +378,19 @@ Tram rails and sleepers on Senate Square, zebra crossings and manholes. Details:
 ### M32 — World enrichment W4 (start): things that move (S)
 Trees sway, boats bob, street lamps glow at dusk, all in shaders or one hidden-by-day mesh. Details: `docs/milestones/M32.md`.
 
-### After M32 (backlog)
+### M34 — World enrichment, rest of W2 (M)
+Doors, gateways and café fronts on ground floors, awnings, balconies, corner turrets. Details: `docs/milestones/M34.md`.
+
+### M35 — World enrichment, rest of W4 (S–M)
+Flags that flutter, steam over the stalls, blossom in the park, drifting cloud shadows. Details: `docs/milestones/M35.md`.
+
+### M36 — World enrichment W5 (start): a busier city (S)
+Circling birds, and the Senate Square tram runs in every level. Details: `docs/milestones/M36.md`.
+
+### M37 — World enrichment W6: landmark kit (S)
+Cathedral portico, Empire-style buildings, fountain splash. Details: `docs/milestones/M37.md`.
+
+### After M37 (backlog)
  World enrichment rest of W2, then W3 to W6 (`docs/design/world-enrichment.md`): streets and squares, things that move, a busier city, landmark kit.
  Plans: `docs/design/fun-todos.md` (F2–F6), `docs/design/graphics-refresh.md` (G2–G6).
  Esplanadi E4–E10 (`docs/design/levels-esplanadi.md`), Katajanokka (`docs/design/levels-katajanokka.md`), each level designed with a co-op variant; the shared systems they need (moving platforms, NPC schedules, Kalle the rival gull, the drone, seasons); local split-screen co-op (optional); optional WebGPU renderer.
