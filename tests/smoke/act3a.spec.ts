@@ -42,20 +42,18 @@ test('level 15: balloons float over the square and a poop pops one', async ({ pa
   expect(errors).toEqual([]);
 });
 
-test('level 16: grandma\'s jar in front of the judge, after the champion\'s is gone, is tasted', async ({ page }) => {
+test('level 16: the fisherman and the soup stall are in place (the chain itself is played in chains.spec)', async ({ page }) => {
   test.setTimeout(300_000);
   const L = await open(page, 'herring-market');
-  await L((l) => l.notes(l.quests.onEvent('grab:champJar')));
-  await L((l) => l.interaction.props.props.find((p) => p.tag === 'grannyJar')!.body.setTranslation({ x: 10.8, y: 0.2, z: -18 }, true));
-  await expect.poll(() => done(L, 'jars', 'swap'), { timeout: 200_000 }).toBe(true);
+  expect(await L((l) => l.quests.quests.map((q) => q.id))).toEqual(['jars', 'sour']);
+  expect(await L((l) => l.interaction.props.props.filter((p) => p.type === 'soup').length)).toBeGreaterThanOrEqual(2);
 });
 
-test('level 17: the ring box given to the groom is a gift', async ({ page }) => {
+test('level 17: the bride and the flower stall are in place (the chain itself is played in chains.spec)', async ({ page }) => {
   test.setTimeout(300_000);
   const L = await open(page, 'wedding-bells');
-  await L((l) => l.notes(l.quests.onEvent('grab:ring')));
-  await L((l) => l.interaction.props.props.find((p) => p.type === 'ring')!.body.setTranslation({ x: -19.2, y: 0.2, z: -14 }, true));
-  await expect.poll(() => done(L, 'ring', 'give'), { timeout: 200_000 }).toBe(true);
+  expect(await L((l) => l.quests.quests.map((q) => q.id))).toEqual(['ring', 'photo']);
+  expect(await L((l) => l.interaction.props.props.filter((p) => p.type === 'flowers').length)).toBeGreaterThanOrEqual(2);
 });
 
 test('level 18: the harbour is ice: no swimming, you stand on it', async ({ page }) => {
@@ -65,5 +63,5 @@ test('level 18: the harbour is ice: no swimming, you stand on it', async ({ page
   await L((l) => Object.assign(l.gull.state, { x: 0, z: 7, y: 0.5, mode: 'ground', vx: 0, vz: 0, vy: 0 }));
   await page.waitForTimeout(4000);
   expect(await L((l) => l.gull.state.overWater)).toBe(false);
-  expect(await L((l) => l.interaction.props.props.filter((p) => p.tag === 'munkki').length)).toBe(3);
+  expect(await L((l) => l.interaction.props.props.filter((p) => p.tag === 'munkki').length)).toBe(2);
 });

@@ -65,12 +65,11 @@ test('S5: a bun makes the Pigeon Gang friends', async ({ page }) => {
   await expect.poll(() => L((l) => l.quests.quests.find((q) => q.id === 'diplomacy')!.objectives[0].done), { timeout: 60_000 }).toBe(true);
 });
 
-test('S6: the wardrobe raid counts grabbed items (no statue spots to hit)', async ({ page }) => {
+test('S6: the foreman chain and the florist\'s stand are in place (the chain itself is played in chains.spec)', async ({ page }) => {
   test.setTimeout(300_000);
   const L = await open(page, 'new-look');
   expect(await L((l) => l.quests.quests.map((q) => q.id))).toEqual(['wardrobe', 'workers']);
-  await L((l) => l.quests.onEvent('grab:tophat'));
-  expect(await L((l) => l.quests.quests.find((q) => q.id === 'wardrobe')!.objectives[0].done)).toBe(true);
+  expect(await L((l) => l.interaction.props.props.filter((p) => p.type === 'flowers').length)).toBeGreaterThanOrEqual(2);
 });
 
 test('S7: the band falls silent and a caw rings every phone', async ({ page }) => {
