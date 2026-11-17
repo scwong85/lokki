@@ -166,3 +166,16 @@ describe('M56 toys', () => {
     for (const id of ['leaf-blower', 'domino-rally', 'captain-gull', 'hush-puppy', 'tablecloth', 'service-bell']) expect(LEVELS.some((l) => l.id === id)).toBe(true);
   });
 });
+
+describe('dog fixes', () => {
+  it('a chasing or called dog stops short of the gull instead of merging with it', async () => {
+    const { Dog } = await import('../../src/gameplay/dogs');
+    const d = new Dog(0, 0, 0, 0);
+    d.summon(10, 0);
+    for (let i = 0; i < 400; i++) d.update(DT, [], []);
+    expect(Math.hypot(10 - d.x, d.z)).toBeGreaterThan(1.0);
+    const c = new Dog(0, 0, 0, 0);
+    for (let i = 0; i < 400; i++) c.update(DT, [{ x: 6, y: 0.5, z: 0, grounded: true }], []);
+    expect(Math.hypot(6 - c.x, c.z)).toBeGreaterThan(1.0);
+  });
+});
