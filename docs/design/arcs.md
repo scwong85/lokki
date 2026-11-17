@@ -105,7 +105,15 @@ Nothing is deleted. The levels become **source material**: each stage reuses the
 
 All old levels, plus a sandbox per arc with **everything unlocked up to that arc**, a prop menu and a reset. Detail in `physics-sandbox.md`.
 
-## 8. Decisions needed
+## 8. Decisions (answered)
+
+1. Locations: Kauppatori, Senaatintori, Esplanadi, Katajanokka: correct.
+2. **Co-op objectives are required** when two gulls play: the stage is cleared when the solo objectives and the co-op objectives are all done (solo play skips the co-op ones).
+3. **Locked controls do nothing** (a soft "Not yet" the first time for honk).
+4. Old levels move to a **Playground** list.
+5. One skill per stage in Act 1: right.
+
+## 9. (Old list of questions, kept for reference)
 
 1. **Which four locations?** I assumed Kauppatori, Senaatintori, Esplanadi, Katajanokka.
 2. **Co-op objectives:** optional bonus (my proposal) or required when playing co-op?

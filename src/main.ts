@@ -40,6 +40,7 @@ import { QuestLog, type QuestNote } from './gameplay/quest';
 import { QUESTS } from './data/quests';
 import { LEVELS, levelById } from './data/levels';
 import type { LevelDef } from './data/levels/types';
+import { isUnlocked, parseGate, switchMech, type Gate, type MechId } from './gameplay/mechanics';
 import { levelProgress, levelSetup, levelStars, levelUnlocked, mergeRecord, starCount } from './gameplay/level';
 import { TOURIST_SPAWNS } from './data/npcs';
 import type { NpcEvent } from './gameplay/npc';
@@ -339,7 +340,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get hidden() { return hiddenNow(gull.state); }, get switches() { return level.switches ?? []; }, peckNow: () => { const sw = switchNear(gull.state); if (sw) peck(sw, players[0]); return !!sw; }, get tugProgress() { return interaction.tugProgress(0); }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get gate() { return gate; }, applyGates, get hidden() { return hiddenNow(gull.state); }, get switches() { return level.switches ?? []; }, peckNow: () => { const sw = switchNear(gull.state); if (sw) peck(sw, players[0]); return !!sw; }, get tugProgress() { return interaction.tugProgress(0); }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -620,6 +621,7 @@ function onFlightEvents(evs: FlightEvent[]): void {
 
 /** A hard splashdown: a wave soaks whoever stands within reach (the bigger the dive, the wider it goes). */
 function cannonball(x: number, z: number, impact: number): void {
+  if (!mech('cannonball')) return;
   cam.shake(0.45);
   gull.wiggleT = 0.6;
   emotes.show('laugh', 'cannon', () => ({ x: gull.position.x, y: gull.position.y + 0.9, z: gull.position.z }), 1.6);
@@ -724,6 +726,25 @@ let hushCd = 0;
 let onRoofBefore = false;
 const roofBox: import('./world/collision').Box = { min: [0, 0, 0], max: [0, 0, 0], kind: 'perch', color: 0xb9c4cf };
 const switchViews: THREE.Object3D[] = [];
+/** Stage gating: which mechanics this level has (docs/design/arcs.md). `?gate=1.3` tries a stage's set; no gate means everything. */
+let gate: Gate | null = null;
+function updateGate(): void {
+  gate = parseGate(new URLSearchParams(location.search).get('gate')) ?? level.gate ?? null;
+}
+const mech = (id: MechId): boolean => isUnlocked(id, gate);
+/** Push the gate into the systems that enforce it (called when the level changes and every tick). */
+function applyGates(): void {
+  updateGate();
+  interaction.gates = { poop: mech('poop'), toss: mech('toss'), tug: mech('tug') };
+  if (npcs) npcs.gates = { contagion: mech('contagion'), slam: mech('slam'), slip: mech('slip') };
+}
+const lockedSeen = new Set<MechId>();
+/** The first time a locked verb is tried: a soft "not yet" so nobody thinks the game is broken. */
+function lockedCue(id: MechId): void {
+  if (lockedSeen.has(id)) return;
+  lockedSeen.add(id);
+  hud.toast('Not yet: you will learn that later.', 1.4);
+}
 interface DominoRun { tiles: THREE.Group[]; start: number; dx: number; dz: number; fell: number }
 let dominoes: DominoRun[] = [];
 let disguiseT = 0;
@@ -731,6 +752,7 @@ let capHat: THREE.Mesh | null = null;
 const swept = new Set<number>();
 /** Per-tick extras of the mischief toys: dominoes falling, the disguise running out, light things blown by low wingbeats. */
 function toyStep(dt: number): void {
+  applyGates();
   for (const d of dominoes) {
     const tf0 = simTime - d.start;
     d.tiles.forEach((t, i) => {
@@ -753,7 +775,7 @@ function toyStep(dt: number): void {
   }
   // wings low over the ground blow light things away
   const s = gull.state;
-  if (s.flapAnim < dt * 1.6 && s.mode !== 'ground' && s.heightAbove < tuning.gust.maxHeight.value && interaction.props) {
+  if (mech('gust') && s.flapAnim < dt * 1.6 && s.mode !== 'ground' && s.heightAbove < tuning.gust.maxHeight.value && interaction.props) {
     const g = tuning.gust;
     let any = false;
     for (const p of interaction.props.free()) {
@@ -781,7 +803,7 @@ function toyStep(dt: number): void {
   }
 }
 function hiddenNow(s: { x: number; z: number; vx: number; vz: number; mode: string }): boolean {
-  if (s.mode !== 'ground' || Math.hypot(s.vx, s.vz) > tuning.hide.maxSpeed.value) return false;
+  if (!mech('hide') || s.mode !== 'ground' || Math.hypot(s.vx, s.vz) > tuning.hide.maxSpeed.value) return false;
   return (level.hides ?? []).some((h) => Math.hypot(h.x - s.x, h.z - s.z) < h.r);
 }
 const switchCd = new Map<string, number>();
@@ -880,7 +902,7 @@ function setupSwitches(): void {
 }
 /** The switch the gull is next to (nothing carried), if any. */
 function switchNear(s: { x: number; z: number }): NonNullable<LevelDef['switches']>[number] | null {
-  for (const sw of level.switches ?? []) if (Math.hypot(sw.x - s.x, sw.z - s.z) < 2.4 && (switchCd.get(sw.id) ?? 0) <= 0) return sw;
+  for (const sw of level.switches ?? []) if (mech(switchMech(sw.effect)) && Math.hypot(sw.x - s.x, sw.z - s.z) < 2.4 && (switchCd.get(sw.id) ?? 0) <= 0) return sw;
   return null;
 }
 function peck(sw: NonNullable<LevelDef['switches']>[number], pl: Player): void {
@@ -1289,8 +1311,11 @@ let steerY = 0;
 function tauntInput(i: number, down: boolean, dt: number): boolean {
   const th = (tapHolds[i] ??= new TapHold(() => tuning.honk.tapMax.value, () => tuning.honk.cooldown.value));
   const r = th.update(down, dt);
-  if (r.tap && players[i]) honk(players[i]);
-  return r.holding;
+  if (r.tap && players[i]) {
+    if (mech('honk')) honk(players[i]);
+    else if (!players[i].remote) lockedCue('honk');
+  }
+  return r.holding && mech('taunt');
 }
 /** A loud screech: calm people jump (and drop what they hold if their back is turned), sleepers wake, pigeons fly. */
 function honk(pl: Player): void {
@@ -1310,7 +1335,7 @@ function honk(pl: Player): void {
     onNpcEvents(npcs.honk(s.x, s.z, tuning.honk.range.value));
   }
   gang?.honk(s.x, s.z, tuning.honk.range.value);
-  for (const d of dogs) if (Math.hypot(d.dog.x - s.x, d.dog.z - s.z) < tuning.honk.range.value * 2.5) d.dog.summon(s.x, s.z);
+  if (mech('dogcall')) for (const d of dogs) if (Math.hypot(d.dog.x - s.x, d.dog.z - s.z) < tuning.honk.range.value * 2.5) d.dog.summon(s.x, s.z);
   if (sunbathers) for (const sb of sunbathers.list) if (sb.state === 'asleep' && Math.hypot(sb.x - s.x, sb.z - s.z) < tuning.honk.range.value * 0.6) { sb.state = 'awake'; sb.t = tuning.sun.awakeSeconds.value; }
 }
 const npcModeSeen = new Map<number, string>();
@@ -1484,6 +1509,7 @@ function applyLevelRules(): void {
   setupKalle();
   setupSenate();
   setupSwitches();
+  applyGates();
   setupEsplanadi();
   resetCoopJuice();
   havoc = level.havoc && !isGuest() ? new HavocRun(level.havoc.seconds) : null;

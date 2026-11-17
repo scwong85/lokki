@@ -179,3 +179,13 @@ describe('dog fixes', () => {
     expect(Math.hypot(6 - c.x, c.z)).toBeGreaterThan(1.0);
   });
 });
+
+describe('gates on the NPC systems', () => {
+  it('locked contagion, slam and slip do nothing', () => {
+    const { npcs, run } = setup(line(5, 1.2));
+    npcs.gates = { contagion: false, slam: false, slip: false };
+    expect(npcs.slam({ x: 0, y: 0.9, z: 0.4, vx: 0, vy: 0, vz: -20, mode: 'dive' } as unknown as FlightState)).toBe(false);
+    (npcs as unknown as { pending: NpcEvent[] }).pending.push({ type: 'panic', npc: npcs.npcs[0] });
+    expect(run(2).some((e) => e.type === 'spread')).toBe(false);
+  });
+});

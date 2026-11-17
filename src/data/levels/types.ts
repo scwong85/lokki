@@ -47,6 +47,8 @@ export interface LevelDef {
   hides?: { x: number; z: number; r: number }[];
   /** Havoc Hour: a timed chaos run with chain scoring instead of to-dos. */
   havoc?: { seconds: number };
+  /** Which stage's mechanics this level has (arc.stage). Without one, everything is unlocked (the Playground, the sandbox). */
+  gate?: { arc: number; stage: number };
   /** Free play: the whole quest pack, no stars, skills per quest (the M7/M8 game). */
   sandbox?: boolean;
   /** Ids of existing quests (from `QUESTS`) used as to-dos, in list order. */
