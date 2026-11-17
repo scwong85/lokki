@@ -7,6 +7,18 @@ import type { PropType } from '../data/props';
  * Tourist brain: a small state machine with senses (sight cone, hearing), things it cares about
  * (the ice cream in its hand) and reactions (notice, shield, panic, chase, recover). Pure logic, no rendering.
  */
+/** How someone feels about what the gull did. Fades back to calm; chains of events are built from changes of mood. */
+export type Mood = 'calm' | 'annoyed' | 'angry' | 'upset' | 'delighted';
+
+/** A place that gives a need: a stall where someone who craves `sells` can buy it. */
+export interface Station {
+  id: string;
+  x: number;
+  z: number;
+  r: number;
+  sells: PropType;
+}
+
 export type NpcMode = 'idle' | 'walk' | 'eat' | 'notice' | 'shield' | 'panic' | 'chase' | 'recover' | 'yuck' | 'cheer';
 
 export interface NpcSpawn {
@@ -34,6 +46,8 @@ export interface NpcSpawn {
   hatColor?: number;
   /** The Clean Freak's sign (role 'cleaner'). */
   signAt?: { x: number; z: number };
+  /** What they want to buy when they are upset or angry and pass a stall that sells it (comfort food). */
+  craves?: PropType;
 }
 
 export interface Npc {
@@ -84,6 +98,13 @@ export interface Npc {
   goal: { x: number; z: number; name: string } | null;
   role: string;
   stationary: boolean;
+  mood: Mood;
+  /** Seconds in the current mood. */
+  moodT: number;
+  craves: PropType | null;
+  /** At a stall waiting to buy: the stall, and how long they have waited (0 = not buying). */
+  station: Station | null;
+  buyT: number;
 }
 
 export interface GullInfo {
@@ -102,10 +123,11 @@ export interface Noise {
   loud: number;
 }
 
-export type NpcEvent = { type: 'reclaimed'; npc: Npc; propType: PropType } | { type: 'cheer'; npc: Npc } | { type: 'arrived'; npc: Npc; goal: string } | { type: 'yuck'; npc: Npc } | { type: 'tookItem'; npc: Npc; propType: PropType } | { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc } | { type: 'selfieClick'; npc: Npc; inFrame: boolean; framed: number } | { type: 'signSplat'; npc: Npc; splats: number } | { type: 'cleanerRobbed'; npc: Npc } | { type: 'snatchUnseen'; npc: Npc } | { type: 'review'; npc: Npc } | { type: 'soaked'; npc: Npc } | { type: 'scared'; npc: Npc; carried: boolean };
+export type NpcEvent = { type: 'reclaimed'; npc: Npc; propType: PropType } | { type: 'cheer'; npc: Npc } | { type: 'arrived'; npc: Npc; goal: string } | { type: 'yuck'; npc: Npc } | { type: 'tookItem'; npc: Npc; propType: PropType } | { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc } | { type: 'selfieClick'; npc: Npc; inFrame: boolean; framed: number } | { type: 'signSplat'; npc: Npc; splats: number } | { type: 'cleanerRobbed'; npc: Npc } | { type: 'snatchUnseen'; npc: Npc } | { type: 'review'; npc: Npc } | { type: 'soaked'; npc: Npc } | { type: 'scared'; npc: Npc; carried: boolean } | { type: 'mood'; npc: Npc; mood: Mood } | { type: 'atStation'; npc: Npc; station: string } | { type: 'bought'; npc: Npc; station: string; propType: PropType };
 
 export interface NpcCtx {
   world: World;
+  stations?: readonly Station[];
   walkable: (x: number, z: number) => boolean;
   rng: Rng;
 }
@@ -124,6 +146,7 @@ export function newNpc(id: number, sp: NpcSpawn): Npc {
     holding: null, shieldFrom: h, handAngle: h - Math.PI / 2, distractT: 0, noiseX: 0, noiseZ: 0, lostSightT: 0, noticeCd: 0,
     walkPhase: 0, moving: false, speed: 0, seesGull: false, suspicion: 0, nextT: 2,
     wants: sp.wants ?? [], holdType: null, goal: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false,
+    mood: 'calm', moodT: 0, craves: sp.craves ?? null, station: null, buyT: 0,
   };
 }
 
@@ -186,6 +209,20 @@ export function snatchable(n: Npc, beak: { x: number; y: number; z: number }): b
   return snatchState(n, beak) === 'ok';
 }
 
+/** Change mood (and say so once). */
+export function setMood(n: Npc, mood: Mood, ev?: NpcEvent[]): void {
+  if (n.mood === mood) {
+    n.moodT = 0;
+    return;
+  }
+  n.mood = mood;
+  n.moodT = 0;
+  ev?.push({ type: 'mood', npc: n, mood });
+}
+
+/** One step angrier: calm, annoyed, angry (and angry stays angry). */
+export const angrier = (m: Mood): Mood => (m === 'calm' || m === 'delighted' || m === 'upset' ? 'annoyed' : 'angry');
+
 function enter(n: Npc, mode: NpcMode): void {
   n.mode = mode;
   n.t = 0;
@@ -239,19 +276,23 @@ export function startle(n: Npc, kind: 'pooped' | 'snatched' | 'yuck' | 'cheer'):
   const ev: NpcEvent[] = [];
   if (kind === 'cheer') {
     enter(n, 'cheer');
+    setMood(n, 'delighted', ev);
     ev.push({ type: 'cheer', npc: n });
   } else if (kind === 'yuck') {
     n.holding = null;
     n.holdType = null;
     enter(n, 'yuck');
+    setMood(n, 'upset', ev);
     ev.push({ type: 'yuck', npc: n });
   } else if (kind === 'snatched') {
     n.holding = null;
     n.holdType = null;
     enter(n, 'chase');
+    setMood(n, 'angry', ev);
     ev.push({ type: 'chase', npc: n });
   } else {
     enter(n, 'panic');
+    setMood(n, angrier(n.mood), ev); // every splat on the same person makes them angrier
     ev.push({ type: 'panic', npc: n });
   }
   n.handAngle = n.heading - Math.PI / 2;
@@ -267,6 +308,45 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
   n.speed = 0;
   const calm = n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat';
   if (n.mode === 'yuck') n.speed = 0;
+
+  // ---- mood fades back to calm (not while they chase or wait to buy) ----
+  n.moodT += dt;
+  if (n.mode === 'chase' || n.buyT > 0) n.moodT = 0;
+  if (n.mood !== 'calm' && n.moodT > tuning.mood.time.value) setMood(n, 'calm', ev);
+
+  // ---- comfort food: someone upset or angry who passes a stall that sells what they crave goes and buys it ----
+  if (n.craves && n.holding === null && n.buyT === 0 && (n.mood === 'angry' || n.mood === 'upset' || n.mood === 'annoyed') && ctx.stations) {
+    const st = ctx.stations.find((x) => x.sells === n.craves && Math.hypot(x.x - n.x, x.z - n.z) <= x.r);
+    if (st) {
+      n.station = st;
+      n.buyT = 0.001;
+      n.goal = null;
+      enter(n, 'idle');
+      setMood(n, 'upset', ev);
+      ev.push({ type: 'atStation', npc: n, station: st.id });
+    }
+  }
+  if (n.buyT > 0 && n.station) {
+    const st = n.station;
+    if (Math.hypot(st.x - n.x, st.z - n.z) > 1.8) n.moving = moveToward(n, st.x, st.z, t.walkSpeed.value, dt, ctx);
+    else {
+      faceToward(n, st.x, st.z, dt);
+      n.buyT += dt;
+    }
+    if (n.buyT >= tuning.mood.buyTime.value) {
+      ev.push({ type: 'bought', npc: n, station: st.id, propType: st.sells });
+      n.station = null;
+      n.buyT = 0;
+      n.craves = null;
+      setMood(n, 'delighted', ev);
+      enter(n, 'idle');
+      n.nextT = 2;
+    }
+    n.handAngle += angleDiff(n.heading - Math.PI / 2, n.handAngle) * Math.min(1, 8 * dt);
+    n.moving = n.speed > 0;
+    n.walkPhase += n.speed * dt * 2.2;
+    return ev;
+  }
 
   // ---- senses ----
   n.seesGull = canSee(n, g, ctx.world);
@@ -290,7 +370,7 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
 
   // ---- reactions ----
   // seeing the gull is not noticing it: suspicion builds while it is in sight (twice as fast for a diving gull) and fades when it is not
-  if (calm && n.seesGull && n.distractT <= 0) n.suspicion = Math.min(1, n.suspicion + (dt / t.noticeBuild.value) * (g.diving ? 2 : 1));
+  if (calm && n.seesGull && n.distractT <= 0 && n.mood !== 'delighted') n.suspicion = Math.min(1, n.suspicion + (dt / t.noticeBuild.value) * (g.diving ? 2 : 1));
   else n.suspicion = Math.max(0, n.suspicion - dt * t.suspicionFade.value);
   if (calm && n.suspicion >= 1 && n.noticeCd <= 0 && n.distractT <= 0) {
     n.suspicion = 0;
@@ -394,7 +474,10 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
     case 'chase': {
       if (gullDist > 2.5) n.moving = moveToward(n, g.x, g.z, t.runSpeed.value, dt, ctx);
       else faceToward(n, g.x, g.z, dt);
-      if (n.t >= t.chaseTime.value || gullDist > 25) {
+      // the lure: an angry person keeps following a gull that taunts (holds T) instead of giving up
+      const lured = !!g.taunt && gullDist < tuning.mood.lureRange.value;
+      if (lured) n.t = Math.min(n.t, t.chaseTime.value - 1);
+      if (n.t >= t.chaseTime.value || gullDist > (lured ? 45 : 25)) {
         enter(n, 'recover');
         n.noticeCd = 2;
       }

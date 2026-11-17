@@ -69,6 +69,19 @@ export class FollowCamera {
     }
   }
 
+  /** Take the camera over (a cutscene): ease towards `pos`/`look` (k = 1 jumps there); no roll, no shake. */
+  cinematic(pos: { x: number; y: number; z: number }, look: { x: number; y: number; z: number }, k: number): void {
+    this.pos.lerp(new THREE.Vector3(pos.x, pos.y, pos.z), k);
+    this.look.lerp(new THREE.Vector3(look.x, look.y, look.z), k);
+    this.camera.position.copy(this.pos);
+    this.camera.lookAt(this.look);
+    const fov = tuning.camera.fov.value;
+    if (Math.abs(this.camera.fov - fov) > 0.01) {
+      this.camera.fov = fov;
+      this.camera.updateProjectionMatrix();
+    }
+  }
+
   resize(aspect: number): void {
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();

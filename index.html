@@ -44,7 +44,11 @@
       .title-card button, .menu-card button { font: inherit; padding: 8px 18px; margin: 4px; border: 0; border-radius: 10px; background: #fff3c4; color: #3a3a4a; cursor: pointer; box-shadow: 0 2px 0 #d9c9a3; }
       .title-card button:hover, .menu-card button:hover { background: #ffe9a0; }
       .title-card button.big { font-size: 22px; padding: 10px 44px; background: #ffd36e; }
-      .title-levels { display: flex; flex-direction: column; gap: 6px; margin: 10px auto 2px; max-width: 360px; }
+      .title-card { max-height: 94vh; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+      .title-levels { display: flex; flex-direction: column; gap: 6px; margin: 10px auto 2px; max-width: 360px; max-height: 38vh; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 0 4px; }
+      .title-levels h4 { margin: 8px 0 0; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: #8a7b5c; text-align: left; border-bottom: 2px dotted #e6d6a8; } .title-levels h4:first-child { margin-top: 0; }
+      /* body.touch turns touch scrolling off for the game; panels that scroll opt back in */
+      body.touch #levelselect .ls-card, body.touch .ls-list, body.touch .menu-card, body.touch #skills .sk-card, body.touch #credits, body.touch #levelcomplete .lc-card { touch-action: pan-y; overscroll-behavior: contain; }
       .title-levels button { display: flex; justify-content: space-between; gap: 12px; margin: 0; padding: 7px 14px; font-size: 14px; background: #fff8e1; }
       .title-levels button.locked { opacity: .55; cursor: default; } .title-levels button.locked .lv-stars { font-size: 11px; color: #8a7b5c; letter-spacing: 0; }
       .title-levels button.on { background: #ffe9a0; box-shadow: 0 0 0 2px #e39a7e inset; } .lv-stars { color: #e0a42b; letter-spacing: 1px; }
@@ -193,6 +197,26 @@
       .lc-next { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0 4px; }
       .lc-next button { font: 600 15px system-ui, sans-serif; padding: 9px 18px; border: 0; border-radius: 10px; background: #fff3c4; color: #4a4033; cursor: pointer; box-shadow: 0 2px 0 #d9c9a3; }
       .lc-next button.big { background: #ffd36e; font-size: 17px; }
+      body.outro::before, body.outro::after { content: ''; position: fixed; left: 0; right: 0; height: 11vh; background: #000; z-index: 45; pointer-events: none; animation: outro-bar .6s ease-out both; }
+      body.outro::before { top: 0; } body.outro::after { bottom: 0; --from: 100%; }
+      @keyframes outro-bar { from { transform: translateY(var(--from, -100%)); } to { transform: none; } }
+      body.outro #todo, body.outro #tip, body.outro #hud, body.outro #waypoints, body.outro #heat, body.outro #minitimer, body.outro #announce, body.outro .toast { display: none !important; }
+      /* software-rendered test browsers cannot afford the animations: they get the end state instead */
+      body.no-anim .lc-photo, body.no-anim .lc-stamp, body.no-anim.outro::before, body.no-anim.outro::after { animation: none !important; }
+      body.no-anim .lc-stamp { opacity: .85; } body.no-anim #polaroid-pop { display: none !important; }
+      #polaroid-pop { position: fixed; right: 18px; bottom: 70px; width: 150px; z-index: 40; border-radius: 3px; box-shadow: 0 6px 18px rgba(60,40,20,.35); pointer-events: none; animation: pol-pop 3.2s ease-out forwards; }
+      #polaroid-pop[hidden] { display: none; }
+      @keyframes pol-pop { 0% { transform: translateY(40px) rotate(-12deg) scale(.6); opacity: 0; } 12% { transform: rotate(4deg) scale(1.08); opacity: 1; } 20% { transform: rotate(3deg) scale(1); } 80% { transform: rotate(3deg); opacity: 1; } 100% { transform: translateY(-20px) rotate(5deg); opacity: 0; } }
+      .lc-photos { display: flex; gap: 10px; justify-content: center; margin: 4px 0 12px; }
+      .lc-photo { display: block; width: 104px; transform: rotate(var(--r, 0deg)); box-shadow: 0 4px 12px rgba(60,40,20,.3); animation: lc-drop .5s cubic-bezier(.2,1.4,.4,1) backwards; }
+      .lc-photo img { display: block; width: 100%; }
+      .lc-photo:hover { transform: rotate(0) scale(1.08); z-index: 2; }
+      @keyframes lc-drop { from { transform: translateY(-30px) rotate(calc(var(--r) * 3)) scale(1.3); opacity: 0; } to { transform: rotate(var(--r)); opacity: 1; } }
+      .lc-stamp { position: absolute; top: 14px; right: -10px; transform: rotate(14deg); border: 3px solid #d9534f; color: #d9534f; border-radius: 6px; padding: 2px 10px; font: 800 18px system-ui, sans-serif; letter-spacing: 2px; opacity: 0; animation: lc-stamp .35s .1s cubic-bezier(.3,1.6,.5,1) forwards; }
+      @keyframes lc-stamp { from { transform: rotate(14deg) scale(3); opacity: 0; } to { transform: rotate(14deg) scale(1); opacity: .85; } }
+      #levelcomplete .lc-card { position: relative; }
+      .ls-district { margin: 10px 0 2px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: #8a7b5c; border-bottom: 2px dotted #e6d6a8; padding-bottom: 2px; }
+      .ls-district:first-child { margin-top: 0; } .ls-count { float: right; text-transform: none; letter-spacing: 0; color: #3f9a62; font-weight: 700; }
       #levelselect { position: fixed; inset: 0; z-index: 48; display: grid; place-items: center; background: rgba(255,248,225,.55); font-family: system-ui, sans-serif; }
       #levelselect[hidden] { display: none; }
       #levelselect .ls-card { background: #fff8e1; color: #4a4033; padding: 16px 22px; border-radius: 14px; box-shadow: 0 10px 30px rgba(80,60,30,.3); width: 460px; max-width: 94vw; max-height: 92vh; overflow-y: auto; }

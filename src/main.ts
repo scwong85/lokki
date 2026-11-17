@@ -67,6 +67,8 @@ import { TRIGGERS } from './data/triggers';
 import { WRONG_FERRY } from './data/places';
 import { LevelStats } from './gameplay/levelStats';
 import { LevelComplete } from './ui/levelComplete';
+import { Polaroids } from './ui/polaroids';
+import { Outro, outroCamera, planRun, yawFor } from './gameplay/outro';
 import { activeMarkers } from './gameplay/questMarkers';
 import type { Marker } from './data/quests';
 import { MarkerPool } from './render/markers';
@@ -177,6 +179,7 @@ for (const sp of [...propSpawns, ...setup.props]) interaction.props.spawn(sp);
 const npcs = greybox ? null : new NpcManager(world, interaction.props, scene, walkable);
 if (npcs) {
   for (const sp of setup.tourists) npcs.spawn(sp);
+  npcs.stations = [...(level.stations ?? [])];
   interaction.npcs = npcs;
 }
 const makeDefense = (): CityDefense | null => (greybox || !setup.defense ? null : new CityDefense(world, scene, walkable));
@@ -234,6 +237,8 @@ if (level.sandbox) quests.restoreWon(save.questsWon); // finished quests belong 
 const triggers = new TriggerSystem(greybox ? [] : setup.triggers);
 const stats = new LevelStats();
 const levelComplete = new LevelComplete(document.body);
+const polaroids = new Polaroids(document.body);
+if (navigator.webdriver) document.body.classList.add('no-anim'); // browser tests run on software rendering
 document.getElementById('levelcomplete')?.addEventListener('click', (e) => {
   if (!(e.target as HTMLElement).closest('button')) levelComplete.hide(); // tap anywhere else to keep playing (phones)
 });
@@ -317,7 +322,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -470,7 +475,7 @@ function onNetEvent(e: GameEvent): void {
   }
 }
 const levelRows = () =>
-  LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), current: l.id === level.id, sandbox: l.sandbox, locked: !levelUnlocked(l, save.levels), unlockHint: l.requires ? `Clear ${levelById(l.requires).name} first` : undefined, best: save.levels[l.id]?.best ? fmtClear(save.levels[l.id].best) : undefined }));
+  LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), district: l.district, series: l.series, current: l.id === level.id, sandbox: l.sandbox, locked: !levelUnlocked(l, save.levels), unlockHint: l.requires ? `Clear ${levelById(l.requires).name} first` : undefined, best: save.levels[l.id]?.best ? fmtClear(save.levels[l.id].best) : undefined }));
 const controlsPanel = new ControlsPanel(document.body);
 const menuNav = new MenuNav();
 pad.menuOpen = () => menuOpen() || levelComplete.visible; // the level card takes the controller too (it does not pause the game)
@@ -528,7 +533,7 @@ const title = new TitleScreen(
     best: fmtClear(save.bestTime),
     skills: skills.ids.length,
     total: SKILLS.length,
-    levels: LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), current: l.id === level.id, sandbox: l.sandbox, locked: !levelUnlocked(l, save.levels), unlockHint: l.requires ? `Clear ${levelById(l.requires).name} first` : undefined })),
+    levels: LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), district: l.district, series: l.series, current: l.id === level.id, sandbox: l.sandbox, locked: !levelUnlocked(l, save.levels), unlockHint: l.requires ? `Clear ${levelById(l.requires).name} first` : undefined })),
   },
 );
 if (interactive && !new URLSearchParams(location.search).has('play')) title.show();
@@ -1174,6 +1179,9 @@ function ringBell(): void {
   if (!b) return;
   bellLeft = b.duration;
   bellLastNoise = 0;
+  // a sandwich taken while the bell was quiet must not end the heist: the picnickers bring out fresh ones
+  const fresh = npcs?.restockHeld('picnic', (pr) => interaction.restock((x) => x === pr)) ?? 0;
+  if (fresh) hud.toast('The picnickers have fresh sandwiches.', 2);
   audio.play('chime');
   hud.toast('BONG! Everyone looks up at the tower.', 1.6);
   notes(quests.onEvent('bell'));
@@ -1228,6 +1236,7 @@ function restartLevel(mode: 'normal' | 'speedrun'): void {
   quests.reset();
   triggers.reset();
   stats.reset();
+  polaroids.clear();
   levelComplete.hide();
   abilities.reset();
   flock.clear();
@@ -1247,6 +1256,7 @@ function loadLevel(id: string): void {
   npcs?.clearAll();
   for (const sp of [...propSpawns, ...setup.props]) interaction.props.spawn(sp);
   if (npcs) for (const sp of setup.tourists) npcs.spawn(sp);
+  if (npcs) npcs.stations = [...(level.stations ?? [])];
   defense?.dispose();
   defense = makeDefense();
   heatMeter?.remove();
@@ -1271,6 +1281,41 @@ const goToLevel = (id: string): void => {
   if (isGuest()) hud.toast('The host picks the level.', 1.6);
   else loadLevel(id);
 };
+
+/** The victory run after a level: the gull lands, runs at the camera laughing, and then the card shows. */
+const outro = new Outro(() => ({ land: tuning.outro.landSeconds.value, run: tuning.outro.runSeconds.value, hold: tuning.outro.holdSeconds.value }));
+let outroCard: (() => void) | null = null;
+let outroClock = 0;
+let outroLaugh = 0;
+let outroHold: { x: number; z: number } | null = null;
+const groundAt = (x: number, z: number): { y: number; water: boolean } => ({ y: world.surfaceBelow(x, z, 500).y, water: !level.winter && !isLand(x, z) });
+function startOutro(showCard: () => void): void {
+  const automated = navigator.webdriver && !new URLSearchParams(location.search).has('outro'); // browser tests expect the card at once (?outro turns it back on)
+  if (tuning.outro.enabled.value < 0.5 || players.length > 1 || net || automated) {
+    showCard();
+    return;
+  }
+  const s = gull.state;
+  const plan = planRun(groundAt, { x: s.x, z: s.z }, tuning.walk.speed.value * tuning.outro.runSeconds.value + tuning.outro.camDistance.value + 2, -s.heading);
+  outroCard = showCard;
+  outroClock = 0;
+  outroLaugh = 0;
+  lockId = null;
+  const top = world.surfaceBelow(plan.start.x, plan.start.z, 500).y;
+  gull.place(plan.start.x, Math.max(s.y, top + 3.5, s.mode === 'ground' ? top + 0.5 : 0), plan.start.z);
+  s.vx = 0;
+  s.vz = 0;
+  s.vy = 0;
+  outro.start(plan, tuning.walk.speed.value);
+  document.body.classList.add('outro');
+}
+function endOutro(): void {
+  document.body.classList.remove('outro');
+  if (outro.plan) cam.yaw = yawFor(outro.plan.dir); // the normal camera picks up behind the gull
+  const show = outroCard;
+  outroCard = null;
+  show?.();
+}
 
 /** A level is cleared when its main to-dos are done: stars, the saved result, the skill reward, the level-complete card. */
 let levelCleared = false;
@@ -1306,10 +1351,15 @@ function checkLevelDone(): void {
   }
   const idx = LEVELS.findIndex((l) => l.id === level.id);
   const nextLevel = LEVELS.slice(idx + 1).find((l) => !l.sandbox);
-  levelComplete.show(stats.summary(), quests.quests.map((x) => ({ title: setup.secret.has(x.id) && x.status !== 'won' ? '???' : x.title, won: x.status === 'won' })), notes, {
-    heading: `${level.name.replace(/^\d+\.\s*/, '')} cleared!`,
-    next: nextLevel ? { id: nextLevel.id, name: nextLevel.name } : undefined,
-    go: (target) => (target === 'menu' ? (levelComplete.hide(), levelSelect.show(levelRows())) : goToLevel(target)),
+  const summary = stats.summary();
+  const rows = quests.quests.map((x) => ({ title: setup.secret.has(x.id) && x.status !== 'won' ? '???' : x.title, won: x.status === 'won' }));
+  startOutro(() => {
+    levelComplete.setPhotos(polaroids.album);
+    levelComplete.show(summary, rows, notes, {
+      heading: `${level.name.replace(/^\d+\.\s*/, '')} cleared!`,
+      next: nextLevel ? { id: nextLevel.id, name: nextLevel.name } : undefined,
+      go: (target) => (target === 'menu' ? (levelComplete.hide(), levelSelect.show(levelRows())) : goToLevel(target)),
+    });
   });
 }
 
@@ -1512,6 +1562,7 @@ function notes(list: QuestNote[]): void {
     } else if (n.type === 'objective') {
       const text = q.objectives.find((o) => o.id === n.objective)!.text;
       hud.toast(`✓ ${text}`, 1.6);
+      polaroids.request(text);
       gull.wiggleT = 0.8;
       fx('stars', { x: gull.state.x, y: gull.state.y + 0.8, z: gull.state.z }, 0.6);
       if (n.quest === 'date' && n.objective === 'splat') {
@@ -1560,6 +1611,10 @@ function notes(list: QuestNote[]): void {
   }
 }
 
+function emoteAtNpc(n: { id: number; x: number; z: number }, kind: EmoteKind | null): void {
+  if (!kind) return;
+  emotes.show(kind, `npc${n.id}`, () => ({ x: n.x, y: 2.3, z: n.z }), 1.6);
+}
 function onNpcEvents(evs: NpcEvent[]): void {
   for (const e of evs) {
     if (e.type === 'noticed') {
@@ -1570,7 +1625,20 @@ function onNpcEvents(evs: NpcEvent[]): void {
         stealTipShown = true;
         announce.show('Tip: guarded items', 'A red ring means they are guarding it. Dive at it from straight above, or make a noise to distract them and grab it with E from the open side.', 'learned');
       }
-    } else if (e.type === 'panic' || e.type === 'chase') audio.play('yelp');
+    } else if (e.type === 'mood') {
+      // a change of mood shows over their head and is what chains are built from
+      emoteAtNpc(e.npc, e.mood === 'angry' ? 'anger' : e.mood === 'annoyed' ? 'sweat' : e.mood === 'upset' ? 'facepalm' : e.mood === 'delighted' ? 'heart' : null);
+      if (e.mood !== 'calm') notes(quests.onEvent(`mood:${e.npc.role}:${e.mood}`));
+    } else if (e.type === 'atStation') {
+      notes(quests.onEvent(`atStation:${e.npc.role}:${e.station}`));
+    } else if (e.type === 'bought') {
+      audio.play('pop');
+      hud.toast('Bought a treat to feel better.', 1.8);
+      notes(quests.onEvent(`bought:${e.npc.role}`));
+    } else if (e.type === 'panic' || e.type === 'chase') {
+      audio.play('yelp');
+      if (e.type === 'chase') notes(quests.onEvent(`robbed:${e.npc.role}`)); // snatched from them
+    }
     else if (e.type === 'tookItem') {
       audio.play('pop');
       notes(quests.onEvent(`tookItem:${e.propType}`));
@@ -1921,7 +1989,12 @@ startLoop({
     // speedrun clock: starts on the first move
     if (runTimer.mode === 'speedrun' && !runTimer.running && !runTimer.finished && (input.axes().x !== 0 || input.axes().y !== 0 || input.isDown('Space'))) runTimer.begin();
     runTimer.tick(dt);
-    const { x, y } = blocked ? { x: 0, y: 0 } : input.axes();
+    const scripted = outro.active;
+    if (scripted && ['Space', 'Enter', 'Escape', 'KeyE', 'KeyF', 'KeyQ'].some((k) => input.wasPressed(k))) {
+      outro.skip();
+      endOutro();
+    }
+    const { x, y } = blocked || scripted ? { x: 0, y: scripted && outro.phase === 'run' ? 1 : 0 } : input.axes();
     if (x !== 0 || y !== 0) tutorial.event('move');
     if (tutorial.tick(dt)) {
       options.tutorialDone = true;
@@ -1942,21 +2015,47 @@ startLoop({
     }
     const lockPoint = lockNow ? { x: lockNow.x, y: lockNow.y, z: lockNow.z } : null;
     const wasDive = gull.state.mode === 'dive';
+    if (scripted && outro.phase === 'land' && gull.state.mode !== 'ground') {
+      // a gentle scripted descent, then the normal landing code does the rest
+      const gs = gull.state;
+      outroHold = { x: gs.x, z: gs.z };
+      const gnd = world.surfaceBelow(gs.x, gs.z, gs.y).y;
+      gs.vx *= 0.9;
+      gs.vz *= 0.9;
+      gs.vy = -Math.max(2.5, Math.max(0, gs.y - gnd) / Math.max(0.3, tuning.outro.landSeconds.value));
+    }
     const evs = gull.update(
-      { ax: x, ay: y, flap: !blocked && input.isDown('Space'),
-        dive: !blocked && (input.isDown('ShiftLeft') || input.isDown('ShiftRight')),
+      { ax: x, ay: y, flap: !blocked && !scripted && input.isDown('Space'),
+        dive: !blocked && !scripted && (input.isDown('ShiftLeft') || input.isDown('ShiftRight')),
         aimPitch: cam.pitch,
         carryMass: isGuest() ? guestCarryMass : interaction.carriedMass(0),
         lock: lockPoint,
         lift: thermalLift(gull.state),
       },
-      cam.yaw,
+      scripted && outro.plan ? yawFor(outro.plan.dir) : cam.yaw,
       dt,
       world,
       simTime,
       npcs ? [...targets, ...npcs.handTargets()] : targets,
     );
     onFlightEvents(evs);
+    if (outroHold && outro.phase === 'land') {
+      // no glide drift on the way down: the gull drops straight onto the spot
+      gull.state.x = outroHold.x;
+      gull.state.z = outroHold.z;
+      gull.state.vx = 0;
+      gull.state.vz = 0;
+    }
+    outroHold = null;
+    if (scripted) {
+      const was = outro.phase;
+      const ended = outro.tick(dt, gull.state.mode === 'ground');
+      if (was === 'land' && outro.phase !== 'land') {
+        fx('confetti', { x: gull.state.x, y: gull.state.y + 1.2, z: gull.state.z });
+        audio.play('win');
+      }
+      if (ended) endOutro();
+    }
     if (npcs?.pushGull(gull.state) && simTime - lastBump > 1) {
       lastBump = simTime;
       audio.play('bonk');
@@ -2173,7 +2272,22 @@ startLoop({
     poopReticle.update(poopHit, blocked);
     touchControls?.update(interaction.grabPrompt(s), !!interaction.carried, { V: skills.has('mimic'), G: skills.has('flock'), B: skills.has('disguise') }, (code) => abilities.fraction(code === 'KeyV' ? 'mimic' : code === 'KeyG' ? 'flock' : 'disguise'), players.length > 1);
     hud.setInteraction(blocked ? 'Umbrella blocks it! Distract the Warden with a noise first (drop or throw a bottle)' : interaction.grabPrompt(s), poopReady);
-    cam.update(gull.position, frameDt, { vx: s.vx, vy: s.vy, vz: s.vz, diving: s.mode === 'dive', turnRate: s.turnRate });
+    if (outro.active && outro.plan) {
+      outroClock += frameDt;
+      const t = tuning.outro;
+      const c = outroCamera(gull.position, outro.plan.dir, outroClock, { distance: t.camDistance.value, height: t.camHeight.value, sway: t.camSway.value }, outro.plan.y);
+      cam.cinematic(c.pos, c.look, outroClock < 0.05 ? 1 : 1 - Math.exp(-5 * frameDt));
+      if (outro.phase === 'run' || outro.phase === 'hold') {
+        gull.openBeak(0.25);
+        gull.wiggleT = Math.max(gull.wiggleT, 0.2);
+        outroLaugh -= frameDt;
+        if (outroLaugh <= 0) {
+          outroLaugh = 0.9;
+          audio.play('screech');
+          emotes.show('laugh', gull, () => ({ x: gull.position.x, y: gull.position.y + 0.75, z: gull.position.z }), 1.2);
+        }
+      }
+    } else cam.update(gull.position, frameDt, { vx: s.vx, vy: s.vy, vz: s.vz, diving: s.mode === 'dive', turnRate: s.turnRate });
     audio.setAir(Math.hypot(s.vx, s.vy, s.vz) / tuning.dive.speed.value, s.mode !== 'ground');
     graphics.update(gull.position);
     sky.update(frameDt, cam.camera.position, simTime);
@@ -2195,6 +2309,8 @@ startLoop({
       post.release();
       renderer.render(scene, cam.camera);
     }
+    polaroids.tick(frameDt);
+    polaroids.capture(renderer.domElement, simTime);
     debug.frame(frameDt, `${renderer.info.render.calls} calls · ${(renderer.info.render.triangles / 1000).toFixed(0)}k tris`);
     const tip = tutorial.current;
     tipEl.hidden = !(tip || tutorial.outroShowing) || menuOpen();

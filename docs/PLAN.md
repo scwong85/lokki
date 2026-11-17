@@ -215,7 +215,11 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M37 World enrichment W6: landmark kit (Cathedral portico, Empire style, fountain splash)
 - [x] M38 Graphics G4: the post look (ink outline, vignette, optional tilt-shift; built on `m38-post-look`, awaiting playtest)
 - [x] M39 Graphics G5 part 1: actor art
-- [ ] M40 Graphics G5 part 2: gull model v2 (bigger blinking eyes, webbed feet; built on `m40-gull-v2`, awaiting playtest)
+- [x] M40 Graphics G5 part 2: gull model v2 (bigger blinking eyes, webbed feet; built on `m40-gull-v2`)
+- [ ] M41 Graphics G6: polaroids, CLEARED stamp, grouped level list (built on `m41-ui-polish`, awaiting playtest)
+- [ ] M42 The victory run: the gull lands and runs laughing at the camera after each level; chain-level plan (built on `m42-outro`, awaiting playtest)
+- [ ] M43 Playtest fixes: Bell Heist and the scrolling title list (built on `m43-fixes`)
+- [ ] M44 Chain levels C1 to C3: mood, lure, stations, chain quests, the Map and Cone level (built on `m44-chain-slice`, awaiting playtest)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -402,7 +406,20 @@ Tram, pigeons, sunbathers and dog rebuilt with real details. Details: `docs/mile
 ### M40 — Graphics G5 (part 2): gull model v2 (S)
 Bigger blinking eyes, rounder head, three-toed webbed feet. Details: `docs/milestones/M40.md`.
 
-### After M40 (backlog)
+### M41 — Graphics G6: polaroids and level list (S)
+Polaroid photos of finished to-dos, a CLEARED stamp with photos on the level card, a district-grouped level list. Details: `docs/milestones/M41.md`.
+
+### M42 — The victory run (S)
+A camera finale after every cleared level: the gull lands and runs at the camera, laughing. Plus the chain-level content plan (`docs/design/chain-levels.md`). Details: `docs/milestones/M42.md`.
+
+### M43 — Playtest fixes (S)
+Bell Heist can always be completed (fresh sandwiches at each bell), the title screen's level list scrolls. Details: `docs/milestones/M43.md`.
+
+### M44 — Chain levels, first slice (M)
+Mood, the lure (taunt), stations where people buy comfort food, chain quests on the to-do note, and the first chain level, Map and Cone. Details: `docs/milestones/M44.md`. Plan: `docs/design/chain-levels.md`.
+
+### After M44 (backlog)
+ Chain levels C4 to C7 (`docs/design/chain-levels.md`): rebuild the fetch-heavy levels as chains, rumour and crowds, escalation events, co-op chains. Waiting for the playtest of Map and Cone.
  World enrichment rest of W2, then W3 to W6 (`docs/design/world-enrichment.md`): streets and squares, things that move, a busier city, landmark kit.
  Plans: `docs/design/fun-todos.md` (F2–F6), `docs/design/graphics-refresh.md` (G2–G6).
  Esplanadi E4–E10 (`docs/design/levels-esplanadi.md`), Katajanokka (`docs/design/levels-katajanokka.md`), each level designed with a co-op variant; the shared systems they need (moving platforms, NPC schedules, Kalle the rival gull, the drone, seasons); local split-screen co-op (optional); optional WebGPU renderer.

@@ -126,7 +126,8 @@ describe('tourist brain', () => {
   it('snatched: chases, then recovers and goes back to idle', () => {
     const n = tourist();
     const ev = startle(n, 'snatched');
-    expect(ev[0].type).toBe('chase');
+    expect(ev.some((e) => e.type === 'chase')).toBe(true);
+    expect(n.mood).toBe('angry'); // and says so
     expect(n.holding).toBeNull();
     run(n, { x: 0, y: 1, z: -10, diving: false }, tuning.npc.chaseTime.value + 0.5);
     expect(n.mode).toBe('recover');

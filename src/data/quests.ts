@@ -48,6 +48,8 @@ export interface QuestDef {
   requiresFlag?: string;
   /** Not listed on the to-do list while locked. */
   hidden?: boolean;
+  /** A chain: one objective made of steps that each answer the one before. The note shows the steps done, the one to do now, and `?` for the rest. */
+  chain?: boolean;
   /** The city notices when this quest starts: the heat is raised to at least this. */
   startHeat?: number;
   /** Shown while the quest is idle and unlocked. */
