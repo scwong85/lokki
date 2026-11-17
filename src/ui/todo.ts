@@ -37,15 +37,17 @@ export class Todo {
       t.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
       t.classList.toggle('low', q.status === 'active' && q.timeLeft < 15);
     }
-    // live escape readout: how far from the nearest tourist, and how long you have kept it up
+    // the escape step: a bar that fills while you carry the loot far enough from everyone, with the numbers beside it
     this.el.querySelectorAll<HTMLElement>('.esc').forEach((el) => {
       const o = quests.find((x) => x.id === el.dataset.q)?.objectives.find((x) => x.id === 'escape');
       if (!o) return;
+      if (!el.firstElementChild) el.innerHTML = '<span class="escbar"><i></i></span><span class="esct"></span>';
       const need = tuning.quest.escapeDistance.value;
-      el.textContent = carryingStolen
-        ? `(${Math.min(Math.round(nearestNpc), 99)} / ${Math.round(need)} m, ${o.progress.toFixed(1)} / ${tuning.quest.escapeTime.value.toFixed(0)} s)`
-        : '(carry it!)';
-      el.classList.toggle('good', carryingStolen && nearestNpc >= need);
+      const total = tuning.quest.escapeTime.value;
+      const far = carryingStolen && nearestNpc >= need;
+      (el.querySelector('i') as HTMLElement).style.width = `${Math.round(Math.min(1, o.progress / total) * 100)}%`;
+      (el.querySelector('.esct') as HTMLElement).textContent = !carryingStolen ? 'carry it!' : far ? `getting away… ${o.progress.toFixed(1)} / ${total.toFixed(0)} s` : `${Math.min(Math.round(nearestNpc), 99)} / ${Math.round(need)} m from everyone: keep going`;
+      el.classList.toggle('good', far);
     });
   }
 

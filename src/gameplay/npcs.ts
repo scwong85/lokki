@@ -427,6 +427,7 @@ export class NpcManager implements NpcHooks {
     if (!prop) return;
     this.props.release(prop, { x: (this.rng.next() - 0.5) * 1.5, y: 2, z: (this.rng.next() - 0.5) * 1.5 });
     prop.heldBy = null;
+    prop.stolen = true; // dropped by someone: carrying it off still counts as getting away with it
     n.holding = null;
     n.holdType = null;
   }

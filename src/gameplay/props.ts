@@ -171,9 +171,10 @@ export class PropManager {
     p.tipped = false;
   }
 
-  /** Something falls out of a person's hand (a slip, full hands): it is theirs no more, and not stolen either. */
+  /** Something falls out of a person's hand (a slip, full hands): it is theirs no more, but carrying it off is still theft (so "get away with it" works on it). */
   drop(p: Prop, vel: { x: number; y: number; z: number }): void {
     p.heldBy = null;
+    p.stolen = true; // it is somebody's: carrying it off counts as getting away with it
     this.release(p, vel);
   }
 

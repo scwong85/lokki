@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { tuning } from '../core/tuning';
+import { comfort } from '../core/comfort';
 
 export interface CameraTargetInfo {
   vx: number;
@@ -48,16 +49,16 @@ export class FollowCamera {
     this.pos.lerp(desired, k);
     this.pos.y = Math.max(this.pos.y, t.minHeight.value);
 
-    const ahead = new THREE.Vector3(info.vx, info.vy * 0.5, info.vz).multiplyScalar(t.lookAhead.value);
+    const ahead = new THREE.Vector3(info.vx, info.vy * 0.5, info.vz).multiplyScalar(t.lookAhead.value * comfort.mods.lookAhead);
     this.look.lerp(target.clone().add(ahead), Math.min(1, k * 1.5));
 
-    this.fovKick += ((info.diving ? t.diveFovKick.value : 0) - this.fovKick) * (1 - Math.exp(-t.fovSmooth.value * frameDt));
-    const rollTarget = Math.max(-0.35, Math.min(0.35, -info.turnRate * t.rollAmount.value));
+    this.fovKick += ((info.diving ? t.diveFovKick.value * comfort.mods.fovKick : 0) - this.fovKick) * (1 - Math.exp(-t.fovSmooth.value * frameDt));
+    const rollTarget = Math.max(-0.35, Math.min(0.35, -info.turnRate * t.rollAmount.value * comfort.mods.roll));
     this.roll += (rollTarget - this.roll) * (1 - Math.exp(-t.rollSmooth.value * frameDt));
 
     this.time += frameDt;
     this.shakeT = Math.max(0, this.shakeT - frameDt * tuning.juice.shakeDecay.value * this.shakeT - frameDt * 0.05);
-    const amp = this.shakeT * this.shakeT * tuning.juice.shake.value * tuning.juice.shakeAmount.value;
+    const amp = this.shakeT * this.shakeT * tuning.juice.shake.value * tuning.juice.shakeAmount.value * comfort.mods.shake;
     this.camera.position.copy(this.pos);
     if (amp > 0.0005) this.camera.position.add(new THREE.Vector3(Math.sin(this.time * 61) * amp, Math.sin(this.time * 47 + 1) * amp, Math.sin(this.time * 53 + 2) * amp));
     this.camera.lookAt(this.look);

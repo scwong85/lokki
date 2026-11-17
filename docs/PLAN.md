@@ -223,7 +223,8 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [ ] M46 Playtest fixes: taunt works, no precision landing to-dos, level card at the side (built on `m46-fixes`, merged)
 - [ ] M47 Chains I: Vappu, Herring Market, Wedding Bells, Frozen Harbour and S6 rebuilt as chains; taunt and stuck-level fixes (built on `m47-chains`, merged)
 - [ ] M48 Mischief toys: Slip (Wet Floor) and Pied Piper levels, mechanics study (built on `m48-mischief`)
-- [ ] M49 Honk, Cannonball and environment sounds (built on `m49-honk-splash`)
+- [ ] M49 Honk, Cannonball and environment sounds (built on `m49-honk-splash`, merged)
+- [ ] M50 Handling and comfort: comfort presets, vignette, smooth steering, camera follow, FOV and distance; escape bar, splash sound (built on `m50-handling`)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -434,7 +435,10 @@ A study of fun mechanics (`docs/design/mischief-mechanics.md`) and the first two
 ### M49 — Honk, Cannonball and the sound of the city (M)
 Tap T to honk, hard dives into water soak the pier, and the tram, church bell, ferry horn, sea and city finally make sound. Details: `docs/milestones/M49.md`.
 
-### After M49 (backlog)
+### M50 — Handling and comfort (M)
+Comfort presets, a vignette, smooth steering, a camera that follows the gull, FOV and distance sliders; plus the escape bar and splash sound. Details: `docs/milestones/M50.md`.
+
+### After M50 (backlog)
  Tug (design in `docs/design/mischief-mechanics.md` section 12), then contagion, slam and the rest of the slate.
  Mischief toys next: tablecloth yank, prank button, hide and BOO, then convert the stall-chain levels to different toys (`docs/design/mischief-mechanics.md`).
  Chain levels: more rebuilds (Cheese Run, Harbour Day, the heist levels, Christmas Market, Key to the City, Coo-Coo, The Drone), then rumour and crowds, escalation events, co-op chains (`docs/design/chain-levels.md`).

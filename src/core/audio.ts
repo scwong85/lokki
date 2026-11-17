@@ -1,6 +1,6 @@
 import { tuning } from './tuning';
 
-export type Sfx = 'flap' | 'hop' | 'screech' | 'thud' | 'bonk' | 'chime' | 'pop' | 'splat' | 'clatter' | 'crash' | 'gasp' | 'yelp' | 'win' | 'lose' | 'hiss' | 'whistle' | 'twang' | 'alarm' | 'crow' | 'bell' | 'tramBell' | 'horn' | 'honk';
+export type Sfx = 'flap' | 'hop' | 'screech' | 'thud' | 'bonk' | 'chime' | 'pop' | 'splat' | 'clatter' | 'crash' | 'gasp' | 'yelp' | 'win' | 'lose' | 'hiss' | 'whistle' | 'twang' | 'alarm' | 'crow' | 'bell' | 'tramBell' | 'horn' | 'honk' | 'splash';
 
 /**
  * Tiny audio manager. Placeholder sounds are synthesised with WebAudio (no files, no licences, fully offline).
@@ -135,6 +135,13 @@ export class AudioManager {
         this.tone('sine', 880, 1100, 0.18, 0.3 * v);
         this.tone('sine', 1320, 1760, 0.22, 0.25 * v, 0.07);
         break;
+      case 'splash':
+        // a body hitting water: a heavy whoosh, a wet slap, then bubbles
+        this.burst(0.5, 900, 0.5, 0.7 * v, 180);
+        this.tone('sine', 160, 55, 0.3, 0.55 * v);
+        this.burst(0.12, 3200, 1.2, 0.35 * v, 1600);
+        for (let i = 0; i < 4; i++) this.tone('sine', 500 + i * 170, 900 + i * 260, 0.07, 0.1 * v, 0.18 + i * 0.07);
+        break;
       case 'honk':
         this.screech(1.5 * vol);
         this.tone('sawtooth', 420, 300, 0.22, 0.28 * v);
@@ -224,7 +231,7 @@ export class AudioManager {
     const k = this.muted ? 0 : tuning.audio.ambient.value;
     const t = this.ctx.currentTime;
     this.ambient.tram.gain.setTargetAtTime(a.tram * 0.5 * k, t, 0.3);
-    this.ambient.sea.gain.setTargetAtTime(a.sea * 0.16 * k, t, 0.6);
+    this.ambient.sea.gain.setTargetAtTime(a.sea * 0.085 * k, t, 0.6);
     this.ambient.city.gain.setTargetAtTime(a.city * 0.05 * k, t, 0.8);
   }
 
