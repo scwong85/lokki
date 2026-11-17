@@ -2,6 +2,10 @@ import { stage } from '../arcs';
 import { FERRY_DECK } from '../places';
 import { restY } from '../props';
 import { SELFIE_SPOT } from './snackAttack';
+import { BOMBS_AWAY } from './bombsAway';
+import { NOSY_PARKERS } from './nosyParkers';
+import { HONK } from './mischief';
+import type { QuestDef } from '../quests';
 
 /** Where the bench bun lies (open quay) and the landing zone beside it. */
 const BENCH = { x: -10, z: -12 };
@@ -82,4 +86,53 @@ export const FIRST_LIGHT = stage(1, 1, {
   defense: false,
   parTime: 300,
   reward: 'flight',
+});
+
+/** Stage 1.2 is built from three earlier levels: take their main chain, give it a way out, show it as a chain. */
+const chainOf = (q: QuestDef, escapeAfter?: string): QuestDef => ({
+  ...q,
+  chain: true,
+  objectives: escapeAfter && !q.objectives.some((o) => o.kind === 'escape') ? [...q.objectives, { id: 'escape', text: 'Get away with it', kind: 'escape', after: escapeAfter, hint: 'Keep it and stay far from everyone until the bar fills.' }] : q.objectives,
+});
+const quest = (l: { extraQuests?: QuestDef[] }, id: string): QuestDef => l.extraQuests!.find((q) => q.id === id)!;
+/** The Nosy Parkers cluster stands 14 m further east so it does not crowd the honk row. */
+const EAST = 14;
+const eastQuest = (q: QuestDef): QuestDef => ({ ...q, objectives: q.objectives.map((o) => ({ ...o, markers: o.markers?.map((m) => ({ ...m, x: m.x + EAST })) })) });
+
+/**
+ * Act 1, stage 2: Fish Market. Poop and wind, tossing, the honk, and noise: sight and hearing. Three objectives (the Clean Freak,
+ * Bottle Service, Honk!), each already a chain, and two co-op objectives.
+ */
+export const FISH_MARKET = stage(1, 2, {
+  name: '1.2 Fish Market',
+  blurb: 'Poop, toss, honk: people see and hear.',
+  intro: { title: 'Fish Market', text: 'Morning at the market hall. People look where they face and listen to noise: use both.' },
+  quests: [],
+  extraQuests: [chainOf(quest(BOMBS_AWAY, 'freak'), 'steal'), chainOf(eastQuest(quest(NOSY_PARKERS, 'bottleService')), 'snatch'), chainOf(quest(HONK, 'honkchain'))],
+  coopRequired: [
+    (BOMBS_AWAY.coopQuests ?? [])[0],
+    {
+      id: 'relay',
+      title: 'Relay',
+      teaser: 'Keep it in the air between you.',
+      timed: false,
+      objectives: [{ id: 'relay', text: 'Pass something in mid-air twice', kind: 'event', event: 'coop:pass', count: 2, hint: 'One gull tosses (Q) in front of the other, who catches it before it lands. Again.' }],
+    },
+  ],
+  triggers: [],
+  extraTriggers: [],
+  tourists: [],
+  extraTourists: [
+    ...(BOMBS_AWAY.extraTourists ?? []),
+    ...(NOSY_PARKERS.extraTourists ?? []).slice(0, 1).map((t) => ({ ...t, x: t.x + EAST })),
+    ...(HONK.extraTourists ?? []).slice(0, 4),
+  ],
+  extraProps: [
+    ...(BOMBS_AWAY.extraProps ?? []),
+    ...(NOSY_PARKERS.extraProps ?? []).map((p) => ({ ...p, x: p.x + EAST })),
+  ],
+  start: { x: 0, z: -30 },
+  defense: false,
+  parTime: 300,
+  reward: 'fatbird',
 });

@@ -66,3 +66,22 @@ describe('arcs and stages', () => {
     expect(levelGroup(rows[2])).toContain('Playground');
   });
 });
+
+describe('stage 1.2 Fish Market', () => {
+  it('has three chain objectives and the co-op ones; poop, toss and honk are unlocked, tug is not', () => {
+    const solo = setup('a1s2');
+    const duo = setup('a1s2', true);
+    expect(solo.main).toEqual(['freak', 'bottleService', 'honkchain']);
+    expect(duo.main).toEqual(['freak', 'bottleService', 'honkchain', 'duoSplat', 'relay']);
+    expect(solo.quests.every((q) => q.chain)).toBe(true);
+    expect(isUnlocked('honk', { arc: 1, stage: 2 })).toBe(true);
+    expect(isUnlocked('tug', { arc: 1, stage: 2 })).toBe(false);
+    expect(introducedAt({ arc: 1, stage: 2 }).map((m) => m.id).sort()).toEqual(['honk', 'poop', 'toss']);
+  });
+  it('is opened by stage 1.1', () => {
+    expect(LEVELS.find((l) => l.id === 'a1s2')!.requires).toBe('a1s1');
+  });
+  it('every quest has at least three steps (escape included)', () => {
+    for (const q of setup('a1s2').quests) expect(q.objectives.length).toBeGreaterThanOrEqual(3);
+  });
+});
