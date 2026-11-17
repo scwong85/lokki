@@ -26,7 +26,8 @@ export function levelSetup(def: LevelDef, allQuests: readonly QuestDef[], allTri
       return x;
     });
   const twists = coop ? def.coopQuests ?? [] : [];
-  const quests = [...pick(def.quests, allQuests, 'quest'), ...(def.extraQuests ?? []), ...twists];
+  const required = coop ? def.coopRequired ?? [] : [];
+  const quests = [...pick(def.quests, allQuests, 'quest'), ...(def.extraQuests ?? []), ...required, ...twists];
   const triggers = [...pick(def.triggers, allTriggers, 'trigger'), ...(def.extraTriggers ?? [])];
   const tourists = [...(def.tourists === 'all' ? allTourists : allTourists.filter((t) => (def.tourists as string[]).includes(t.role ?? 'any'))), ...(def.extraTourists ?? [])];
   const secret = new Set([...(def.secret ?? []), ...twists.map((q) => q.id)]);

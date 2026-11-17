@@ -40,7 +40,7 @@ export interface SaveData {
   havocBest: number;
 }
 
-export const blankSave = (): SaveData => ({ version: 1, skills: [], questsWon: [], replayUnlocked: false, extrasOn: false, bestTime: null, speedrunBest: null, clears: 0, muted: false, skin: 'herring', levels: {}, level: 'sandbox', havocBest: 0 });
+export const blankSave = (): SaveData => ({ version: 1, skills: [], questsWon: [], replayUnlocked: false, extrasOn: false, bestTime: null, speedrunBest: null, clears: 0, muted: false, skin: 'herring', levels: {}, level: 'a1s1', havocBest: 0 });
 
 /** The small part of the Storage API we need (so tests can pass a fake). */
 export interface StorageLike {

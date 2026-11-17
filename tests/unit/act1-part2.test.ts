@@ -109,7 +109,7 @@ describe('swim trigger', () => {
 describe('levels 5-8', () => {
   const ids = ['city-strikes', 'owl-be-back', 'the-warden', 'harbour-day'];
   it('are in order after level 4, each unlocked by the one before, with a real skill reward', () => {
-    expect(LEVELS.map((l) => l.id).slice(0, 8)).toEqual(['snack-attack', 'bombs-away', 'nosy-parkers', 'butterfingers', ...ids]);
+    expect(LEVELS.filter((l) => l.arc === undefined).map((l) => l.id).slice(0, 8)).toEqual(['snack-attack', 'bombs-away', 'nosy-parkers', 'butterfingers', ...ids]);
     ids.forEach((id, i) => {
       const l = levelById(id);
       expect(l.requires).toBe(i === 0 ? 'butterfingers' : ids[i - 1]);

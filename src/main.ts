@@ -40,7 +40,7 @@ import { QuestLog, type QuestNote } from './gameplay/quest';
 import { QUESTS } from './data/quests';
 import { LEVELS, levelById } from './data/levels';
 import type { LevelDef } from './data/levels/types';
-import { isUnlocked, parseGate, switchMech, type Gate, type MechId } from './gameplay/mechanics';
+import { introducedAt, isUnlocked, parseGate, switchMech, type Gate, type MechId } from './gameplay/mechanics';
 import { levelProgress, levelSetup, levelStars, levelUnlocked, mergeRecord, starCount } from './gameplay/level';
 import { TOURIST_SPAWNS } from './data/npcs';
 import type { NpcEvent } from './gameplay/npc';
@@ -493,7 +493,7 @@ function onNetEvent(e: GameEvent): void {
   }
 }
 const levelRows = () =>
-  LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), district: l.district, series: l.series, current: l.id === level.id, sandbox: l.sandbox, locked: !levelUnlocked(l, save.levels), unlockHint: l.requires ? `Clear ${levelById(l.requires).name} first` : undefined, best: save.levels[l.id]?.best ? fmtClear(save.levels[l.id].best) : undefined }));
+  LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), district: l.district, series: l.series, arc: l.arc, stage: l.stage, current: l.id === level.id, sandbox: l.sandbox, locked: !levelUnlocked(l, save.levels), unlockHint: l.requires ? `Clear ${levelById(l.requires).name} first` : undefined, best: save.levels[l.id]?.best ? fmtClear(save.levels[l.id].best) : undefined }));
 const controlsPanel = new ControlsPanel(document.body);
 const menuNav = new MenuNav();
 pad.menuOpen = () => menuOpen() || levelComplete.visible; // the level card takes the controller too (it does not pause the game)
@@ -526,8 +526,17 @@ const tipEl = document.createElement('div');
 tipEl.id = 'tip';
 tipEl.hidden = true;
 document.body.appendChild(tipEl);
+const introShown = new Set<string>();
+/** The opening beat of a campaign stage: what is new here (the place and the mechanics it introduces). */
+function stageIntro(): void {
+  if (!level.arc || !level.stage || introShown.has(level.id) || navigator.webdriver) return;
+  introShown.add(level.id);
+  if (level.intro) announce.show(level.intro.title, level.intro.text, 'learned');
+  for (const m of introducedAt({ arc: level.arc, stage: level.stage })) announce.show(`New: ${m.name}`, m.tip, 'learned');
+}
 function startPlaying(): void {
   title.hide();
+  stageIntro();
   if (touch) {
     // Android: go fullscreen and hold landscape (iPhone Safari cannot; the rotate card covers portrait there)
     const so = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
@@ -551,7 +560,7 @@ const title = new TitleScreen(
     best: fmtClear(save.bestTime),
     skills: skills.ids.length,
     total: SKILLS.length,
-    levels: LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), district: l.district, series: l.series, current: l.id === level.id, sandbox: l.sandbox, locked: !levelUnlocked(l, save.levels), unlockHint: l.requires ? `Clear ${levelById(l.requires).name} first` : undefined })),
+    levels: LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), district: l.district, series: l.series, arc: l.arc, stage: l.stage, current: l.id === level.id, sandbox: l.sandbox, locked: !levelUnlocked(l, save.levels), unlockHint: l.requires ? `Clear ${levelById(l.requires).name} first` : undefined })),
   },
 );
 if (interactive && !new URLSearchParams(location.search).has('play')) title.show();
@@ -729,7 +738,7 @@ const switchViews: THREE.Object3D[] = [];
 /** Stage gating: which mechanics this level has (docs/design/arcs.md). `?gate=1.3` tries a stage's set; no gate means everything. */
 let gate: Gate | null = null;
 function updateGate(): void {
-  gate = parseGate(new URLSearchParams(location.search).get('gate')) ?? level.gate ?? null;
+  gate = parseGate(new URLSearchParams(location.search).get('gate')) ?? level.gate ?? (level.arc && level.stage ? { arc: level.arc, stage: level.stage } : null);
 }
 const mech = (id: MechId): boolean => isUnlocked(id, gate);
 /** Push the gate into the systems that enforce it (called when the level changes and every tick). */
@@ -2690,7 +2699,7 @@ startLoop({
     lockMarker.update(lockNow, lockNow?.radius ?? 1, cam.camera, simTime, lockNow ? Math.hypot(lockNow.x - s.x, lockNow.z - s.z) : 0);
     const blocked = poopHit?.tag === 'umbrella';
     poopReticle.update(poopHit, blocked);
-    touchControls?.update(interaction.grabPrompt(s), !!interaction.carried, { V: skills.has('mimic'), G: skills.has('flock'), B: skills.has('disguise') }, (code) => abilities.fraction(code === 'KeyV' ? 'mimic' : code === 'KeyG' ? 'flock' : 'disguise'), players.length > 1 || setup.quests.some((q) => q.chain));
+    touchControls?.update(interaction.grabPrompt(s), !!interaction.carried, { V: skills.has('mimic'), G: skills.has('flock'), B: skills.has('disguise') }, (code) => abilities.fraction(code === 'KeyV' ? 'mimic' : code === 'KeyG' ? 'flock' : 'disguise'), players.length > 1 || setup.quests.some((q) => q.chain), { poop: !mech('poop'), toss: !mech('toss'), taunt: !mech('taunt') });
     hud.setInteraction(blocked ? 'Umbrella blocks it! Distract the Warden with a noise first (drop or throw a bottle)' : (!interaction.carried && switchNear(s) ? `E: ${({ yank: 'yank', summon: 'ring', domino: 'push', disguise: 'wear' } as Record<string, string>)[switchNear(s)!.effect] ?? 'peck'} the ${switchNear(s)!.label}` : '') || interaction.grabPrompt(s), poopReady);
     if (outro.active && outro.plan) {
       outroClock += frameDt;

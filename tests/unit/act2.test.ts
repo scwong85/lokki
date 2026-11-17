@@ -26,7 +26,7 @@ const ids = ['caw-of-the-wild', 'invisible-maze', 'heavy-lifting', 'gulls-eleven
 
 describe('Act 2 levels', () => {
   it('follow level 8 in order, each grants the skill it teaches and rewards it', () => {
-    expect(LEVELS.map((l) => l.id).slice(8, 14)).toEqual(ids);
+    expect(LEVELS.filter((l) => l.arc === undefined).map((l) => l.id).slice(8, 14)).toEqual(ids);
     const skills = ['mimic', 'hawkeye', 'fatbird', 'flock', 'disguise', 'flight'];
     ids.forEach((id, i) => {
       const l = levelById(id);

@@ -11,7 +11,7 @@ const ids = ['vappu-eve', 'herring-market', 'wedding-bells', 'frozen-harbour'];
 
 describe('Act 3, themed days (part 1)', () => {
   it('follow level 14 in order, each unlocked by the one before, with a real reward', () => {
-    expect(LEVELS.map((l) => l.id).slice(14, 18)).toEqual(ids);
+    expect(LEVELS.filter((l) => l.arc === undefined).map((l) => l.id).slice(14, 18)).toEqual(ids);
     ids.forEach((id, i) => {
       const l = levelById(id);
       expect(l.requires).toBe(i === 0 ? 'thermal-express' : ids[i - 1]);
