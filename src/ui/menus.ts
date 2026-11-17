@@ -107,6 +107,8 @@ export interface TitleLevel {
   unlockHint?: string;
   /** Best clear time (formatted). */
   best?: string;
+  /** Which district the level is in (the level list groups by it). */
+  district?: string;
 }
 
 /** Title screen: shown once the city has loaded; the game waits behind it. */

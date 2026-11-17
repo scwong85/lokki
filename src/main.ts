@@ -67,6 +67,7 @@ import { TRIGGERS } from './data/triggers';
 import { WRONG_FERRY } from './data/places';
 import { LevelStats } from './gameplay/levelStats';
 import { LevelComplete } from './ui/levelComplete';
+import { Polaroids } from './ui/polaroids';
 import { activeMarkers } from './gameplay/questMarkers';
 import type { Marker } from './data/quests';
 import { MarkerPool } from './render/markers';
@@ -234,6 +235,7 @@ if (level.sandbox) quests.restoreWon(save.questsWon); // finished quests belong 
 const triggers = new TriggerSystem(greybox ? [] : setup.triggers);
 const stats = new LevelStats();
 const levelComplete = new LevelComplete(document.body);
+const polaroids = new Polaroids(document.body);
 document.getElementById('levelcomplete')?.addEventListener('click', (e) => {
   if (!(e.target as HTMLElement).closest('button')) levelComplete.hide(); // tap anywhere else to keep playing (phones)
 });
@@ -317,7 +319,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -470,7 +472,7 @@ function onNetEvent(e: GameEvent): void {
   }
 }
 const levelRows = () =>
-  LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), current: l.id === level.id, sandbox: l.sandbox, locked: !levelUnlocked(l, save.levels), unlockHint: l.requires ? `Clear ${levelById(l.requires).name} first` : undefined, best: save.levels[l.id]?.best ? fmtClear(save.levels[l.id].best) : undefined }));
+  LEVELS.map((l) => ({ id: l.id, name: l.name, blurb: l.blurb, stars: starCount(save.levels[l.id]), district: l.district, current: l.id === level.id, sandbox: l.sandbox, locked: !levelUnlocked(l, save.levels), unlockHint: l.requires ? `Clear ${levelById(l.requires).name} first` : undefined, best: save.levels[l.id]?.best ? fmtClear(save.levels[l.id].best) : undefined }));
 const controlsPanel = new ControlsPanel(document.body);
 const menuNav = new MenuNav();
 pad.menuOpen = () => menuOpen() || levelComplete.visible; // the level card takes the controller too (it does not pause the game)
@@ -1228,6 +1230,7 @@ function restartLevel(mode: 'normal' | 'speedrun'): void {
   quests.reset();
   triggers.reset();
   stats.reset();
+  polaroids.clear();
   levelComplete.hide();
   abilities.reset();
   flock.clear();
@@ -1306,6 +1309,7 @@ function checkLevelDone(): void {
   }
   const idx = LEVELS.findIndex((l) => l.id === level.id);
   const nextLevel = LEVELS.slice(idx + 1).find((l) => !l.sandbox);
+  levelComplete.setPhotos(polaroids.album);
   levelComplete.show(stats.summary(), quests.quests.map((x) => ({ title: setup.secret.has(x.id) && x.status !== 'won' ? '???' : x.title, won: x.status === 'won' })), notes, {
     heading: `${level.name.replace(/^\d+\.\s*/, '')} cleared!`,
     next: nextLevel ? { id: nextLevel.id, name: nextLevel.name } : undefined,
@@ -1512,6 +1516,7 @@ function notes(list: QuestNote[]): void {
     } else if (n.type === 'objective') {
       const text = q.objectives.find((o) => o.id === n.objective)!.text;
       hud.toast(`✓ ${text}`, 1.6);
+      polaroids.request(text);
       gull.wiggleT = 0.8;
       fx('stars', { x: gull.state.x, y: gull.state.y + 0.8, z: gull.state.z }, 0.6);
       if (n.quest === 'date' && n.objective === 'splat') {
@@ -2195,6 +2200,8 @@ startLoop({
       post.release();
       renderer.render(scene, cam.camera);
     }
+    polaroids.tick(frameDt);
+    polaroids.capture(renderer.domElement, simTime);
     debug.frame(frameDt, `${renderer.info.render.calls} calls · ${(renderer.info.render.triangles / 1000).toFixed(0)}k tris`);
     const tip = tutorial.current;
     tipEl.hidden = !(tip || tutorial.outroShowing) || menuOpen();

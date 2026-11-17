@@ -1,3 +1,4 @@
+import { pickShowcase, type Polaroid } from './polaroids';
 import { formatTime, type StatSummary } from '../gameplay/levelStats';
 
 /** What the card offers after a level: where to go next. */
@@ -25,6 +26,12 @@ export class LevelComplete {
   }
 
   private nav: LevelNext | undefined;
+  private photos: Polaroid[] = [];
+
+  /** The album for this level; the card shows a few of them. Call before show(). */
+  setPhotos(list: Polaroid[]): void {
+    this.photos = list;
+  }
 
   /** Enter on the card: the next level when there is one (returns true if it navigated). */
   goNext(): boolean {
@@ -42,8 +49,10 @@ export class LevelComplete {
     const row = (label: string, value: string | number) => `<tr><td>${label}</td><td>${value}</td></tr>`;
     this.el.innerHTML = `
       <div class="lc-card">
+        <div class="lc-stamp">CLEARED</div>
         <h2>${nav?.heading ?? 'Kauppatori is in chaos!'}</h2>
         <p class="lc-sub">Level complete</p>
+        ${this.photos.length ? `<div class="lc-photos">${pickShowcase(this.photos).map((ph, i) => `<a class="lc-photo" style="--r:${[-4, 3, -2][i % 3]}deg;animation-delay:${0.25 + i * 0.18}s" href="${ph.url}" download="lokki-${i + 1}.jpg" title="Save this photo"><img src="${ph.url}" alt="${ph.caption}"></a>`).join('')}</div>` : ''}
         <ul class="lc-quests">${quests.map((q) => `<li class="${q.won ? 'won' : ''}">${q.won ? '☑' : '☐'} ${q.title}</li>`).join('')}</ul>
         <table>
           ${row('Time', formatTime(s.seconds))}
