@@ -724,6 +724,62 @@ let hushCd = 0;
 let onRoofBefore = false;
 const roofBox: import('./world/collision').Box = { min: [0, 0, 0], max: [0, 0, 0], kind: 'perch', color: 0xb9c4cf };
 const switchViews: THREE.Object3D[] = [];
+interface DominoRun { tiles: THREE.Group[]; start: number; dx: number; dz: number; fell: number }
+let dominoes: DominoRun[] = [];
+let disguiseT = 0;
+let capHat: THREE.Mesh | null = null;
+const swept = new Set<number>();
+/** Per-tick extras of the mischief toys: dominoes falling, the disguise running out, light things blown by low wingbeats. */
+function toyStep(dt: number): void {
+  for (const d of dominoes) {
+    const tf0 = simTime - d.start;
+    d.tiles.forEach((t, i) => {
+      const tf = tf0 - i * tuning.domino.interval.value;
+      t.rotation.z = -Math.min(1, Math.max(0, tf / 0.35)) * 1.45;
+      if (tf >= 0 && i >= d.fell) {
+        d.fell = i + 1;
+        audio.play('thud', 0.5);
+        npcs?.knockAt(t.position.x + d.dx * 1.0, t.position.z + d.dz * 1.0, 1.1, { x: d.dx, z: d.dz });
+      }
+    });
+  }
+  if (disguiseT > 0) {
+    disguiseT -= dt;
+    if (disguiseT <= 0) hud.toast('The captain\'s cap blows away.', 1.4);
+  }
+  if (capHat) {
+    capHat.visible = disguiseT > 0;
+    capHat.position.set(gull.position.x, gull.position.y + 0.55, gull.position.z);
+  }
+  // wings low over the ground blow light things away
+  const s = gull.state;
+  if (s.flapAnim < dt * 1.6 && s.mode !== 'ground' && s.heightAbove < tuning.gust.maxHeight.value && interaction.props) {
+    const g = tuning.gust;
+    let any = false;
+    for (const p of interaction.props.free()) {
+      if (PROPS[p.type].mass > g.maxMass.value) continue;
+      const dx = p.cur.p.x - s.x, dz = p.cur.p.z - s.z;
+      const d = Math.hypot(dx, dz);
+      if (d > g.radius.value || p.cur.p.y > s.y) continue;
+      const k = d > 0.05 ? 1 / d : 0;
+      interaction.props.release(p, { x: (d > 0.05 ? dx * k : Math.sin(-s.heading)) * g.push.value, y: g.lift.value, z: (d > 0.05 ? dz * k : -Math.cos(s.heading)) * g.push.value });
+      any = true;
+    }
+    if (any) puffs.burst('feathers', { x: s.x, y: s.y - 0.4, z: s.z }, 0.3);
+  }
+  const sw = level.sweep;
+  if (sw) {
+    for (const p of interaction.props.props) {
+      if (p.tag !== sw.tag || swept.has(p.id)) continue;
+      const z = sw.zone;
+      if (p.cur.p.x >= z.minX && p.cur.p.x <= z.maxX && p.cur.p.z >= z.minZ && p.cur.p.z <= z.maxZ) {
+        swept.add(p.id);
+        notes(quests.onEvent(`${sw.event}:${swept.size}`));
+        hud.toast('Swept away!', 1);
+      }
+    }
+  }
+}
 function hiddenNow(s: { x: number; z: number; vx: number; vz: number; mode: string }): boolean {
   if (s.mode !== 'ground' || Math.hypot(s.vx, s.vz) > tuning.hide.maxSpeed.value) return false;
   return (level.hides ?? []).some((h) => Math.hypot(h.x - s.x, h.z - s.z) < h.r);
@@ -732,6 +788,14 @@ const switchCd = new Map<string, number>();
 function setupSwitches(): void {
   for (const g of switchViews) scene.remove(g);
   switchViews.length = 0;
+  dominoes = [];
+  swept.clear();
+  disguiseT = 0;
+  if (!capHat) {
+    capHat = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.35, 10), new THREE.MeshLambertMaterial({ color: 0xd9402f }));
+    scene.add(capHat);
+  }
+  capHat.visible = false;
   switchCd.clear();
   for (const h of level.hides ?? []) {
     const bush = new THREE.Mesh(new THREE.SphereGeometry(h.r, 10, 8), new THREE.MeshLambertMaterial({ color: 0x6fae6a }));
@@ -741,6 +805,64 @@ function setupSwitches(): void {
     switchViews.push(bush);
   }
   for (const sw of level.switches ?? []) {
+    if (sw.effect === 'yank') {
+      const t = new THREE.Group();
+      const top = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.08, 14), new THREE.MeshLambertMaterial({ color: 0xffffff }));
+      top.position.y = 0.9;
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.2, 0.9, 8), new THREE.MeshLambertMaterial({ color: 0x8b6b4a }));
+      leg.position.y = 0.45;
+      const hang = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.3, 0.35, 14, 1, true), new THREE.MeshLambertMaterial({ color: 0xff8fa3, side: THREE.DoubleSide }));
+      hang.position.y = 0.75;
+      t.add(top, leg, hang);
+      for (let i = 0; i < 4; i++) {
+        const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.05, 10), new THREE.MeshLambertMaterial({ color: 0xffd36e }));
+        plate.position.set(Math.cos(i * 1.57) * 0.6, 0.97, Math.sin(i * 1.57) * 0.6);
+        t.add(plate);
+      }
+      t.position.set(sw.x, 0, sw.z);
+      t.name = `cloth:${sw.id}`;
+      scene.add(t);
+      switchViews.push(t);
+      continue;
+    }
+    if (sw.effect === 'domino') {
+      const tg = sw.target ?? { x: sw.x + 8, z: sw.z };
+      const n = sw.tiles ?? 8;
+      const len = Math.hypot(tg.x - sw.x, tg.z - sw.z);
+      const dx = (tg.x - sw.x) / len, dz = (tg.z - sw.z) / len;
+      const tiles: THREE.Group[] = [];
+      for (let i = 0; i < n; i++) {
+        const t = new THREE.Group();
+        t.position.set(sw.x + dx * (len * i) / (n - 1), 0, sw.z + dz * (len * i) / (n - 1));
+        t.rotation.y = -Math.atan2(dz, dx);
+        const b = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.6, 0.9), new THREE.MeshLambertMaterial({ color: i % 2 ? 0xf7a1c4 : 0xffd36e }));
+        b.position.y = 0.8;
+        t.add(b);
+        scene.add(t);
+        switchViews.push(t);
+        tiles.push(t);
+      }
+      dominoes.push({ tiles, start: 1e9, dx, dz, fell: 0 });
+      continue;
+    }
+    if (sw.effect === 'disguise') {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.14, 1.2, 8), new THREE.MeshLambertMaterial({ color: 0x8b6b4a }));
+      post.position.set(sw.x, 0.6, sw.z);
+      const hat = new THREE.Mesh(new THREE.ConeGeometry(0.4, 0.45, 10), new THREE.MeshLambertMaterial({ color: 0xd9402f }));
+      hat.position.set(sw.x, 1.45, sw.z);
+      scene.add(post, hat);
+      switchViews.push(post, hat);
+      continue;
+    }
+    if (sw.effect === 'summon') {
+      const bell = new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0xffd36e }));
+      bell.position.set(sw.x, 0.9, sw.z);
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.9, 8), new THREE.MeshLambertMaterial({ color: 0x8b6b4a }));
+      base.position.set(sw.x, 0.45, sw.z);
+      scene.add(bell, base);
+      switchViews.push(bell, base);
+      continue;
+    }
     const g = new THREE.Group();
     const body = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.5, 0.7), new THREE.MeshLambertMaterial({ color: sw.effect === 'dance' ? 0xc94f7c : sw.effect === 'alarm' ? 0xd9402f : 0x3f8fd9 }));
     body.position.y = 0.75;
@@ -766,7 +888,7 @@ function peck(sw: NonNullable<LevelDef['switches']>[number], pl: Player): void {
   const s = pl.gull.state;
   pl.gull.openBeak(0.4);
   pl.gull.wiggleT = 0.4;
-  audio.play(sw.effect === 'dance' ? 'jukebox' : sw.effect === 'alarm' ? 'alarm' : 'splash');
+  audio.play(sw.effect === 'dance' ? 'jukebox' : sw.effect === 'alarm' ? 'alarm' : sw.effect === 'yank' ? 'crash' : sw.effect === 'summon' ? 'tramBell' : sw.effect === 'disguise' ? 'pop' : sw.effect === 'domino' ? 'thud' : 'splash');
   fx('stars', { x: sw.x, y: 1.6, z: sw.z }, 0.8);
   notes(quests.onEvent(`pecked:${sw.id}`));
   if (npcs && sw.effect === 'dance') {
@@ -778,6 +900,30 @@ function peck(sw: NonNullable<LevelDef['switches']>[number], pl: Player): void {
     npcs.soakRadius(t.x, t.z, tuning.button.soakRadius.value);
     fx('stars', { x: t.x, y: 2, z: t.z }, 1);
   }
+  if (npcs && sw.effect === 'yank') {
+    // the cloth comes off: everything on the table flies, and people near it jump
+    const gd = sw.goods;
+    const v = tuning.cloth.launch.value;
+    for (let i = 0; gd && i < gd.count; i++) {
+      const a = (i / gd.count) * Math.PI * 2;
+      const pr = interaction.props.spawn({ type: gd.type, x: sw.x + Math.cos(a) * 0.5, y: 1.1, z: sw.z + Math.sin(a) * 0.5, tag: gd.tag });
+      interaction.props.drop(pr, { x: Math.cos(a) * v, y: 2.5, z: Math.sin(a) * v });
+    }
+    for (const v2 of switchViews) if (v2.name === `cloth:${sw.id}`) v2.children.forEach((c, i) => { if (i === 2) c.visible = false; });
+    noise(sw.x, sw.z, 2);
+    fx('stars', { x: sw.x, y: 1.2, z: sw.z }, 1);
+    npcs.scareNear(sw.x, sw.z, tuning.cloth.scareRadius.value, false);
+  }
+  if (sw.effect === 'domino') {
+    const d = dominoes.find((x) => x.tiles[0].position.x === sw.x && x.tiles[0].position.z === sw.z);
+    if (d && d.start > 1e8) d.start = simTime;
+  }
+  if (sw.effect === 'disguise') {
+    disguiseT = tuning.disguise.seconds.value;
+    hud.toast('The captain\'s cap! Nobody sees a gull now.', 2);
+    polaroids.request('Ahoy!');
+  }
+  if (npcs && sw.effect === 'summon' && sw.role) npcs.sendRole(sw.role, [{ x: sw.x + 1.4, z: sw.z, name: 'bell' }]);
   if (npcs && sw.effect === 'alarm') noise(sw.x, sw.z, tuning.button.alarmLoud.value);
   void s;
 }
@@ -1163,6 +1309,7 @@ function honk(pl: Player): void {
     onNpcEvents(npcs.honk(s.x, s.z, tuning.honk.range.value));
   }
   gang?.honk(s.x, s.z, tuning.honk.range.value);
+  for (const d of dogs) if (Math.hypot(d.dog.x - s.x, d.dog.z - s.z) < tuning.honk.range.value * 2.5) d.dog.summon(s.x, s.z);
   if (sunbathers) for (const sb of sunbathers.list) if (sb.state === 'asleep' && Math.hypot(sb.x - s.x, sb.z - s.z) < tuning.honk.range.value * 0.6) { sb.state = 'awake'; sb.t = tuning.sun.awakeSeconds.value; }
 }
 const npcModeSeen = new Map<number, string>();
@@ -2283,6 +2430,7 @@ startLoop({
       if (ended) endOutro();
     }
     if (npcs && !isGuest()) npcs.slam(gull.state);
+    if (!isGuest()) toyStep(dt);
     if (npcs?.pushGull(gull.state) && simTime - lastBump > 1) {
       lastBump = simTime;
       audio.play('bonk');
@@ -2337,7 +2485,7 @@ startLoop({
     else onGags(interaction.step(dt, simTime, gull.state));
     if (npcs && !isGuest()) {
       const g = gull.state;
-      onNpcEvents(npcs.update(dt, players.map((p) => ({ x: p.gull.state.x, y: p.gull.state.y, z: p.gull.state.z, diving: p.gull.state.mode === 'dive', taunt: p.gull.taunting, hidden: hiddenNow(p.gull.state) }))));
+      onNpcEvents(npcs.update(dt, players.map((p) => ({ x: p.gull.state.x, y: p.gull.state.y, z: p.gull.state.z, diving: p.gull.state.mode === 'dive', taunt: p.gull.taunting, hidden: hiddenNow(p.gull.state), disguise: disguiseT > 0 }))));
       const stolen = players.some((p) => interaction.beak(p.id).carried?.stolen === true);
       notes(quests.tick({ dt, carryingStolen: stolen, nearestNpc: Math.min(...players.map((p) => npcs.nearestDistance(p.gull.state))) }));
       if (defense) {
@@ -2516,7 +2664,7 @@ startLoop({
     const blocked = poopHit?.tag === 'umbrella';
     poopReticle.update(poopHit, blocked);
     touchControls?.update(interaction.grabPrompt(s), !!interaction.carried, { V: skills.has('mimic'), G: skills.has('flock'), B: skills.has('disguise') }, (code) => abilities.fraction(code === 'KeyV' ? 'mimic' : code === 'KeyG' ? 'flock' : 'disguise'), players.length > 1 || setup.quests.some((q) => q.chain));
-    hud.setInteraction(blocked ? 'Umbrella blocks it! Distract the Warden with a noise first (drop or throw a bottle)' : (!interaction.carried && switchNear(s) ? `E: peck the ${switchNear(s)!.label}` : '') || interaction.grabPrompt(s), poopReady);
+    hud.setInteraction(blocked ? 'Umbrella blocks it! Distract the Warden with a noise first (drop or throw a bottle)' : (!interaction.carried && switchNear(s) ? `E: ${({ yank: 'yank', summon: 'ring', domino: 'push', disguise: 'wear' } as Record<string, string>)[switchNear(s)!.effect] ?? 'peck'} the ${switchNear(s)!.label}` : '') || interaction.grabPrompt(s), poopReady);
     if (outro.active && outro.plan) {
       outroClock += frameDt;
       const t = tuning.outro;

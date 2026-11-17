@@ -415,3 +415,70 @@ export const PEEKABOO: LevelDef = {
   start: { x: -8, z: -30 },
   parTime: 240,
 };
+
+/** M11. Tablecloth Trick (yank): pull the cloth and everything on the table flies; the diners jump. */
+export const TABLECLOTH: LevelDef = {
+  id: 'tablecloth',
+  name: 'M11. Tablecloth Trick',
+  blurb: 'Yank the cloth. Everything on the table goes flying.',
+  district: 'kauppatori',
+  series: 'Mischief (new)',
+  quests: [],
+  extraQuests: [
+    {
+      id: 'clothchain',
+      title: 'Tablecloth Trick',
+      teaser: 'Yank the tablecloth and grab a bun that flies off.',
+      timed: false,
+      chain: true,
+      objectives: [
+        { id: 'yank', text: 'Yank the tablecloth (E)', kind: 'event', event: 'pecked:cloth', hint: 'Land by the pink table and press E.', markers: [{ x: -6, z: -17, r: 4, label: 'Table' }] },
+        { id: 'jump', text: 'Make the diners jump', kind: 'event', event: 'owlScare:diner', after: 'yank', hint: 'Everyone near the table jumps when the cloth goes.' },
+        { id: 'bun', text: 'Take a bun that flew off', kind: 'event', event: 'grab:clothBun', hint: 'Grab one with E.' },
+        { id: 'escape', text: 'Get away with it', kind: 'escape', after: 'bun', hint: 'Keep it and stay far from everyone until the bar fills.' },
+      ],
+    },
+  ],
+  triggers: [],
+  tourists: [],
+  extraTourists: [
+    { x: -8.4, z: -17, heading: -Math.PI / 2, ice: true, role: 'diner', stationary: true, post: true, color: 0xf7a1c4 },
+    { x: -3.6, z: -17, heading: Math.PI / 2, ice: true, role: 'diner', stationary: true, post: true, color: 0x9ec9f0 },
+    { x: -6, z: -19.4, heading: 0, ice: true, role: 'diner', stationary: true, post: true, color: 0xffd36e },
+  ],
+  switches: [{ id: 'cloth', x: -6, z: -17, label: 'tablecloth', effect: 'yank', cooldown: 8, goods: { type: 'bun', tag: 'clothBun', count: 4 } }],
+  defense: false,
+  start: { x: -6, z: -32 },
+  parTime: 240,
+};
+
+/** M12. Service Bell (summon): ring the bell and the waiter comes running, away from his tray. */
+export const SERVICE_BELL: LevelDef = {
+  id: 'service-bell',
+  name: 'M12. Service Bell',
+  blurb: 'Ring for service. The waiter comes. Take his bun.',
+  district: 'kauppatori',
+  series: 'Mischief (new)',
+  quests: [],
+  extraQuests: [
+    {
+      id: 'bellchain',
+      title: 'Service Bell',
+      teaser: 'Ring the bell, and take the bun from the waiter when he comes.',
+      timed: false,
+      chain: true,
+      objectives: [
+        { id: 'ring', text: 'Ring the service bell (E)', kind: 'event', event: 'pecked:bell', hint: 'The little gold bell on the post.', markers: [{ x: -6, z: -20, r: 4, label: 'Bell' }] },
+        { id: 'bun', text: 'Take the waiter\'s bun while he is coming', kind: 'event', event: 'grab:bellBun', after: 'ring', hint: 'Dive at it (Shift) while he walks: he is not guarding it.' },
+        { id: 'escape', text: 'Get away with it', kind: 'escape', after: 'bun', hint: 'Keep it and stay far from everyone until the bar fills.' },
+      ],
+    },
+  ],
+  triggers: [],
+  tourists: [],
+  extraTourists: [{ x: -24, z: -20, heading: -Math.PI / 2, holds: 'bun', holdTag: 'bellBun', role: 'waiter', stationary: true, color: 0xf0f0f0 }],
+  switches: [{ id: 'bell', x: -6, z: -20, label: 'service bell', effect: 'summon', cooldown: 10, role: 'waiter' }],
+  defense: false,
+  start: { x: -6, z: -34 },
+  parTime: 240,
+};

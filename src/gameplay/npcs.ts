@@ -278,6 +278,17 @@ export class NpcManager implements NpcHooks {
     }
   }
 
+  /** Something knocks over whoever stands within `r` of (x, z), sliding them along `dir` (a falling domino): the fall goes on from them. */
+  knockAt(x: number, z: number, r: number, dir: { x: number; z: number }): number {
+    let k = 0;
+    for (const n of this.npcs) {
+      if (n.mode === 'slip' || n.tugged || Math.hypot(n.x - x, n.z - z) > r) continue;
+      this.knock(n, dir, 0);
+      k++;
+    }
+    return k;
+  }
+
   /** The jukebox plays: calm people within `r` dance for `seconds`. Returns how many. */
   danceNear(x: number, z: number, r: number, seconds: number): NpcEvent[] {
     const ev: NpcEvent[] = [];
@@ -649,7 +660,7 @@ export class NpcManager implements NpcHooks {
   scareNear(x: number, z: number, range: number, carried: boolean): Npc[] {
     const out: Npc[] = [];
     for (const n of this.npcs) {
-      if (!(n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat')) continue;
+      if (!isCalm(n)) continue;
       if (Math.hypot(n.x - x, n.z - z) > range) continue;
       this.dropHeld(n);
       this.pending.push(...startle(n, 'pooped'));

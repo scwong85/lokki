@@ -433,6 +433,23 @@ export const tuning = {
     soakRadius: p(4.5, 1, 12, 0.5), // a sprinkler button soaks everyone this close to its target
     alarmLoud: p(3, 0.5, 6, 0.5), // how loud the alarm is (hearing range multiplier)
   },
+  gust: {
+    radius: p(3.2, 1, 8, 0.2), // light things this close below a low flapping gull are blown away
+    push: p(7, 1, 14, 0.5), // how hard
+    lift: p(1.4, 0, 5, 0.1),
+    maxMass: p(0.8, 0.1, 5, 0.1), // only things this light move
+    maxHeight: p(3.4, 1, 8, 0.2), // the gull must be this low
+  },
+  disguise: {
+    seconds: p(25, 5, 90, 1), // how long the captain's cap fools everyone
+  },
+  domino: {
+    interval: p(0.22, 0.05, 1, 0.01), // seconds between one tile and the next falling
+  },
+  cloth: {
+    scareRadius: p(5, 1, 12, 0.5), // people this close to the table jump when the cloth is yanked
+    launch: p(5, 1, 12, 0.5), // how hard the goods fly off
+  },
   dance: {
     seconds: p(9, 2, 30, 1), // how long the jukebox makes people dance
     range: p(20, 4, 60, 1), // how far the music carries

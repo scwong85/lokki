@@ -35,6 +35,9 @@ export class Dog {
   /** True while running fast (the caller scatters food near it). */
   running = false;
   private biteCd = 0;
+  private alertT = 0;
+  private alertX = 0;
+  private alertZ = 0;
   private wanderT = 0;
   private wanderX = 0;
   private wanderZ = 0;
@@ -44,6 +47,13 @@ export class Dog {
     this.z = homeZ;
     this.wanderX = homeX;
     this.wanderZ = homeZ;
+  }
+
+  /** A honk (or a shout): the dog bounds over to the spot, straight through whatever is in the way. */
+  summon(x: number, z: number, seconds = 6): void {
+    this.alertT = seconds;
+    this.alertX = x;
+    this.alertZ = z;
   }
 
   private moveTo(tx: number, tz: number, speed: number, dt: number): number {
@@ -69,6 +79,13 @@ export class Dog {
         this.carrying = null;
         this.mode = 'idle';
       }
+      return ev;
+    }
+    if (this.alertT > 0 && this.mode !== 'fetch') {
+      this.alertT -= dt;
+      this.running = true;
+      if (this.mode !== 'chase') this.mode = 'chase';
+      if (this.moveTo(this.alertX, this.alertZ, t.speed.value, dt) < 1.6) this.alertT = 0;
       return ev;
     }
     // chase a gull on the ground
