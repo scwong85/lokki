@@ -78,6 +78,31 @@ export class NpcManager implements NpcHooks {
     this.items.set(n.id, prop);
   }
 
+  /**
+   * Give back the item (and the calm) of every npc of this role that has lost it: snatched out of turn, dropped, eaten.
+   * The bell heist uses it so a snatch while the bell is quiet is never the end of the level. `release` frees the old
+   * item from a beak. Returns how many were restocked.
+   */
+  restockHeld(role: string, release: (p: Prop) => void): number {
+    let k = 0;
+    for (const n of this.npcs) {
+      if (n.role !== role) continue;
+      const sp = this.spawns.get(n.id)!;
+      const prop = this.items.get(n.id);
+      const holds = sp.holds ?? (sp.ice ? 'icecream' : undefined);
+      if (!prop || !holds || n.holding === prop.id) continue;
+      release(prop);
+      Object.assign(n, newNpc(n.id, sp)); // calm again, back at the picnic
+      this.props.reset(prop);
+      this.props.attach(prop, n.id);
+      n.holding = prop.id;
+      n.holdType = holds;
+      this.props.setHoldTarget(prop, handPos(n));
+      k++;
+    }
+    return k;
+  }
+
   /** A sound the tourists can hear (clatter, crash, tipped bin...). */
   addNoise(x: number, z: number, loud = 1): void {
     this.noises.push({ x, z, loud });

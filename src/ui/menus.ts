@@ -111,6 +111,22 @@ export interface TitleLevel {
   district?: string;
 }
 
+const DISTRICT_NAMES: Record<string, string> = { kauppatori: 'Kauppatori · the Market Square', senaatintori: 'Senate Square', esplanadi: 'Esplanadi' };
+
+/** The level buttons of the title screen, with a heading where the district changes. */
+export function titleLevelRows(levels: TitleLevel[]): string {
+  let last = '';
+  return levels
+    .map((l) => {
+      const group = l.sandbox ? 'Free play' : DISTRICT_NAMES[l.district ?? 'kauppatori'] ?? '';
+      const head = group !== last ? `<h4>${group}</h4>` : '';
+      last = group;
+      const stars = l.locked ? l.unlockHint ?? '' : l.sandbox ? 'free play' : '★'.repeat(l.stars) + '☆'.repeat(3 - l.stars);
+      return `${head}<button data-level="${l.id}" class="${l.current ? 'on' : ''}${l.locked ? ' locked' : ''}" title="${l.locked ? l.unlockHint ?? 'Locked' : l.blurb}"><span class="lv-name">${l.locked ? '🔒 ' : ''}${l.name}</span><span class="lv-stars">${stars}</span></button>`;
+    })
+    .join('');
+}
+
 /** Title screen: shown once the city has loaded; the game waits behind it. */
 export class TitleScreen {
   private el: HTMLElement;
@@ -129,7 +145,7 @@ export class TitleScreen {
         <h1>Lokki</h1>
         <p class="tag">A seagull. Helsinki's Market Square. Zero regrets.</p>
         <button class="big" data-act="play">Play${info.levels?.find((l) => l.current) ? `: ${info.levels.find((l) => l.current)!.name}` : ''}</button>
-        ${info.levels ? `<div class="title-levels">${info.levels.map((l) => `<button data-level="${l.id}" class="${l.current ? 'on' : ''}${l.locked ? ' locked' : ''}" title="${l.locked ? l.unlockHint ?? 'Locked' : l.blurb}"><span class="lv-name">${l.locked ? '🔒 ' : ''}${l.name}</span><span class="lv-stars">${l.locked ? l.unlockHint ?? '' : l.sandbox ? 'free play' : '★'.repeat(l.stars) + '☆'.repeat(3 - l.stars)}</span></button>`).join('')}</div>` : ''}
+        ${info.levels ? `<div class="title-levels">${titleLevelRows(info.levels)}</div>` : ''}
         <div class="title-row"><button data-act="options">Options</button><button data-act="coop">Play with a friend</button><button data-act="credits">Credits</button></div>
         <p class="title-keys"><b>WASD</b> move · <b>Space</b> jump (hold: fly) · <b>Shift</b> dive · <b>E</b> grab · <b>F</b> poop · <b>Tab</b> lock on · <b>Mouse</b> look (click to capture)</p>
         ${info.best ? `<p class="title-best">Best clear ${info.best} · skills ${info.skills}/${info.total}</p>` : info.skills ? `<p class="title-best">Skills ${info.skills}/${info.total}</p>` : ''}
@@ -157,6 +173,7 @@ export class TitleScreen {
 
   show(): void {
     this.el.hidden = false;
+    this.el.querySelector('.title-levels button.on')?.scrollIntoView({ block: 'center' }); // the long list opens at the current level
   }
 
   hide(): void {

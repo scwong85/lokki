@@ -44,7 +44,11 @@
       .title-card button, .menu-card button { font: inherit; padding: 8px 18px; margin: 4px; border: 0; border-radius: 10px; background: #fff3c4; color: #3a3a4a; cursor: pointer; box-shadow: 0 2px 0 #d9c9a3; }
       .title-card button:hover, .menu-card button:hover { background: #ffe9a0; }
       .title-card button.big { font-size: 22px; padding: 10px 44px; background: #ffd36e; }
-      .title-levels { display: flex; flex-direction: column; gap: 6px; margin: 10px auto 2px; max-width: 360px; }
+      .title-card { max-height: 94vh; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+      .title-levels { display: flex; flex-direction: column; gap: 6px; margin: 10px auto 2px; max-width: 360px; max-height: 38vh; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 0 4px; }
+      .title-levels h4 { margin: 8px 0 0; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: #8a7b5c; text-align: left; border-bottom: 2px dotted #e6d6a8; } .title-levels h4:first-child { margin-top: 0; }
+      /* body.touch turns touch scrolling off for the game; panels that scroll opt back in */
+      body.touch #levelselect .ls-card, body.touch .ls-list, body.touch .menu-card, body.touch #skills .sk-card, body.touch #credits, body.touch #levelcomplete .lc-card { touch-action: pan-y; overscroll-behavior: contain; }
       .title-levels button { display: flex; justify-content: space-between; gap: 12px; margin: 0; padding: 7px 14px; font-size: 14px; background: #fff8e1; }
       .title-levels button.locked { opacity: .55; cursor: default; } .title-levels button.locked .lv-stars { font-size: 11px; color: #8a7b5c; letter-spacing: 0; }
       .title-levels button.on { background: #ffe9a0; box-shadow: 0 0 0 2px #e39a7e inset; } .lv-stars { color: #e0a42b; letter-spacing: 1px; }
