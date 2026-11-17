@@ -339,7 +339,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get switches() { return level.switches ?? []; }, peckNow: () => { const sw = switchNear(gull.state); if (sw) peck(sw, players[0]); return !!sw; }, get tugProgress() { return interaction.tugProgress(0); }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get hidden() { return hiddenNow(gull.state); }, get switches() { return level.switches ?? []; }, peckNow: () => { const sw = switchNear(gull.state); if (sw) peck(sw, players[0]); return !!sw; }, get tugProgress() { return interaction.tugProgress(0); }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -723,15 +723,26 @@ let quietCd = 0;
 let hushCd = 0;
 let onRoofBefore = false;
 const roofBox: import('./world/collision').Box = { min: [0, 0, 0], max: [0, 0, 0], kind: 'perch', color: 0xb9c4cf };
-const switchViews: THREE.Group[] = [];
+const switchViews: THREE.Object3D[] = [];
+function hiddenNow(s: { x: number; z: number; vx: number; vz: number; mode: string }): boolean {
+  if (s.mode !== 'ground' || Math.hypot(s.vx, s.vz) > tuning.hide.maxSpeed.value) return false;
+  return (level.hides ?? []).some((h) => Math.hypot(h.x - s.x, h.z - s.z) < h.r);
+}
 const switchCd = new Map<string, number>();
 function setupSwitches(): void {
   for (const g of switchViews) scene.remove(g);
   switchViews.length = 0;
   switchCd.clear();
+  for (const h of level.hides ?? []) {
+    const bush = new THREE.Mesh(new THREE.SphereGeometry(h.r, 10, 8), new THREE.MeshLambertMaterial({ color: 0x6fae6a }));
+    bush.scale.y = 0.8;
+    bush.position.set(h.x, h.r * 0.6, h.z);
+    scene.add(bush);
+    switchViews.push(bush);
+  }
   for (const sw of level.switches ?? []) {
     const g = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.5, 0.7), new THREE.MeshLambertMaterial({ color: 0xc94f7c }));
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.5, 0.7), new THREE.MeshLambertMaterial({ color: sw.effect === 'dance' ? 0xc94f7c : sw.effect === 'alarm' ? 0xd9402f : 0x3f8fd9 }));
     body.position.y = 0.75;
     const top = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.7, 12, 1, false, 0, Math.PI), new THREE.MeshLambertMaterial({ color: 0xffd36e }));
     top.rotation.z = Math.PI / 2;
@@ -755,13 +766,19 @@ function peck(sw: NonNullable<LevelDef['switches']>[number], pl: Player): void {
   const s = pl.gull.state;
   pl.gull.openBeak(0.4);
   pl.gull.wiggleT = 0.4;
-  audio.play('jukebox');
+  audio.play(sw.effect === 'dance' ? 'jukebox' : sw.effect === 'alarm' ? 'alarm' : 'splash');
   fx('stars', { x: sw.x, y: 1.6, z: sw.z }, 0.8);
   notes(quests.onEvent(`pecked:${sw.id}`));
   if (npcs && sw.effect === 'dance') {
     const evs = npcs.danceNear(sw.x, sw.z, tuning.dance.range.value, tuning.dance.seconds.value);
     onNpcEvents(evs);
   }
+  if (npcs && sw.effect === 'soak') {
+    const t = sw.target ?? sw;
+    npcs.soakRadius(t.x, t.z, tuning.button.soakRadius.value);
+    fx('stars', { x: t.x, y: 2, z: t.z }, 1);
+  }
+  if (npcs && sw.effect === 'alarm') noise(sw.x, sw.z, tuning.button.alarmLoud.value);
   void s;
 }
 function setupSenate(): void {
@@ -1141,7 +1158,10 @@ function honk(pl: Player): void {
   if (isGuest()) return;
   noise(s.x, s.z, 2.6);
   notes(quests.onEvent('honk'));
-  if (npcs) onNpcEvents(npcs.honk(s.x, s.z, tuning.honk.range.value));
+  if (npcs) {
+    if (hiddenNow(s)) onNpcEvents(npcs.boo(s.x, s.z, tuning.hide.booRange.value));
+    onNpcEvents(npcs.honk(s.x, s.z, tuning.honk.range.value));
+  }
   gang?.honk(s.x, s.z, tuning.honk.range.value);
   if (sunbathers) for (const sb of sunbathers.list) if (sb.state === 'asleep' && Math.hypot(sb.x - s.x, sb.z - s.z) < tuning.honk.range.value * 0.6) { sb.state = 'awake'; sb.t = tuning.sun.awakeSeconds.value; }
 }
@@ -1787,6 +1807,10 @@ function onNpcEvents(evs: NpcEvent[]): void {
     } else if (e.type === 'spread') {
       notes(quests.onEvent(`spread:${e.count}`));
       if (e.count === 5) polaroids.request('Panic!');
+    } else if (e.type === 'boo') {
+      emoteAtNpc(e.npc, 'alert');
+      notes(quests.onEvent('boo'));
+      notes(quests.onEvent(`boo:${e.npc.role}`));
     } else if (e.type === 'slam') {
       audio.play('bonk');
       cam.shake(0.35);
@@ -2313,7 +2337,7 @@ startLoop({
     else onGags(interaction.step(dt, simTime, gull.state));
     if (npcs && !isGuest()) {
       const g = gull.state;
-      onNpcEvents(npcs.update(dt, players.map((p) => ({ x: p.gull.state.x, y: p.gull.state.y, z: p.gull.state.z, diving: p.gull.state.mode === 'dive', taunt: p.gull.taunting }))));
+      onNpcEvents(npcs.update(dt, players.map((p) => ({ x: p.gull.state.x, y: p.gull.state.y, z: p.gull.state.z, diving: p.gull.state.mode === 'dive', taunt: p.gull.taunting, hidden: hiddenNow(p.gull.state) }))));
       const stolen = players.some((p) => interaction.beak(p.id).carried?.stolen === true);
       notes(quests.tick({ dt, carryingStolen: stolen, nearestNpc: Math.min(...players.map((p) => npcs.nearestDistance(p.gull.state))) }));
       if (defense) {

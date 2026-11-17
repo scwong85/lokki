@@ -40,7 +40,9 @@ export interface LevelDef {
   /** A cathedral bell that rings now and then: everyone within hearing looks up at the tower. */
   bells?: { x: number; z: number; first: number; every: number; duration: number };
   /** Things the gull can peck with E (a jukebox, a button): each starts an effect and fires `pecked:<id>`. */
-  switches?: { id: string; x: number; z: number; label: string; effect: 'dance'; cooldown?: number }[];
+  switches?: { id: string; x: number; z: number; label: string; effect: 'dance' | 'soak' | 'alarm'; cooldown?: number; target?: { x: number; z: number } }[];
+  /** Bushes to hide in: crouch still inside one and people further than arm's length cannot see you; honk (T) for a BOO. */
+  hides?: { x: number; z: number; r: number }[];
   /** Havoc Hour: a timed chaos run with chain scoring instead of to-dos. */
   havoc?: { seconds: number };
   /** Free play: the whole quest pack, no stars, skills per quest (the M7/M8 game). */

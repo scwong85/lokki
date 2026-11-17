@@ -54,6 +54,8 @@ export interface NpcSpawn {
   follows?: boolean;
   /** Walks this route back and forth instead of wandering. */
   patrol?: { x: number; z: number }[];
+  /** Keeps their place: after a fright or a fall they walk back, and a cone dropped nearby is theirs again (mischief levels). */
+  post?: boolean;
 }
 
 export interface Npc {
@@ -137,6 +139,8 @@ export interface GullInfo {
   diving: boolean;
   /** Taunting: holds the attention of everyone nearby (co-op decoy). */
   taunt?: boolean;
+  /** Crouching in a bush: people more than arm's length away cannot see it. */
+  hidden?: boolean;
 }
 
 export interface Noise {
@@ -146,7 +150,7 @@ export interface Noise {
   loud: number;
 }
 
-export type NpcEvent = { type: 'reclaimed'; npc: Npc; propType: PropType } | { type: 'cheer'; npc: Npc } | { type: 'arrived'; npc: Npc; goal: string } | { type: 'yuck'; npc: Npc } | { type: 'tookItem'; npc: Npc; propType: PropType } | { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc } | { type: 'selfieClick'; npc: Npc; inFrame: boolean; framed: number } | { type: 'signSplat'; npc: Npc; splats: number } | { type: 'cleanerRobbed'; npc: Npc } | { type: 'snatchUnseen'; npc: Npc } | { type: 'review'; npc: Npc } | { type: 'soaked'; npc: Npc } | { type: 'scared'; npc: Npc; carried: boolean } | { type: 'mood'; npc: Npc; mood: Mood } | { type: 'atStation'; npc: Npc; station: string } | { type: 'bought'; npc: Npc; station: string; propType: PropType } | { type: 'slipped'; npc: Npc } | { type: 'startled'; npc: Npc; dropped: boolean } | { type: 'spread'; count: number } | { type: 'slam' } | { type: 'knockdown'; count: number } | { type: 'dancing'; count: number };
+export type NpcEvent = { type: 'reclaimed'; npc: Npc; propType: PropType } | { type: 'cheer'; npc: Npc } | { type: 'arrived'; npc: Npc; goal: string } | { type: 'yuck'; npc: Npc } | { type: 'tookItem'; npc: Npc; propType: PropType } | { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc } | { type: 'selfieClick'; npc: Npc; inFrame: boolean; framed: number } | { type: 'signSplat'; npc: Npc; splats: number } | { type: 'cleanerRobbed'; npc: Npc } | { type: 'snatchUnseen'; npc: Npc } | { type: 'review'; npc: Npc } | { type: 'soaked'; npc: Npc } | { type: 'scared'; npc: Npc; carried: boolean } | { type: 'mood'; npc: Npc; mood: Mood } | { type: 'atStation'; npc: Npc; station: string } | { type: 'bought'; npc: Npc; station: string; propType: PropType } | { type: 'slipped'; npc: Npc } | { type: 'startled'; npc: Npc; dropped: boolean } | { type: 'spread'; count: number } | { type: 'slam' } | { type: 'boo'; npc: Npc } | { type: 'knockdown'; count: number } | { type: 'dancing'; count: number };
 
 export interface NpcCtx {
   world: World;
@@ -182,6 +186,7 @@ export function canSee(n: { x: number; z: number; heading: number; mode: string 
   const dy = g.y - 1.6;
   const range = t.sightRange.value * (n.mode === 'eat' ? t.eatSightFactor.value : 1) * (g.diving ? 1.3 : 1);
   if (Math.hypot(d2, dy) > range) return false;
+  if (g.hidden && d2 > 1.2) return false;
   if (d2 > 2.5) {
     if (Math.abs(angleDiff(bearing(dx, dz), n.heading)) > (t.sightConeDeg.value * Math.PI) / 360) return false;
     if ((Math.atan2(dy, d2) * 180) / Math.PI > t.blindAboveDeg.value) return false;
@@ -355,7 +360,7 @@ export function slip(n: Npc, ev: NpcEvent[], dir?: { x: number; z: number }, spe
 export const SLIP_SECONDS = 2.4;
 
 /** Can this person be frightened or knocked by what is going on around them? (busy people are not reached.) */
-export const isCalm = (n: Npc): boolean => (n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat' || n.mode === 'recover' || n.mode === 'cheer' || n.mode === 'dance') && !n.following && n.buyT === 0 && !n.tugged;
+export const isCalm = (n: Npc): boolean => (n.mode === 'idle' || n.mode === 'walk' || n.mode === 'notice' || n.mode === 'shield' || n.mode === 'eat' || n.mode === 'recover' || n.mode === 'cheer' || n.mode === 'dance') && !n.following && n.buyT === 0 && !n.tugged;
 
 /** A fright from a neighbour: a jump and a flinch (no running). */
 export function scareJump(n: Npc, ev: NpcEvent[]): void {

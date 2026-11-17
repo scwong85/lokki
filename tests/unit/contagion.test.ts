@@ -101,3 +101,45 @@ describe('the new levels', () => {
     expect(LEVELS.find((x) => x.id === 'jukebox-hero')!.switches?.[0].effect).toBe('dance');
   });
 });
+
+describe('hiding and BOO', () => {
+  it('a hidden gull is invisible beyond arm length, a visible one is not', async () => {
+    const { canSee } = await import('../../src/gameplay/npc');
+    const n = { x: 0, z: 0, heading: 0, mode: 'idle' };
+    const g = { x: 0, y: 1, z: -4, diving: false };
+    expect(canSee(n, g, new World())).toBe(true);
+    expect(canSee(n, { ...g, hidden: true }, new World())).toBe(false);
+  });
+  it('BOO makes everyone close drop their cone and panic', () => {
+    const { npcs } = setup(line(3, 1.5));
+    const ev = npcs.boo(1.5, 0, 5);
+    expect(ev.filter((e) => e.type === 'boo').length).toBe(3);
+    expect(npcs.npcs.every((n) => n.holding === null && n.mode === 'panic')).toBe(true);
+  });
+});
+
+describe('playtest fixes', () => {
+  it('people who are watching the gull (notice, shield) still catch a fright and still dance', () => {
+    const { npcs, run } = setup(line(4, 1.5));
+    for (const n of npcs.npcs.slice(1)) n.mode = 'shield';
+    (npcs as unknown as { pending: NpcEvent[] }).pending.push({ type: 'panic', npc: npcs.npcs[0] });
+    const ev = run(2);
+    expect(Math.max(...(ev.filter((e) => e.type === 'spread') as { count: number }[]).map((e) => e.count))).toBeGreaterThanOrEqual(3);
+    const b = setup(line(3, 1.5));
+    for (const n of b.npcs.npcs) n.mode = 'notice';
+    expect(b.npcs.danceNear(1.5, 0, 20, 5).find((e) => e.type === 'dancing')).toMatchObject({ count: 3 });
+  });
+  it('a knocked-down line walks back to its places and takes its cones back', () => {
+    const spawns = line(4, 1.2).map((s) => ({ ...s, post: true }));
+    const { npcs, run } = setup(spawns);
+    const g = { x: 0, y: 0.9, z: 0.4, vx: 0, vy: 0, vz: -20, mode: 'dive' } as unknown as FlightState;
+    expect(npcs.slam(g)).toBe(true);
+    run(3);
+    expect(npcs.npcs.some((n) => n.holding === null)).toBe(true);
+    run(14);
+    npcs.npcs.forEach((n, i) => {
+      expect(Math.hypot(n.x - i * 1.2, n.z)).toBeLessThan(0.6);
+      expect(n.holding).not.toBeNull();
+    });
+  });
+});

@@ -239,7 +239,7 @@ export const TUG_OF_WAR: LevelDef = {
 };
 
 const queue = (n: number, x0: number, z: number, dx: number, role: string, tag: string, colors: number[], heading = Math.PI) =>
-  Array.from({ length: n }, (_, i) => ({ x: x0 + i * dx, z, heading, ice: true, holdTag: tag, role, stationary: true, color: colors[i % colors.length] }));
+  Array.from({ length: n }, (_, i) => ({ x: x0 + i * dx, z, heading, ice: true, holdTag: tag, role, stationary: true, post: true, color: colors[i % colors.length] }));
 
 /**
  * M6. Rush Hour (contagion): a fright spreads person to person. Splat one in the queue and the whole line panics.
@@ -261,7 +261,7 @@ export const RUSH_HOUR: LevelDef = {
       objectives: [
         { id: 'splat', text: 'Splat the first person in the queue', kind: 'event', event: 'poopNpc:queuer', hint: 'Poop (Q) on someone in the line on the quay. Everyone near them will jump too.', markers: [{ x: -5, z: -11, r: 6, label: 'Queue' }] },
         { id: 'spread', text: 'Make the panic spread to five people', kind: 'event', event: 'spread:5', after: 'splat', hint: 'A fright jumps to people standing close. Splat another one if it stops.' },
-        { id: 'cone', text: 'Take a cone the crowd dropped', kind: 'event', event: 'grab:rushCone', after: 'spread', hint: 'They dropped their ice creams. Grab one with E.' },
+        { id: 'cone', text: 'Take a cone (from a person or off the ground)', kind: 'event', event: 'grab:rushCone', hint: 'They dropped their ice creams. Grab one with E.' },
         { id: 'escape', text: 'Get away with it', kind: 'escape', after: 'cone', hint: 'Keep it and stay far from everyone until the bar fills.' },
       ],
     },
@@ -294,7 +294,7 @@ export const STRIKE: LevelDef = {
       objectives: [
         { id: 'slam', text: 'Bowl someone over with a fast dive', kind: 'event', event: 'slammed', hint: 'Hold Shift and dive hard at the end of the line, low and fast.', markers: [{ x: -26, z: -14, r: 6, label: 'The line' }] },
         { id: 'strike', text: 'Knock down four people with one dive', kind: 'event', event: 'knockdown:4', after: 'slam', hint: 'Fallen people knock over their neighbours. Hit the line near one end.' },
-        { id: 'cone', text: 'Take a cone that went flying', kind: 'event', event: 'grab:strikeCone', after: 'strike', hint: 'They dropped their ice creams. Grab one with E.' },
+        { id: 'cone', text: 'Take a cone that went flying', kind: 'event', event: 'grab:strikeCone', hint: 'They dropped their ice creams. Grab one with E.' },
         { id: 'escape', text: 'Get away with it', kind: 'escape', after: 'cone', hint: 'Keep it and stay far from everyone until the bar fills.' },
       ],
     },
@@ -327,7 +327,7 @@ export const JUKEBOX_HERO: LevelDef = {
       objectives: [
         { id: 'peck', text: 'Peck the jukebox (E)', kind: 'event', event: 'pecked:juke', hint: 'Land next to the jukebox and press E.', markers: [{ x: -6, z: -18, r: 4, label: 'Jukebox' }] },
         { id: 'dance', text: 'Get four people dancing', kind: 'event', event: 'dancers:4', after: 'peck', hint: 'Stay near the people. Peck it again if they stop.' },
-        { id: 'cone', text: 'Take a dancer\'s ice cream', kind: 'event', event: 'grab:danceCone', after: 'dance', hint: 'Dancers are too happy to guard. Grab the cone with E.' },
+        { id: 'cone', text: 'Take a dancer\'s ice cream', kind: 'event', event: 'grab:danceCone', hint: 'Dancers are too happy to guard. Grab the cone with E.' },
         { id: 'escape', text: 'Get away with it', kind: 'escape', after: 'cone', hint: 'Keep it and stay far from everyone until the bar fills.' },
       ],
     },
@@ -335,13 +335,83 @@ export const JUKEBOX_HERO: LevelDef = {
   triggers: [],
   tourists: [],
   extraTourists: [
-    { x: -10, z: -21, heading: 0.4, ice: true, holdTag: 'danceCone', role: 'dancer', stationary: true, color: 0xf7a1c4 },
-    { x: -2, z: -21, heading: -0.4, ice: true, holdTag: 'danceCone', role: 'dancer', stationary: true, color: 0x9ec9f0 },
-    { x: -9, z: -14, heading: 0.9, ice: true, holdTag: 'danceCone', role: 'dancer', stationary: true, color: 0xffd36e },
-    { x: -3, z: -14, heading: -0.9, ice: true, holdTag: 'danceCone', role: 'dancer', stationary: true, color: 0xb8e0c8 },
+    { x: -10, z: -21, heading: 0.4, ice: true, holdTag: 'danceCone', role: 'dancer', stationary: true, post: true, color: 0xf7a1c4 },
+    { x: -2, z: -21, heading: -0.4, ice: true, holdTag: 'danceCone', role: 'dancer', stationary: true, post: true, color: 0x9ec9f0 },
+    { x: -9, z: -14, heading: 0.9, ice: true, holdTag: 'danceCone', role: 'dancer', stationary: true, post: true, color: 0xffd36e },
+    { x: -3, z: -14, heading: -0.9, ice: true, holdTag: 'danceCone', role: 'dancer', stationary: true, post: true, color: 0xb8e0c8 },
   ],
   switches: [{ id: 'juke', x: -6, z: -18, label: 'jukebox', effect: 'dance', cooldown: 6 }],
   defense: false,
   start: { x: -6, z: -34 },
+  parTime: 240,
+};
+
+/** M9. Big Red Button (prank buttons): a fire alarm and a sprinkler button. Peck them from a safe distance. */
+export const RED_BUTTON: LevelDef = {
+  id: 'red-button',
+  name: 'M9. Big Red Button',
+  blurb: 'Pull the alarm, press the sprinkler, enjoy the chaos.',
+  district: 'kauppatori',
+  series: 'Mischief (new)',
+  quests: [],
+  extraQuests: [
+    {
+      id: 'buttonchain',
+      title: 'Big Red Button',
+      teaser: 'Pull the alarm, soak the queue with the sprinkler button, take a cone.',
+      timed: false,
+      chain: true,
+      objectives: [
+        { id: 'alarm', text: 'Peck the fire alarm (E)', kind: 'event', event: 'pecked:alarm', hint: 'The red box on the left. Land beside it and press E.', markers: [{ x: -22, z: -20, r: 4, label: 'Alarm' }] },
+        { id: 'sprinkle', text: 'Peck the sprinkler button', kind: 'event', event: 'pecked:sprinkle', after: 'alarm', hint: 'The blue box on the right waters the queue in the middle.', markers: [{ x: 22, z: -20, r: 4, label: 'Sprinkler' }] },
+        { id: 'cone', text: 'Take a cone from the soaked queue', kind: 'event', event: 'grab:btnCone', hint: 'They dropped their ice creams. Grab one with E.' },
+        { id: 'escape', text: 'Get away with it', kind: 'escape', after: 'cone', hint: 'Keep it and stay far from everyone until the bar fills.' },
+      ],
+    },
+  ],
+  triggers: [],
+  tourists: [],
+  extraTourists: queue(4, -2.1, -12, 1.4, 'queuer', 'btnCone', [0xf7a1c4, 0x9ec9f0, 0xffd36e, 0xb8e0c8]),
+  switches: [
+    { id: 'alarm', x: -22, z: -20, label: 'fire alarm', effect: 'alarm', cooldown: 6 },
+    { id: 'sprinkle', x: 22, z: -20, label: 'sprinkler button', effect: 'soak', cooldown: 8, target: { x: 0, z: -12 } },
+  ],
+  defense: false,
+  start: { x: -22, z: -34 },
+  parTime: 240,
+};
+
+/** M10. Peekaboo (hide and BOO): crouch in a bush, wait until they are close, then honk. */
+export const PEEKABOO: LevelDef = {
+  id: 'peekaboo',
+  name: 'M10. Peekaboo',
+  blurb: 'Crouch in a bush. Wait. Honk when they are close.',
+  district: 'kauppatori',
+  series: 'Mischief (new)',
+  quests: [],
+  extraQuests: [
+    {
+      id: 'booschain',
+      title: 'Peekaboo',
+      teaser: 'Hide in the bush, then BOO the people beside it and take a cone.',
+      timed: false,
+      chain: true,
+      objectives: [
+        { id: 'boo', text: 'Hide in the bush and honk (T) when they are close', kind: 'event', event: 'boo:peeker', hint: 'Walk into the green bush and stay still: they cannot see you. Then tap T.', markers: [{ x: -8, z: -16, r: 3, label: 'Bush' }] },
+        { id: 'cone', text: 'Take a cone they dropped', kind: 'event', event: 'grab:booCone', hint: 'Grab it with E.' },
+        { id: 'escape', text: 'Get away with it', kind: 'escape', after: 'cone', hint: 'Keep it and stay far from everyone until the bar fills.' },
+      ],
+    },
+  ],
+  triggers: [],
+  tourists: [],
+  extraTourists: [
+    { x: -8, z: -12.5, heading: 0, ice: true, holdTag: 'booCone', role: 'peeker', stationary: true, post: true, color: 0xf7a1c4 },
+    { x: -11.5, z: -15, heading: -Math.PI / 2, ice: true, holdTag: 'booCone', role: 'peeker', stationary: true, post: true, color: 0x9ec9f0 },
+    { x: -4.5, z: -15, heading: Math.PI / 2, ice: true, holdTag: 'booCone', role: 'peeker', stationary: true, post: true, color: 0xffd36e },
+  ],
+  hides: [{ x: -8, z: -16, r: 1.7 }],
+  defense: false,
+  start: { x: -8, z: -30 },
   parTime: 240,
 };

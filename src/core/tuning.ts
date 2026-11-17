@@ -419,11 +419,19 @@ export const tuning = {
   },
   slam: {
     minSpeed: p(14, 6, 40, 1), // a dive at least this fast bowls people over
-    radius: p(1.05, 0.5, 2.5, 0.05), // how close to a person the dive must pass
-    knockRadius: p(1.5, 0.6, 4, 0.1), // a person who falls knocks over those this close
-    maxGen: p(3, 1, 6, 1), // how many people deep the domino goes
+    radius: p(1.4, 0.5, 2.5, 0.05), // how close to a person the dive must pass
+    knockRadius: p(2.1, 0.6, 4, 0.1), // a person who falls knocks over those this close
+    maxGen: p(5, 1, 8, 1), // how many people deep the domino goes
     slide: p(3.2, 1, 8, 0.2), // how fast a knocked-down person slides
     speedLoss: p(0.55, 0.2, 1, 0.05), // the gull keeps this share of its speed after a hit
+  },
+  hide: {
+    maxSpeed: p(2.5, 0.5, 8, 0.1), // slower than this inside a bush, and you are hidden
+    booRange: p(5, 1, 14, 0.5), // a BOO from a bush reaches this far
+  },
+  button: {
+    soakRadius: p(4.5, 1, 12, 0.5), // a sprinkler button soaks everyone this close to its target
+    alarmLoud: p(3, 0.5, 6, 0.5), // how loud the alarm is (hearing range multiplier)
   },
   dance: {
     seconds: p(9, 2, 30, 1), // how long the jukebox makes people dance
