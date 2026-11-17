@@ -211,8 +211,10 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [x] M32 World enrichment W4 start: swaying trees, bobbing boats, glowing lamps
 - [x] M34 World enrichment rest of W2: ground-floor variety, awnings, balconies, corner turrets
 - [x] M35 World enrichment rest of W4: flags, steam, petals, cloud shadows
-- [ ] M36 World enrichment W5 start: ambient birds, the tram runs in every level (built on `m36-busy-city`, awaiting playtest)
-- [ ] M37 World enrichment W6: landmark kit (Cathedral portico, Empire style, fountain splash; built on `m37-landmarks`, awaiting playtest)
+- [x] M36 World enrichment W5 start: ambient birds, the tram runs in every level
+- [x] M37 World enrichment W6: landmark kit (Cathedral portico, Empire style, fountain splash)
+- [ ] M38 Graphics G4: the post look (ink outline, vignette, optional tilt-shift; built on `m38-post-look`, awaiting playtest)
+- [ ] M39 Graphics G5 part 1: actor art (tram, pigeons, sunbathers, dog; built on `m39-actor-art`, awaiting playtest)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -390,7 +392,13 @@ Circling birds, and the Senate Square tram runs in every level. Details: `docs/m
 ### M37 — World enrichment W6: landmark kit (S)
 Cathedral portico, Empire-style buildings, fountain splash. Details: `docs/milestones/M37.md`.
 
-### After M37 (backlog)
+### M38 — Graphics G4: the post look (S)
+Ink outline, vignette, saturation and optional tilt-shift on the high preset, with an Options toggle. Details: `docs/milestones/M38.md`.
+
+### M39 — Graphics G5 (part 1): actor art (S)
+Tram, pigeons, sunbathers and dog rebuilt with real details. Details: `docs/milestones/M39.md`.
+
+### After M39 (backlog)
  World enrichment rest of W2, then W3 to W6 (`docs/design/world-enrichment.md`): streets and squares, things that move, a busier city, landmark kit.
  Plans: `docs/design/fun-todos.md` (F2–F6), `docs/design/graphics-refresh.md` (G2–G6).
  Esplanadi E4–E10 (`docs/design/levels-esplanadi.md`), Katajanokka (`docs/design/levels-katajanokka.md`), each level designed with a co-op variant; the shared systems they need (moving platforms, NPC schedules, Kalle the rival gull, the drone, seasons); local split-screen co-op (optional); optional WebGPU renderer.
