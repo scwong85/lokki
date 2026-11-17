@@ -1171,6 +1171,7 @@ function showThermals(): void {
   }
 }
 /** The cathedral bell: rings on a schedule (and when you ring it yourself); while it rings, people look up at the tower. */
+const paradeDone = new Set<string>();
 let bellClock = 0;
 let bellLeft = 0;
 let bellLastNoise = 0;
@@ -1194,6 +1195,7 @@ let owlCd = 0;
 function applyLevelRules(): void {
   heat60Fired = false;
   bellClock = 0;
+  paradeDone.clear();
   bellLeft = 0;
   altitudeFired = false;
   thermalsSeen.clear();
@@ -1629,6 +1631,18 @@ function onNpcEvents(evs: NpcEvent[]): void {
       // a change of mood shows over their head and is what chains are built from
       emoteAtNpc(e.npc, e.mood === 'angry' ? 'anger' : e.mood === 'annoyed' ? 'sweat' : e.mood === 'upset' ? 'facepalm' : e.mood === 'delighted' ? 'heart' : null);
       if (e.mood !== 'calm') notes(quests.onEvent(`mood:${e.npc.role}:${e.mood}`));
+    } else if (e.type === 'slipped') {
+      audio.play('splat');
+      audio.play('yelp');
+      emotes.show('laugh', 'slip', () => ({ x: gull.position.x, y: gull.position.y + 0.75, z: gull.position.z }), 1.8);
+      gull.openBeak(0.8);
+      gull.wiggleT = 0.8;
+      fx('stars', { x: e.npc.x, y: 1.2, z: e.npc.z }, 0.8);
+      polaroids.request('Whoops!');
+      if (!isGuest()) {
+        hud.toast('Whoa!', 1.2);
+        notes(quests.onEvent(`slipped:${e.npc.role}`));
+      }
     } else if (e.type === 'atStation') {
       notes(quests.onEvent(`atStation:${e.npc.role}:${e.station}`));
     } else if (e.type === 'bought') {
@@ -1778,6 +1792,10 @@ function onGags(gags: GagEvent[]): void {
       case 'splat':
         audio.play('splat');
         noise(g.x, g.z, 0.4);
+        if (!isGuest()) {
+          npcs?.addHazard(g.x, g.z); // a wet patch: whoever walks through it slips
+          for (const z of level.splatZones ?? []) if (g.x >= z.zone.minX && g.x <= z.zone.maxX && g.z >= z.zone.minZ && g.z <= z.zone.maxZ) notes(quests.onEvent(z.event));
+        }
         break;
       case 'snatch':
         audio.play('yelp');
@@ -2179,6 +2197,19 @@ startLoop({
     if (!altitudeFired && gull.state.y > 80) {
       altitudeFired = true;
       notes(quests.onEvent('altitude80'));
+    }
+    // the conga line: events when enough followers are in a place (once each)
+    if (level.parade && npcs && !isGuest()) {
+      for (const st of level.parade.stops) {
+        if (paradeDone.has(st.event)) continue;
+        const n = st.at ? npcs.followersNear(st.at.x, st.at.z, st.at.r) : npcs.followingCount();
+        if (n < st.need) continue;
+        paradeDone.add(st.event);
+        if (st.text) hud.toast(st.text, 2.4);
+        audio.play('chime');
+        notes(quests.onEvent(st.event));
+        if (st.send) npcs.sendRole(st.send.role, st.send.goals);
+      }
     }
     // the cathedral bell
     if (level.bells && !isGuest()) {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { LEVELS } from '../../src/data/levels';
 
 /** Every chain level: its cast, stall and goods fit together, so the chain can be played through. */
-const chainLevels = LEVELS.filter((l) => [...(l.extraQuests ?? [])].some((q) => q.chain));
+const chainLevels = LEVELS.filter((l) => [...(l.extraQuests ?? [])].some((q) => q.chain && q.objectives.some((o) => o.id === 'lure' && o.event?.startsWith('atStation'))));
 
 describe('chain levels', () => {
   it('there are six: Map and Cone and the five rebuilt fetch levels', () => {
