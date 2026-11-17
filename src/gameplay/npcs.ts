@@ -278,6 +278,17 @@ export class NpcManager implements NpcHooks {
     }
   }
 
+  /** Something knocks over whoever stands within `r` of (x, z), sliding them along `dir` (a falling domino): the fall goes on from them. */
+  knockAt(x: number, z: number, r: number, dir: { x: number; z: number }): number {
+    let k = 0;
+    for (const n of this.npcs) {
+      if (n.mode === 'slip' || n.tugged || Math.hypot(n.x - x, n.z - z) > r) continue;
+      this.knock(n, dir, 0);
+      k++;
+    }
+    return k;
+  }
+
   /** The jukebox plays: calm people within `r` dance for `seconds`. Returns how many. */
   danceNear(x: number, z: number, r: number, seconds: number): NpcEvent[] {
     const ev: NpcEvent[] = [];

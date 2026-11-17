@@ -141,6 +141,8 @@ export interface GullInfo {
   taunt?: boolean;
   /** Crouching in a bush: people more than arm's length away cannot see it. */
   hidden?: boolean;
+  /** Wearing a hat that fools everyone: nobody sees a gull (the captain's cap). */
+  disguise?: boolean;
 }
 
 export interface Noise {
@@ -185,6 +187,7 @@ export function canSee(n: { x: number; z: number; heading: number; mode: string 
   const d2 = Math.hypot(dx, dz);
   const dy = g.y - 1.6;
   const range = t.sightRange.value * (n.mode === 'eat' ? t.eatSightFactor.value : 1) * (g.diving ? 1.3 : 1);
+  if (g.disguise) return false;
   if (Math.hypot(d2, dy) > range) return false;
   if (g.hidden && d2 > 1.2) return false;
   if (d2 > 2.5) {

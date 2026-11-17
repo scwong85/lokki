@@ -143,3 +143,26 @@ describe('playtest fixes', () => {
     });
   });
 });
+
+describe('M56 toys', () => {
+  it('a falling domino knocks over the people it lands on, and they knock over their neighbours', () => {
+    const { npcs, run } = setup(line(5, 1.2));
+    expect(npcs.knockAt(0, 0, 1.1, { x: 1, z: 0 })).toBe(1);
+    const ev = run(3);
+    expect(Math.max(...(ev.filter((e) => e.type === 'knockdown') as { count: number }[]).map((e) => e.count))).toBeGreaterThanOrEqual(3);
+  });
+  it('a dog called by a honk runs to the spot', async () => {
+    const { Dog } = await import('../../src/gameplay/dogs');
+    const d = new Dog(0, 0, 0, 0);
+    d.summon(20, 0);
+    for (let i = 0; i < 240; i++) d.update(DT, [], []);
+    expect(d.x).toBeGreaterThan(12);
+  });
+  it('nobody sees a disguised gull', async () => {
+    const { canSee } = await import('../../src/gameplay/npc');
+    expect(canSee({ x: 0, z: 0, heading: 0, mode: 'idle' }, { x: 0, y: 1, z: -2, diving: false, disguise: true }, new World())).toBe(false);
+  });
+  it('the new levels exist', () => {
+    for (const id of ['leaf-blower', 'domino-rally', 'captain-gull', 'hush-puppy', 'tablecloth', 'service-bell']) expect(LEVELS.some((l) => l.id === id)).toBe(true);
+  });
+});

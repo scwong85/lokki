@@ -40,7 +40,9 @@ export interface LevelDef {
   /** A cathedral bell that rings now and then: everyone within hearing looks up at the tower. */
   bells?: { x: number; z: number; first: number; every: number; duration: number };
   /** Things the gull can peck with E (a jukebox, a button): each starts an effect and fires `pecked:<id>`. */
-  switches?: { id: string; x: number; z: number; label: string; effect: 'dance' | 'soak' | 'alarm' | 'yank' | 'summon'; cooldown?: number; target?: { x: number; z: number }; /** yank: the table's goods that fly off; summon: the role that comes running. */ goods?: { type: 'bun' | 'icecream'; tag: string; count: number }; role?: string }[];
+  switches?: { id: string; x: number; z: number; label: string; effect: 'dance' | 'soak' | 'alarm' | 'yank' | 'summon' | 'domino' | 'disguise'; cooldown?: number; target?: { x: number; z: number }; /** yank: the table's goods that fly off; summon: the role that comes running. */ goods?: { type: 'bun' | 'icecream'; tag: string; count: number }; role?: string; /** domino: how many tiles stand between the switch and its target. */ tiles?: number }[];
+  /** Tagged things that end up in a zone (blown there with the wings) count one by one as `<event>:<n>`. */
+  sweep?: { tag: string; zone: { minX: number; maxX: number; minZ: number; maxZ: number }; event: string };
   /** Bushes to hide in: crouch still inside one and people further than arm's length cannot see you; honk (T) for a BOO. */
   hides?: { x: number; z: number; r: number }[];
   /** Havoc Hour: a timed chaos run with chain scoring instead of to-dos. */
