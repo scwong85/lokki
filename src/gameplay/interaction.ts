@@ -40,7 +40,7 @@ export type GagEvent =
   | { type: 'grab'; prop: Prop; by?: number }
   | { type: 'snatch'; prop: Prop; by?: number }
   | { type: 'tugStart'; prop: Prop; by?: number }
-  | { type: 'tugWin'; prop: Prop; by?: number }
+  | { type: 'tugWin'; prop: Prop; by?: number; /** How many gulls were pulling on it. */ team?: number }
   | { type: 'tugLost'; prop: Prop; by?: number }
   | { type: 'poopNpc'; role?: string; by?: number; x?: number; z?: number }
   | { type: 'drop'; prop: Prop; by?: number }
@@ -221,16 +221,18 @@ export class Interaction {
     if (b.tug) {
       const prop = this.props.byId(b.tug.propId);
       const ok = !!prop && !prop.broken && prop.heldBy !== null && s.mode === 'ground' && !stunned && !!this.npcs?.isTugged(prop.id);
-      const res = ok ? b.tug.step(dt, { held: !!inp.grabHeld, mash: inp.grab ? 1 : 0, pull: this.npcs!.pullOf(prop!.id), interrupted: b.tugInterrupt }) : 'cancelled';
+      const team = this.beaks.filter((o) => o?.tug?.propId === b.tug!.propId).length;
+      const res = ok ? b.tug.step(dt, { held: !!inp.grabHeld, mash: inp.grab ? 1 : 0, pull: this.npcs!.pullOf(prop!.id) / Math.max(1, team), interrupted: b.tugInterrupt }) : 'cancelled';
       b.tugInterrupt = false;
       if (res === 'won') {
         b.tug = null;
         this.takeInBeak(prop!, ev, b);
-        ev.push({ type: 'tugWin', prop: prop!, by: id });
+        ev.push({ type: 'tugWin', prop: prop!, by: id, team });
       } else if (res === 'lost' || res === 'cancelled') {
         const propId = b.tug.propId;
         b.tug = null;
-        this.npcs?.onTugEnd(propId, false);
+        // a partner may still be pulling: the person stays tugged until the last gull lets go
+        if (!this.beaks.some((o) => o?.tug?.propId === propId) && this.npcs?.isTugged(propId)) this.npcs.onTugEnd(propId, false);
         if (res === 'lost' && prop) {
           b.grabCd = 1.2;
           ev.push({ type: 'tugLost', prop, by: id });
@@ -257,7 +259,7 @@ export class Interaction {
             const target = this.tugTarget(s);
             if (target) {
               b.tug = new Tug(target.id);
-              this.npcs?.onTugStart(target.id);
+              if (!this.npcs?.isTugged(target.id)) this.npcs?.onTugStart(target.id); // joining a partner's tug: already held
               ev.push({ type: 'tugStart', prop: target, by: id });
             }
           }
@@ -352,6 +354,11 @@ export class Interaction {
   private tugTarget(s: FlightState): Prop | null {
     if (!this.gates.tug) return null;
     const beak = this.beakPos(s);
+    // a partner is already pulling on something within reach: join it (a team tug)
+    for (const o of this.beaks) {
+      const p = o?.tug ? this.props.byId(o.tug.propId) : undefined;
+      if (p && p.heldBy !== null && Math.hypot(p.cur.p.x - beak.x, p.cur.p.z - beak.z) <= tuning.tug.reach.value) return p;
+    }
     const c = (this.npcs?.tugCandidates({ x: s.x, y: s.y, z: s.z }) ?? []).sort((a, b) => Math.hypot(a.x - beak.x, a.z - beak.z) - Math.hypot(b.x - beak.x, b.z - beak.z))[0];
     return c ? this.props.byId(c.id) ?? null : null;
   }

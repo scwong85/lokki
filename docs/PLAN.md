@@ -235,6 +235,7 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [ ] M59 Mechanic gating: stage gates, locked verbs do nothing (built on `m59-gating`)
 - [ ] M60 Stage framework and stage 1.1 First Light (built on `m60-stage-framework`)
 - [ ] M61 Stage 1.2 Fish Market (built on `m61-fish-market`)
+- [ ] M62 Stages 1.3 Strings Attached and 1.4 Mood Swings, team tug and duet (built on `m62-strings-moods`)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -475,7 +476,10 @@ Arcs and stages as data, co-op objectives required, the campaign first and the P
 ### M61 — Stage 1.2 Fish Market (S)
 Poop, toss, honk: three chains and two co-op objectives. Details: `docs/milestones/M61.md`.
 
-### After M61 (backlog)
+### M62 — Stages 1.3 and 1.4 (M)
+Heat, tug, hiding and buttons; moods, the lure, slip and the jukebox; team tug and duet for co-op. Details: `docs/milestones/M62.md`.
+
+### After M62 (backlog)
  Tablecloth yank, prank button, hide and BOO and the rest of the slate (`docs/design/mischief-mechanics.md`), then convert the stall-chain levels to the new toys.
  Mischief toys next: tablecloth yank, prank button, hide and BOO, then convert the stall-chain levels to different toys (`docs/design/mischief-mechanics.md`).
  Chain levels: more rebuilds (Cheese Run, Harbour Day, the heist levels, Christmas Market, Key to the City, Coo-Coo, The Drone), then rumour and crowds, escalation events, co-op chains (`docs/design/chain-levels.md`).

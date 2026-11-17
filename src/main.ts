@@ -757,11 +757,20 @@ function lockedCue(id: MechId): void {
 interface DominoRun { tiles: THREE.Group[]; start: number; dx: number; dz: number; fell: number }
 let dominoes: DominoRun[] = [];
 let disguiseT = 0;
+let duetT = 0;
 let capHat: THREE.Mesh | null = null;
 const swept = new Set<number>();
 /** Per-tick extras of the mischief toys: dominoes falling, the disguise running out, light things blown by low wingbeats. */
 function toyStep(dt: number): void {
   applyGates();
+  // a duet: every gull taunting at once for a few seconds (co-op)
+  if (players.length > 1 && players.every((p) => p.gull.taunting)) {
+    duetT += dt;
+    if (duetT >= tuning.coop.duetSeconds.value) {
+      duetT = -1e9; // once per taunt
+      notes(quests.onEvent('coop:duet'));
+    }
+  } else duetT = 0;
   for (const d of dominoes) {
     const tf0 = simTime - d.start;
     d.tiles.forEach((t, i) => {
@@ -2168,6 +2177,7 @@ function onGags(gags: GagEvent[]): void {
         audio.play('pop');
         fx('stars', g.prop.cur.p, 0.7);
         notes(quests.onEvent('tugWin'));
+        if ((g.team ?? 1) >= 2) notes(quests.onEvent('coop:tug'));
         if (g.prop.tag) notes(quests.onEvent(`tugWin:${g.prop.tag}`));
         break;
       }

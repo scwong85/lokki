@@ -85,3 +85,29 @@ describe('stage 1.2 Fish Market', () => {
     for (const q of setup('a1s2').quests) expect(q.objectives.length).toBeGreaterThanOrEqual(3);
   });
 });
+
+describe('stages 1.3 and 1.4', () => {
+  it('1.3 Strings Attached: three chains, a hidden bonus, heat and lines, tug and hiding unlocked', () => {
+    const solo = setup('a1s3');
+    const duo = setup('a1s3', true);
+    expect(solo.main).toEqual(['tugchain', 'spray', 'booschain']);
+    expect(solo.secret.has('buttonchain')).toBe(true);
+    expect(duo.main).toEqual(['tugchain', 'spray', 'booschain', 'teamTug', 'duoSpray']);
+    expect(solo.defense).toBe(true);
+    const g = { arc: 1, stage: 3 };
+    expect(['tug', 'hide', 'peck'].every((m) => isUnlocked(m as never, g))).toBe(true);
+    expect(isUnlocked('taunt', g)).toBe(false);
+    expect(LEVELS.find((l) => l.id === 'a1s3')!.requires).toBe('a1s2');
+  });
+  it('1.4 Mood Swings: three chains; taunt, slip and the jukebox unlocked, contagion not yet', () => {
+    const duo = setup('a1s4', true);
+    expect(duo.main).toEqual(['mapcone', 'wetfloor', 'jukechain', 'decoyThief', 'duet']);
+    const g = { arc: 1, stage: 4 };
+    expect(['taunt', 'slip', 'jukebox'].every((m) => isUnlocked(m as never, g))).toBe(true);
+    expect(isUnlocked('contagion', g)).toBe(false);
+    expect(LEVELS.find((l) => l.id === 'a1s4')!.requires).toBe('a1s3');
+  });
+  it('every stage chain has at least three steps', () => {
+    for (const id of ['a1s3', 'a1s4']) for (const q of setup(id).quests) expect(q.objectives.length).toBeGreaterThanOrEqual(3);
+  });
+});
