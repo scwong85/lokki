@@ -9,7 +9,7 @@ type Lk = {
   audio: { log: { name: string; vol: number }[]; unlock: () => void; setAmbient: (a: { tram: number; sea: number; city: number }) => void; play: (n: string, v?: number) => void };
   npcs: { npcs: Npc[] };
   quests: { quests: { id: string; objectives: { id: string; done: boolean; count: number }[] }[] };
-  interaction: { props: { props: { id: number; type: string; tag?: string; heldBy: number | null }[] } };
+  interaction: { props: { props: { id: number; type: string; tag?: string; heldBy: number | null; stolen: boolean }[] } };
   gull: { state: { x: number; y: number; z: number; vx: number; vy: number; vz: number; mode: string; heading: number; diveAngle: number; diveT: number } };
   cam: { pitch: number; yaw: number };
 };
@@ -34,6 +34,8 @@ test('Honk!: from behind they drop it, from the front they only flinch, and the 
   await l((x) => { const n = x.npcs.npcs.find((m) => m.role === 'tourist' && m.holding !== null)!; Object.assign(x.gull.state, { x: n.x + Math.sin(n.heading) * 5, y: 1.2, z: n.z + Math.cos(n.heading) * 5, vx: 0, vy: 0, vz: 0, mode: 'ground' }); x.honkNow(); return 0; });
   await expect.poll(() => l((x) => x.npcs.npcs.filter((m) => m.mode === 'startle' || m.mode === 'recover').length), { timeout: 20_000 }).toBeGreaterThanOrEqual(1);
   expect(await l((x) => x.npcs.npcs.filter((m) => m.holding === null && m.role === 'tourist').length)).toBeGreaterThanOrEqual(1); // somebody dropped theirs
+  // a dropped item counts as theirs: carrying it off is getting away with it (the escape step needs `stolen`)
+  expect(await l((x) => x.interaction.props.props.some((p) => p.tag === 'honkCone' && p.heldBy === null && p.stolen))).toBe(true);
   // a second one, after the cooldown of the others calming down
   await page.waitForTimeout(3000);
   await l((x) => { const n = x.npcs.npcs.find((m) => m.role === 'tourist' && m.holding !== null && (m.mode === 'idle' || m.mode === 'walk'))!; Object.assign(x.gull.state, { x: n.x + Math.sin(n.heading) * 5, y: 1.2, z: n.z + Math.cos(n.heading) * 5, vx: 0, vy: 0, vz: 0, mode: 'ground' }); x.honkNow(); return 0; });

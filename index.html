@@ -79,7 +79,7 @@
       #todo h3 { margin: 0 0 4px; font-size: 16px; border-bottom: 2px dotted #d9c9a3; }
       #todo .q { margin-top: 6px; } #todo .qt { font-weight: 700; } #todo ul { list-style: none; margin: 2px 0 0; padding: 0; }
       #todo li.done { text-decoration: line-through; opacity: .6; } #todo .timer { font-weight: 400; color: #8a7b5c; } #todo .timer.low { color: #d6453d; font-weight: 700; }
-      #todo .hint { font-size: 12px; color: #8a7b5c; margin: 1px 0 3px 18px; line-height: 1.25; } #todo .esc { font-size: 12px; color: #d6453d; } #todo .esc.good { color: #3f9a62; }
+      #todo .hint { font-size: 12px; color: #8a7b5c; margin: 1px 0 3px 18px; line-height: 1.25; } #todo .esc { display: block; font-size: 12px; color: #d6453d; margin: 2px 0 0 18px; } #todo .esc.good { color: #3f9a62; } #todo .escbar { display: block; height: 7px; border-radius: 4px; background: rgba(0,0,0,.12); overflow: hidden; margin-bottom: 2px; } #todo .escbar i { display: block; height: 100%; width: 0; background: #d6453d; transition: width .15s linear; } #todo .esc.good .escbar i { background: #3f9a62; }
       #todo .teaser { font-size: 12px; color: #8a7b5c; margin: 0 0 2px 2px; line-height: 1.25; } #todo .locked, #todo .won { opacity: .6; } #todo li.later { opacity: .55; }
       #todo { max-height: 78vh; overflow: hidden; }
       @media (max-height: 820px) { #todo .teaser { display: none; } #todo { font-size: 13px; } }
@@ -205,6 +205,7 @@
       /* software-rendered test browsers cannot afford the animations: they get the end state instead */
       body.no-anim .lc-photo, body.no-anim .lc-stamp, body.no-anim.outro::before, body.no-anim.outro::after { animation: none !important; }
       body.no-anim .lc-stamp { opacity: .85; } body.no-anim #polaroid-pop { display: none !important; }
+      #comfort-vignette { position: fixed; inset: 0; z-index: 15; pointer-events: none; opacity: 0; transition: opacity .25s ease-out; background: radial-gradient(ellipse at center, rgba(10,10,25,0) 42%, rgba(10,10,25,.82) 100%); }
       #polaroid-pop { position: fixed; right: 18px; bottom: 70px; width: 150px; z-index: 40; border-radius: 3px; box-shadow: 0 6px 18px rgba(60,40,20,.35); pointer-events: none; animation: pol-pop 3.2s ease-out forwards; }
       #polaroid-pop[hidden] { display: none; }
       @keyframes pol-pop { 0% { transform: translateY(40px) rotate(-12deg) scale(.6); opacity: 0; } 12% { transform: rotate(4deg) scale(1.08); opacity: 1; } 20% { transform: rotate(3deg) scale(1); } 80% { transform: rotate(3deg); opacity: 1; } 100% { transform: translateY(-20px) rotate(5deg); opacity: 0; } }

@@ -1,4 +1,5 @@
 import { tuning } from './tuning';
+import { COMFORT, comfort, type CamFollow, type Comfort } from './comfort';
 import type { StorageLike } from './save';
 import { HUD_MODES, type HudMode } from '../ui/hudMode';
 
@@ -22,6 +23,14 @@ export interface Options {
   touchLook: number;
   /** Touch: which thumb works the buttons. */
   touchHand: 'right' | 'left';
+  /** Comfort preset (motion sickness): standard, gentle or calm. */
+  comfort: Comfort;
+  /** Field of view in degrees, camera distance, invert vertical look, smooth steering, and the camera following the gull's heading. */
+  fov: number;
+  camDistance: number;
+  invertY: boolean;
+  smoothSteer: boolean;
+  camFollow: CamFollow;
 }
 
 export const defaultOptions = (): Options => ({
@@ -37,6 +46,12 @@ export const defaultOptions = (): Options => ({
   hud: 'full',
   touchLook: 2.6,
   touchHand: 'right',
+  comfort: 'standard',
+  fov: tuning.camera.fov.value,
+  camDistance: tuning.camera.distance.value,
+  invertY: false,
+  smoothSteer: true,
+  camFollow: 'gentle',
 });
 
 const RANGES = {
@@ -46,6 +61,8 @@ const RANGES = {
   sensitivity: [0.0005, 0.01],
   shake: [0, 1],
   touchLook: [0.5, 6],
+  fov: [60, 100],
+  camDistance: [4, 12],
 } as const;
 
 const clampNum = (v: unknown, lo: number, hi: number, fallback: number): number =>
@@ -61,6 +78,10 @@ export function sanitizeOptions(raw: unknown, base: Options = defaultOptions()):
   o.graphics = r.graphics === 'low' ? 'low' : 'high';
   o.inkLook = r.inkLook !== false;
   o.touchHand = r.touchHand === 'left' ? 'left' : 'right';
+  o.comfort = r.comfort === 'gentle' || r.comfort === 'calm' ? r.comfort : 'standard';
+  o.invertY = r.invertY === true;
+  o.smoothSteer = r.smoothSteer !== false;
+  o.camFollow = r.camFollow === 'off' || r.camFollow === 'strong' ? r.camFollow : 'gentle';
   o.hud = HUD_MODES.includes(r.hud as HudMode) ? (r.hud as HudMode) : 'full';
   return o;
 }
@@ -73,6 +94,12 @@ export function applyOptions(o: Options): void {
   tuning.camera.mouseSensitivity.value = o.sensitivity;
   tuning.juice.shake.value = o.shake;
   tuning.touch.lookScale.value = o.touchLook;
+  tuning.camera.fov.value = o.fov;
+  tuning.camera.distance.value = o.camDistance;
+  comfort.mods = COMFORT[o.comfort];
+  comfort.invertY = o.invertY;
+  comfort.smoothSteer = o.smoothSteer;
+  comfort.follow = o.camFollow;
 }
 
 export class OptionsStore {
@@ -113,11 +140,13 @@ function defaultStorage(): StorageLike | null {
   }
 }
 
-export const OPTION_SLIDERS: { key: 'master' | 'music' | 'sfx' | 'sensitivity' | 'shake' | 'touchLook'; label: string; min: number; max: number; step: number; touchOnly?: boolean }[] = [
+export const OPTION_SLIDERS: { key: 'master' | 'music' | 'sfx' | 'sensitivity' | 'shake' | 'touchLook' | 'fov' | 'camDistance'; label: string; min: number; max: number; step: number; touchOnly?: boolean }[] = [
   { key: 'master', label: 'Volume', min: 0, max: 1, step: 0.05 },
   { key: 'music', label: 'Music', min: 0, max: 1, step: 0.05 },
   { key: 'sfx', label: 'Sound effects', min: 0, max: 1, step: 0.05 },
   { key: 'sensitivity', label: 'Mouse look', min: 0.0005, max: 0.008, step: 0.0005 },
   { key: 'shake', label: 'Screen shake', min: 0, max: 1, step: 0.1 },
+  { key: 'fov', label: 'Field of view', min: 60, max: 100, step: 1 },
+  { key: 'camDistance', label: 'Camera distance', min: 4, max: 12, step: 0.5 },
   { key: 'touchLook', label: 'Touch look speed', min: 0.5, max: 6, step: 0.1, touchOnly: true },
 ];

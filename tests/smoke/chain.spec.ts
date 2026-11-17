@@ -56,6 +56,8 @@ test('C1 Map and Cone: snatch the map, the angry tourist is led to the stall, bu
     return 0;
   });
   await expect.poll(steps, { timeout: 20_000 }).toEqual(['map', 'lure', 'buy', 'cone']);
+  // the escape step shows a bar that fills
+  await expect(page.locator('#todo .escbar')).toBeVisible();
   // the to-do shows the chain: done steps, the current one, and nothing spoiled
   await expect(page.locator('#todo')).toContainText('Treat yourself');
   expect(errors).toEqual([]);

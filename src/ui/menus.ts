@@ -11,13 +11,27 @@ export class OptionsPanel {
     this.el.className = 'menu-card';
     this.el.hidden = true;
     const rows = OPTION_SLIDERS.map((s) => `<label${s.touchOnly ? ' class="touch-only"' : ''}>${s.label}<input type="range" data-k="${s.key}" min="${s.min}" max="${s.max}" step="${s.step}" value="${options[s.key]}"></label>`).join('');
-    this.el.innerHTML = `<h3>Options</h3>${rows}<label class="chk">HUD <button type="button" data-act="hud" class="hudbtn"></button></label><label class="chk touch-only"><input type="checkbox" data-k="lefty"> Left-handed buttons</label><button type="button" class="touch-only" data-act="arrange">Arrange the touch buttons…</button><label class="chk"><input type="checkbox" data-k="graphics"> High quality graphics (shadows)</label><label class="chk"><input type="checkbox" data-k="ink"> Ink outline look (high graphics)</label><label class="chk"><input type="checkbox" data-k="tutorial"> Show the flying tips again</label><button type="button" data-act="levels">Choose a level… (L)</button><button type="button" data-act="skills">Skills &amp; gull looks (K)</button><button type="button" data-act="controls">Controls…</button><button type="button" data-act="coop">Play with a friend online… (N)</button><p class="menu-keys"><b>M</b> mutes everything · <b>U</b> cycles the HUD · <b>O</b> closes this</p><button data-act="close">Close</button>`;
+    this.el.innerHTML = `<h3>Options</h3>${rows}<label>Comfort (motion sickness) <select data-k="comfort"><option value="standard">Standard</option><option value="gentle">Gentle: less camera movement</option><option value="calm">Calm: steady horizon, soft vignette</option></select></label><label>Camera follows the gull <select data-k="camFollow"><option value="off">Off (mouse only)</option><option value="gentle">Gentle</option><option value="strong">Strong</option></select></label><label class="chk"><input type="checkbox" data-k="smoothSteer"> Smooth steering</label><label class="chk"><input type="checkbox" data-k="invertY"> Invert vertical look</label><label class="chk">HUD <button type="button" data-act="hud" class="hudbtn"></button></label><label class="chk touch-only"><input type="checkbox" data-k="lefty"> Left-handed buttons</label><button type="button" class="touch-only" data-act="arrange">Arrange the touch buttons…</button><label class="chk"><input type="checkbox" data-k="graphics"> High quality graphics (shadows)</label><label class="chk"><input type="checkbox" data-k="ink"> Ink outline look (high graphics)</label><label class="chk"><input type="checkbox" data-k="tutorial"> Show the flying tips again</label><button type="button" data-act="levels">Choose a level… (L)</button><button type="button" data-act="skills">Skills &amp; gull looks (K)</button><button type="button" data-act="controls">Controls…</button><button type="button" data-act="coop">Play with a friend online… (N)</button><p class="menu-keys"><b>M</b> mutes everything · <b>U</b> cycles the HUD · <b>O</b> closes this</p><button data-act="close">Close</button>`;
     this.el.querySelectorAll<HTMLInputElement>('input[type=range]').forEach((inp) => {
       inp.addEventListener('input', () => {
         (this.options as unknown as Record<string, number>)[inp.dataset.k!] = Number(inp.value);
         this.onChange(this.options);
       });
     });
+    for (const k of ['comfort', 'camFollow'] as const) {
+      const sel = this.el.querySelector<HTMLSelectElement>(`select[data-k=${k}]`)!;
+      sel.addEventListener('change', () => {
+        (this.options as unknown as Record<string, string>)[k] = sel.value;
+        this.onChange(this.options);
+      });
+    }
+    for (const k of ['smoothSteer', 'invertY'] as const) {
+      const cb = this.el.querySelector<HTMLInputElement>(`input[data-k=${k}]`)!;
+      cb.addEventListener('change', () => {
+        this.options[k] = cb.checked;
+        this.onChange(this.options);
+      });
+    }
     const hudBtn = this.el.querySelector<HTMLButtonElement>('[data-act=hud]')!;
     hudBtn.addEventListener('click', () => {
       this.options.hud = nextHudMode(this.options.hud);
@@ -86,6 +100,11 @@ export class OptionsPanel {
     this.el.querySelector<HTMLInputElement>('input[data-k=lefty]')!.checked = this.options.touchHand === 'left';
     this.el.querySelector<HTMLInputElement>('input[data-k=graphics]')!.checked = this.options.graphics === 'high';
     this.el.querySelector<HTMLInputElement>('input[data-k=ink]')!.checked = this.options.inkLook;
+    this.el.querySelector<HTMLSelectElement>('select[data-k=comfort]')!.value = this.options.comfort;
+    this.el.querySelector<HTMLSelectElement>('select[data-k=camFollow]')!.value = this.options.camFollow;
+    this.el.querySelector<HTMLInputElement>('input[data-k=smoothSteer]')!.checked = this.options.smoothSteer;
+    this.el.querySelector<HTMLInputElement>('input[data-k=invertY]')!.checked = this.options.invertY;
+    for (const s of this.el.querySelectorAll<HTMLInputElement>('input[type=range]')) s.value = String((this.options as unknown as Record<string, number>)[s.dataset.k!]);
     this.el.querySelector<HTMLButtonElement>('[data-act=hud]')!.textContent = HUD_NAMES[this.options.hud];
     this.el.hidden = false;
   }

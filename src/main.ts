@@ -71,6 +71,7 @@ import { Polaroids } from './ui/polaroids';
 import { Outro, outroCamera, planRun, yawFor } from './gameplay/outro';
 import { distanceGain } from './core/spatial';
 import { TapHold } from './gameplay/tapHold';
+import { comfort, followYawStep, FOLLOW_RATE, LookSmoother, smoothAxis, vignetteAmount } from './core/comfort';
 import { activeMarkers } from './gameplay/questMarkers';
 import type { Marker } from './data/quests';
 import { MarkerPool } from './render/markers';
@@ -240,6 +241,9 @@ const triggers = new TriggerSystem(greybox ? [] : setup.triggers);
 const stats = new LevelStats();
 const levelComplete = new LevelComplete(document.body);
 const polaroids = new Polaroids(document.body);
+const vignetteEl = document.createElement('div'); // the comfort vignette: darkens the edges in fast turns and dives
+vignetteEl.id = 'comfort-vignette';
+document.body.appendChild(vignetteEl);
 if (navigator.webdriver) document.body.classList.add('no-anim'); // browser tests run on software rendering
 document.getElementById('levelcomplete')?.addEventListener('click', (e) => {
   if (!(e.target as HTMLElement).closest('button')) levelComplete.hide(); // tap anywhere else to keep playing (phones)
@@ -579,7 +583,7 @@ function onFlightEvents(evs: FlightEvent[]): void {
     else if (e.type === 'land' && e.water) {
       const big = e.impact >= tuning.cannon.minImpact.value;
       hud.toast(big ? 'CANNONBALL!' : 'Splash!', big ? 1.2 : 0.6);
-      audio.play('splat', big ? 1.4 : 1);
+      audio.play('splash', big ? 1.5 : 0.8);
       ripples.add(gull.state.x, gull.state.z, big ? 3.4 : 1.6);
       puffs.burst('splash', { x: gull.state.x, y: 0.2, z: gull.state.z }, big ? 2.4 : 1);
       if (big) cannonball(gull.state.x, gull.state.z, e.impact);
@@ -1061,6 +1065,10 @@ const tangle = new Tangle();
 let slowmoT = 0;
 const tauntT: number[] = [];
 const tapHolds: TapHold[] = [];
+const lookSmoother = new LookSmoother();
+let lookIdle = 0;
+let steerX = 0;
+let steerY = 0;
 /** T: a quick tap is a honk, holding it is a taunt. Returns whether the player is taunting now (held past the tap time). */
 function tauntInput(i: number, down: boolean, dt: number): boolean {
   const th = (tapHolds[i] ??= new TapHold(() => tuning.honk.tapMax.value, () => tuning.honk.cooldown.value));
@@ -1962,7 +1970,7 @@ function onGags(gags: GagEvent[]): void {
 applyLevelRules(); // the first level's own rules (heat, lunch, current)
 
 startLoop({
-  timeScale: () => (slowmoT > 0 ? tuning.juice.slowmoScale.value : 1),
+  timeScale: () => (slowmoT > 0 ? 1 - (1 - tuning.juice.slowmoScale.value) * comfort.mods.slowmo : 1),
   update(dt) {
     simTime += dt;
     music.setTier(musicDirector.update(dt, defense?.heat.tier ?? 0, quests.quests.some((q) => q.id === 'finale' && q.status === 'active')));
@@ -1996,7 +2004,12 @@ startLoop({
       options.tutorialDone = true;
       optStore.save(options);
     }
-    if (!menuOpen()) cam.rotate(m.dx, m.dy);
+    // mouse look: optionally spread over a few frames (comfort), vertical can be inverted
+    const look = lookSmoother.step(m.dx, m.dy, dt, comfort.mods.lookTau);
+    if (!menuOpen()) cam.rotate(look.dx, comfort.invertY ? -look.dy : look.dy);
+    lookIdle = Math.abs(m.dx) + Math.abs(m.dy) > 0.5 ? 0 : lookIdle + dt;
+    // the camera drifts round behind the gull's heading when you are not looking around yourself
+    if (!menuOpen() && !outro.active && !lockNow && lookIdle > 1.2 && Math.hypot(gull.state.vx, gull.state.vz) > 2.5) cam.yaw = followYawStep(cam.yaw, gull.state.heading, dt, FOLLOW_RATE[comfort.follow]);
     if (input.wasPressed('KeyN')) lobby.toggle();
     if (input.wasPressed('KeyR')) {
       if (isGuest()) hud.toast('The host restarts the level.', 1.4);
@@ -2089,7 +2102,13 @@ startLoop({
       outro.skip();
       endOutro();
     }
-    const { x, y } = blocked || scripted ? { x: 0, y: scripted && outro.phase === 'run' ? 1 : 0 } : input.axes();
+    const rawAx = blocked || scripted ? { x: 0, y: scripted && outro.phase === 'run' ? 1 : 0 } : input.axes();
+    // smooth steering: a keyboard press ramps up over a fraction of a second instead of jerking the gull round
+    const tau = comfort.smoothSteer && !scripted ? comfort.mods.stickTau : 0;
+    steerX = smoothAxis(steerX, rawAx.x, dt, tau);
+    steerY = smoothAxis(steerY, rawAx.y, dt, tau);
+    const x = Math.abs(steerX) < 0.01 ? 0 : steerX;
+    const y = Math.abs(steerY) < 0.01 ? 0 : steerY;
     if (x !== 0 || y !== 0) tutorial.event('move');
     if (tutorial.tick(dt)) {
       options.tutorialDone = true;
@@ -2398,6 +2417,7 @@ startLoop({
     } else cam.update(gull.position, frameDt, { vx: s.vx, vy: s.vy, vz: s.vz, diving: s.mode === 'dive', turnRate: s.turnRate });
     audio.setAir(Math.hypot(s.vx, s.vy, s.vz) / tuning.dive.speed.value, s.mode !== 'ground');
     ambientSound(frameDt);
+    vignetteEl.style.opacity = vignetteAmount(s.turnRate, s.mode === 'dive', Math.hypot(s.vx, s.vy, s.vz) / tuning.dive.speed.value, comfort.mods.vignette).toFixed(2);
     graphics.update(gull.position);
     sky.update(frameDt, cam.camera.position, simTime);
     tickMotion(simTime);
