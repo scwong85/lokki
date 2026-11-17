@@ -209,3 +209,6 @@ Effort M. It builds on the snatch code, guard states and the vendor spray cone, 
 - **A vendor's spray breaks a tug** and you lose it (the ground way is the risky way near a vendor). A honk makes the person let go almost at once. A noise or a taunt weakens their pull.
 - Level **M5. Tug of War** (Mischief): the soup (tug), the balloon (dive), the bun (either way, but a vendor stands next door).
 - Not done: a partner who joins the tug (co-op), heat for tugging (it is noisy: they notice), per-item tug strengths, and guests hold E only by mashing (their held key is not sent to the host).
+
+## 15. Built in M53: Contagion, Slam, Peck
+Contagion (fright jumps to calm neighbours, `contagion.*`), Slam (dive at speed bowls people over, domino knock-downs, `slam.*`) and Peck (E on a level switch; the jukebox makes people dance and forget their snacks, `dance.*`). Levels M6 Rush Hour, M7 Strike!, M8 Jukebox Hero. The vendor spray also soaks the person being tugged, so they drop the bun (emergent, kept).

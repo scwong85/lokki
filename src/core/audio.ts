@@ -1,6 +1,6 @@
 import { tuning } from './tuning';
 
-export type Sfx = 'flap' | 'hop' | 'screech' | 'thud' | 'bonk' | 'chime' | 'pop' | 'splat' | 'clatter' | 'crash' | 'gasp' | 'yelp' | 'win' | 'lose' | 'hiss' | 'whistle' | 'twang' | 'alarm' | 'crow' | 'bell' | 'tramBell' | 'horn' | 'honk' | 'splash';
+export type Sfx = 'flap' | 'hop' | 'screech' | 'thud' | 'bonk' | 'chime' | 'pop' | 'splat' | 'clatter' | 'crash' | 'gasp' | 'yelp' | 'win' | 'lose' | 'hiss' | 'whistle' | 'twang' | 'alarm' | 'crow' | 'bell' | 'tramBell' | 'horn' | 'honk' | 'splash' | 'jukebox';
 
 /**
  * Tiny audio manager. Placeholder sounds are synthesised with WebAudio (no files, no licences, fully offline).
@@ -141,6 +141,13 @@ export class AudioManager {
         this.tone('sine', 160, 55, 0.3, 0.55 * v);
         this.burst(0.12, 3200, 1.2, 0.35 * v, 1600);
         for (let i = 0; i < 4; i++) this.tone('sine', 500 + i * 170, 900 + i * 260, 0.07, 0.1 * v, 0.18 + i * 0.07);
+        break;
+      case 'jukebox':
+        // a jaunty little tune: eight notes up and down a major scale
+        [523, 659, 784, 659, 880, 784, 659, 523].forEach((f, i) => {
+          this.tone('square', f, f, 0.16, 0.14 * v, i * 0.17);
+          this.tone('triangle', f / 2, f / 2, 0.16, 0.2 * v, i * 0.17);
+        });
         break;
       case 'honk':
         this.screech(1.5 * vol);

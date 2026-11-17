@@ -226,6 +226,7 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [ ] M49 Honk, Cannonball and environment sounds (built on `m49-honk-splash`, merged)
 - [ ] M50 Handling and comfort: comfort presets, vignette, smooth steering, camera follow, FOV and distance; escape bar, splash sound (built on `m50-handling`, merged)
 - [ ] M52 Tug of war: ground tug vs air snatch, items by grab mode, vendor spray interrupts (built on `m52-tug`)
+- [ ] M53 Contagion, Slam and Peck: spreading panic, skittles, jukebox (built on `m53-contagion-slam-peck`)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -442,8 +443,11 @@ Comfort presets, a vignette, smooth steering, a camera that follows the gull, FO
 ### M52 — Tug of war (M)
 On the ground E starts a tug of war against someone's hand; in the air the snatch stays instant; items are air-only, ground-only or both. Details: `docs/milestones/M52.md`.
 
-### After M52 (backlog)
- Contagion, slam and the rest of the slate (`docs/design/mischief-mechanics.md`), then convert the stall-chain levels to the new toys.
+### M53 — Contagion, Slam and Peck (M)
+Panic that spreads through a queue, fast dives that bowl people over like skittles, and a pecked jukebox that makes people dance; three showcase levels. Details: `docs/milestones/M53.md`.
+
+### After M53 (backlog)
+ Tablecloth yank, prank button, hide and BOO and the rest of the slate (`docs/design/mischief-mechanics.md`), then convert the stall-chain levels to the new toys.
  Mischief toys next: tablecloth yank, prank button, hide and BOO, then convert the stall-chain levels to different toys (`docs/design/mischief-mechanics.md`).
  Chain levels: more rebuilds (Cheese Run, Harbour Day, the heist levels, Christmas Market, Key to the City, Coo-Coo, The Drone), then rumour and crowds, escalation events, co-op chains (`docs/design/chain-levels.md`).
  World enrichment rest of W2, then W3 to W6 (`docs/design/world-enrichment.md`): streets and squares, things that move, a busier city, landmark kit.

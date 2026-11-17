@@ -237,3 +237,111 @@ export const TUG_OF_WAR: LevelDef = {
   deploy: ['vendors'],
   parTime: 300,
 };
+
+const queue = (n: number, x0: number, z: number, dx: number, role: string, tag: string, colors: number[], heading = Math.PI) =>
+  Array.from({ length: n }, (_, i) => ({ x: x0 + i * dx, z, heading, ice: true, holdTag: tag, role, stationary: true, color: colors[i % colors.length] }));
+
+/**
+ * M6. Rush Hour (contagion): a fright spreads person to person. Splat one in the queue and the whole line panics.
+ */
+export const RUSH_HOUR: LevelDef = {
+  id: 'rush-hour',
+  name: 'M6. Rush Hour',
+  blurb: 'Panic is catching. Splat one person in the queue.',
+  district: 'kauppatori',
+  series: 'Mischief (new)',
+  quests: [],
+  extraQuests: [
+    {
+      id: 'rushchain',
+      title: 'Rush Hour',
+      teaser: 'Start a panic in the ice cream queue, and take a dropped cone.',
+      timed: false,
+      chain: true,
+      objectives: [
+        { id: 'splat', text: 'Splat the first person in the queue', kind: 'event', event: 'poopNpc:queuer', hint: 'Poop (Q) on someone in the line on the quay. Everyone near them will jump too.', markers: [{ x: -5, z: -11, r: 6, label: 'Queue' }] },
+        { id: 'spread', text: 'Make the panic spread to five people', kind: 'event', event: 'spread:5', after: 'splat', hint: 'A fright jumps to people standing close. Splat another one if it stops.' },
+        { id: 'cone', text: 'Take a cone the crowd dropped', kind: 'event', event: 'grab:rushCone', after: 'spread', hint: 'They dropped their ice creams. Grab one with E.' },
+        { id: 'escape', text: 'Get away with it', kind: 'escape', after: 'cone', hint: 'Keep it and stay far from everyone until the bar fills.' },
+      ],
+    },
+  ],
+  triggers: [],
+  tourists: [],
+  extraTourists: queue(7, -9, -11, 1.4, 'queuer', 'rushCone', [0xf7a1c4, 0x9ec9f0, 0xffd36e, 0xb8e0c8]),
+  defense: false,
+  start: { x: -5, z: -30 },
+  parTime: 240,
+};
+
+/**
+ * M7. Strike! (slam): a fast dive bowls a person over, and they knock over the next, like skittles.
+ */
+export const STRIKE: LevelDef = {
+  id: 'strike',
+  name: 'M7. Strike!',
+  blurb: 'Dive fast through the line. Watch them fall like skittles.',
+  district: 'kauppatori',
+  series: 'Mischief (new)',
+  quests: [],
+  extraQuests: [
+    {
+      id: 'strikechain',
+      title: 'Strike!',
+      teaser: 'Knock four people down with one dive, and take a cone.',
+      timed: false,
+      chain: true,
+      objectives: [
+        { id: 'slam', text: 'Bowl someone over with a fast dive', kind: 'event', event: 'slammed', hint: 'Hold Shift and dive hard at the end of the line, low and fast.', markers: [{ x: -26, z: -14, r: 6, label: 'The line' }] },
+        { id: 'strike', text: 'Knock down four people with one dive', kind: 'event', event: 'knockdown:4', after: 'slam', hint: 'Fallen people knock over their neighbours. Hit the line near one end.' },
+        { id: 'cone', text: 'Take a cone that went flying', kind: 'event', event: 'grab:strikeCone', after: 'strike', hint: 'They dropped their ice creams. Grab one with E.' },
+        { id: 'escape', text: 'Get away with it', kind: 'escape', after: 'cone', hint: 'Keep it and stay far from everyone until the bar fills.' },
+      ],
+    },
+  ],
+  triggers: [],
+  tourists: [],
+  extraTourists: queue(6, -30, -14, 1.2, 'bowler', 'strikeCone', [0xf7a1c4, 0x9ec9f0, 0xffd36e], 0).map((t, i) => ({ ...t, x: -26 + i * 1.2, heading: Math.PI })),
+  defense: false,
+  start: { x: -26, z: -34 },
+  parTime: 240,
+};
+
+/**
+ * M8. Jukebox Hero (peck): peck the jukebox and everyone nearby dances, too happy to guard their ice cream.
+ */
+export const JUKEBOX_HERO: LevelDef = {
+  id: 'jukebox-hero',
+  name: 'M8. Jukebox Hero',
+  blurb: 'Peck the jukebox. Nobody guards an ice cream while dancing.',
+  district: 'kauppatori',
+  series: 'Mischief (new)',
+  quests: [],
+  extraQuests: [
+    {
+      id: 'jukechain',
+      title: 'Jukebox Hero',
+      teaser: 'Start the music, then take a dancer\'s ice cream.',
+      timed: false,
+      chain: true,
+      objectives: [
+        { id: 'peck', text: 'Peck the jukebox (E)', kind: 'event', event: 'pecked:juke', hint: 'Land next to the jukebox and press E.', markers: [{ x: -6, z: -18, r: 4, label: 'Jukebox' }] },
+        { id: 'dance', text: 'Get four people dancing', kind: 'event', event: 'dancers:4', after: 'peck', hint: 'Stay near the people. Peck it again if they stop.' },
+        { id: 'cone', text: 'Take a dancer\'s ice cream', kind: 'event', event: 'grab:danceCone', after: 'dance', hint: 'Dancers are too happy to guard. Grab the cone with E.' },
+        { id: 'escape', text: 'Get away with it', kind: 'escape', after: 'cone', hint: 'Keep it and stay far from everyone until the bar fills.' },
+      ],
+    },
+  ],
+  triggers: [],
+  tourists: [],
+  extraTourists: [
+    { x: -10, z: -21, heading: 0.4, ice: true, holdTag: 'danceCone', role: 'dancer', stationary: true, color: 0xf7a1c4 },
+    { x: -2, z: -21, heading: -0.4, ice: true, holdTag: 'danceCone', role: 'dancer', stationary: true, color: 0x9ec9f0 },
+    { x: -9, z: -14, heading: 0.9, ice: true, holdTag: 'danceCone', role: 'dancer', stationary: true, color: 0xffd36e },
+    { x: -3, z: -14, heading: -0.9, ice: true, holdTag: 'danceCone', role: 'dancer', stationary: true, color: 0xb8e0c8 },
+  ],
+  switches: [{ id: 'juke', x: -6, z: -18, label: 'jukebox', effect: 'dance', cooldown: 6 }],
+  defense: false,
+  start: { x: -6, z: -34 },
+  parTime: 240,
+};

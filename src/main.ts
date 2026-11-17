@@ -39,6 +39,7 @@ import { NpcManager } from './gameplay/npcs';
 import { QuestLog, type QuestNote } from './gameplay/quest';
 import { QUESTS } from './data/quests';
 import { LEVELS, levelById } from './data/levels';
+import type { LevelDef } from './data/levels/types';
 import { levelProgress, levelSetup, levelStars, levelUnlocked, mergeRecord, starCount } from './gameplay/level';
 import { TOURIST_SPAWNS } from './data/npcs';
 import type { NpcEvent } from './gameplay/npc';
@@ -338,7 +339,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get tugProgress() { return interaction.tugProgress(0); }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get switches() { return level.switches ?? []; }, peckNow: () => { const sw = switchNear(gull.state); if (sw) peck(sw, players[0]); return !!sw; }, get tugProgress() { return interaction.tugProgress(0); }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -722,6 +723,47 @@ let quietCd = 0;
 let hushCd = 0;
 let onRoofBefore = false;
 const roofBox: import('./world/collision').Box = { min: [0, 0, 0], max: [0, 0, 0], kind: 'perch', color: 0xb9c4cf };
+const switchViews: THREE.Group[] = [];
+const switchCd = new Map<string, number>();
+function setupSwitches(): void {
+  for (const g of switchViews) scene.remove(g);
+  switchViews.length = 0;
+  switchCd.clear();
+  for (const sw of level.switches ?? []) {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.5, 0.7), new THREE.MeshLambertMaterial({ color: 0xc94f7c }));
+    body.position.y = 0.75;
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.7, 12, 1, false, 0, Math.PI), new THREE.MeshLambertMaterial({ color: 0xffd36e }));
+    top.rotation.z = Math.PI / 2;
+    top.rotation.y = Math.PI / 2;
+    top.position.y = 1.55;
+    const glow = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.7, 0.05), new THREE.MeshBasicMaterial({ color: 0xfff3b0 }));
+    glow.position.set(0, 0.95, 0.36);
+    g.add(body, top, glow);
+    g.position.set(sw.x, 0, sw.z);
+    scene.add(g);
+    switchViews.push(g);
+  }
+}
+/** The switch the gull is next to (nothing carried), if any. */
+function switchNear(s: { x: number; z: number }): NonNullable<LevelDef['switches']>[number] | null {
+  for (const sw of level.switches ?? []) if (Math.hypot(sw.x - s.x, sw.z - s.z) < 2.4 && (switchCd.get(sw.id) ?? 0) <= 0) return sw;
+  return null;
+}
+function peck(sw: NonNullable<LevelDef['switches']>[number], pl: Player): void {
+  switchCd.set(sw.id, sw.cooldown ?? 4);
+  const s = pl.gull.state;
+  pl.gull.openBeak(0.4);
+  pl.gull.wiggleT = 0.4;
+  audio.play('jukebox');
+  fx('stars', { x: sw.x, y: 1.6, z: sw.z }, 0.8);
+  notes(quests.onEvent(`pecked:${sw.id}`));
+  if (npcs && sw.effect === 'dance') {
+    const evs = npcs.danceNear(sw.x, sw.z, tuning.dance.range.value, tuning.dance.seconds.value);
+    onNpcEvents(evs);
+  }
+  void s;
+}
 function setupSenate(): void {
   if (tramView) scene.remove(tramView.group);
   if (gangView) scene.remove(gangView.group);
@@ -1273,6 +1315,7 @@ function applyLevelRules(): void {
   sky.apply(skyById(level.sky ?? (level.night ? 'night' : 'noon')));
   setupKalle();
   setupSenate();
+  setupSwitches();
   setupEsplanadi();
   resetCoopJuice();
   havoc = level.havoc && !isGuest() ? new HavocRun(level.havoc.seconds) : null;
@@ -1741,6 +1784,20 @@ function onNpcEvents(evs: NpcEvent[]): void {
         hud.toast('Whoa!', 1.2);
         notes(quests.onEvent(`slipped:${e.npc.role}`));
       }
+    } else if (e.type === 'spread') {
+      notes(quests.onEvent(`spread:${e.count}`));
+      if (e.count === 5) polaroids.request('Panic!');
+    } else if (e.type === 'slam') {
+      audio.play('bonk');
+      cam.shake(0.35);
+      notes(quests.onEvent('slammed'));
+    } else if (e.type === 'knockdown') {
+      audio.play('thud');
+      notes(quests.onEvent(`knockdown:${e.count}`));
+      if (e.count === 4) polaroids.request('Strike!');
+    } else if (e.type === 'dancing') {
+      for (let i = 1; i <= e.count; i++) notes(quests.onEvent(`dancers:${i}`));
+      if (e.count >= 4) polaroids.request('Dance party!');
     } else if (e.type === 'atStation') {
       notes(quests.onEvent(`atStation:${e.npc.role}:${e.station}`));
     } else if (e.type === 'bought') {
@@ -2201,6 +2258,7 @@ startLoop({
       }
       if (ended) endOutro();
     }
+    if (npcs && !isGuest()) npcs.slam(gull.state);
     if (npcs?.pushGull(gull.state) && simTime - lastBump > 1) {
       lastBump = simTime;
       audio.play('bonk');
@@ -2211,7 +2269,12 @@ startLoop({
       if (!blocked && input.wasPressed('KeyE')) net!.tap('KeyE');
       if (!blocked && input.wasPressed('KeyQ')) net!.tap('KeyQ');
       if (!blocked && (input.wasPressed('KeyF') || input.wasClicked())) net!.tap('KeyF');
-    } else onGags(interaction.updateGull(0, gull.state, { grab: !blocked && input.wasPressed('KeyE'), grabHeld: !blocked && input.isDown('KeyE'), toss: !blocked && input.wasPressed('KeyQ'), poop: !blocked && (input.wasPressed('KeyF') || input.wasClicked()), lock: lockPoint ? { ...lockPoint, r: lockNow!.radius } : spotAssist(0) }, dt, simTime));
+    } else {
+      for (const [k, v] of switchCd) switchCd.set(k, v - dt);
+      const sw = switchNear(gull.state);
+      if (sw && !blocked && !interaction.carried && input.wasPressed('KeyE')) peck(sw, players[0]);
+      onGags(interaction.updateGull(0, gull.state, { grab: !blocked && input.wasPressed('KeyE'), grabHeld: !blocked && input.isDown('KeyE'), toss: !blocked && input.wasPressed('KeyQ'), poop: !blocked && (input.wasPressed('KeyF') || input.wasClicked()), lock: lockPoint ? { ...lockPoint, r: lockNow!.radius } : spotAssist(0) }, dt, simTime));
+    }
     // other players: their own flight and beak (the camera stays on player 1)
     for (const p of players) {
       if (p.id === 0) continue;
@@ -2429,7 +2492,7 @@ startLoop({
     const blocked = poopHit?.tag === 'umbrella';
     poopReticle.update(poopHit, blocked);
     touchControls?.update(interaction.grabPrompt(s), !!interaction.carried, { V: skills.has('mimic'), G: skills.has('flock'), B: skills.has('disguise') }, (code) => abilities.fraction(code === 'KeyV' ? 'mimic' : code === 'KeyG' ? 'flock' : 'disguise'), players.length > 1 || setup.quests.some((q) => q.chain));
-    hud.setInteraction(blocked ? 'Umbrella blocks it! Distract the Warden with a noise first (drop or throw a bottle)' : interaction.grabPrompt(s), poopReady);
+    hud.setInteraction(blocked ? 'Umbrella blocks it! Distract the Warden with a noise first (drop or throw a bottle)' : (!interaction.carried && switchNear(s) ? `E: peck the ${switchNear(s)!.label}` : '') || interaction.grabPrompt(s), poopReady);
     if (outro.active && outro.plan) {
       outroClock += frameDt;
       const t = tuning.outro;
