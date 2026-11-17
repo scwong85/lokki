@@ -69,6 +69,8 @@ export class GullModel {
   private legs: THREE.Group[] = [];
   private head = new THREE.Group();
   private lowerBeak = new THREE.Group();
+  private eyes = new THREE.Group();
+  private blinkT = 2;
   private baked: Baked[] = [];
   private skin: Record<GullSlot, number> = GULL_SKINS[0].colours;
   private disguised = false;
@@ -96,21 +98,24 @@ export class GullModel {
 
     // head: skull, eyes (pale iris, pupil, red ring), beak with a hook; the lower beak (with the red spot) opens
     this.head.position.set(0, 0.3, -0.6);
-    const eyeParts: Part[] = [];
-    for (const s of [-1, 1]) {
-      eyeParts.push(p(new THREE.SphereGeometry(0.034, 6, 5), 'eye', [s * 0.128, 0.045, -0.1]));
-      eyeParts.push(p(new THREE.SphereGeometry(0.017, 5, 4), 'pupil', [s * 0.155, 0.05, -0.108]));
-      eyeParts.push(p(new THREE.TorusGeometry(0.036, 0.008, 4, 10), 'ring', [s * 0.132, 0.045, -0.1], [0, Math.PI / 2, 0]));
+    const eyeParts: Part[] = []; // positions relative to the eye pivot (so a blink squashes about the eye line)
+    for (const sd of [-1, 1]) {
+      eyeParts.push(p(new THREE.SphereGeometry(0.05, 8, 6), 'eye', [sd * 0.133, 0, 0]));
+      eyeParts.push(p(new THREE.SphereGeometry(0.026, 6, 5), 'pupil', [sd * 0.175, 0.004, -0.012]));
+      eyeParts.push(p(new THREE.SphereGeometry(0.009, 4, 3), 'eye', [sd * 0.19, 0.016, -0.024])); // a tiny highlight
+      eyeParts.push(p(new THREE.TorusGeometry(0.053, 0.009, 4, 12), 'ring', [sd * 0.137, 0, 0], [0, Math.PI / 2, 0]));
     }
+    this.eyes.position.set(0, 0.05, -0.1);
     const upper = new THREE.CylinderGeometry(0.018, 0.045, 0.34, 4);
     upper.rotateX(-Math.PI / 2);
     upper.rotateZ(Math.PI / 4);
     add(this.head, [
-      p(new THREE.SphereGeometry(0.19, 10, 8), 'head', [0, 0, 0], [0, 0, 0], [0.95, 1, 1.12]),
-      ...eyeParts,
+      p(new THREE.SphereGeometry(0.2, 10, 8), 'head', [0, 0, 0], [0, 0, 0], [0.95, 1, 1.1]),
       p(upper, 'beak', [0, -0.015, -0.34], [0, 0, 0], [1, 0.75, 1]),
       p(new THREE.ConeGeometry(0.03, 0.08, 4), 'beak', [0, -0.05, -0.5], [Math.PI, 0, 0]),
     ]);
+    add(this.eyes, eyeParts);
+    this.head.add(this.eyes);
     this.lowerBeak.position.set(0, -0.05, -0.2);
     const lower = new THREE.CylinderGeometry(0.014, 0.035, 0.28, 4);
     lower.rotateX(-Math.PI / 2);
@@ -166,10 +171,18 @@ export class GullModel {
     for (const side of [-1, 1]) {
       const leg = new THREE.Group();
       leg.position.set(side * 0.13, -0.22, 0.1);
-      const web = new THREE.ConeGeometry(0.1, 0.22, 3);
+      const toe = new THREE.CylinderGeometry(0.012, 0.016, 0.17, 4);
+      toe.rotateX(-Math.PI / 2);
+      const web = new THREE.ConeGeometry(0.1, 0.16, 3); // the web between the toes
       web.rotateX(-Math.PI / 2);
-      web.scale(1, 0.15, 1);
-      add(leg, [p(new THREE.CylinderGeometry(0.022, 0.026, 0.3, 5), 'legs', [0, -0.15, 0]), p(web, 'legs', [0, -0.3, -0.07])]);
+      web.scale(1, 0.1, 1);
+      add(leg, [
+        p(new THREE.CylinderGeometry(0.022, 0.026, 0.3, 5), 'legs', [0, -0.15, 0]),
+        p(web, 'legs', [0, -0.3, -0.09]),
+        p(toe, 'legs', [0, -0.3, -0.1]),
+        p(toe, 'legs', [-0.06, -0.3, -0.09], [0, 0.45, 0]),
+        p(toe, 'legs', [0.06, -0.3, -0.09], [0, -0.45, 0]),
+      ]);
       this.root.add(leg);
       this.legs.push(leg);
     }
@@ -232,5 +245,9 @@ export class GullModel {
     this.head.rotation.set(c.headPitch, 0, c.headRoll);
     this.lowerBeak.rotation.x = c.beakOpen * 0.5;
     this.root.position.y = pose.bob;
+    // blink every few seconds (a quick squash of the eyes), slightly more often while the beak is open
+    this.blinkT -= dt;
+    if (this.blinkT < -0.13) this.blinkT = 2.5 + ((Math.sin(this.blinkT * 91.7) + 1) * 1.5);
+    this.eyes.scale.y = this.blinkT < 0 ? 0.1 : 1;
   }
 }
