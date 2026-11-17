@@ -42,8 +42,8 @@ test('Tug of War: which things can be tugged and which snatched', async ({ page 
   expect(errors).toEqual([]);
 });
 
-test('Tug of War: holding E tugs the soup out of his hands; a spray in the middle makes you lose', async ({ page }) => {
-  test.setTimeout(300_000);
+test('Tug of War: mashing E tugs the soup out of his hands; a spray in the middle makes you lose', async ({ page }) => {
+  test.setTimeout(400_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   const l = await open(page);
@@ -59,9 +59,16 @@ test('Tug of War: holding E tugs the soup out of his hands; a spray in the middl
   // now the soup, for real: stand beside the soup man and HOLD E
   await l((x) => { const n = x.npcs.npcs.find((m) => m.role === 'soupman')!; Object.assign(x.gull.state, { x: n.x, y: 0.5, z: n.z + 1.1, vx: 0, vy: 0, vz: 0, heading: 0, mode: 'ground' }); return 0; });
   await page.waitForTimeout(2000); // the 1.2 s cooldown after the lost tug
-  await page.keyboard.down('KeyE');
-  await expect.poll(() => l((x) => x.quests.quests.find((q) => q.id === 'tugchain')!.objectives.find((o) => o.id === 'soup')!.done), { timeout: 90_000 }).toBe(true);
-  await page.keyboard.up('KeyE');
+  // he has noticed the gull, so he pulls hard: holding alone is not enough, it takes mashing E (press, release, press...)
+  await expect
+    .poll(async () => {
+      await page.keyboard.down('KeyE');
+      await page.waitForTimeout(220);
+      await page.keyboard.up('KeyE');
+      await page.waitForTimeout(120);
+      return l((x) => x.quests.quests.find((q) => q.id === 'tugchain')!.objectives.find((o) => o.id === 'soup')!.done);
+    }, { timeout: 150_000 })
+    .toBe(true);
   expect(await l((x) => x.interaction.carried?.tag)).toBe('tugSoup');
   expect(errors).toEqual([]);
 });
