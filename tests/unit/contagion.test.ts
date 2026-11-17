@@ -101,3 +101,19 @@ describe('the new levels', () => {
     expect(LEVELS.find((x) => x.id === 'jukebox-hero')!.switches?.[0].effect).toBe('dance');
   });
 });
+
+describe('hiding and BOO', () => {
+  it('a hidden gull is invisible beyond arm length, a visible one is not', async () => {
+    const { canSee } = await import('../../src/gameplay/npc');
+    const n = { x: 0, z: 0, heading: 0, mode: 'idle' };
+    const g = { x: 0, y: 1, z: -4, diving: false };
+    expect(canSee(n, g, new World())).toBe(true);
+    expect(canSee(n, { ...g, hidden: true }, new World())).toBe(false);
+  });
+  it('BOO makes everyone close drop their cone and panic', () => {
+    const { npcs } = setup(line(3, 1.5));
+    const ev = npcs.boo(1.5, 0, 5);
+    expect(ev.filter((e) => e.type === 'boo').length).toBe(3);
+    expect(npcs.npcs.every((n) => n.holding === null && n.mode === 'panic')).toBe(true);
+  });
+});

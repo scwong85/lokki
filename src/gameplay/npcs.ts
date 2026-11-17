@@ -266,6 +266,18 @@ export class NpcManager implements NpcHooks {
     return ev;
   }
 
+  /** BOO from a hiding place: everyone within `r` jumps, drops what they hold and runs. */
+  boo(x: number, z: number, r: number): NpcEvent[] {
+    const ev: NpcEvent[] = [];
+    for (const n of this.npcs) {
+      if (Math.hypot(n.x - x, n.z - z) > r || n.mode === 'panic' || n.mode === 'slip' || n.tugged) continue;
+      this.dropHeld(n);
+      ev.push(...startle(n, 'pooped'));
+      ev.push({ type: 'boo', npc: n });
+    }
+    return ev;
+  }
+
   /** A honk at (x, z): calm people within `range` jump; someone with their back turned drops what they hold. */
   honk(x: number, z: number, range: number): NpcEvent[] {
     const ev: NpcEvent[] = [];

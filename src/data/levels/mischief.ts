@@ -345,3 +345,73 @@ export const JUKEBOX_HERO: LevelDef = {
   start: { x: -6, z: -34 },
   parTime: 240,
 };
+
+/** M9. Big Red Button (prank buttons): a fire alarm and a sprinkler button. Peck them from a safe distance. */
+export const RED_BUTTON: LevelDef = {
+  id: 'red-button',
+  name: 'M9. Big Red Button',
+  blurb: 'Pull the alarm, press the sprinkler, enjoy the chaos.',
+  district: 'kauppatori',
+  series: 'Mischief (new)',
+  quests: [],
+  extraQuests: [
+    {
+      id: 'buttonchain',
+      title: 'Big Red Button',
+      teaser: 'Pull the alarm, soak the queue with the sprinkler button, take a cone.',
+      timed: false,
+      chain: true,
+      objectives: [
+        { id: 'alarm', text: 'Peck the fire alarm (E)', kind: 'event', event: 'pecked:alarm', hint: 'The red box on the left. Land beside it and press E.', markers: [{ x: -22, z: -20, r: 4, label: 'Alarm' }] },
+        { id: 'sprinkle', text: 'Peck the sprinkler button', kind: 'event', event: 'pecked:sprinkle', after: 'alarm', hint: 'The blue box on the right waters the queue in the middle.', markers: [{ x: 22, z: -20, r: 4, label: 'Sprinkler' }] },
+        { id: 'cone', text: 'Take a cone from the soaked queue', kind: 'event', event: 'grab:btnCone', after: 'sprinkle', hint: 'They dropped their ice creams. Grab one with E.' },
+        { id: 'escape', text: 'Get away with it', kind: 'escape', after: 'cone', hint: 'Keep it and stay far from everyone until the bar fills.' },
+      ],
+    },
+  ],
+  triggers: [],
+  tourists: [],
+  extraTourists: queue(4, -2.1, -12, 1.4, 'queuer', 'btnCone', [0xf7a1c4, 0x9ec9f0, 0xffd36e, 0xb8e0c8]),
+  switches: [
+    { id: 'alarm', x: -22, z: -20, label: 'fire alarm', effect: 'alarm', cooldown: 6 },
+    { id: 'sprinkle', x: 22, z: -20, label: 'sprinkler button', effect: 'soak', cooldown: 8, target: { x: 0, z: -12 } },
+  ],
+  defense: false,
+  start: { x: -22, z: -34 },
+  parTime: 240,
+};
+
+/** M10. Peekaboo (hide and BOO): crouch in a bush, wait until they are close, then honk. */
+export const PEEKABOO: LevelDef = {
+  id: 'peekaboo',
+  name: 'M10. Peekaboo',
+  blurb: 'Crouch in a bush. Wait. Honk when they are close.',
+  district: 'kauppatori',
+  series: 'Mischief (new)',
+  quests: [],
+  extraQuests: [
+    {
+      id: 'booschain',
+      title: 'Peekaboo',
+      teaser: 'Hide in the bush, then BOO the people beside it and take a cone.',
+      timed: false,
+      chain: true,
+      objectives: [
+        { id: 'boo', text: 'Hide in the bush and honk (T) when they are close', kind: 'event', event: 'boo:peeker', hint: 'Walk into the green bush and stay still: they cannot see you. Then tap T.', markers: [{ x: -8, z: -16, r: 3, label: 'Bush' }] },
+        { id: 'cone', text: 'Take a cone they dropped', kind: 'event', event: 'grab:booCone', after: 'boo', hint: 'Grab it with E.' },
+        { id: 'escape', text: 'Get away with it', kind: 'escape', after: 'cone', hint: 'Keep it and stay far from everyone until the bar fills.' },
+      ],
+    },
+  ],
+  triggers: [],
+  tourists: [],
+  extraTourists: [
+    { x: -8, z: -12.5, heading: 0, ice: true, holdTag: 'booCone', role: 'peeker', stationary: true, color: 0xf7a1c4 },
+    { x: -11.5, z: -15, heading: -Math.PI / 2, ice: true, holdTag: 'booCone', role: 'peeker', stationary: true, color: 0x9ec9f0 },
+    { x: -4.5, z: -15, heading: Math.PI / 2, ice: true, holdTag: 'booCone', role: 'peeker', stationary: true, color: 0xffd36e },
+  ],
+  hides: [{ x: -8, z: -16, r: 1.7 }],
+  defense: false,
+  start: { x: -8, z: -30 },
+  parTime: 240,
+};
