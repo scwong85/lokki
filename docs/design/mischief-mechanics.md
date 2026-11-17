@@ -1,6 +1,6 @@
 # Mischief mechanics: a catalogue to diversify the levels
 
-Status: **study and plan. Two mechanics built (M48: Slip, Pied Piper)**. Round 2 (section 6 onwards) widens the study to NPC and environment interaction and to new gull verbs. **Built from round 2 (M49): Honk (V1) and Cannonball (V6).** Tug (V2) is designed below (decisions from the owner), not built yet.
+Status: **study and plan. Two mechanics built (M48: Slip, Pied Piper)**. Round 2 (section 6 onwards) widens the study to NPC and environment interaction and to new gull verbs. **Built from round 2 (M49): Honk (V1) and Cannonball (V6).** Tug (V2) was built in M52.
 
 Written from the playtest note: "the levels are too similar, the mechanics are the same. Diversify the play style; study different fun mechanics that make it fun and funny to be mischievous."
 
@@ -202,3 +202,10 @@ Effort M. It builds on the snatch code, guard states and the vendor spray cone, 
 - **Honk**: tap T (quick press); calm people within 14 m jump; someone with their back turned drops what they hold; sleepers within about 8 m wake; the pigeons on the statue take off. Holding T is still the taunt (it starts after 0.25 s). Level: **M3. Honk!**
 - **Cannonball**: a hard dive into the water (faster than 9 m/s) makes a wave that soaks everyone within 3 to 8 m (by speed): they drop what they hold and run. Level: **M4. Splash Landing**.
 - **Sound**: a real church bell (low strike with partials that ring on for seconds, heard at any distance but quieter far away), a tram bell (ding-ding, fading with distance up to 160 m), a ferry horn (finale), and always-on layers: the tram's rumble, the sea when you are near water, and the city murmur when people are near. The old bell and tram sounds were a tiny 880 Hz blip at one volume.
+
+## 14. Built in M52: Tug of war
+- **Air snatch, ground tug.** From the air (or a dive) the snatch is instant, as before. On the ground, pressing E next to someone's hand starts a **tug of war**: a meter (the orange bar over the HUD) fills while you hold E (slowly) and jumps with every press (mash E, or tap the Grab button on a phone: a tap keeps it going for 0.4 s). They pull back by how they feel: a calm person 0.12, someone on guard 0.40, angry +0.25, startled by a honk 0.02, distracted by a noise 30 % of that. Win: it is yours (and they chase you as with any snatch). Lose: they keep it, hang on, and watch you.
+- **Items say how they can be taken** (`PropDef.grab`): *air only* (balloon, student cap, top hat, scarf: held high or loose), *ground only* (soup bowl, raw herring: held in both hands, a swoop cannot take them), and *both* (everything else, as before).
+- **A vendor's spray breaks a tug** and you lose it (the ground way is the risky way near a vendor). A honk makes the person let go almost at once. A noise or a taunt weakens their pull.
+- Level **M5. Tug of War** (Mischief): the soup (tug), the balloon (dive), the bun (either way, but a vendor stands next door).
+- Not done: a partner who joins the tug (co-op), heat for tugging (it is noisy: they notice), per-item tug strengths, and guests hold E only by mashing (their held key is not sent to the host).

@@ -205,6 +205,7 @@
       /* software-rendered test browsers cannot afford the animations: they get the end state instead */
       body.no-anim .lc-photo, body.no-anim .lc-stamp, body.no-anim.outro::before, body.no-anim.outro::after { animation: none !important; }
       body.no-anim .lc-stamp { opacity: .85; } body.no-anim #polaroid-pop { display: none !important; }
+      #tugbar { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); width: 240px; z-index: 22; text-align: center; font: 800 16px system-ui, sans-serif; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.5); pointer-events: none; } #tugbar[hidden] { display: none; } #tugbar b { display: block; height: 14px; margin-top: 4px; border-radius: 8px; background: rgba(0,0,0,.35); overflow: hidden; box-shadow: 0 0 0 2px rgba(255,255,255,.6); } #tugbar i { display: block; height: 100%; width: 30%; background: linear-gradient(90deg, #ffb347, #ffd36e); transition: width .08s linear; }
       #comfort-vignette { position: fixed; inset: 0; z-index: 15; pointer-events: none; opacity: 0; transition: opacity .25s ease-out; background: radial-gradient(ellipse at center, rgba(10,10,25,0) 42%, rgba(10,10,25,.82) 100%); }
       #polaroid-pop { position: fixed; right: 18px; bottom: 70px; width: 150px; z-index: 40; border-radius: 3px; box-shadow: 0 6px 18px rgba(60,40,20,.35); pointer-events: none; animation: pol-pop 3.2s ease-out forwards; }
       #polaroid-pop[hidden] { display: none; }

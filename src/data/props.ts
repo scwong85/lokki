@@ -19,14 +19,16 @@ export interface PropDef {
   radius: number;
   /** Floats in the air (a balloon): hardly any gravity. */
   floats?: boolean;
+  /** How it can be taken out of a person's hand: only by a snatch from the air, only by a tug on the ground, or both (the default). */
+  grab?: 'air' | 'ground' | 'both';
 }
 
 export const PROPS: Record<PropType, PropDef> = {
   icecream: { name: 'ice cream', tags: ['edible', 'throwable'], mass: 0.15, shape: { kind: 'capsule', hh: 0.12, r: 0.14 }, radius: 0.35 },
   fish: { name: 'fried vendace', tags: ['edible', 'throwable'], mass: 0.3, shape: { kind: 'box', hx: 0.3, hy: 0.06, hz: 0.12 }, radius: 0.35 },
   bun: { name: 'cinnamon bun', tags: ['edible', 'throwable'], mass: 0.2, shape: { kind: 'cyl', hh: 0.07, r: 0.2 }, radius: 0.25 },
-  cap: { name: 'student cap', tags: ['hat', 'throwable', 'shiny'], mass: 0.15, shape: { kind: 'cyl', hh: 0.08, r: 0.22 }, radius: 0.28 },
-  tophat: { name: 'top hat', tags: ['hat', 'throwable'], mass: 0.3, shape: { kind: 'cyl', hh: 0.16, r: 0.2 }, radius: 0.3 },
+  cap: { name: 'student cap', grab: 'air', tags: ['hat', 'throwable', 'shiny'], mass: 0.15, shape: { kind: 'cyl', hh: 0.08, r: 0.22 }, radius: 0.28 },
+  tophat: { name: 'top hat', grab: 'air', tags: ['hat', 'throwable'], mass: 0.3, shape: { kind: 'cyl', hh: 0.16, r: 0.2 }, radius: 0.3 },
   bottle: { name: 'bottle', tags: ['fragile', 'noisy', 'shiny', 'throwable'], mass: 0.4, shape: { kind: 'capsule', hh: 0.16, r: 0.07 }, radius: 0.25 },
   bin: { name: 'litter bin', tags: ['heavy', 'noisy', 'container'], mass: 30, shape: { kind: 'cyl', hh: 0.5, r: 0.45 }, radius: 0.7 },
   crate: { name: 'crate', tags: ['heavy', 'stackable'], mass: 8, shape: { kind: 'box', hx: 0.4, hy: 0.35, hz: 0.4 }, radius: 0.65 },
@@ -40,13 +42,13 @@ export const PROPS: Record<PropType, PropDef> = {
   sausage: { name: 'sausage', tags: ['edible', 'throwable'], mass: 0.12, shape: { kind: 'box', hx: 0.12, hy: 0.04, hz: 0.04 }, radius: 0.3 },
   sunscreen: { name: 'sunscreen', tags: ['throwable'], mass: 0.2, shape: { kind: 'cyl', hh: 0.1, r: 0.05 }, radius: 0.28 },
   baton: { name: 'baton', tags: ['throwable', 'shiny'], mass: 0.05, shape: { kind: 'box', hx: 0.2, hy: 0.02, hz: 0.02 }, radius: 0.3 },
-  scarf: { name: 'scarf', tags: ['throwable'], mass: 0.15, shape: { kind: 'box', hx: 0.2, hy: 0.05, hz: 0.1 }, radius: 0.32 },
+  scarf: { name: 'scarf', grab: 'air', tags: ['throwable'], mass: 0.15, shape: { kind: 'box', hx: 0.2, hy: 0.05, hz: 0.1 }, radius: 0.32 },
   flowers: { name: 'bouquet', tags: ['throwable'], mass: 0.2, shape: { kind: 'box', hx: 0.12, hy: 0.2, hz: 0.12 }, radius: 0.35 },
   sign: { name: 'polished sign', tags: ['heavy', 'shiny'], mass: 60, shape: { kind: 'cyl', hh: 0.6, r: 0.32 }, radius: 0.75 },
-  soup: { name: 'bowl of salmon soup', tags: ['edible', 'throwable'], mass: 0.4, shape: { kind: 'cyl', hh: 0.07, r: 0.17 }, radius: 0.3 },
-  herring: { name: 'raw herring', tags: ['edible', 'throwable'], mass: 0.3, shape: { kind: 'box', hx: 0.26, hy: 0.04, hz: 0.1 }, radius: 0.32 },
+  soup: { name: 'bowl of salmon soup', grab: 'ground', tags: ['edible', 'throwable'], mass: 0.4, shape: { kind: 'cyl', hh: 0.07, r: 0.17 }, radius: 0.3 },
+  herring: { name: 'raw herring', grab: 'ground', tags: ['edible', 'throwable'], mass: 0.3, shape: { kind: 'box', hx: 0.26, hy: 0.04, hz: 0.1 }, radius: 0.32 },
   owl: { name: 'plastic owl', tags: ['throwable'], mass: 0.6, shape: { kind: 'capsule', hh: 0.12, r: 0.16 }, radius: 0.42 },
-  balloon: { name: 'balloon', tags: ['fragile'], mass: 0.05, shape: { kind: 'ball', r: 0.32 }, radius: 0.5, floats: true },
+  balloon: { name: 'balloon', grab: 'air', tags: ['fragile'], mass: 0.05, shape: { kind: 'ball', r: 0.32 }, radius: 0.5, floats: true },
   ring: { name: 'wedding ring box', tags: ['shiny', 'throwable'], mass: 0.05, shape: { kind: 'box', hx: 0.06, hy: 0.04, hz: 0.06 }, radius: 0.25 },
   battery: { name: 'drone battery', tags: ['shiny', 'throwable'], mass: 0.4, shape: { kind: 'box', hx: 0.12, hy: 0.06, hz: 0.18 }, radius: 0.35 },
   cheese: { name: 'leip\u00e4juusto', tags: ['edible', 'throwable'], mass: 0.6, shape: { kind: 'ball', r: 0.26 }, radius: 0.4 },

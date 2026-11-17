@@ -411,6 +411,17 @@ export const tuning = {
     shadowArea: p(70, 20, 200, 5), // half-size in metres of the shadow box around the player
     ao: p(0.32, 0, 0.8, 0.02), // baked darkening at the foot of walls
   },
+  tug: {
+    start: p(0.3, 0.1, 0.6, 0.05), // where the meter starts (1 = yours, 0 = they keep it)
+    hold: p(0.35, 0.1, 1, 0.05), // how fast holding E alone pulls (per second)
+    mash: p(0.14, 0.02, 0.5, 0.01), // what each extra press of E adds
+    grace: p(0.4, 0.1, 1, 0.05), // seconds a single tap keeps the tug alive (phones)
+    pullCalm: p(0.12, 0, 0.6, 0.02), // how hard a calm person pulls back
+    pullGuarded: p(0.4, 0, 1, 0.02), // ... someone who has noticed the gull
+    pullAngry: p(0.25, 0, 1, 0.02), // ... extra when they are angry
+    pullStartled: p(0.02, 0, 0.6, 0.02), // ... when a honk has just startled them
+    reach: p(1.7, 0.8, 3, 0.1), // how close to their hand you must stand to start a tug
+  },
   cannon: {
     minImpact: p(9, 2, 30, 0.5), // a splashdown at least this fast is a cannonball (a normal dive is much faster)
     radiusBase: p(3, 1, 10, 0.5), // metres soaked by the smallest cannonball

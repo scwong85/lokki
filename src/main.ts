@@ -196,6 +196,11 @@ if (npcs) {
   interaction.npcs = {
     snatchCandidates: (b) => npcs.snatchCandidates(b),
     onSnatched: (id) => npcs.onSnatched(id),
+    tugCandidates: (b) => npcs.tugCandidates(b),
+    onTugStart: (id) => npcs.onTugStart(id),
+    onTugEnd: (id, won) => npcs.onTugEnd(id, won),
+    pullOf: (id) => npcs.pullOf(id),
+    isTugged: (id) => npcs.isTugged(id),
     blockedHint: (b) => npcs.blockedHint(b),
     poopSpheres: () => {
       const t = npcs.poopSpheres();
@@ -241,6 +246,11 @@ const triggers = new TriggerSystem(greybox ? [] : setup.triggers);
 const stats = new LevelStats();
 const levelComplete = new LevelComplete(document.body);
 const polaroids = new Polaroids(document.body);
+const tugEl = document.createElement('div'); // the tug-of-war meter
+tugEl.id = 'tugbar';
+tugEl.hidden = true;
+tugEl.innerHTML = '<span>TUG!</span><b><i></i></b>';
+document.body.appendChild(tugEl);
 const vignetteEl = document.createElement('div'); // the comfort vignette: darkens the edges in fast turns and dives
 vignetteEl.id = 'comfort-vignette';
 document.body.appendChild(vignetteEl);
@@ -328,7 +338,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get tugProgress() { return interaction.tugProgress(0); }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -1553,6 +1563,10 @@ function onDefense(evs: DefenseEvent[]): void {
           hud.toast('Slipped through!', 0.8);
           break;
         }
+        if (e.hit.kind === 'spray' && interaction.tugProgress(e.gull) !== null) {
+          interaction.interruptTug(e.gull); // sprayed in the middle of a tug: you lose it
+          hud.toast('Sprayed mid-tug! They keep it.', 1.6);
+        }
         const lost = interaction.dropCarried(victim.state, e.gull);
         const what = { spray: 'Sprayed by a vendor!', swat: 'Swatted by the Warden!', line: 'Tangled in a scare line!', net: 'Caught in the net!', drone: 'Hit by the drone!' }[e.hit.kind];
         hud.toast(lost ? `${what} Dropped the ${lost.def.name}!` : what, 1.4);
@@ -1881,6 +1895,23 @@ function onGags(gags: GagEvent[]): void {
           for (const z of level.splatZones ?? []) if (g.x >= z.zone.minX && g.x <= z.zone.maxX && g.z >= z.zone.minZ && g.z <= z.zone.maxZ) notes(quests.onEvent(z.event));
         }
         break;
+      case 'tugStart':
+        hud.toast('Tug of war! Mash E!', 1.4);
+        audio.play('twang');
+        break;
+      case 'tugWin': {
+        hud.toast('Won the tug!', 1.2);
+        audio.play('pop');
+        fx('stars', g.prop.cur.p, 0.7);
+        notes(quests.onEvent('tugWin'));
+        if (g.prop.tag) notes(quests.onEvent(`tugWin:${g.prop.tag}`));
+        break;
+      }
+      case 'tugLost':
+        hud.toast('They hung on to it!', 1.4);
+        audio.play('gasp');
+        notes(quests.onEvent('tugLost'));
+        break;
       case 'snatch':
         audio.play('yelp');
         hud.toast('Snatched!', 1);
@@ -2180,7 +2211,7 @@ startLoop({
       if (!blocked && input.wasPressed('KeyE')) net!.tap('KeyE');
       if (!blocked && input.wasPressed('KeyQ')) net!.tap('KeyQ');
       if (!blocked && (input.wasPressed('KeyF') || input.wasClicked())) net!.tap('KeyF');
-    } else onGags(interaction.updateGull(0, gull.state, { grab: !blocked && input.wasPressed('KeyE'), toss: !blocked && input.wasPressed('KeyQ'), poop: !blocked && (input.wasPressed('KeyF') || input.wasClicked()), lock: lockPoint ? { ...lockPoint, r: lockNow!.radius } : spotAssist(0) }, dt, simTime));
+    } else onGags(interaction.updateGull(0, gull.state, { grab: !blocked && input.wasPressed('KeyE'), grabHeld: !blocked && input.isDown('KeyE'), toss: !blocked && input.wasPressed('KeyQ'), poop: !blocked && (input.wasPressed('KeyF') || input.wasClicked()), lock: lockPoint ? { ...lockPoint, r: lockNow!.radius } : spotAssist(0) }, dt, simTime));
     // other players: their own flight and beak (the camera stays on player 1)
     for (const p of players) {
       if (p.id === 0) continue;
@@ -2212,7 +2243,7 @@ startLoop({
         simTime,
         targets,
       );
-      onGags(interaction.updateGull(p.id, p.gull.state, { grab: p.input.wasPressed('KeyE'), toss: p.input.wasPressed('KeyQ'), poop: p.input.wasPressed('KeyF') }, dt, simTime));
+      onGags(interaction.updateGull(p.id, p.gull.state, { grab: p.input.wasPressed('KeyE'), grabHeld: p.input.isDown('KeyE'), toss: p.input.wasPressed('KeyQ'), poop: p.input.wasPressed('KeyF') }, dt, simTime));
       p.input.endStep();
     }
     if (isGuest()) guestStep(dt);
@@ -2417,6 +2448,9 @@ startLoop({
     } else cam.update(gull.position, frameDt, { vx: s.vx, vy: s.vy, vz: s.vz, diving: s.mode === 'dive', turnRate: s.turnRate });
     audio.setAir(Math.hypot(s.vx, s.vy, s.vz) / tuning.dive.speed.value, s.mode !== 'ground');
     ambientSound(frameDt);
+    const tugP = interaction.tugProgress(0);
+    tugEl.hidden = tugP === null;
+    if (tugP !== null) (tugEl.querySelector('i') as HTMLElement).style.width = `${Math.round(Math.max(0, Math.min(1, tugP)) * 100)}%`;
     vignetteEl.style.opacity = vignetteAmount(s.turnRate, s.mode === 'dive', Math.hypot(s.vx, s.vy, s.vz) / tuning.dive.speed.value, comfort.mods.vignette).toFixed(2);
     graphics.update(gull.position);
     sky.update(frameDt, cam.camera.position, simTime);
