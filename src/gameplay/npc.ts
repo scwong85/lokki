@@ -17,6 +17,8 @@ export interface Station {
   z: number;
   r: number;
   sells: PropType;
+  /** Where its goods stand (offset in z from the station spot, and the counter height), so an empty stall can restock. */
+  goods?: { dz: number; y?: number };
 }
 
 export type NpcMode = 'idle' | 'walk' | 'eat' | 'notice' | 'shield' | 'panic' | 'chase' | 'recover' | 'yuck' | 'cheer';
@@ -291,9 +293,13 @@ export function startle(n: Npc, kind: 'pooped' | 'snatched' | 'yuck' | 'cheer'):
     setMood(n, 'angry', ev);
     ev.push({ type: 'chase', npc: n });
   } else {
-    enter(n, 'panic');
-    setMood(n, angrier(n.mood), ev); // every splat on the same person makes them angrier
-    ev.push({ type: 'panic', npc: n });
+    // every splat on the same person makes them angrier; someone who is angry and has comfort in mind chases the gull instead of running
+    setMood(n, angrier(n.mood), ev);
+    if (n.mood === 'angry' && n.craves) enter(n, 'chase');
+    else {
+      enter(n, 'panic');
+      ev.push({ type: 'panic', npc: n });
+    }
   }
   n.handAngle = n.heading - Math.PI / 2;
   return ev;
@@ -311,11 +317,11 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
 
   // ---- mood fades back to calm (not while they chase or wait to buy) ----
   n.moodT += dt;
-  if (n.mode === 'chase' || n.buyT > 0) n.moodT = 0;
+  if (n.mode === 'chase' || n.buyT > 0 || (n.craves && (n.mood === 'angry' || n.mood === 'upset'))) n.moodT = 0; // a grudge lasts until they have had their comfort
   if (n.mood !== 'calm' && n.moodT > tuning.mood.time.value) setMood(n, 'calm', ev);
 
   // ---- comfort food: someone upset or angry who passes a stall that sells what they crave goes and buys it ----
-  if (n.craves && n.holding === null && n.buyT === 0 && (n.mood === 'angry' || n.mood === 'upset' || n.mood === 'annoyed') && ctx.stations) {
+  if (n.craves && n.buyT === 0 && (n.mood === 'angry' || n.mood === 'upset' || n.mood === 'annoyed') && ctx.stations) {
     const st = ctx.stations.find((x) => x.sells === n.craves && Math.hypot(x.x - n.x, x.z - n.z) <= x.r);
     if (st) {
       n.station = st;
@@ -380,6 +386,8 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
 
   const gullBearing = bearing(g.x - n.x, g.z - n.z);
   const gullDist = Math.hypot(g.x - n.x, g.z - n.z);
+  // the lure: someone still angry who wants comfort goes after a taunting gull again, even after they had given up the chase
+  if (g.taunt && n.craves && n.buyT === 0 && (n.mood === 'angry' || n.mood === 'upset') && n.mode !== 'chase' && n.mode !== 'panic' && gullDist < tuning.mood.lureRange.value) enter(n, 'chase');
   switch (n.mode) {
     case 'idle': {
       if (n.distractT > 0) faceToward(n, n.noiseX, n.noiseZ, dt);
