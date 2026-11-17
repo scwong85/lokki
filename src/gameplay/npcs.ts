@@ -28,6 +28,8 @@ export class NpcManager implements NpcHooks {
   private spawns = new Map<number, NpcSpawn>();
   private noises: Noise[] = [];
   private pending: NpcEvent[] = [];
+  /** Mechanics that are available now (stage gating). */
+  gates = { contagion: true, slam: true, slip: true };
   /** Frights waiting to reach the next people (contagion), and how many people the current cascade has reached. */
   private frights: { x: number; z: number; gen: number; at: number; src: Npc }[] = [];
   private cascade = 0;
@@ -197,6 +199,7 @@ export class NpcManager implements NpcHooks {
 
   /** A fright reaches calm neighbours (called with this tick's events; adds its own results to `ev` after scanning). */
   private spread(ev: NpcEvent[], dt: number): void {
+    if (!this.gates.contagion) return;
     const c = tuning.contagion;
     const fresh = ev.slice();
     for (const e of fresh) {
@@ -229,6 +232,7 @@ export class NpcManager implements NpcHooks {
 
   /** A fast dive through people bowls them over; a fallen person knocks over the next (the domino). Returns true if the dive hit someone. */
   slam(s: FlightState): boolean {
+    if (!this.gates.slam) return false;
     const t = tuning.slam;
     const speed = Math.hypot(s.vx, s.vy, s.vz);
     if (s.mode !== 'dive' || speed < t.minSpeed.value || s.y < 0.1 || s.y > BODY_HEIGHT + 0.8) return false;
@@ -380,7 +384,7 @@ export class NpcManager implements NpcHooks {
       const stepped = stepNpc(n, near, this.noises, dt, ctx);
       for (const e of stepped) if (e.type === 'bought') this.serve(e.npc, e.station, e.propType);
       ev.push(...stepped);
-      if (n.mode !== 'slip' && n.speed > 0.6) {
+      if (this.gates.slip && n.mode !== 'slip' && n.speed > 0.6) {
         const puddle = this.puddleAt(n);
         if (puddle) {
           puddle.kill?.();

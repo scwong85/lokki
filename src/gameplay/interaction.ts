@@ -88,6 +88,8 @@ export class Interaction {
   private poops: LivePoop[] = [];
 
   npcs: NpcHooks | null = null;
+  /** Mechanics that are available now (stage gating): a locked verb does nothing. */
+  gates = { poop: true, toss: true, tug: true };
   /** Ring around the prop E would grab (so you can see what is in reach). */
   private ring: THREE.Mesh;
 
@@ -264,7 +266,7 @@ export class Interaction {
         // diving at a held ice cream snatches it without pressing anything
         const hit = this.npcs?.snatchCandidates(this.beakPos(s))[0];
         if (hit) this.takeInBeak(this.props.byId(hit.id)!, ev, b);
-      } else if (inp.toss && b.carried) {
+      } else if (inp.toss && b.carried && this.gates.toss) {
         const p = b.carried;
         this.props.release(p, {
           x: s.vx * 0.5 + forward.x * it.tossSpeed.value,
@@ -279,7 +281,7 @@ export class Interaction {
     if (b.carried) this.props.setCarryTarget(b.carried, this.beakPos(s), s.heading);
 
     // ---- poop ----
-    if (inp.poop && !stunned && b.poopCd <= 0) {
+    if (inp.poop && this.gates.poop && !stunned && b.poopCd <= 0) {
       b.poopCd = tuning.poop.cooldown.value * mods.poopCooldown;
       const { spheres: pSpheres, props: pProps } = this.props.hitSpheres();
       const nSpheres = this.npcs?.poopSpheres() ?? [];
@@ -348,6 +350,7 @@ export class Interaction {
   /** Something knocked the item out of the beak (spray, swat, net...). */
   /** The held item a gull on the ground would start tugging: the nearest within reach of the beak. */
   private tugTarget(s: FlightState): Prop | null {
+    if (!this.gates.tug) return null;
     const beak = this.beakPos(s);
     const c = (this.npcs?.tugCandidates({ x: s.x, y: s.y, z: s.z }) ?? []).sort((a, b) => Math.hypot(a.x - beak.x, a.z - beak.z) - Math.hypot(b.x - beak.x, b.z - beak.z))[0];
     return c ? this.props.byId(c.id) ?? null : null;
