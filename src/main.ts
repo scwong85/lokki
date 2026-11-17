@@ -1191,6 +1191,7 @@ function stepEsplanadi(dt: number): void {
         if (!PROPS[p.type].tags.includes('edible') || p.cur.p.y > 1.3) continue;
         if (Math.hypot(p.cur.p.x - d.dog.x, p.cur.p.z - d.dog.z) < tuning.dog.scatterRadius.value) {
           interaction.props.release(p, { x: Math.sin(d.dog.heading) * 2.5, y: 3, z: Math.cos(d.dog.heading) * 2.5 });
+          p.stolen = true; // knocked loose by the dog: carrying it off counts as getting away with it
           scattered = true;
         }
       }

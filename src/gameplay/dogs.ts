@@ -56,10 +56,10 @@ export class Dog {
     this.alertZ = z;
   }
 
-  private moveTo(tx: number, tz: number, speed: number, dt: number): number {
+  private moveTo(tx: number, tz: number, speed: number, dt: number, stop = 0): number {
     const dx = tx - this.x, dz = tz - this.z, d = Math.hypot(dx, dz);
-    if (d > 1e-3) {
-      const step = Math.min(d, speed * dt);
+    if (d > stop + 1e-3) {
+      const step = Math.min(d - stop, speed * dt);
       this.x += (dx / d) * step;
       this.z += (dz / d) * step;
       this.heading = Math.atan2(dx, dz);
@@ -85,7 +85,7 @@ export class Dog {
       this.alertT -= dt;
       this.running = true;
       if (this.mode !== 'chase') this.mode = 'chase';
-      if (this.moveTo(this.alertX, this.alertZ, t.speed.value, dt) < 1.6) this.alertT = 0;
+      if (this.moveTo(this.alertX, this.alertZ, t.speed.value, dt, 1.4) < 1.8) this.alertT = 0;
       return ev;
     }
     // chase a gull on the ground
@@ -101,7 +101,7 @@ export class Dog {
       this.mode = 'chase';
       this.running = true;
       const g = gulls[chase];
-      if (this.moveTo(g.x, g.z, t.speed.value, dt) < 1.6 && this.biteCd <= 0) {
+      if (this.moveTo(g.x, g.z, t.speed.value, dt, 1.3) < 1.7 && this.biteCd <= 0) {
         this.biteCd = 2;
         ev.push({ type: 'bite', gull: chase, x: g.x - this.x, z: g.z - this.z });
       }
