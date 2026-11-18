@@ -30,4 +30,4 @@ export interface Reaction {
 export const reactionsFor = (list: readonly Reaction[] | undefined, event: string): Reaction[] => (list ?? []).filter((r) => r.on === event);
 
 /** Events that count as a person or the city reacting (for the chain test). */
-export const REACTION_EVENT = /^(robbed|mood|atStation|bought|slipped|soaked|honkDrop|knockdown|spread|dancers|signSplat|poopNpc|poopWarden|wardenHunt|dodge|bunAtDock|mapInSea|wrongFerry|distract|tugWin|snatch|pecked|dancing|boo|slammed)/;
+export const REACTION_EVENT = /^(robbed|mood|atStation|bought|slipped|soaked|honkDrop|knockdown|spread|dancers|signSplat|poopNpc|poopWarden|wardenHunt|dodge|bunAtDock|mapInSea|wrongFerry|distract|tugWin|snatch|pecked|dancing|boo|slammed|pose)/;

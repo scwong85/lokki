@@ -342,7 +342,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get gate() { return gate; }, applyGates, get hidden() { return hiddenNow(gull.state); }, get playtest() { return playtest; }, get switches() { return level.switches ?? []; }, peckNow: () => { const sw = switchNear(gull.state); if (sw) peck(sw, players[0]); return !!sw; }, get tugProgress() { return interaction.tugProgress(0); }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get gate() { return gate; }, applyGates, get hidden() { return hiddenNow(gull.state); }, get playtest() { return playtest; }, strikePose: (k: string) => strikePose(players[0], k), photoPoses, get switches() { return level.switches ?? []; }, peckNow: () => { const sw = switchNear(gull.state); if (sw) peck(sw, players[0]); return !!sw; }, get tugProgress() { return interaction.tugProgress(0); }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -528,6 +528,16 @@ const tipEl = document.createElement('div');
 tipEl.id = 'tip';
 tipEl.hidden = true;
 document.body.appendChild(tipEl);
+/** Poses (the emote keys 1 to 4) count in a photo for a few seconds (Act 2). */
+const posing = new Map<number, { kind: string; until: number }>();
+let lastPose = '';
+function strikePose(pl: Player | undefined, kind: string): void {
+  if (!pl || !mech('pose')) return;
+  posing.set(pl.id, { kind, until: simTime + tuning.pose.hold.value });
+}
+function photoPoses(who: number[]): string[] {
+  return who.map((i) => players[i]).filter(Boolean).map((p) => posing.get(p.id)).filter((x): x is { kind: string; until: number } => !!x && x.until >= simTime).map((x) => x.kind);
+}
 const reactionsDone = new Set<string>();
 /** The world answers a quest event (docs/design/puzzle-quality.md): a person's mood, someone walks over, an audience laughs. */
 function runReactions(event: string): void {
@@ -557,7 +567,7 @@ document.body.appendChild(ratingEl);
 function askRating(quest: string, title: string): void {
   if (level.sandbox || navigator.webdriver) return;
   ratingFor = { quest, until: simTime + 9 };
-  ratingEl.textContent = `${title}: how was that?  1 stuck · 2 got it · 3 funny`;
+  ratingEl.textContent = `${title}: how was that?  7 stuck · 8 got it · 9 funny`;
   ratingEl.hidden = false;
 }
 function ratingKeys(): void {
@@ -1598,6 +1608,8 @@ function applyLevelRules(): void {
 
 function restartLevel(mode: 'normal' | 'speedrun'): void {
   reactionsDone.clear();
+  posing.clear();
+  lastPose = '';
   levelCleared = false;
   for (const p of players) p.gull.setStart(level.start?.x ?? start.x, level.start?.z ?? start.z);
   lockId = null;
@@ -2136,6 +2148,16 @@ function onNpcEvents(evs: NpcEvent[]): void {
         interaction.debris.burst({ x: e.npc.x, y: 2.2, z: e.npc.z }, 0xffffff, 10); // camera flash
         notes(quests.onEvent('photobomb'));
         if (e.framed >= 2) notes(quests.onEvent('coop:photobomb'));
+        // a pose in the picture ruins it your way (Act 2)
+        const poses = photoPoses(e.who);
+        if (poses.length) {
+          notes(quests.onEvent('pose:any'));
+          for (const k of new Set(poses)) notes(quests.onEvent(`pose:${k}`));
+          if (lastPose && poses[0] !== lastPose) notes(quests.onEvent('pose:new')); // a different pose from the last photo
+          lastPose = poses[0];
+          if (poses.length >= 2) notes(quests.onEvent('coop:pose'));
+          polaroids.request('Say pigeon!');
+        }
       }
     } else if (e.type === 'arrived' && e.goal === 'stormoff') {
       notes(quests.onEvent('dateOver'));
@@ -2433,6 +2455,7 @@ startLoop({
     if (!blocked && !skillsPanel.visible) EMOTE_KEYS.forEach((k, i) => {
       if (!input.wasPressed(`Digit${i + 1}`)) return;
       emoteOver(players[0], k);
+      strikePose(players[0], k);
       if (isGuest()) net!.tap(`Digit${i + 1}`);
     });
     // active skills
@@ -2568,7 +2591,7 @@ startLoop({
           p.gull.stepRemote(dt);
           const taps = net!.takeTaps();
           const yaw = net!.guestFrame?.yaw ?? 0;
-          EMOTE_KEYS.forEach((k, i) => taps.includes(`Digit${i + 1}`) && emoteOver(p, k));
+          EMOTE_KEYS.forEach((k, i) => { if (taps.includes(`Digit${i + 1}`)) { emoteOver(p, k); strikePose(p, k); } });
           if (taps.includes('KeyV')) mimic(p.gull, yaw);
           if (taps.includes('KeyG')) flockCall(p.gull, yaw);
           if (taps.includes('KeyH') && defense?.activateHawk()) hud.toast('Hawk-eye!', 0.8);

@@ -447,6 +447,9 @@ export const tuning = {
   domino: {
     interval: p(0.22, 0.05, 1, 0.01), // seconds between one tile and the next falling
   },
+  pose: {
+    hold: p(3.5, 1, 10, 0.5), // a pose counts in a photo for this many seconds
+  },
   cloth: {
     scareRadius: p(5, 1, 12, 0.5), // people this close to the table jump when the cloth is yanked
     launch: p(5, 1, 12, 0.5), // how hard the goods fly off
