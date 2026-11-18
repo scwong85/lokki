@@ -283,6 +283,7 @@ export const tuning = {
   coop: {
     tauntRadius: p(16, 4, 40, 1), // people this close to a taunting gull watch it and nobody else
     tauntLoud: p(1.3, 0.3, 3, 0.1), // how loud a taunt is (people turn to look)
+    duetSeconds: p(3, 1, 10, 0.5), // both gulls taunting this long counts as a duet
     tauntEvery: p(0.9, 0.3, 3, 0.1), // seconds between taunt squawks while held
     passWindow: p(2.5, 0.5, 6, 0.1), // a thrown item counts as "in flight" this long
     catchRadius: p(2.6, 0.8, 6, 0.1), // a partner's throw this close jumps into your beak

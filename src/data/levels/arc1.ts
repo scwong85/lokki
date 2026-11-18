@@ -4,7 +4,9 @@ import { restY } from '../props';
 import { SELFIE_SPOT } from './snackAttack';
 import { BOMBS_AWAY } from './bombsAway';
 import { NOSY_PARKERS } from './nosyParkers';
-import { HONK } from './mischief';
+import { RUSH_HOUR, STRIKE, HONK, TUG_OF_WAR, PEEKABOO, RED_BUTTON, WET_FLOOR, JUKEBOX_HERO } from './mischief';
+import { CITY_STRIKES } from './cityStrikes';
+import { MAP_AND_CONE } from './mapAndCone';
 import type { QuestDef } from '../quests';
 
 /** Where the bench bun lies (open quay) and the landing zone beside it. */
@@ -135,4 +137,154 @@ export const FISH_MARKET = stage(1, 2, {
   defense: false,
   parTime: 300,
   reward: 'fatbird',
+});
+
+/**
+ * Act 1, stage 3: Strings Attached. The city fights back (heat, spray vendors, scare lines), and you learn the ground tug, hiding in
+ * a bush and BOO, and the alarm and sprinkler buttons. Objectives: Tug of War, Spray Tan, Peekaboo; the Big Red Button is a hidden bonus.
+ */
+export const STRINGS_ATTACHED = stage(1, 3, {
+  name: '1.3 Strings Attached',
+  blurb: 'The city strikes back. Tug, hide, press the button.',
+  intro: { title: 'Strings Attached', text: 'Midday. The vendors have spray bottles and there are lines over the stalls. Heat rises when you are seen: stay clever.' },
+  quests: [],
+  extraQuests: [
+    chainOf(quest(TUG_OF_WAR, 'tugchain')),
+    chainOf(quest(CITY_STRIKES, 'spray'), 'lunch'),
+    chainOf(quest(PEEKABOO, 'booschain')),
+    chainOf(quest(RED_BUTTON, 'buttonchain')),
+  ],
+  secret: ['buttonchain'],
+  coopRequired: [
+    {
+      id: 'teamTug',
+      title: 'Team tug',
+      teaser: 'Two beaks are stronger than one.',
+      timed: false,
+      objectives: [{ id: 'teamTug', text: 'Both hold E on the same person\'s hand and pull it away', kind: 'event', event: 'coop:tug', hint: 'Both land beside the man with the soup, hold E and mash. Your pulls add up: the person pulls back half as hard on each of you.' }],
+    },
+    (CITY_STRIKES.coopQuests ?? [])[0],
+  ],
+  triggers: [],
+  extraTriggers: [],
+  tourists: [],
+  extraTourists: [
+    ...(TUG_OF_WAR.extraTourists ?? []).slice(0, 3),
+    ...(CITY_STRIKES.extraTourists ?? []).slice(0, 1),
+    ...(PEEKABOO.extraTourists ?? []),
+    ...(RED_BUTTON.extraTourists ?? []),
+  ],
+  hides: PEEKABOO.hides,
+  switches: RED_BUTTON.switches,
+  start: { x: 0, z: -32 },
+  defense: true,
+  deploy: ['vendors', 'lines'],
+  startHeat: 22,
+  parTime: 360,
+  reward: 'hawkeye',
+});
+
+/**
+ * Act 1, stage 4: Mood Swings. People have moods: an angry tourist follows a taunting gull to a stall and buys comfort food, a slippery
+ * floor trips the inspector, a jukebox makes strangers dance. Objectives: Map and Cone, Wet Floor, Jukebox Hero.
+ */
+export const MOOD_SWINGS = stage(1, 4, {
+  name: '1.4 Mood Swings',
+  blurb: 'Anger, comfort food, slippery floors and a jukebox.',
+  intro: { title: 'Mood Swings', text: 'Afternoon. Everyone has a mood now, and a mood can be used. Hold T to lure an angry person.' },
+  quests: [],
+  extraQuests: [chainOf(quest(MAP_AND_CONE, 'mapcone')), chainOf(quest(WET_FLOOR, 'wetfloor')), chainOf(quest(JUKEBOX_HERO, 'jukechain'))],
+  coopRequired: [
+    {
+      id: 'decoyThief',
+      title: 'Decoy and thief',
+      teaser: 'One shows off, one steals.',
+      timed: false,
+      objectives: [{ id: 'decoyThief', text: 'One gull taunts (hold T), the other snatches', kind: 'event', event: 'coop:decoy', hint: 'One gull holds T near the tourists: everyone watches it. The other snatches from behind while they stare.' }],
+    },
+    {
+      id: 'duet',
+      title: 'Duet',
+      teaser: 'Taunt together.',
+      timed: false,
+      objectives: [{ id: 'duet', text: 'Both gulls hold T at the same time for three seconds', kind: 'event', event: 'coop:duet', hint: 'Stand near each other and both hold T.' }],
+    },
+  ],
+  triggers: [],
+  extraTriggers: [],
+  tourists: [],
+  extraTourists: [
+    ...(MAP_AND_CONE.extraTourists ?? []).slice(0, 1),
+    ...(WET_FLOOR.extraTourists ?? []).slice(0, 1),
+    ...(JUKEBOX_HERO.extraTourists ?? []),
+  ],
+  stations: MAP_AND_CONE.stations,
+  extraProps: MAP_AND_CONE.extraProps,
+  splatZones: WET_FLOOR.splatZones,
+  switches: JUKEBOX_HERO.switches,
+  start: { x: 0, z: -32 },
+  defense: false,
+  parTime: 330,
+  reward: 'mimic',
+});
+
+/** The Strike! line stands 40 m east of where it was built so the Warden's bench (west) and the Rush Hour queue (middle) stay clear. */
+const STRIKE_SHIFT = 40;
+
+/**
+ * Act 1, stage 5: The Warden (arc finale). Panic spreads through a queue, a fast dive bowls people over like skittles, and the
+ * Warden himself sits down for lunch with his umbrella down. Objectives: Rush Hour, Strike!, Nemesis.
+ */
+export const THE_WARDEN_STAGE = stage(1, 5, {
+  name: '1.5 The Warden',
+  blurb: 'Panic spreads, skittles fall, and the Warden has lunch.',
+  intro: { title: 'The Warden', text: 'Dusk. The Warden is on his rounds, umbrella up. Make a mess he cannot stop, then find him at lunch.' },
+  quests: [],
+  extraQuests: [
+    chainOf(quest(RUSH_HOUR, 'rushchain')),
+    chainOf({ ...quest(STRIKE, 'strikechain'), objectives: quest(STRIKE, 'strikechain').objectives.map((o) => ({ ...o, markers: o.markers?.map((m) => ({ ...m, x: m.x + STRIKE_SHIFT })) })) }),
+    {
+      id: 'nemesis',
+      title: 'Nemesis',
+      teaser: 'Catch the Warden with his umbrella down.',
+      timed: false,
+      chain: true,
+      objectives: [
+        { id: 'lunch', text: 'Wait for the Warden to sit down for lunch', kind: 'event', event: 'wardenLunch', hint: 'He takes a lunch break soon: the level tells you. Until then keep away from him.' },
+        { id: 'sandwich', text: 'Take his sandwich from the bench', kind: 'event', event: 'grab:wardenSandwich', after: 'lunch', hint: 'It lies on the bench beside him.', markers: [{ x: -19, z: -10, r: 3, label: 'Sandwich' }] },
+        { id: 'poop', text: 'Poop on the Warden while his umbrella is down', kind: 'event', event: 'poopWarden', after: 'sandwich', hint: 'He sits with the umbrella down for a while: dive in and drop it from above.', markers: [{ x: -20, z: -10, r: 3, label: 'The Warden' }] },
+        { id: 'escape', text: 'Get away with it', kind: 'escape', after: 'poop', hint: 'Keep the sandwich and stay far from everyone until the bar fills.' },
+      ],
+    },
+  ],
+  coopRequired: [
+    {
+      id: 'pincer',
+      title: 'Pincer',
+      teaser: 'Two gulls, one target.',
+      timed: false,
+      objectives: [{ id: 'pincer', text: 'Both gulls splat the same person within a few seconds', kind: 'event', event: 'coop:poopNpc', hint: 'Pick one person, and both drop on them together.' }],
+    },
+    {
+      id: 'volley',
+      title: 'Volley',
+      teaser: 'Keep it in the air.',
+      timed: false,
+      objectives: [{ id: 'volley', text: 'Pass something back and forth in the air three times', kind: 'event', event: 'coop:volley', hint: 'One tosses (Q), the other catches and tosses it back.' }],
+    },
+  ],
+  triggers: [],
+  extraTriggers: [],
+  tourists: [],
+  extraTourists: [
+    ...(RUSH_HOUR.extraTourists ?? []),
+    ...(STRIKE.extraTourists ?? []).map((t) => ({ ...t, x: t.x + STRIKE_SHIFT })),
+  ],
+  extraProps: [{ type: 'bun', x: -19, y: restY('bun', 0), z: -10, tag: 'wardenSandwich' }],
+  defense: true,
+  deploy: ['warden'],
+  wardenLunch: { at: 18, duration: 40, x: -20, z: -10, repeat: 100 },
+  start: { x: 0, z: -32 },
+  parTime: 420,
+  reward: 'quickpoop',
 });

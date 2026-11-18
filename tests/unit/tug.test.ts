@@ -104,3 +104,18 @@ describe('the person being tugged', () => {
     expect(npcPull(n)).toBeLessThan(0.05);
   });
 });
+
+describe('team tug', () => {
+  it('two gulls halve the pull each, so the same fight is won sooner', () => {
+    const run = (pull: number): number => {
+      const t = new Tug(1);
+      for (let i = 0; i < 60 * 20; i++) {
+        const r = t.step(1 / 60, { held: true, mash: i % 8 === 0 ? 1 : 0, pull, interrupted: false });
+        if (r === 'won') return i;
+        if (r === 'lost' || r === 'cancelled') return 1e9;
+      }
+      return 1e9;
+    };
+    expect(run(0.4 / 2)).toBeLessThan(run(0.4));
+  });
+});
