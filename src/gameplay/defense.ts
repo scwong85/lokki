@@ -87,6 +87,16 @@ export class CityDefense {
   hiddenLines = false;
   private clock = 0;
   private lunchOn = false;
+
+  /** A reaction wakes the Warden's anger: he sets off after the gull (alert, then hunt). */
+  alertWarden(): void {
+    const w = this.warden;
+    if (w && (w.mode === 'lunch' || w.mode === 'patrol' || w.mode === 'recover')) {
+      w.mode = 'alert';
+      w.t = 0;
+      w.lostT = 0;
+    }
+  }
   private scareCd = 0;
   private pending: DefenseEvent[] = [];
   private owners: Owner[] = [];

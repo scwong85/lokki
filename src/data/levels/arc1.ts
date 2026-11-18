@@ -1,5 +1,4 @@
 import { stage } from '../arcs';
-import { FERRY_DECK } from '../places';
 import { restY } from '../props';
 import { SELFIE_SPOT } from './snackAttack';
 import { BOMBS_AWAY } from './bombsAway';
@@ -7,53 +6,68 @@ import { NOSY_PARKERS } from './nosyParkers';
 import { RUSH_HOUR, STRIKE, HONK, TUG_OF_WAR, PEEKABOO, RED_BUTTON, WET_FLOOR, JUKEBOX_HERO } from './mischief';
 import { CITY_STRIKES } from './cityStrikes';
 import { MAP_AND_CONE } from './mapAndCone';
-import type { QuestDef } from '../quests';
+import { QUESTS, type QuestDef } from '../quests';
 
-/** Where the bench bun lies (open quay) and the landing zone beside it. */
+/** Where the bench bun lies, and the dockhand who keeps the quay spotless. */
 const BENCH = { x: -10, z: -12 };
+const DOCKHAND = { x: 12, z: -8 };
+const DOCK_MESS = { x: 6, z: -10.5 };
 
 /**
  * Act 1, stage 1: First Light. Dawn on the quay. Teaches flying, the dive-snatch and carrying (nothing else is unlocked yet:
- * no poop, honk, tug or toys). Three objectives, each a chain; two co-op objectives that two gulls must also finish.
- * Design: docs/design/arcs.md, Act 1 stage 1.
+ * no poop, honk, tug or toys). Three objectives, each a chain whose steps answer one another; two co-op objectives that two
+ * gulls must also finish. Design: docs/design/arcs.md and docs/design/puzzle-quality.md.
  */
 export const FIRST_LIGHT = stage(1, 1, {
   name: '1.1 First Light',
   blurb: 'Dawn on the quay: fly, dive, snatch, carry.',
   intro: { title: 'First Light', text: 'Dawn on the Market Square. Fly with Space, dive with Shift, grab with E. Breakfast is in the tourists\' hands.' },
-  quests: ['map'],
+  quests: [],
+  // the map quest's drop-in-the-sea step is detected by this world trigger
+  triggers: ['mapInSea'],
   extraQuests: [
     {
       id: 'breakfast',
       title: 'Breakfast',
-      teaser: 'Nick an ice cream and eat it high up.',
+      teaser: 'Nick an ice cream, and outrun its owner.',
       timed: false,
       chain: true,
+      joke: { joke: 'A tourist lost in her selfie loses her ice cream and chases a seagull across the quay while everyone laughs.', insight: 'She is only distracted while she counts down: dive on the 1.', reaction: 'She yells, gives chase, and the crowd points and laughs.' },
       objectives: [
         {
           id: 'snatch',
           text: 'Snatch an ice cream from a tourist',
           kind: 'event',
           event: 'snatch:icecream',
+          recap: 'You snatched her ice cream',
           hint: 'A red ring means guarded. The tourist on the quay takes selfies: when she counts 3, 2, 1, dive on the 1, her ice cream is open for two seconds.',
           markers: [{ x: SELFIE_SPOT.x, z: SELFIE_SPOT.z, r: 3, label: 'Selfie tourist' }],
         },
-        { id: 'roof', text: 'Land on a rooftop with it', kind: 'event', event: 'feast', after: 'snatch', hint: 'Carry the ice cream and land on any roof (buildings are the tall boxes around the square).' },
-        { id: 'escape', text: 'Get away with it', kind: 'escape', after: 'roof', hint: 'Keep it and stay far from everyone until the bar fills.' },
+        { id: 'chase', text: 'She is after you', kind: 'event', event: 'robbed', after: 'snatch', recap: 'she chased you across the quay', hint: 'She is angry and chases you. Stay out of her reach.' },
+        { id: 'escape', text: 'Lose her', kind: 'escape', after: 'chase', recap: 'and you lost her', hint: 'Keep the ice cream and stay far from everyone until the bar fills.' },
       ],
     },
+    { ...(QUESTS.find((q) => q.id === 'map') as QuestDef), chain: true, joke: { joke: 'A tourist\'s map blows into the harbour and he marches off to the wrong ferry.', insight: 'Maps float: drop it over the water, not on the quay.', reaction: 'He stares at the sea, then trots to the wrong ferry; the ferry crew shout.' } },
     {
       id: 'neighbours',
-      title: 'Neighbours',
-      teaser: 'The other gulls want that bun on the ferry.',
+      title: 'Bun voyage',
+      teaser: 'Make the dockhand leave his lunch.',
       timed: false,
       chain: true,
+      joke: { joke: 'A dockhand so proud of his spotless quay storms off to scold a bun left on it, and his lunch is unguarded.', insight: 'He leaves his post for a mess on the quay.', reaction: 'He is outraged, marches over and scolds the bun; the onlookers laugh when his lunch goes.' },
       objectives: [
-        { id: 'land', text: 'Land on the quay by the bench', kind: 'event', event: 'quayLand', hint: 'Glide down onto the open quay (the pale ground) near the bench.', markers: [{ x: BENCH.x, z: BENCH.z, r: 6, label: 'Bench' }] },
-        { id: 'bun', text: 'Pick up the bun (E)', kind: 'event', event: 'grab:benchBun', after: 'land', hint: 'It lies on the ground by the bench.' },
-        { id: 'ferry', text: 'Drop it on the ferry', kind: 'event', event: 'bunFerry', after: 'bun', hint: 'Carry it to the ferry at the south end of the quay and let go over the deck (E).' },
+        { id: 'bun', text: 'Pick up the bun by the bench (E)', kind: 'event', event: 'grab:benchBun', recap: 'You took the bun from the bench', hint: 'It lies on the ground by the bench: land beside it.', markers: [{ x: BENCH.x, z: BENCH.z, r: 5, label: 'Bench' }] },
+        { id: 'mess', text: 'Drop it on the quay in front of the dockhand', kind: 'event', event: 'bunAtDock', after: 'bun', recap: 'dropped it on his spotless quay', hint: 'Put it down (E) on the open quay near the man in the blue cap, where he can see it.', markers: [{ x: DOCK_MESS.x, z: DOCK_MESS.z, r: 5, label: 'Spotless quay' }] },
+        { id: 'lunch', text: 'Take his lunch while he scolds the mess', kind: 'event', event: 'grab:dockLunch', after: 'mess', recap: 'and took his lunch while he scolded it', hint: 'He has walked over to the bun and has his back to his sandwich: dive on it.', markers: [{ x: DOCKHAND.x, z: DOCKHAND.z, r: 5, label: 'His lunch' }] },
       ],
     },
+  ],
+  reactions: [
+    { on: 'robbed', witness: { x: SELFIE_SPOT.x, z: SELFIE_SPOT.z, r: 16, emote: 'laugh' }, say: 'Hey! My ice cream!', sound: 'yelp' },
+    { on: 'mapInSea', witness: { x: 0, z: -6, r: 14, emote: 'point' }, say: 'The wind took it. Or was it a gull?' },
+    { on: 'wrongFerry', sound: 'horn', witness: { x: 0, z: -6, r: 16, emote: 'laugh' } },
+    { on: 'bunAtDock', mood: { role: 'dockhand', mood: 'annoyed' }, send: { role: 'dockhand', goals: [{ x: DOCK_MESS.x, z: DOCK_MESS.z, name: 'mess' }] }, oblivious: { role: 'dockhand', seconds: 14 }, say: 'My spotless quay!', sound: 'gasp', witness: { x: DOCKHAND.x, z: DOCKHAND.z, r: 12, emote: 'laugh' } },
+    { on: 'grab:dockLunch', witness: { x: 8, z: -9, r: 16, emote: 'laugh' }, say: 'He never saw it coming.' },
   ],
   coopRequired: [
     {
@@ -71,11 +85,8 @@ export const FIRST_LIGHT = stage(1, 1, {
       objectives: [{ id: 'twoBirds', text: 'Both snatch an ice cream within three seconds', kind: 'event', event: 'coop:snatch', hint: 'Pick two different tourists and dive together.' }],
     },
   ],
-  triggers: [],
   extraTriggers: [
-    { id: 'feast', kind: 'carryLanded', event: 'feast', propType: 'icecream', minY: 6 },
-    { id: 'quayLand', kind: 'gullInZone', event: 'quayLand', zone: { minX: BENCH.x - 6, maxX: BENCH.x + 6, minZ: BENCH.z - 5, maxZ: BENCH.z + 5 }, grounded: true },
-    { id: 'bunFerry', kind: 'propInZone', event: 'bunFerry', propType: 'bun', tag: 'benchBun', zone: FERRY_DECK },
+    { id: 'bunAtDock', kind: 'propInZone', event: 'bunAtDock', propType: 'bun', tag: 'benchBun', zone: { minX: 3, maxX: 9, minZ: -13, maxZ: -8.5 } },
   ],
   tourists: [],
   extraTourists: [
@@ -83,6 +94,7 @@ export const FIRST_LIGHT = stage(1, 1, {
     { x: -22, z: -20, heading: 0.6, ice: true, color: 0x7fd1ae },
     { x: 14, z: -22, heading: -1.2, ice: true, color: 0xffc971 },
     { x: 36, z: -24, heading: 2.2, holds: 'map', color: 0xf7a1c4 },
+    { x: DOCKHAND.x, z: DOCKHAND.z, heading: Math.PI / 2, holds: 'bun', holdTag: 'dockLunch', role: 'dockhand', stationary: true, hat: 'cap', hatColor: 0x2a5ea8, color: 0x5b8fd6 },
   ],
   extraProps: [{ type: 'bun', x: BENCH.x, y: restY('bun'), z: BENCH.z, tag: 'benchBun' }],
   defense: false,
@@ -90,11 +102,17 @@ export const FIRST_LIGHT = stage(1, 1, {
   reward: 'flight',
 });
 
-/** Stage 1.2 is built from three earlier levels: take their main chain, give it a way out, show it as a chain. */
-const chainOf = (q: QuestDef, escapeAfter?: string): QuestDef => ({
+/**
+ * Stages 1.2 to 1.5 are built from earlier levels: take their chain, put the joke card on it, drop the padding tail (a chain ends on
+ * its punchline, not on "get away with it", unless someone is chasing you), and show it as a chain.
+ */
+const card = (q: QuestDef, joke: { joke: string; insight: string; reaction: string }, recaps: Record<string, string> = {}): QuestDef => ({
   ...q,
   chain: true,
-  objectives: escapeAfter && !q.objectives.some((o) => o.kind === 'escape') ? [...q.objectives, { id: 'escape', text: 'Get away with it', kind: 'escape', after: escapeAfter, hint: 'Keep it and stay far from everyone until the bar fills.' }] : q.objectives,
+  joke,
+  objectives: q.objectives
+    .filter((o) => !(o.kind === 'escape' && !q.objectives.some((x) => x.event?.startsWith('robbed'))))
+    .map((o) => ({ ...o, recap: recaps[o.id] ?? o.recap })),
 });
 const quest = (l: { extraQuests?: QuestDef[] }, id: string): QuestDef => l.extraQuests!.find((q) => q.id === id)!;
 /** The Nosy Parkers cluster stands 14 m further east so it does not crowd the honk row. */
@@ -110,7 +128,17 @@ export const FISH_MARKET = stage(1, 2, {
   blurb: 'Poop, toss, honk: people see and hear.',
   intro: { title: 'Fish Market', text: 'Morning at the market hall. People look where they face and listen to noise: use both.' },
   quests: [],
-  extraQuests: [chainOf(quest(BOMBS_AWAY, 'freak'), 'steal'), chainOf(eastQuest(quest(NOSY_PARKERS, 'bottleService')), 'snatch'), chainOf(quest(HONK, 'honkchain'))],
+  extraQuests: [
+    card(quest(BOMBS_AWAY, 'freak'), { joke: 'A vendor so proud of his sign drops everything to scrub every splat, and his fish plate sits there unguarded.', insight: 'While he scrubs, his back is to the plate.', reaction: 'He scrubs and sweats (his mood), then yells when the fish is gone; the crowd laughs.' }, { splatSign: 'You splatted his shiny sign', steal: 'and took his fish while he scrubbed' }),
+    card(eastQuest(quest(NOSY_PARKERS, 'bottleService')), { joke: 'A tourist who never looks away from you spins round at a clattering bottle, and her ice cream is open.', insight: 'People turn towards noise, and the open side is the side they turn from.', reaction: 'She whips round at the noise, then gasps when the cone is gone.' }, { distract: 'A bottle clattered and she turned', snatch: 'and you took her ice cream' }),
+    card(quest(HONK, 'honkchain'), { joke: 'Four grown adults admiring the sea jump out of their skin and drop their cones.', insight: 'A honk only drops things for people who have their backs to you.', reaction: 'They jump, the cones fly, the others turn and stare.' }, { honk: 'You honked behind two people', take: 'and took what they dropped' }),
+  ],
+  reactions: [
+    { on: 'snatch:fish', witness: { x: -13, z: -13, r: 14, emote: 'laugh' }, say: 'His fish! He turns round too late.', sound: 'gasp' },
+    { on: 'snatch:icecream', witness: { x: 24, z: -12, r: 12, emote: 'alert' } },
+    { on: 'honkDrop', witness: { x: 0, z: -10, r: 14, emote: 'laugh' } },
+    { on: 'grab:honkCone', say: 'Finders keepers.', sound: 'pop' },
+  ],
   coopRequired: [
     (BOMBS_AWAY.coopQuests ?? [])[0],
     {
@@ -149,10 +177,19 @@ export const STRINGS_ATTACHED = stage(1, 3, {
   intro: { title: 'Strings Attached', text: 'Midday. The vendors have spray bottles and there are lines over the stalls. Heat rises when you are seen: stay clever.' },
   quests: [],
   extraQuests: [
-    chainOf(quest(TUG_OF_WAR, 'tugchain')),
-    chainOf(quest(CITY_STRIKES, 'spray'), 'lunch'),
-    chainOf(quest(PEEKABOO, 'booschain')),
-    chainOf(quest(RED_BUTTON, 'buttonchain')),
+    card(quest(TUG_OF_WAR, 'tugchain'), { joke: 'Three people hold three things three different ways, and each loses it to a different trick.', insight: 'Ground items are tugged, high items snatched from the air, and the spray vendor ends a tug for you.', reaction: 'The soup man sulks, the balloon man gapes, the bun man is sprayed.' }, { soup: 'You tugged the soup out of his hands', balloon: 'snatched the balloon from the air', bun: 'and took the bun' }),
+    card(quest(CITY_STRIKES, 'spray'), { joke: 'The vendor aims his spray at you and soaks a man in a top hat instead.', insight: 'The spray goes through whoever stands in front of you.', reaction: 'The rich tourist is drenched, drops his lunch and storms off; the crowd laughs.' }, { soak: 'The vendor soaked the rich tourist', lunch: 'and you took his lunch' }),
+    card(quest(PEEKABOO, 'booschain'), { joke: 'A bush honks, and three tourists lose their ice creams.', insight: 'Stay still in the bush: nobody sees you, then BOO.', reaction: 'They jump, drop their cones and look for the ghost.' }, { boo: 'You BOO-ed from the bush', cone: 'and took a cone' }),
+    card(quest(RED_BUTTON, 'buttonchain'), { joke: 'Someone presses the sprinkler button and a whole queue is soaked.', insight: 'Buttons are pecked from a safe distance.', reaction: 'The queue is drenched and drops its cones.' }, { alarm: 'You rang the alarm', sprinkle: 'pressed the sprinkler button', cone: 'and took a dropped cone' }),
+  ],
+  reactions: [
+    { on: 'grab:tugSoup', mood: { role: 'soupman', mood: 'upset' }, say: 'My soup!', sound: 'yelp' },
+    { on: 'grab:tugBalloon', witness: { x: 20, z: -15, r: 10, emote: 'point' }, say: 'The balloon floats off with a gull.' },
+    { on: 'grab:tugBun', mood: { role: 'bunman', mood: 'upset' }, witness: { x: -29, z: -17, r: 8, emote: 'laugh' } },
+    { on: 'soaked:rich', witness: { x: -33, z: -17, r: 14, emote: 'laugh' }, sound: 'gasp' },
+    { on: 'boo:peeker', witness: { x: -8, z: -14, r: 12, emote: 'alert' } },
+    { on: 'grab:booCone', say: 'The bush has an ice cream now.' },
+    { on: 'grab:richLunch', witness: { x: -33, z: -17, r: 12, emote: 'laugh' }, say: 'His lunch. Not any more.' },
   ],
   secret: ['buttonchain'],
   coopRequired: [
@@ -193,7 +230,16 @@ export const MOOD_SWINGS = stage(1, 4, {
   blurb: 'Anger, comfort food, slippery floors and a jukebox.',
   intro: { title: 'Mood Swings', text: 'Afternoon. Everyone has a mood now, and a mood can be used. Hold T to lure an angry person.' },
   quests: [],
-  extraQuests: [chainOf(quest(MAP_AND_CONE, 'mapcone')), chainOf(quest(WET_FLOOR, 'wetfloor')), chainOf(quest(JUKEBOX_HERO, 'jukechain'))],
+  extraQuests: [
+    card(quest(MAP_AND_CONE, 'mapcone'), { joke: 'A lost tourist chases you across the square, buys himself an ice cream to feel better, and you take that too.', insight: 'An angry person who wants comfort follows your taunt to the stall.', reaction: 'He fumes, follows, buys, beams, and then fumes again.' }, { map: 'You took his map', lure: 'he followed you to the ice cream stall', buy: 'bought himself a cone', cone: 'and you took that too' }),
+    card(quest(WET_FLOOR, 'wetfloor'), { joke: 'A very serious man in a hi-vis vest walks into a puddle on his own route.', insight: 'A splat stays wet, and he walks the same route every time.', reaction: 'He slips, his lunch flies, the onlookers wince and laugh.' }, { trap: 'You splatted his route', slip: 'he slipped', lunch: 'and his lunch was yours' }),
+    card(quest(JUKEBOX_HERO, 'jukechain'), { joke: 'The jukebox plays and strangers dance, too happy to guard their ice creams.', insight: 'Dancers do not guard anything.', reaction: 'They sway, spin, and cheer while a gull takes the cone.' }, { peck: 'You pecked the jukebox', dance: 'four people danced', cone: 'and one dancer lost a cone' }),
+  ],
+  reactions: [
+    { on: 'grab:inspLunch', witness: { x: 16, z: -20, r: 14, emote: 'laugh' }, say: 'The inspector is not amused.' },
+    { on: 'grab:danceCone', witness: { x: -6, z: -18, r: 10, emote: 'heart' } },
+    { on: 'bought:mapper', say: 'He feels a little better.', sound: 'pop' },
+  ],
   coopRequired: [
     {
       id: 'decoyThief',
@@ -241,21 +287,28 @@ export const THE_WARDEN_STAGE = stage(1, 5, {
   intro: { title: 'The Warden', text: 'Dusk. The Warden is on his rounds, umbrella up. Make a mess he cannot stop, then find him at lunch.' },
   quests: [],
   extraQuests: [
-    chainOf(quest(RUSH_HOUR, 'rushchain')),
-    chainOf({ ...quest(STRIKE, 'strikechain'), objectives: quest(STRIKE, 'strikechain').objectives.map((o) => ({ ...o, markers: o.markers?.map((m) => ({ ...m, x: m.x + STRIKE_SHIFT })) })) }),
+    card(quest(RUSH_HOUR, 'rushchain'), { joke: 'One splat in a queue and the whole line panics, one person at a time.', insight: 'A fright jumps to whoever stands close.', reaction: 'Each person jumps, drops their cone and runs; the rest catch it.' }, { splat: 'You splatted the first in the queue', spread: 'the panic reached five people', cone: 'and a cone was yours' }),
+    card({ ...quest(STRIKE, 'strikechain'), objectives: quest(STRIKE, 'strikechain').objectives.map((o) => ({ ...o, markers: o.markers?.map((m) => ({ ...m, x: m.x + STRIKE_SHIFT })) })) }, { joke: 'A fast dive bowls a line of tourists over like skittles.', insight: 'A fallen person knocks over the next one.', reaction: 'They topple one after another, ice creams flying.' }, { slam: 'You bowled one over', strike: 'and he took four down with him', cone: 'a cone flew your way' }),
     {
       id: 'nemesis',
       title: 'Nemesis',
       teaser: 'Catch the Warden with his umbrella down.',
       timed: false,
       chain: true,
+      joke: { joke: 'The Warden, robbed of his sandwich, swings his umbrella at a gull that is not there, and ends up pooped on with the umbrella stuck in the ground.', insight: 'After a missed swat his umbrella is down for a moment.', reaction: 'He notices, charges, swings and misses, sulks; the crowd cheers.' },
       objectives: [
-        { id: 'lunch', text: 'Wait for the Warden to sit down for lunch', kind: 'event', event: 'wardenLunch', hint: 'He takes a lunch break soon: the level tells you. Until then keep away from him.' },
-        { id: 'sandwich', text: 'Take his sandwich from the bench', kind: 'event', event: 'grab:wardenSandwich', after: 'lunch', hint: 'It lies on the bench beside him.', markers: [{ x: -19, z: -10, r: 3, label: 'Sandwich' }] },
-        { id: 'poop', text: 'Poop on the Warden while his umbrella is down', kind: 'event', event: 'poopWarden', after: 'sandwich', hint: 'He sits with the umbrella down for a while: dive in and drop it from above.', markers: [{ x: -20, z: -10, r: 3, label: 'The Warden' }] },
-        { id: 'escape', text: 'Get away with it', kind: 'escape', after: 'poop', hint: 'Keep the sandwich and stay far from everyone until the bar fills.' },
+        { id: 'lunch', text: 'Wait for the Warden to sit down for lunch', kind: 'event', event: 'wardenLunch', recap: 'The Warden sat down for lunch', hint: 'He takes a lunch break soon: the level tells you. Until then keep away from him.' },
+        { id: 'sandwich', text: 'Take his sandwich from the bench', kind: 'event', event: 'grab:wardenSandwich', after: 'lunch', recap: 'you took his sandwich', hint: 'It lies on the bench beside him.', markers: [{ x: -19, z: -10, r: 3, label: 'Sandwich' }] },
+        { id: 'hunt', text: 'Let him spot you', kind: 'event', event: 'wardenHunt', after: 'sandwich', recap: 'he came after you', hint: 'Stay in sight, high enough to be safe. He sets off after the thief.' },
+        { id: 'dodge', text: 'Dodge his umbrella swing', kind: 'event', event: 'dodge:warden', after: 'hunt', recap: 'his swing missed', hint: 'He swings when you are close. Move sideways just as he swings: the umbrella goes down after a miss.' },
+        { id: 'poop', text: 'Poop on the Warden while his umbrella is down', kind: 'event', event: 'poopWarden', after: 'dodge', recap: 'and you pooped on him', hint: 'He sulks for a moment with the umbrella down: drop it from above.', markers: [{ x: -20, z: -10, r: 8, label: 'The Warden' }] },
       ],
     },
+  ],
+  reactions: [
+    { on: 'grab:wardenSandwich', hunt: true, say: 'My sandwich!', sound: 'whistle', witness: { x: -20, z: -10, r: 14, emote: 'laugh' } },
+    { on: 'poopWarden', witness: { x: -20, z: -10, r: 16, emote: 'laugh' } },
+    { on: 'spread:5', say: 'PANIC!', witness: { x: -5, z: -11, r: 14, emote: 'laugh' } },
   ],
   coopRequired: [
     {

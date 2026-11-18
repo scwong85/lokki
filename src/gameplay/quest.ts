@@ -165,7 +165,11 @@ export class QuestLog {
     }
   }
 
+  /** Called for every quest event before it is handled (the world's reactions hang here). */
+  hook: ((type: QuestEventType) => void) | null = null;
+
   onEvent(type: QuestEventType): QuestNote[] {
+    this.hook?.(type);
     const notes: QuestNote[] = [];
     for (const q of this.quests) {
       const d = this.def(q.id);

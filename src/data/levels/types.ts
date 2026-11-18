@@ -1,4 +1,5 @@
 import type { QuestDef } from '../quests';
+import type { Reaction } from '../reactions';
 import type { TriggerDef } from '../../gameplay/triggers';
 import type { SkillId } from '../skills';
 import type { NpcSpawn, Station } from '../../gameplay/npc';
@@ -54,6 +55,8 @@ export interface LevelDef {
   intro?: { title: string; text: string };
   /** Co-op objectives that are required when two gulls play (solo play skips them). */
   coopRequired?: QuestDef[];
+  /** The world's answers to quest events (a person walks over, the crowd laughs): what makes a step a reaction, not a chore. */
+  reactions?: Reaction[];
   /** Which stage's mechanics this level has (arc.stage). Without one, everything is unlocked (the Playground, the sandbox). */
   gate?: { arc: number; stage: number };
   /** Free play: the whole quest pack, no stars, skills per quest (the M7/M8 game). */

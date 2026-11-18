@@ -40,6 +40,8 @@ import { QuestLog, type QuestNote } from './gameplay/quest';
 import { QUESTS } from './data/quests';
 import { LEVELS, levelById } from './data/levels';
 import type { LevelDef } from './data/levels/types';
+import { reactionsFor } from './data/reactions';
+import { PlaytestLog, RATING_KEYS, recapOf } from './core/playtest';
 import { introducedAt, isUnlocked, parseGate, switchMech, type Gate, type MechId } from './gameplay/mechanics';
 import { levelProgress, levelSetup, levelStars, levelUnlocked, mergeRecord, starCount } from './gameplay/level';
 import { TOURIST_SPAWNS } from './data/npcs';
@@ -340,7 +342,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get gate() { return gate; }, applyGates, get hidden() { return hiddenNow(gull.state); }, get switches() { return level.switches ?? []; }, peckNow: () => { const sw = switchNear(gull.state); if (sw) peck(sw, players[0]); return !!sw; }, get tugProgress() { return interaction.tugProgress(0); }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get gate() { return gate; }, applyGates, get hidden() { return hiddenNow(gull.state); }, get playtest() { return playtest; }, get switches() { return level.switches ?? []; }, peckNow: () => { const sw = switchNear(gull.state); if (sw) peck(sw, players[0]); return !!sw; }, get tugProgress() { return interaction.tugProgress(0); }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -526,6 +528,55 @@ const tipEl = document.createElement('div');
 tipEl.id = 'tip';
 tipEl.hidden = true;
 document.body.appendChild(tipEl);
+const reactionsDone = new Set<string>();
+/** The world answers a quest event (docs/design/puzzle-quality.md): a person's mood, someone walks over, an audience laughs. */
+function runReactions(event: string): void {
+  if (isGuest()) return;
+  reactionsFor(level.reactions, event).forEach((r, i) => {
+    if (reactionsDone.has(`${level.id}:${event}:${i}`)) return;
+    reactionsDone.add(`${level.id}:${event}:${i}`);
+    if (r.mood) npcs?.moodRole(r.mood.role, r.mood.mood);
+    if (r.send) npcs?.sendRole(r.send.role, r.send.goals);
+    if (r.distract) npcs?.distractRole(r.distract.role, r.distract.seconds);
+    if (r.oblivious) npcs?.obliviousRole(r.oblivious.role, r.oblivious.seconds);
+    if (r.witness) for (const n of npcs?.near(r.witness.x, r.witness.z, r.witness.r) ?? []) emoteAtNpc(n, r.witness.emote);
+    if (r.say) hud.toast(r.say, 2.2);
+    if (r.sound) audio.play(r.sound);
+    if (r.hunt) defense?.alertWarden();
+    if (r.emit) notes(quests.onEvent(r.emit));
+  });
+}
+quests.hook = runReactions;
+const playtest = new PlaytestLog((() => { try { return localStorage; } catch { return null; } })());
+let ratingFor: { quest: string; until: number } | null = null;
+const ratingEl = document.createElement('div');
+ratingEl.id = 'playtest-card';
+ratingEl.hidden = true;
+ratingEl.style.cssText = 'position:fixed;left:12px;bottom:12px;padding:8px 12px;background:rgba(255,248,230,.92);border-radius:10px;font:600 13px system-ui;color:#4a3b2a;z-index:30;box-shadow:0 2px 8px rgba(0,0,0,.2)';
+document.body.appendChild(ratingEl);
+function askRating(quest: string, title: string): void {
+  if (level.sandbox || navigator.webdriver) return;
+  ratingFor = { quest, until: simTime + 9 };
+  ratingEl.textContent = `${title}: how was that?  1 stuck · 2 got it · 3 funny`;
+  ratingEl.hidden = false;
+}
+function ratingKeys(): void {
+  if (!ratingFor) return;
+  if (simTime > ratingFor.until) {
+    ratingFor = null;
+    ratingEl.hidden = true;
+    return;
+  }
+  for (const [code, rating] of Object.entries(RATING_KEYS)) {
+    if (input.wasPressed(code)) {
+      playtest.add(level.id, ratingFor.quest, rating, simTime);
+      hud.toast('Noted. Thanks!', 0.9);
+      ratingFor = null;
+      ratingEl.hidden = true;
+      return;
+    }
+  }
+}
 const introShown = new Set<string>();
 /** The opening beat of a campaign stage: what is new here (the place and the mechanics it introduces). */
 function stageIntro(): void {
@@ -1546,6 +1597,7 @@ function applyLevelRules(): void {
 }
 
 function restartLevel(mode: 'normal' | 'speedrun'): void {
+  reactionsDone.clear();
   levelCleared = false;
   for (const p of players) p.gull.setStart(level.start?.x ?? start.x, level.start?.z ?? start.z);
   lockId = null;
@@ -1872,7 +1924,10 @@ function onDefense(evs: DefenseEvent[]): void {
         break;
       case 'noticed':
         audio.play(e.who === 'warden' ? 'whistle' : 'gasp');
-        if (e.who === 'warden') hud.toast('The Warden spotted you!', 1.2);
+        if (e.who === 'warden') {
+          hud.toast('The Warden spotted you!', 1.2);
+          notes(quests.onEvent('wardenHunt'));
+        }
         break;
       case 'poopVendor':
         notes(quests.onEvent('poopVendor'));
@@ -1918,6 +1973,12 @@ function notes(list: QuestNote[]): void {
       }
     } else if (n.type === 'won') {
       audio.play('win');
+      if (def.chain && !level.sandbox) {
+        // the accomplishment beat: a moment of slow motion on the punchline, then what you did, step by step
+        if (players.length === 1) slowmoT = Math.max(slowmoT, 1.1);
+        announce.show(`${def.title}: you did it`, recapOf(def.objectives.filter((o) => o.kind === 'event')), 'learned');
+        askRating(def.id, def.title);
+      }
       fx('confetti', { x: gull.state.x, y: gull.state.y + 1.2, z: gull.state.z });
       hud.toast(n.quest === 'extras' ? 'All extras done!' : n.quest === 'bonus' ? 'All extra objectives done!' : `Quest complete: ${q.title}!`, 2.4);
       const skill = level.sandbox ? skills.unlockForQuest(n.quest) : null; // levels give their skill when cleared
@@ -2022,7 +2083,10 @@ function onNpcEvents(evs: NpcEvent[]): void {
       notes(quests.onEvent(`bought:${e.npc.role}`));
     } else if (e.type === 'panic' || e.type === 'chase') {
       audio.play('yelp');
-      if (e.type === 'chase') notes(quests.onEvent(`robbed:${e.npc.role}`)); // snatched from them
+      if (e.type === 'chase') {
+        notes(quests.onEvent(`robbed:${e.npc.role}`)); // snatched from them
+        notes(quests.onEvent('robbed'));
+      }
     }
     else if (e.type === 'tookItem') {
       audio.play('pop');
@@ -2477,6 +2541,7 @@ startLoop({
     }
     if (npcs && !isGuest()) npcs.slam(gull.state);
     if (!isGuest()) toyStep(dt);
+    ratingKeys();
     if (npcs?.pushGull(gull.state) && simTime - lastBump > 1) {
       lastBump = simTime;
       audio.play('bonk');

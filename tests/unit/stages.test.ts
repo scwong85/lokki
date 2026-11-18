@@ -42,18 +42,18 @@ describe('arcs and stages', () => {
   it('solo play skips the co-op objectives; two gulls must finish them too', () => {
     const solo = setup('a1s1');
     const duo = setup('a1s1', true);
-    expect(solo.main).toEqual(['map', 'breakfast', 'neighbours']);
-    expect(duo.main).toEqual(['map', 'breakfast', 'neighbours', 'handoverCoop', 'twoBirds']);
+    expect(solo.main).toEqual(['breakfast', 'map', 'neighbours']);
+    expect(duo.main).toEqual(['breakfast', 'map', 'neighbours', 'handoverCoop', 'twoBirds']);
     const won = (ids: string[]) => ids.map((id) => ({ id, status: 'won' }));
     const def = LEVELS.find((l) => l.id === 'a1s1')!;
-    expect(levelProgress(def, duo, won(['map', 'breakfast', 'neighbours'])).cleared).toBe(false);
+    expect(levelProgress(def, duo, won(['breakfast', 'map', 'neighbours'])).cleared).toBe(false);
     expect(levelProgress(def, duo, won(duo.main)).cleared).toBe(true);
     expect(levelProgress(def, solo, won(solo.main)).cleared).toBe(true);
   });
   it('every chain objective names a trigger or event source that exists', () => {
     const s = setup('a1s1', true);
     const have = new Set(s.triggers.map((t) => ('event' in t ? t.event : '')));
-    expect(have.has('feast') && have.has('quayLand') && have.has('bunFerry')).toBe(true);
+    expect(have.has('bunAtDock') && have.has('mapInSea')).toBe(true);
   });
   it('the level list groups stages under their act and the rest under the Playground', () => {
     const rows = orderLevels([
@@ -81,8 +81,8 @@ describe('stage 1.2 Fish Market', () => {
   it('is opened by stage 1.1', () => {
     expect(LEVELS.find((l) => l.id === 'a1s2')!.requires).toBe('a1s1');
   });
-  it('every quest has at least three steps (escape included)', () => {
-    for (const q of setup('a1s2').quests) expect(q.objectives.length).toBeGreaterThanOrEqual(3);
+  it('every chain has at least two steps', () => {
+    for (const q of setup('a1s2').quests) expect(q.objectives.length).toBeGreaterThanOrEqual(2);
   });
 });
 
@@ -107,8 +107,8 @@ describe('stages 1.3 and 1.4', () => {
     expect(isUnlocked('contagion', g)).toBe(false);
     expect(LEVELS.find((l) => l.id === 'a1s4')!.requires).toBe('a1s3');
   });
-  it('every stage chain has at least three steps', () => {
-    for (const id of ['a1s3', 'a1s4']) for (const q of setup(id).quests) expect(q.objectives.length).toBeGreaterThanOrEqual(3);
+  it('every stage chain has at least two steps', () => {
+    for (const id of ['a1s3', 'a1s4']) for (const q of setup(id).quests) expect(q.objectives.length).toBeGreaterThanOrEqual(2);
   });
 });
 
@@ -136,4 +136,16 @@ describe('stage 1.5 The Warden (arc finale)', () => {
   it('the five stage rewards are the five skills of act 1', () => {
     expect(LEVELS.slice(0, 5).map((l) => l.reward)).toEqual(['flight', 'fatbird', 'hawkeye', 'mimic', 'quickpoop']);
   });
+});
+
+describe('stage quests can be finished: every world trigger they wait for is in the stage', () => {
+  const triggerEvents = (t: (typeof TRIGGERS)[number]): string[] => ('events' in t ? t.events : [t.event]);
+  const worldEvents = new Set(TRIGGERS.flatMap(triggerEvents));
+  for (const def of stagesOf(LEVELS)) {
+    it(`${def.id}: objectives that need a world trigger have it`, () => {
+      const s = levelSetup(def, QUESTS, TRIGGERS, TOURIST_SPAWNS, true);
+      const have = new Set(s.triggers.flatMap(triggerEvents));
+      for (const q of s.quests) for (const o of q.objectives) if (o.kind === 'event' && o.event && worldEvents.has(o.event)) expect(have.has(o.event), `${q.id}/${o.id} waits for "${o.event}"`).toBe(true);
+    });
+  }
 });
