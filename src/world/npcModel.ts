@@ -10,6 +10,8 @@ import { tuning } from '../core/tuning';
 
 export interface NpcView {
   x: number;
+  /** Height they stand at (default 0). */
+  y?: number;
   z: number;
   heading: number;
   mode: NpcMode;
@@ -245,12 +247,12 @@ export class NpcModel {
   apply(n: Npc, time: number): void {
     const h = n.holding !== null ? handPos(n) : undefined;
     const label = n.cleanT > 0 ? '\u{1F9FD}' : n.selfie === 'count' ? String(n.selfieCount) : n.selfie === 'open' ? '\u{1F4F7}' : undefined;
-    this.applyView({ x: n.x, z: n.z, heading: n.heading, mode: n.mode, moving: n.moving, walkPhase: n.walkPhase, t: n.t, holding: n.holding !== null, distracted: n.distractT > 0, hand: h, label }, time);
+    this.applyView({ x: n.x, y: n.y, z: n.z, heading: n.heading, mode: n.mode, moving: n.moving, walkPhase: n.walkPhase, t: n.t, holding: n.holding !== null, distracted: n.distractT > 0, hand: h, label }, time);
   }
 
   applyView(n: NpcView, time: number): void {
     const pose = npcPose({ mode: n.mode, moving: n.moving, walkPhase: n.walkPhase, t: n.t, time, holding: n.holding, distracted: n.distracted });
-    this.root.position.set(n.x, this.skinned ? 0 : pose.bob, n.z);
+    this.root.position.set(n.x, (n.y ?? 0) + (this.skinned ? 0 : pose.bob), n.z);
     this.root.rotation.y = n.heading;
     this.body.rotation.x = pose.lean;
     this.indicator.visible = pose.indicator !== 'none';

@@ -237,11 +237,12 @@ export class NpcManager implements NpcHooks {
     if (!this.gates.slam) return false;
     const t = tuning.slam;
     const speed = Math.hypot(s.vx, s.vy, s.vz);
-    if (s.mode !== 'dive' || speed < t.minSpeed.value || s.y < 0.1 || s.y > BODY_HEIGHT + 0.8) return false;
+    if (s.mode !== 'dive' || speed < t.minSpeed.value) return false;
     const dir = { x: s.vx, z: s.vz };
     let hit = false;
     for (const n of this.npcs) {
       if (n.mode === 'slip' || n.tugged) continue;
+      if (s.y - n.y < 0.1 || s.y - n.y > BODY_HEIGHT + 0.8) continue;
       if (Math.hypot(n.x - s.x, n.z - s.z) > t.radius.value + BODY_RADIUS) continue;
       this.knock(n, dir, 0);
       hit = true;
@@ -417,7 +418,7 @@ export class NpcManager implements NpcHooks {
       ev.push(...this.wantedItems(n));
       ev.push(...this.reclaim(n));
       // solid walls, counters and landmarks push the tourist out (horizontal only)
-      const p = { x: n.x, y: 0.9, z: n.z };
+      const p = { x: n.x, y: 0.9 + n.y, z: n.z };
       this.world.collide(p, BODY_RADIUS);
       n.x = p.x;
       n.z = p.z;
@@ -549,7 +550,7 @@ export class NpcManager implements NpcHooks {
   pushGull(s: FlightState): boolean {
     let bumped = false;
     for (const n of this.npcs) {
-      if (s.y < 0.2 || s.y > BODY_HEIGHT + 0.6) continue;
+      if (s.y - n.y < 0.2 || s.y - n.y > BODY_HEIGHT + 0.6) continue;
       const dx = s.x - n.x, dz = s.z - n.z;
       const d = Math.hypot(dx, dz);
       const min = BODY_RADIUS + 0.5;
@@ -716,7 +717,7 @@ export class NpcManager implements NpcHooks {
     this.owners = [];
     const out: HitSphere[] = [];
     for (const n of this.npcs) {
-      out.push({ x: n.x, y: 1.0, z: n.z, r: NPC_RADIUS_BODY, tag: 'tourist' }, { x: n.x, y: 1.75, z: n.z, r: 0.3, tag: 'tourist' });
+      out.push({ x: n.x, y: n.y + 1.0, z: n.z, r: NPC_RADIUS_BODY, tag: 'tourist' }, { x: n.x, y: n.y + 1.75, z: n.z, r: 0.3, tag: 'tourist' });
       this.owners.push(n, n);
     }
     return out;

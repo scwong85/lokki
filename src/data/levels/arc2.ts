@@ -2,7 +2,7 @@ import { stage } from '../arcs';
 import { restY } from '../props';
 import { CHEESE_RUN, DING_DONG, SAY_PIGEON, STEPS_X, STEPS_BOTTOM_Z, LANE3_X, LANDING_Z, LANDING_Y, SENATE_START } from './senate';
 import { TRAM, TRAM_SURFING, TURF_WAR, NEW_LOOK, EMPEROR } from './senate2';
-import { CONCERT_NIGHT, LIBRARY_RULE, KEY_TO_THE_CITY, LIBRARY } from './senate3';
+import { CONCERT_NIGHT, LIBRARY_RULE, KEY_TO_THE_CITY, LIBRARY, STAGE } from './senate3';
 import { CAPTAIN_GULL } from './mischief2';
 import { card, quest } from './arc1';
 
@@ -359,7 +359,7 @@ export const KEY_STAGE = stage(2, 5, {
   extraTourists: [
     ...(KEY_TO_THE_CITY.extraTourists ?? []).slice(0, 3),
     ...(LIBRARY_RULE.extraTourists ?? []),
-    ...(CONCERT_NIGHT.extraTourists ?? []),
+    ...(CONCERT_NIGHT.extraTourists ?? []).map((t) => (t.role === 'conductor' ? { ...t, y: STAGE.top } : t)),
   ],
   extraProps: [...(KEY_TO_THE_CITY.extraProps ?? []), ...(CONCERT_NIGHT.extraProps ?? [])],
   defense: false,

@@ -165,8 +165,10 @@ if (greybox) {
   keepClearSpots = city.keepClear;
   phys.addStaticMesh(city.physicsMesh.vertices, city.physicsMesh.indices);
 }
-const gull = new Gull(start);
-phys.createGullBody(GULL_RADIUS, start.x, GULL_RADIUS, start.z);
+// the gull starts where the level says (a stage in Senate Square must not begin at the Market Square)
+const firstStart = { x: level.start?.x ?? start.x, z: level.start?.z ?? start.z };
+const gull = new Gull(firstStart);
+phys.createGullBody(GULL_RADIUS, firstStart.x, GULL_RADIUS, firstStart.z);
 const interaction = new Interaction(phys, world, scene);
 if (!greybox) {
   gull.isWater = (x, z) => !isLand(x, z);
