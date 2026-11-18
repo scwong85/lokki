@@ -200,6 +200,7 @@ if (npcs) {
   interaction.npcs = {
     snatchCandidates: (b) => npcs.snatchCandidates(b),
     onSnatched: (id) => npcs.onSnatched(id),
+    onGroundPickup: (id) => npcs.onGroundPickup(id),
     tugCandidates: (b) => npcs.tugCandidates(b),
     onTugStart: (id) => npcs.onTugStart(id),
     onTugEnd: (id, won) => npcs.onTugEnd(id, won),

@@ -247,3 +247,24 @@ describe('the graduate who dropped his cap', () => {
     expect(ev.some((e) => e.type === 'chase' && e.npc === grad)).toBe(true);
   });
 });
+
+describe('stage 2.2 graduate really runs after the thief (the real cast)', () => {
+  it('knocked down by a dive, his cap taken off the floor, he chases the gull across the square', () => {
+    const def = LEVELS.find((l) => l.id === 'a2s2')!;
+    const { npcs } = setup(def.extraTourists!.map((t) => ({ ...t })));
+    const grad = npcs.npcs.find((n) => n.role === 'graduate')!;
+    const capId = grad.holding!;
+    // a fast dive through him
+    expect(npcs.slam({ x: grad.x, y: 0.9, z: grad.z + 0.6, vx: 0, vy: 0, vz: -24, mode: 'dive' } as unknown as FlightState)).toBe(true);
+    expect(grad.holding).toBeNull();
+    npcs.onGroundPickup(capId);
+    expect(grad.mode).toBe('chase');
+    const x0 = grad.x, z0 = grad.z;
+    const gull = { x: grad.x + 8, y: 2, z: grad.z - 8, diving: false };
+    const evs: NpcEvent[] = [];
+    for (let i = 0; i < 60 * 4; i++) evs.push(...(npcs.update(DT, gull) as NpcEvent[]));
+    expect(Math.hypot(grad.x - x0, grad.z - z0)).toBeGreaterThan(5); // he ran a good way
+    expect(grad.mode).toBe('chase');
+    expect(evs.some((e) => e.type === 'chase' && e.npc === grad)).toBe(true);
+  });
+});
