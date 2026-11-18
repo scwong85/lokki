@@ -225,3 +225,24 @@ describe('Act 2 stages 2.3 and 2.4', () => {
     expect(ids.slice(0, 9)).toEqual(['a1s1', 'a1s2', 'a1s3', 'a1s4', 'a1s5', 'a2s1', 'a2s2', 'a2s3', 'a2s4']);
   });
 });
+
+describe('Act 2 stage 2.5 The Key to the City (the end of Senaatintori)', () => {
+  it('three big chains, the co-op pair, everything in play, and Pigeon Diplomacy as the reward', () => {
+    const def = LEVELS.find((l) => l.id === 'a2s5')!;
+    expect(def.requires).toBe('a2s4');
+    expect(def.reward).toBe('pigeons');
+    expect(def.tram && def.pigeons && def.bells && def.quiet && def.quietBreaks).toBeTruthy();
+    expect(setup('a2s5', true).main).toEqual(['ceremony', 'shhh', 'screen', 'ceremonyPincer', 'duoConcert']);
+    const ceremony = setup('a2s5').quests.find((q) => q.id === 'ceremony')!;
+    expect(ceremony.objectives.map((o) => o.event)).toEqual(['pigeonsFriends', 'pose:any', 'bell', 'grab:key', 'keyNest']);
+    expect(setup('a2s5').triggers.some((t) => 'event' in t && t.event === 'keyNest')).toBe(true);
+  });
+  it('the next act opens after this stage', () => {
+    expect(previousStage(3, 1)).toEqual({ arc: 2, stage: 5 });
+    expect(LEVELS.slice(0, 10).map((l) => l.id)).toEqual(['a1s1', 'a1s2', 'a1s3', 'a1s4', 'a1s5', 'a2s1', 'a2s2', 'a2s3', 'a2s4', 'a2s5']);
+  });
+  it('Pigeon Diplomacy is a skill the stage gives', async () => {
+    const { skillById } = await import('../../src/data/skills');
+    expect(skillById('pigeons')?.name).toBe('Pigeon Diplomacy');
+  });
+});

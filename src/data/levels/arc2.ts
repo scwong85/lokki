@@ -2,6 +2,7 @@ import { stage } from '../arcs';
 import { restY } from '../props';
 import { CHEESE_RUN, DING_DONG, SAY_PIGEON, STEPS_X, STEPS_BOTTOM_Z, LANE3_X, LANDING_Z, LANDING_Y, SENATE_START } from './senate';
 import { TRAM, TRAM_SURFING, TURF_WAR, NEW_LOOK, EMPEROR } from './senate2';
+import { CONCERT_NIGHT, LIBRARY_RULE, KEY_TO_THE_CITY, LIBRARY } from './senate3';
 import { CAPTAIN_GULL } from './mischief2';
 import { card, quest } from './arc1';
 
@@ -287,4 +288,81 @@ export const TURF_WAR_STAGE = stage(2, 4, {
   defense: false,
   parTime: 360,
   reward: 'disguise',
+});
+
+/**
+ * Act 2, stage 5: The Key to the City (the end of Senaatintori). Everything of acts 1 and 2 is in play: the pigeons, the bell, the tram,
+ * the cameras, the quiet library and a concert at night. Objectives: Ceremony Crashers, Shhh!, Jumbotron.
+ */
+export const KEY_STAGE = stage(2, 5, {
+  name: '2.5 The Key to the City',
+  blurb: 'Ceremony, library and concert: crash all three.',
+  district: 'senaatintori',
+  sky: 'golden',
+  start: SENATE_START,
+  intro: { title: 'The Key to the City', text: 'Dusk. The mayor is about to hand the golden key to a celebrity. The pigeons, the bell, the cameras and the library are all in play. Make a scene.' },
+  tram: TRAM,
+  pigeons: { x: EMPEROR.x, z: EMPEROR.z },
+  bells: { x: -138.95, z: -370.49, first: 15, every: 30, duration: 6 },
+  quiet: LIBRARY_RULE.quiet,
+  quietBreaks: { first: 18, every: 40, duration: 12 },
+  quests: [],
+  extraQuests: [
+    {
+      id: 'ceremony',
+      title: 'Ceremony Crashers',
+      teaser: 'Win the pigeons, pose for the front page, and take the golden key.',
+      timed: false,
+      chain: true,
+      joke: { joke: 'During the mayor\'s big moment a seagull poses for the front page, takes the golden key while the bell rings, and gives it to the pigeons.', insight: 'The bell makes everyone look up at the tower: that is when the key is unguarded.', reaction: 'The pigeons adopt you, the front page gets a bird, the mayor looks at the bell, and the key is gone.' },
+      objectives: [
+        { id: 'pigeons', text: 'Win the Pigeon Gang over with a bun', kind: 'event', event: 'pigeonsFriends', recap: 'You won the Pigeon Gang over', hint: 'Put a bun down by the statue.', markers: [{ x: EMPEROR.x, z: EMPEROR.z, r: 8, label: 'Pigeon Gang' }] },
+        { id: 'photo', text: 'Pose in the front-page photo (keys 1 to 4)', kind: 'event', event: 'pose:any', after: 'pigeons', recap: 'posed for the front page', hint: 'The front-page photographer counts 3, 2, 1 in front of the stage. Strike a pose at the click.', markers: [{ x: -156.5, z: -312, r: 4, label: 'Photographer' }] },
+        { id: 'bell', text: 'Wait for the bell', kind: 'event', event: 'bell', after: 'photo', recap: 'waited for the bell', hint: 'The bell rings every 30 seconds.' },
+        { id: 'key', text: 'Grab the golden key from the podium', kind: 'event', event: 'grab:key', after: 'bell', recap: 'took the key while everyone looked up', hint: 'Everyone looks at the tower for six seconds. The mayor guards the podium the rest of the time.', markers: [{ x: -156.5, z: -322, r: 3, label: 'Key' }] },
+        { id: 'nest', text: 'Drop it at the foot of the emperor\'s statue', kind: 'event', event: 'keyNest', after: 'key', recap: 'and gave it to the pigeons', hint: 'The pigeons will guard it.', markers: [{ x: EMPEROR.x, z: EMPEROR.z, r: 4, label: 'Nest' }] },
+      ],
+    },
+    card({ ...quest(LIBRARY_RULE, 'shhh'), objectives: [
+      { id: 'snacks', text: 'Take three snacks from the revising students', kind: 'event', event: 'snatch', count: 3, recap: 'You took three snacks, quietly', hint: 'Walk up on foot: flying or diving near the library makes a racket (and heat).', markers: [{ x: LIBRARY.x - 8.5, z: LIBRARY.z, r: 6, label: 'Library steps' }] },
+      { id: 'hushed', text: 'Get shushed by the librarian', kind: 'event', event: 'hushed', after: 'snacks', recap: 'got shushed', hint: 'Flap near the library.' },
+      { id: 'splat', text: 'Splat the librarian', kind: 'event', event: 'poopNpc:librarian', after: 'hushed', recap: 'and splatted the librarian', hint: 'Make her drop her book loudly.', markers: [{ x: LIBRARY.x - 11, z: LIBRARY.z + 8, r: 5, label: 'Librarian' }] },
+    ] }, { joke: 'In the quietest library in Helsinki a seagull steals three snacks, and the only thing that makes a noise is the librarian.', insight: 'Walking is silent, flying is not.', reaction: 'The students gasp at their empty hands; the librarian shushes, then shrieks.' }),
+    card({ ...quest(CONCERT_NIGHT, 'screen'), objectives: [
+      { id: 'bomb', text: 'Photobomb the camera crew (three times)', kind: 'event', event: 'photobomb', count: 3, recap: 'You got on the big screen three times', hint: 'The two camera people count 3, 2, 1. Be in front of the lens at the click.', markers: [{ x: -172, z: -309, r: 3, label: 'Camera' }, { x: -172, z: -297, r: 3, label: 'Camera' }] },
+      { id: 'phones', text: 'In the quiet bit, press V to caw so every phone rings', kind: 'event', event: 'mimicQuiet', after: 'bomb', recap: 'rang every phone in the quiet bit', hint: 'The band goes silent for 12 seconds every 40 seconds. Caw (V) then.', markers: [{ x: -166, z: -303, r: 6, label: 'Crowd' }] },
+      { id: 'baton', text: 'Take the conductor\'s baton', kind: 'event', event: 'grab:baton', after: 'phones', recap: 'took the conductor\'s baton', hint: 'He stands at the front of the stage.' },
+      { id: 'around', text: 'Carry the baton round the stage: conduct!', kind: 'event', event: 'conducted', after: 'baton', recap: 'and conducted the band', hint: 'Walk or fly the baton past the three corners of the stage.' },
+    ] }, { joke: 'A seagull gets on the jumbotron, rings every phone in the crowd during the silent bit, then conducts the band.', insight: 'The band goes quiet on a timer: caw then.', reaction: 'The crowd cheers at the screen, every phone rings at once, the conductor stares at his empty hand.' }),
+  ],
+  coopRequired: [
+    { id: 'ceremonyPincer', title: 'Ceremony pincer', teaser: 'One shows off, one steals.', timed: false, objectives: [{ id: 'ceremonyPincer', text: 'One gull taunts (hold T), the other snatches', kind: 'event', event: 'coop:decoy', hint: 'One gull holds T near the mayor: everyone watches it. The other grabs the key.' }] },
+    (CONCERT_NIGHT.coopQuests ?? [])[0],
+  ],
+  reactions: [
+    { on: 'pigeonsFriends', witness: { x: EMPEROR.x, z: EMPEROR.z, r: 14, emote: 'heart' }, say: 'The Pigeon Gang adopts you.' },
+    { on: 'pose:any', witness: { x: -156.5, z: -314, r: 14, emote: 'laugh' }, say: 'Front page!' },
+    { on: 'bell', witness: { x: -156, z: -310, r: 40, emote: 'alert' } },
+    { on: 'grab:key', witness: { x: -156.5, z: -322, r: 14, emote: 'alert' }, say: 'The key! The mayor looks at the bell.', sound: 'gasp' },
+    { on: 'keyNest', witness: { x: EMPEROR.x, z: EMPEROR.z, r: 14, emote: 'laugh' }, say: 'The pigeons guard the key.', sound: 'pop' },
+    { on: 'hushed', say: 'SHHH!', sound: 'whistle' },
+    { on: 'poopNpc:librarian', witness: { x: LIBRARY.x - 11, z: LIBRARY.z + 8, r: 14, emote: 'laugh' } },
+    { on: 'mimicQuiet', witness: { x: -166, z: -303, r: 16, emote: 'alert' }, say: 'Every phone in the crowd rings!', sound: 'chime' },
+    { on: 'grab:baton', witness: { x: -179, z: -301, r: 10, emote: 'point' } },
+  ],
+  extraTriggers: [
+    { id: 'keyNest', kind: 'propInZone', event: 'keyNest', propType: 'ring', tag: 'key', zone: { minX: EMPEROR.x - 4.2, maxX: EMPEROR.x + 4.2, minZ: EMPEROR.z - 4.2, maxZ: EMPEROR.z + 4.2, maxY: 4 } },
+    ...(CONCERT_NIGHT.extraTriggers ?? []),
+  ],
+  triggers: [],
+  tourists: [],
+  extraTourists: [
+    ...(KEY_TO_THE_CITY.extraTourists ?? []).slice(0, 3),
+    ...(LIBRARY_RULE.extraTourists ?? []),
+    ...(CONCERT_NIGHT.extraTourists ?? []),
+  ],
+  extraProps: [...(KEY_TO_THE_CITY.extraProps ?? []), ...(CONCERT_NIGHT.extraProps ?? [])],
+  defense: false,
+  parTime: 480,
+  reward: 'pigeons',
 });

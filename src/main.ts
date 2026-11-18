@@ -1054,6 +1054,10 @@ function setupSenate(): void {
   }
   if (level.pigeons) {
     gang = new PigeonGang(level.pigeons);
+    if (skills.has('pigeons')) {
+      gang.mode = 'friends'; // Pigeon Diplomacy: the gang remembers you
+      gang.wasFriends = true;
+    }
     gangView = new PigeonView(gang, Math.round(tuning.pigeons.count.value));
     scene.add(gangView.group);
   }
