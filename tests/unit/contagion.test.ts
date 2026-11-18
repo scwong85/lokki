@@ -268,3 +268,24 @@ describe('stage 2.2 graduate really runs after the thief (the real cast)', () =>
     expect(evs.some((e) => e.type === 'chase' && e.npc === grad)).toBe(true);
   });
 });
+
+describe('hard hat soft heart: the flowers on the floor', () => {
+  it('a person who has just bought comfort food chases whoever picks it up off the floor', () => {
+    const { npcs } = setup([{ x: 0, z: 0, heading: 0, holds: 'flowers', role: 'hardhat', color: 0 }]);
+    const n = npcs.npcs[0];
+    const flowers = n.holding!;
+    n.hadComfort = true; // he has just bought them
+    npcs.soakRadius(0, 0, 1); // knocked over, they fall
+    npcs.onGroundPickup(flowers);
+    expect(n.mode).toBe('chase');
+    expect(n.mood).toBe('angry');
+  });
+  it('someone who bought nothing does not (an ordinary dropped item)', () => {
+    const { npcs } = setup([{ x: 0, z: 0, heading: 0, holds: 'flowers', role: 'x', color: 0 }]);
+    const n = npcs.npcs[0];
+    const flowers = n.holding!;
+    npcs.soakRadius(0, 0, 1);
+    npcs.onGroundPickup(flowers);
+    expect(n.mode).not.toBe('chase');
+  });
+});

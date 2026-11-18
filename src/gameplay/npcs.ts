@@ -650,7 +650,7 @@ export class NpcManager implements NpcHooks {
     const id = this.droppedBy.get(propId);
     this.droppedBy.delete(propId);
     const n = this.npcs.find((o) => o.id === id);
-    if (!n || !n.relentless || n.mode === 'chase') return;
+    if (!n || !(n.relentless || n.hadComfort) || n.mode === 'chase') return;
     this.pending.push(...startle(n, 'snatched'));
   }
 
