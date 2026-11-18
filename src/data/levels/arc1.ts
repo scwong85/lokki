@@ -106,7 +106,7 @@ export const FIRST_LIGHT = stage(1, 1, {
  * Stages 1.2 to 1.5 are built from earlier levels: take their chain, put the joke card on it, drop the padding tail (a chain ends on
  * its punchline, not on "get away with it", unless someone is chasing you), and show it as a chain.
  */
-const card = (q: QuestDef, joke: { joke: string; insight: string; reaction: string }, recaps: Record<string, string> = {}): QuestDef => ({
+export const card = (q: QuestDef, joke: { joke: string; insight: string; reaction: string }, recaps: Record<string, string> = {}): QuestDef => ({
   ...q,
   chain: true,
   joke,
@@ -114,7 +114,7 @@ const card = (q: QuestDef, joke: { joke: string; insight: string; reaction: stri
     .filter((o) => !(o.kind === 'escape' && !q.objectives.some((x) => x.event?.startsWith('robbed'))))
     .map((o) => ({ ...o, recap: recaps[o.id] ?? o.recap })),
 });
-const quest = (l: { extraQuests?: QuestDef[] }, id: string): QuestDef => l.extraQuests!.find((q) => q.id === id)!;
+export const quest = (l: { extraQuests?: QuestDef[] }, id: string): QuestDef => l.extraQuests!.find((q) => q.id === id)!;
 /** The Nosy Parkers cluster stands 14 m further east so it does not crowd the honk row. */
 const EAST = 14;
 const eastQuest = (q: QuestDef): QuestDef => ({ ...q, objectives: q.objectives.map((o) => ({ ...o, markers: o.markers?.map((m) => ({ ...m, x: m.x + EAST })) })) });
