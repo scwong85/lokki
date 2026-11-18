@@ -479,7 +479,10 @@ export class NpcManager implements NpcHooks {
       n.noiseZ = n.z - Math.cos(facing) * 6;
       n.distractT = Math.max(n.distractT, 0.3);
     }
-    if (was === 'count' && st.phase === 'open') ev.push({ type: 'selfieClick', npc: n, inFrame: gulls.some((g) => inFrame(n, facing, g)), framed: gulls.filter((g) => inFrame(n, facing, g)).length });
+    if (was === 'count' && st.phase === 'open') {
+      const who = gulls.map((g, i) => (inFrame(n, facing, g) ? i : -1)).filter((i) => i >= 0);
+      ev.push({ type: 'selfieClick', npc: n, inFrame: who.length > 0, framed: who.length, who });
+    }
     return ev;
   }
 

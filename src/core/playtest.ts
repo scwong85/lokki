@@ -53,7 +53,7 @@ export class PlaytestLog {
   }
 }
 
-export const RATING_KEYS: Record<string, Rating> = { Digit1: 'stuck', Digit2: 'got', Digit3: 'funny' };
+export const RATING_KEYS: Record<string, Rating> = { Digit7: 'stuck', Digit8: 'got', Digit9: 'funny' };
 
 /** The recap of a won chain: what you did and what the world did, in order. */
 export function recapOf(objectives: readonly { text: string; recap?: string }[]): string {

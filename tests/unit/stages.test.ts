@@ -149,3 +149,32 @@ describe('stage quests can be finished: every world trigger they wait for is in 
     });
   }
 });
+
+describe('Act 2 stages 2.1 and 2.2', () => {
+  it('2.1 Steps: three chains in the Senate district, opened by the end of Act 1', () => {
+    const def = LEVELS.find((l) => l.id === 'a2s1')!;
+    expect(def.district).toBe('senaatintori');
+    expect(def.requires).toBe('a1s5');
+    const duo = setup('a2s1', true);
+    expect(duo.main).toEqual(['cheese', 'peel', 'hotdog', 'duoCheese', 'stairRelay']);
+    expect(duo.quests.filter((q) => q.chain).length).toBe(3);
+    expect(isUnlocked('pose', { arc: 2, stage: 1 })).toBe(false);
+  });
+  it('2.2 Say Pigeon!: pose is introduced here; three chains and the co-op pair', () => {
+    const duo = setup('a2s2', true);
+    expect(duo.main).toEqual(['photos', 'caps', 'shutterbug', 'duoPigeon', 'duoPose']);
+    expect(introducedAt({ arc: 2, stage: 2 }).map((m) => m.id)).toEqual(['pose']);
+    expect(isUnlocked('pose', { arc: 2, stage: 2 })).toBe(true);
+    expect(introducedAt({ arc: 2, stage: 4 }).map((m) => m.id)).toEqual(['disguise']);
+  });
+  it('the three photos need three different poses (the second and third wait for "new")', () => {
+    const photos = setup('a2s2').quests.find((q) => q.id === 'photos')!;
+    expect(photos.objectives.map((o) => o.event)).toEqual(['pose:any', 'pose:new', 'pose:new']);
+  });
+  it('the vendor storms off and the quay trap uses a slippery fish on the walker\'s route', () => {
+    const s = setup('a2s1');
+    expect(s.triggers.some((t) => 'event' in t && t.event === 'fishTrap')).toBe(true);
+    expect(s.props.some((p) => p.tag === 'slippery')).toBe(true);
+    expect(s.tourists.find((t) => t.role === 'walker')?.patrol?.length).toBe(2);
+  });
+});

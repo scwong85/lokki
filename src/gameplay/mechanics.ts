@@ -10,7 +10,7 @@ export interface Gate {
   stage: number;
 }
 
-export type MechId = 'poop' | 'toss' | 'honk' | 'tug' | 'hide' | 'peck' | 'taunt' | 'slip' | 'jukebox' | 'cloth' | 'domino' | 'contagion' | 'slam' | 'disguise' | 'gust' | 'dogcall' | 'cannonball';
+export type MechId = 'poop' | 'toss' | 'honk' | 'tug' | 'hide' | 'peck' | 'taunt' | 'slip' | 'jukebox' | 'cloth' | 'domino' | 'contagion' | 'slam' | 'pose' | 'disguise' | 'gust' | 'dogcall' | 'cannonball';
 
 export interface MechDef {
   id: MechId;
@@ -37,7 +37,8 @@ export const MECHANICS: readonly MechDef[] = [
   { id: 'domino', name: 'Domino', at: g(1, 5), tip: 'E on the first tile starts the row.' },
   { id: 'contagion', name: 'Panic spreads', at: g(1, 5), tip: 'A fright jumps to people standing close.' },
   { id: 'slam', name: 'Slam', at: g(1, 5), tip: 'A fast, low dive bowls people over.' },
-  { id: 'disguise', name: 'Captain\'s cap', at: g(2, 1), tip: 'Wear the cap and nobody sees a gull.' },
+  { id: 'pose', name: 'Pose', at: g(2, 2), tip: 'Keys 1 to 4 strike a pose (wave, laugh, point, facepalm). Pose in a photo at the click and it is ruined your way.' },
+  { id: 'disguise', name: 'Captain\'s cap', at: g(2, 4), tip: 'Wear the cap and nobody sees a gull.' },
   { id: 'gust', name: 'Wing gust', at: g(3, 1), tip: 'Flap low: light things blow away.' },
   { id: 'dogcall', name: 'Dog call', at: g(3, 1), tip: 'A honk calls the park dogs.' },
   { id: 'cannonball', name: 'Cannonball', at: g(4, 1), tip: 'A hard dive into the water soaks the pier.' },

@@ -203,3 +203,13 @@ describe('victims sent somewhere', () => {
     expect(n.x).toBeGreaterThan(2); // walked towards (30, 0)
   });
 });
+
+describe('photos: who is in the picture', () => {
+  it('the click names the gulls in front of the photographer', () => {
+    const { npcs } = setup([{ x: 0, z: 0, heading: 0, role: 'selfie', stationary: true, color: 0 }]);
+    const gulls = [{ x: 0.4, y: 1, z: -2, diving: false }, { x: -0.4, y: 1, z: -2.5, diving: false }, { x: 30, y: 1, z: 30, diving: false }];
+    let who: number[] | null = null;
+    for (let i = 0; i < 60 * 40 && !who; i++) for (const e of npcs.update(DT, gulls)) if (e.type === 'selfieClick' && e.inFrame) who = e.who;
+    expect(who).toEqual([0, 1]);
+  });
+});
