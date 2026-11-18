@@ -67,3 +67,16 @@ test('stage 2.4 Turf War: the pigeons are there and the captain\'s cap works', a
   expect(await l((x) => (x as unknown as { peckNow: () => boolean }).peckNow())).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('stage 2.5 The Key to the City: all the pieces are in the square', async ({ page }) => {
+  test.setTimeout(240_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  const l = await open(page, 'a2s5');
+  expect(await l((x) => x.gate)).toEqual({ arc: 2, stage: 5 });
+  expect(await l((x) => x.quests.quests.map((q) => q.id))).toEqual(['ceremony', 'shhh', 'screen']);
+  const have = await l((x) => { const k = x as unknown as { gang: unknown; tram: unknown; bell: unknown; npcs: { npcs: { role: string }[] } }; return { gang: !!k.gang, tram: !!k.tram, roles: [...new Set(k.npcs.npcs.map((n) => n.role))].sort() }; });
+  expect(have.gang && have.tram).toBe(true);
+  expect(have.roles).toEqual(expect.arrayContaining(['librarian', 'mayor', 'conductor', 'student', 'selfie']));
+  expect(errors).toEqual([]);
+});
