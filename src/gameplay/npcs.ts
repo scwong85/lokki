@@ -244,6 +244,12 @@ export class NpcManager implements NpcHooks {
       if (n.mode === 'slip' || n.tugged) continue;
       if (s.y - n.y < 0.1 || s.y - n.y > BODY_HEIGHT + 0.8) continue;
       if (Math.hypot(n.x - s.x, n.z - s.z) > t.radius.value + BODY_RADIUS) continue;
+      // a steep dive at somebody's hand is a snatch, not a skittle: when the held item is within the beak's reach, take it instead of bowling them over
+      if (n.holding !== null && s.diveAngle > (t.maxAngleDeg.value * Math.PI) / 180) {
+        const h = handPos(n);
+        const beak = { x: s.x - Math.sin(s.heading) * 0.85, y: s.y + 0.05, z: s.z - Math.cos(s.heading) * 0.85 };
+        if (Math.hypot(beak.x - h.x, beak.y - h.y, beak.z - h.z) <= tuning.npc.snatchReach.value * 2) continue;
+      }
       this.knock(n, dir, 0);
       hit = true;
     }

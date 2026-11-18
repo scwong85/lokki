@@ -424,6 +424,7 @@ export const tuning = {
     knockRadius: p(2.1, 0.6, 4, 0.1), // a person who falls knocks over those this close
     maxGen: p(5, 1, 8, 1), // how many people deep the domino goes
     slide: p(3.2, 1, 8, 0.2), // how fast a knocked-down person slides
+    maxAngleDeg: p(30, 10, 80, 1), // a dive steeper than this goes for the hand (a snatch); a shallower one skims the body (a skittle)
     speedLoss: p(0.55, 0.2, 1, 0.05), // the gull keeps this share of its speed after a hit
   },
   hide: {

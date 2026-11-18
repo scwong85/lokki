@@ -292,7 +292,7 @@ export const STRIKE: LevelDef = {
       timed: false,
       chain: true,
       objectives: [
-        { id: 'slam', text: 'Bowl someone over with a fast dive', kind: 'event', event: 'slammed', hint: 'Hold Shift and dive hard at the end of the line, low and fast.', markers: [{ x: -26, z: -14, r: 6, label: 'The line' }] },
+        { id: 'slam', text: 'Bowl someone over with a fast dive', kind: 'event', event: 'slammed', hint: 'Hold Shift and skim the end of the line in a long, low, fast dive (a steep dive at someone\'s hand snatches instead).', markers: [{ x: -26, z: -14, r: 6, label: 'The line' }] },
         { id: 'strike', text: 'Knock down four people with one dive', kind: 'event', event: 'knockdown:4', after: 'slam', hint: 'Fallen people knock over their neighbours. Hit the line near one end.' },
         { id: 'cone', text: 'Take a cone that went flying', kind: 'event', event: 'grab:strikeCone', hint: 'They dropped their ice creams. Grab one with E.' },
         { id: 'escape', text: 'Get away with it', kind: 'escape', after: 'cone', hint: 'Keep it and stay far from everyone until the bar fills.' },

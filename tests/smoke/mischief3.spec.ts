@@ -34,7 +34,7 @@ test('Strike!: a fast dive knocks four people down', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   const l = await open(page, 'strike');
-  await l((x) => { const n = x.npcs.npcs[0]; Object.assign(x.gull.state, { x: n.x, y: 0.9, z: n.z, vx: 0, vy: 0, vz: -20, mode: 'dive' }); return x.npcs.slam(x.gull.state); });
+  await l((x) => { const n = x.npcs.npcs[0]; Object.assign(x.gull.state, { x: n.x, y: 0.9, z: n.z, vx: 0, vy: 0, vz: -20, mode: 'dive', diveAngle: 0.1 }); return x.npcs.slam(x.gull.state); });
   await expect.poll(() => done(l, 'strikechain', 'strike'), { timeout: 30_000, intervals: [1000] }).toBe(true);
   expect(errors).toEqual([]);
 });
