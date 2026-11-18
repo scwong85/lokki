@@ -485,6 +485,8 @@ export const tuning = {
     time: p(30, 5, 120, 1), // seconds until a mood fades back to calm (not while chasing or buying)
     buyTime: p(2.5, 0.5, 10, 0.1), // how long someone waits at a stall before they are served
     followRange: p(22, 5, 50, 1), // a follower joins the conga line when you taunt within this distance
+    relentlessTime: p(11, 3, 30, 0.5), // a thief's victim who will not let go chases this long
+    relentlessSpeed: p(1.35, 1, 2, 0.05), // ...and runs this much faster
     followHold: p(6, 0, 20, 0.5), // and keeps following this long after you let go of T
     lureRange: p(50, 10, 80, 1), // an angry person follows a taunting gull within this distance (and starts again if they had given up)
   },
