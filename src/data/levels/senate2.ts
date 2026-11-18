@@ -151,7 +151,7 @@ export const NEW_LOOK: LevelDef = {
     { x: -146, z: -292, heading: 0.5, holds: 'scarf', role: 'tourist', color: 0xe86a8a },
     { x: -168, z: -303, heading: 1.2, holds: 'flowers', role: 'florist', stationary: true, color: 0x9bd8b0 },
     { x: -164, z: -310, heading: 0.0, hat: 'cap', hatColor: 0xffc400, craves: 'flowers', role: 'hardhat', stationary: true, color: 0xf2a35e },
-    { x: -162, z: -311.5, heading: 0.4, hat: 'cap', hatColor: 0xffc400, role: 'worker', stationary: true, color: 0xf2a35e },
+    { x: -162, z: -311.5, heading: 0.4, hat: 'cap', hatColor: 0xffc400, role: 'worker', stationary: true, roam: 2.5, color: 0xf2a35e },
   ],
   stations: [FLORIST_STAND],
   extraProps: stallGoods(FLORIST_STAND),

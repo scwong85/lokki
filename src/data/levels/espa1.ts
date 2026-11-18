@@ -116,7 +116,7 @@ export const GOOD_BOY: LevelDef = {
   tourists: [],
   extraTourists: [
     { x: -194, z: -49, heading: 0.5, holds: 'ball', role: 'owner', stationary: true, color: 0x9ec9f0 },
-    { x: -188, z: -49, heading: -0.4, role: 'picnic', stationary: true, color: 0xf7a1c4 },
+    { x: -188, z: -49, heading: -0.4, role: 'picnic', stationary: true, roam: 3, color: 0xf7a1c4 },
     { x: -156, z: -52, heading: 1.0, holds: 'tophat', color: 0x4a5a8a },
   ],
   extraProps: [

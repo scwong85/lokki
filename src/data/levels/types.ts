@@ -78,6 +78,8 @@ export interface LevelDef {
   stations?: Station[];
   /** Tourists placed just for this level. */
   extraTourists?: NpcSpawn[];
+  /** How many background strollers walk about (default: tuning.crowd.strollers on campaign stages, none elsewhere). */
+  strollers?: number;
   /** Props placed just for this level (on top of the city's own). */
   extraProps?: PropSpawn[];
   /** The level that must be cleared first (shown locked until then). */
