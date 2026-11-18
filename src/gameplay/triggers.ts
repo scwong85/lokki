@@ -72,7 +72,7 @@ export class TriggerSystem {
     for (const d of this.defs) {
       if (d.kind === 'carryCheckpoints') {
         const i = this.index.get(d.id) ?? 0;
-        if (i >= d.events.length || !ctx.carried || ctx.carried.type !== d.propType || !wanted.has(d.events[i])) continue;
+        if (i >= d.events.length || !ctx.carried || ctx.carried.type !== d.propType || !(wanted.has(d.events[i]) || wanted.has(d.events[d.events.length - 1]))) continue; // the points are wanted when the last event of the route is
         const pt = d.points[i];
         if (Math.hypot(ctx.gull.x - pt.x, ctx.gull.z - pt.z) <= pt.r && ctx.gull.y <= (d.maxY ?? 99)) {
           out.push(d.events[i]);

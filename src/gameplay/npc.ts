@@ -56,6 +56,8 @@ export interface NpcSpawn {
   patrol?: { x: number; z: number }[];
   /** Keeps their place: after a fright or a fall they walk back, and a cone dropped nearby is theirs again (mischief levels). */
   post?: boolean;
+  /** Height they stand at (a conductor on the stage). Default 0, the ground. */
+  y?: number;
   /** Chases a thief for a long time and fast (a graduate whose cap was taken). */
   relentless?: boolean;
 }
@@ -135,6 +137,8 @@ export interface Npc {
   danceT: number;
   /** Too busy with something to notice the gull (a reaction sets it). */
   obliviousT: number;
+  /** Height they stand at. */
+  y: number;
   /** Has just bought comfort food: whoever takes it, even off the floor, sets them off in pursuit. */
   hadComfort: boolean;
 }
@@ -183,16 +187,16 @@ export function newNpc(id: number, sp: NpcSpawn): Npc {
     walkPhase: 0, moving: false, speed: 0, seesGull: false, suspicion: 0, nextT: 2,
     wants: sp.wants ?? [], holdType: null, goal: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false,
     mood: 'calm', moodT: 0, craves: sp.craves ?? null, station: null, buyT: 0,
-    follows: sp.follows ?? false, followT: 0, followGap: 2.5, following: false, patrol: sp.patrol ?? null, relentless: sp.relentless ?? false, patrolI: 0, slipT: 0, slideX: 0, slideZ: 0, startleT: 0, tugged: false, infectedT: 0, danceT: 0, obliviousT: 0, hadComfort: false,
+    follows: sp.follows ?? false, followT: 0, followGap: 2.5, following: false, patrol: sp.patrol ?? null, relentless: sp.relentless ?? false, patrolI: 0, slipT: 0, slideX: 0, slideZ: 0, startleT: 0, tugged: false, infectedT: 0, danceT: 0, obliviousT: 0, hadComfort: false, y: sp.y ?? 0,
   };
 }
 
 /** Does the tourist see the gull right now? Range, cone, blind spot overhead, line of sight. */
-export function canSee(n: { x: number; z: number; heading: number; mode: string }, g: GullInfo, world: World): boolean {
+export function canSee(n: { x: number; z: number; y?: number; heading: number; mode: string }, g: GullInfo, world: World): boolean {
   const t = tuning.npc;
   const dx = g.x - n.x, dz = g.z - n.z;
   const d2 = Math.hypot(dx, dz);
-  const dy = g.y - 1.6;
+  const dy = g.y - 1.6 - (n.y ?? 0);
   const range = t.sightRange.value * (n.mode === 'eat' ? t.eatSightFactor.value : 1) * (g.diving ? 1.3 : 1);
   if (g.disguise) return false;
   if (Math.hypot(d2, dy) > range) return false;
@@ -213,11 +217,11 @@ export function canSee(n: { x: number; z: number; heading: number; mode: string 
 /** Where the ice cream hand is, in world space. */
 export function handPos(n: Npc): { x: number; y: number; z: number } {
   // taking a selfie: the arm is up, holding the phone (and the ice cream) out in front
-  if (n.selfie !== 'idle' && n.mode !== 'panic') return { x: n.x - Math.sin(n.heading) * 0.6, y: 2.0, z: n.z - Math.cos(n.heading) * 0.6 };
-  if (n.mode === 'eat') return { x: n.x - Math.sin(n.heading) * 0.3, y: 1.45, z: n.z - Math.cos(n.heading) * 0.3 };
-  if (n.mode === 'panic') return { x: n.x - Math.sin(n.handAngle) * 0.3, y: 1.95, z: n.z - Math.cos(n.handAngle) * 0.3 };
+  if (n.selfie !== 'idle' && n.mode !== 'panic') return { x: n.x - Math.sin(n.heading) * 0.6, y: n.y + 2.0, z: n.z - Math.cos(n.heading) * 0.6 };
+  if (n.mode === 'eat') return { x: n.x - Math.sin(n.heading) * 0.3, y: n.y + 1.45, z: n.z - Math.cos(n.heading) * 0.3 };
+  if (n.mode === 'panic') return { x: n.x - Math.sin(n.handAngle) * 0.3, y: n.y + 1.95, z: n.z - Math.cos(n.handAngle) * 0.3 };
   const r = n.mode === 'shield' ? 0.55 : 0.5;
-  return { x: n.x - Math.sin(n.handAngle) * r, y: n.mode === 'shield' ? 1.2 : 1.1, z: n.z - Math.cos(n.handAngle) * r };
+  return { x: n.x - Math.sin(n.handAngle) * r, y: n.y + (n.mode === 'shield' ? 1.2 : 1.1), z: n.z - Math.cos(n.handAngle) * r };
 }
 
 export type SnatchState = 'none' | 'far' | 'blocked' | 'ok';
@@ -231,7 +235,7 @@ export function snatchState(n: Npc, beak: { x: number; y: number; z: number }): 
   for (let i = 0; i <= 6; i++) {
     const f = i / 7;
     const x = beak.x + (h.x - beak.x) * f, y = beak.y + (h.y - beak.y) * f, z = beak.z + (h.z - beak.z) * f;
-    if (y < BODY_HEIGHT && Math.hypot(x - n.x, z - n.z) < BODY_RADIUS) return 'blocked';
+    if (y - n.y < BODY_HEIGHT && Math.hypot(x - n.x, z - n.z) < BODY_RADIUS) return 'blocked';
   }
   return d > tuning.npc.snatchReach.value ? 'far' : 'ok';
 }

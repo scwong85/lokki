@@ -122,3 +122,17 @@ describe('relentless chasers', () => {
     expect(grad.mode).toBe('chase');
   });
 });
+
+describe('people standing higher up (the conductor on the stage)', () => {
+  it('the hand, the body and the gull\'s reach are measured from where they stand', async () => {
+    const { handPos, snatchState } = await import('../../src/gameplay/npc');
+    const ground = newNpc(1, { x: 0, z: 0, heading: 0, holds: 'bun', role: 'a', color: 0 });
+    const stage = newNpc(2, { x: 0, z: 0, y: 1, heading: 0, holds: 'bun', role: 'b', color: 0 });
+    expect(handPos(stage).y - handPos(ground).y).toBeCloseTo(1, 5);
+    stage.holding = 5;
+    ground.holding = 5;
+    const beak = { x: 0, y: 1.2, z: 0.2 }; // low and close beside the body
+    expect(snatchState(ground, beak)).not.toBe('ok');
+    expect(snatchState(stage, { x: 0.7, y: 2.1, z: 0 })).toBe('ok'); // at the stage conductor's hand height
+  });
+});

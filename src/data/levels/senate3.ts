@@ -72,7 +72,7 @@ export const CONCERT_NIGHT: LevelDef = {
     { x: -168, z: -304, heading: Math.PI, ice: true, color: 0xffc971 },
     { x: -165, z: -300, heading: Math.PI, ice: true, color: 0x7fd1ae },
     { x: -164, z: -308, heading: Math.PI, color: 0xc7b5e0 },
-    { x: STAGE.x + 1.5, z: STAGE.z + 2, heading: Math.PI / 2, role: 'conductor', stationary: true, color: 0x2f3a55 },
+    { x: STAGE.x + 1.5, z: STAGE.z + 2, y: STAGE.top, heading: Math.PI / 2, role: 'conductor', stationary: true, color: 0x2f3a55 },
   ],
   extraProps: [{ type: 'baton', x: STAGE.x + 1.2, y: restY('baton', STAGE.top), z: STAGE.z, tag: 'baton' }],
   defense: false,

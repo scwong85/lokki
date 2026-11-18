@@ -28,8 +28,10 @@ test('stage 1.1: gated to flying and snatching, three objectives, the bun chain 
   await expect.poll(() => done(l, 'neighbours', 'bun'), { timeout: 20_000, intervals: [500] }).toBe(true);
   // put it down on the dockhand's spotless quay: he gets angry and walks over to it (the world reacts)
   await l((x) => { Object.assign(x.gull.state, { x: 6, y: 0.5, z: -10.5, vx: 0, vy: 0, vz: 0, heading: 0, mode: 'ground' }); return 0; });
-  await page.waitForTimeout(1500);
-  await page.keyboard.press('KeyE');
+  for (let k = 0; k < 10 && !(await done(l, 'neighbours', 'mess')); k++) {
+    await page.waitForTimeout(1500);
+    await page.keyboard.press('KeyE'); // the grab cooldown runs on game time, which is slow here: press again until it lets go
+  }
   await expect.poll(() => done(l, 'neighbours', 'mess'), { timeout: 30_000, intervals: [500] }).toBe(true);
   await expect.poll(() => l((x) => { const d = (x as unknown as { npcs: { npcs: { role: string; x: number; z: number }[] } }).npcs.npcs.find((n) => n.role === 'dockhand')!; return Math.hypot(d.x - 6, d.z + 10.5); }), { timeout: 120_000, intervals: [500] }).toBeLessThan(4);
   expect(errors).toEqual([]);
