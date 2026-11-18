@@ -43,6 +43,8 @@ export class NpcManager implements NpcHooks {
   private items = new Map<number, Prop>();
   /** Who an item was snatched from (quests send the victim somewhere afterwards). */
   private victimOf = new Map<number, number>();
+  /** Who dropped which prop (so someone who will not let go can chase the thief who picks it up). */
+  private droppedBy = new Map<number, number>();
   /** Wanted items being eaten: consumed when the timer runs out. */
   private eating = new Map<number, { prop: Prop; until: number }>();
   private clock = 0;
@@ -643,6 +645,15 @@ export class NpcManager implements NpcHooks {
     return this.npcs.some((n) => n.tugged && n.holding === propId);
   }
 
+  /** The gull picks up something a person dropped: someone who will not let go sets off after the thief. */
+  onGroundPickup(propId: number): void {
+    const id = this.droppedBy.get(propId);
+    this.droppedBy.delete(propId);
+    const n = this.npcs.find((o) => o.id === id);
+    if (!n || !n.relentless || n.mode === 'chase') return;
+    this.pending.push(...startle(n, 'snatched'));
+  }
+
   onSnatched(propId: number): void {
     const n = this.npcs.find((x) => x.holding === propId);
     if (n) {
@@ -663,6 +674,7 @@ export class NpcManager implements NpcHooks {
     this.props.release(prop, { x: (this.rng.next() - 0.5) * 1.5, y: 2, z: (this.rng.next() - 0.5) * 1.5 });
     prop.heldBy = null;
     prop.stolen = true; // dropped by someone: carrying it off still counts as getting away with it
+    this.droppedBy.set(prop.id, n.id);
     n.holding = null;
     n.holdType = null;
   }
@@ -782,6 +794,7 @@ export class NpcManager implements NpcHooks {
     this.items.clear();
     this.eating.clear();
     this.victimOf.clear();
+    this.droppedBy.clear();
     this.handTargetCache.clear();
     this.pending.length = 0;
     this.npcs.length = 0;
@@ -840,6 +853,7 @@ export class NpcManager implements NpcHooks {
     }
     this.eating.clear();
     this.victimOf.clear();
+    this.droppedBy.clear();
     this.pending.length = 0;
   }
 
