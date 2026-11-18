@@ -189,3 +189,17 @@ describe('gates on the NPC systems', () => {
     expect(run(2).some((e) => e.type === 'spread')).toBe(false);
   });
 });
+
+describe('victims sent somewhere', () => {
+  it('a person chasing the thief drops the chase and walks to the place, not noticing the gull', () => {
+    const { npcs, run } = setup([{ x: 0, z: 0, heading: 0, holds: 'map', role: 'mapper', color: 0 }]);
+    const n = npcs.npcs[0];
+    (npcs as unknown as { victimOf: Map<number, number> }).victimOf.set(77, n.id);
+    n.mode = 'chase';
+    expect(npcs.sendVictimTo(77, 30, 0, 'ferry')).toBe(true);
+    expect(n.mode).toBe('walk');
+    expect(n.obliviousT).toBeGreaterThan(30);
+    run(4);
+    expect(n.x).toBeGreaterThan(2); // walked towards (30, 0)
+  });
+});
