@@ -91,9 +91,9 @@ Each milestone ships with tests (routines and attractors are pure logic), a show
 | Chaos makes the game hard to read | routines are calm and slow; the interesting people stay marked; the scout pulse |
 | Too many systems at once | one milestone at a time, M80 first (cheap, helps every stage) |
 
-## 8. Decisions needed
+## 8. Decisions (made)
 
-1. Order: **M80 (see things) first**, then routines, attractors, experiments. OK, or a different order?
-2. Is a portable boom box (heavy, needs Fat bird, placed and pecked) the right way to "carry a jukebox to attract people"?
-3. How strong should the item highlight be by default: subtle sparkle (my proposal) or loud?
-4. Should the scout pulse need a skill (Hawk-eye) or be free for everyone?
+1. Order M80 items, M81 routines, M82 attractors, M83 experiments.
+2. Portable boom box: heavy, needs Fat bird, set down and pecked.
+3. Item highlight is subtle by default.
+4. The scout pulse is Hawk-eye.

@@ -1,6 +1,7 @@
 import { tuning } from './tuning';
 import { COMFORT, comfort, type CamFollow, type Comfort } from './comfort';
 import type { StorageLike } from './save';
+import { HIGHLIGHTS, type Highlight } from '../gameplay/itemGlow';
 import { HUD_MODES, type HudMode } from '../ui/hudMode';
 
 export interface Options {
@@ -17,6 +18,8 @@ export interface Options {
   graphics: 'high' | 'low';
   /** Ink outline and soft look on top of high graphics. */
   inkLook: boolean;
+  /** Sparkle on loose items: off, subtle or strong. */
+  highlight: Highlight;
   /** How much HUD to show (full / minimal / off). */
   hud: HudMode;
   /** Touch: how fast dragging turns the view. */
@@ -43,6 +46,7 @@ export const defaultOptions = (): Options => ({
   tutorialDone: false,
   graphics: 'high',
   inkLook: true,
+  highlight: 'subtle',
   hud: 'full',
   touchLook: 2.6,
   touchHand: 'right',
@@ -77,6 +81,7 @@ export function sanitizeOptions(raw: unknown, base: Options = defaultOptions()):
   o.tutorialDone = r.tutorialDone === true;
   o.graphics = r.graphics === 'low' ? 'low' : 'high';
   o.inkLook = r.inkLook !== false;
+  o.highlight = HIGHLIGHTS.includes(r.highlight as Highlight) ? (r.highlight as Highlight) : 'subtle';
   o.touchHand = r.touchHand === 'left' ? 'left' : 'right';
   o.comfort = r.comfort === 'gentle' || r.comfort === 'calm' ? r.comfort : 'standard';
   o.invertY = r.invertY === true;
