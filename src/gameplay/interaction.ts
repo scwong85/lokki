@@ -17,6 +17,8 @@ export interface NpcHooks {
   snatchCandidates(beak: { x: number; y: number; z: number }): GrabCandidate[];
   blockedHint(beak: { x: number; y: number; z: number }): string | null;
   onSnatched(propId: number): void;
+  /** Something a person dropped is picked up off the ground by the gull. */
+  onGroundPickup?(propId: number): void;
   tugCandidates(beak: { x: number; y: number; z: number }): GrabCandidate[];
   onTugStart(propId: number): void;
   onTugEnd(propId: number, won: boolean): void;
@@ -160,6 +162,7 @@ export class Interaction {
   private takeInBeak(p: Prop, ev: GagEvent[], b: Beak): void {
     const fromNpc = p.heldBy !== null;
     if (fromNpc) this.npcs?.onSnatched(p.id);
+    else this.npcs?.onGroundPickup?.(p.id);
     this.props.grab(p);
     b.carried = p;
     b.grabCd = tuning.interaction.grabCooldown.value;

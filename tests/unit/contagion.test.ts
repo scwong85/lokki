@@ -224,3 +224,26 @@ describe('stage 2.2 class: panic spreads', () => {
     expect(Math.max(...(ev.filter((e) => e.type === 'spread') as { count: number }[]).map((e) => e.count))).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe('the graduate who dropped his cap', () => {
+  it('chases the gull that picks it up off the floor (relentless people only)', () => {
+    const { npcs } = setup([
+      { x: 0, z: 0, heading: 0, holds: 'cap', role: 'graduate', relentless: true, color: 0 },
+      { x: 10, z: 0, heading: 0, holds: 'cap', role: 'other', color: 0 },
+    ]);
+    const [grad, other] = npcs.npcs;
+    const gp = grad.holding!, op = other.holding!;
+    npcs.soakRadius(0, 0, 1);
+    npcs.soakRadius(10, 0, 1); // both are frightened and drop their caps
+    expect(grad.holding).toBeNull();
+    npcs.onGroundPickup(gp);
+    npcs.onGroundPickup(op);
+    expect(grad.mode).toBe('chase'); // at once, before the next step
+    const ev: NpcEvent[] = [];
+    for (let i = 0; i < 10; i++) ev.push(...npcs.update(DT, { x: 20, y: 1, z: 0, diving: false }));
+    expect(grad.mode).toBe('chase');
+    expect(grad.mood).toBe('angry');
+    expect(other.mode).not.toBe('chase');
+    expect(ev.some((e) => e.type === 'chase' && e.npc === grad)).toBe(true);
+  });
+});
