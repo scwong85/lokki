@@ -79,6 +79,8 @@ import { comfort, followYawStep, FOLLOW_RATE, LookSmoother, smoothAxis, vignette
 import { activeMarkers } from './gameplay/questMarkers';
 import type { Marker } from './data/quests';
 import { MarkerPool } from './render/markers';
+import { ItemGlow } from './render/itemGlow';
+import { wantedItems } from './gameplay/itemGlow';
 import { Waypoints } from './ui/waypoints';
 import { SaveStore, type SaveData } from './core/save';
 import { SkillSet } from './gameplay/skills';
@@ -268,6 +270,8 @@ document.getElementById('levelcomplete')?.addEventListener('click', (e) => {
 const markerPool = new MarkerPool();
 const waypoints = new Waypoints(document.body);
 scene.add(markerPool.group);
+const itemGlow = new ItemGlow();
+scene.add(itemGlow.group);
 const todo = new Todo(document.body);
 todo.defs = setup.quests;
 todo.secret = setup.secret;
@@ -2781,6 +2785,7 @@ startLoop({
     skillsPanel.updateBar(skills, abilities);
     runHud.update(runTimer, save.speedrunBest);
     markerPool.update(markers, simTime);
+    itemGlow.update(greybox ? [] : interaction.props.props, gull.position, wantedItems(setup.quests, quests.quests), defense?.hawkActive === true, options.highlight, simTime);
     waypoints.update(labelled, cam.camera, gull.position, innerWidth, innerHeight);
     todo.update(quests.quests, npcs ? npcs.nearestDistance(gull.state) : Infinity, interaction.carried?.stolen === true);
     targets.forEach((t, i) => (targetMeshes[i].visible = t.cooldown === 0));
