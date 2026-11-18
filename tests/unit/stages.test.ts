@@ -137,3 +137,15 @@ describe('stage 1.5 The Warden (arc finale)', () => {
     expect(LEVELS.slice(0, 5).map((l) => l.reward)).toEqual(['flight', 'fatbird', 'hawkeye', 'mimic', 'quickpoop']);
   });
 });
+
+describe('stage quests can be finished: every world trigger they wait for is in the stage', () => {
+  const triggerEvents = (t: (typeof TRIGGERS)[number]): string[] => ('events' in t ? t.events : [t.event]);
+  const worldEvents = new Set(TRIGGERS.flatMap(triggerEvents));
+  for (const def of stagesOf(LEVELS)) {
+    it(`${def.id}: objectives that need a world trigger have it`, () => {
+      const s = levelSetup(def, QUESTS, TRIGGERS, TOURIST_SPAWNS, true);
+      const have = new Set(s.triggers.flatMap(triggerEvents));
+      for (const q of s.quests) for (const o of q.objectives) if (o.kind === 'event' && o.event && worldEvents.has(o.event)) expect(have.has(o.event), `${q.id}/${o.id} waits for "${o.event}"`).toBe(true);
+    });
+  }
+});

@@ -22,6 +22,8 @@ export const FIRST_LIGHT = stage(1, 1, {
   blurb: 'Dawn on the quay: fly, dive, snatch, carry.',
   intro: { title: 'First Light', text: 'Dawn on the Market Square. Fly with Space, dive with Shift, grab with E. Breakfast is in the tourists\' hands.' },
   quests: ['map'],
+  // the map quest's drop-in-the-sea step is detected by this world trigger
+  triggers: ['mapInSea'],
   extraQuests: [
     {
       id: 'breakfast',
@@ -71,7 +73,6 @@ export const FIRST_LIGHT = stage(1, 1, {
       objectives: [{ id: 'twoBirds', text: 'Both snatch an ice cream within three seconds', kind: 'event', event: 'coop:snatch', hint: 'Pick two different tourists and dive together.' }],
     },
   ],
-  triggers: [],
   extraTriggers: [
     { id: 'feast', kind: 'carryLanded', event: 'feast', propType: 'icecream', minY: 6 },
     { id: 'quayLand', kind: 'gullInZone', event: 'quayLand', zone: { minX: BENCH.x - 6, maxX: BENCH.x + 6, minZ: BENCH.z - 5, maxZ: BENCH.z + 5 }, grounded: true },
