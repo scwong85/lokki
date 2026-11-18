@@ -529,11 +529,14 @@ export class NpcManager implements NpcHooks {
     const n = this.npcs.find((o) => o.id === id);
     if (!n) return false;
     n.goal = { x, z, name };
-    if (n.mode === 'idle' || n.mode === 'recover' || n.mode === 'eat') {
+    // whatever they were doing (even chasing the thief), they now head for the place, and the gull no longer catches their eye on the way
+    if (n.mode === 'idle' || n.mode === 'recover' || n.mode === 'eat' || n.mode === 'chase' || n.mode === 'notice' || n.mode === 'shield') {
       n.mode = 'walk';
       n.t = 0;
       n.targetX = n.targetZ = null;
     }
+    n.obliviousT = Math.max(n.obliviousT, 60);
+    n.following = false;
     return true;
   }
 
