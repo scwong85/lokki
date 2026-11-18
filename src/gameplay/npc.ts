@@ -56,6 +56,8 @@ export interface NpcSpawn {
   patrol?: { x: number; z: number }[];
   /** Keeps their place: after a fright or a fall they walk back, and a cone dropped nearby is theirs again (mischief levels). */
   post?: boolean;
+  /** Chases a thief for a long time and fast (a graduate whose cap was taken). */
+  relentless?: boolean;
 }
 
 export interface Npc {
@@ -119,6 +121,7 @@ export interface Npc {
   followGap: number;
   following: boolean;
   patrol: { x: number; z: number }[] | null;
+  relentless: boolean;
   patrolI: number;
   /** Slipping: seconds so far, and the slide they carry on with. */
   slipT: number;
@@ -178,7 +181,7 @@ export function newNpc(id: number, sp: NpcSpawn): Npc {
     walkPhase: 0, moving: false, speed: 0, seesGull: false, suspicion: 0, nextT: 2,
     wants: sp.wants ?? [], holdType: null, goal: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false,
     mood: 'calm', moodT: 0, craves: sp.craves ?? null, station: null, buyT: 0,
-    follows: sp.follows ?? false, followT: 0, followGap: 2.5, following: false, patrol: sp.patrol ?? null, patrolI: 0, slipT: 0, slideX: 0, slideZ: 0, startleT: 0, tugged: false, infectedT: 0, danceT: 0, obliviousT: 0,
+    follows: sp.follows ?? false, followT: 0, followGap: 2.5, following: false, patrol: sp.patrol ?? null, relentless: sp.relentless ?? false, patrolI: 0, slipT: 0, slideX: 0, slideZ: 0, startleT: 0, tugged: false, infectedT: 0, danceT: 0, obliviousT: 0,
   };
 }
 
@@ -607,12 +610,14 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
       break;
     }
     case 'chase': {
-      if (gullDist > 2.5) n.moving = moveToward(n, g.x, g.z, t.runSpeed.value, dt, ctx);
+      if (gullDist > 2.5) n.moving = moveToward(n, g.x, g.z, t.runSpeed.value * (n.relentless ? tuning.mood.relentlessSpeed.value : 1), dt, ctx);
       else faceToward(n, g.x, g.z, dt);
       // the lure: an angry person keeps following a gull that taunts (holds T) instead of giving up
       const lured = !!g.taunt && gullDist < tuning.mood.lureRange.value;
       if (lured) n.t = Math.min(n.t, t.chaseTime.value - 1);
-      if (n.t >= t.chaseTime.value || gullDist > (lured ? 45 : 25)) {
+      const maxT = n.relentless ? tuning.mood.relentlessTime.value : t.chaseTime.value;
+      if (lured) n.t = Math.min(n.t, maxT - 1);
+      if (n.t >= maxT || gullDist > (lured || n.relentless ? 45 : 25)) {
         enter(n, 'recover');
         n.noticeCd = 2;
       }

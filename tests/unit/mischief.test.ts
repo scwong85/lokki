@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createRng } from '../../src/core/rng';
 import { World } from '../../src/world/collision';
-import { SLIP_SECONDS, newNpc, slip, stepNpc, type GullInfo, type Npc, type NpcCtx, type NpcEvent } from '../../src/gameplay/npc';
+import { SLIP_SECONDS, newNpc, slip, startle, stepNpc, type GullInfo, type Npc, type NpcCtx, type NpcEvent } from '../../src/gameplay/npc';
 import { npcPose } from '../../src/gameplay/npcPose';
 import { LEVELS } from '../../src/data/levels';
 import { tuning } from '../../src/core/tuning';
@@ -107,5 +107,18 @@ describe('mischief levels', () => {
     expect(l.extraTourists!.filter((t) => t.follows).length).toBe(6);
     expect(l.parade!.stops.every((s) => s.need === 4)).toBe(true);
     expect(l.parade!.stops.map((s) => s.event)).toEqual(['piperGather', 'piperWest', 'piperEast', 'piperFerry']);
+  });
+});
+
+describe('relentless chasers', () => {
+  it('a graduate who lost his cap keeps chasing long after an ordinary tourist gives up', () => {
+    const ordinary = newNpc(1, { x: 0, z: 0, heading: 0, role: 'x', color: 0 });
+    const grad = newNpc(2, { x: 0, z: 0, heading: 0, role: 'graduate', relentless: true, color: 0 });
+    const gull = { x: 0, y: 1, z: -15, diving: false };
+    for (const n of [ordinary, grad]) startle(n, 'snatched');
+    run(ordinary, gull, 8);
+    run(grad, gull, 8);
+    expect(ordinary.mode).not.toBe('chase');
+    expect(grad.mode).toBe('chase');
   });
 });
