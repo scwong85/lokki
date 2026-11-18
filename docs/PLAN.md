@@ -237,6 +237,7 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [ ] M61 Stage 1.2 Fish Market (built on `m61-fish-market`)
 - [ ] M62 Stages 1.3 Strings Attached and 1.4 Mood Swings, team tug and duet (built on `m62-strings-moods`)
 - [ ] M63 Stage 1.5 The Warden: Act 1 complete (built on `m63-the-warden`)
+- [ ] M64 Plan: Act 2 Senaatintori, five stages (`docs/design/act2.md`; built on `m64-act2-plan`)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -483,7 +484,10 @@ Heat, tug, hiding and buttons; moods, the lure, slip and the jukebox; team tug a
 ### M63 — Stage 1.5 The Warden (S)
 Rush Hour, Strike!, Nemesis; the end of Act 1. Details: `docs/milestones/M63.md`.
 
-### After M63 (backlog)
+### M64 — Plan: Act 2, Senaatintori (S)
+Five stages (Steps, Say Pigeon!, Ding Dong, Turf War, The Key to the City), the Pose verb, three skills, a build plan M65 to M67. Docs only. Details: `docs/design/act2.md`.
+
+### After M64 (backlog)
  Tablecloth yank, prank button, hide and BOO and the rest of the slate (`docs/design/mischief-mechanics.md`), then convert the stall-chain levels to the new toys.
  Mischief toys next: tablecloth yank, prank button, hide and BOO, then convert the stall-chain levels to different toys (`docs/design/mischief-mechanics.md`).
  Chain levels: more rebuilds (Cheese Run, Harbour Day, the heist levels, Christmas Market, Key to the City, Coo-Coo, The Drone), then rumour and crowds, escalation events, co-op chains (`docs/design/chain-levels.md`).
