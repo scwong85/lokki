@@ -42,3 +42,28 @@ test('stage 2.2 Say Pigeon!: a pose at the click ruins the photo and ticks the f
   expect(await done(l, 'photos', 'one')).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('stage 2.3 Ding Dong: the bell ticks the first step', async ({ page }) => {
+  test.setTimeout(240_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  const l = await open(page, 'a2s3');
+  expect(await l((x) => x.gate)).toEqual({ arc: 2, stage: 3 });
+  expect(await l((x) => x.quests.quests.map((q) => q.id))).toEqual(['bell', 'lunch', 'bellsplat']);
+  await l((x) => { (x as unknown as { ringBell: () => void }).ringBell(); return 0; });
+  expect(await done(l, 'bell', 'wait')).toBe(true);
+  expect(await done(l, 'bellsplat', 'wait')).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('stage 2.4 Turf War: the pigeons are there and the captain\'s cap works', async ({ page }) => {
+  test.setTimeout(240_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  const l = await open(page, 'a2s4');
+  expect(await l((x) => x.gate)).toEqual({ arc: 2, stage: 4 });
+  expect(await l((x) => x.quests.quests.map((q) => q.id))).toEqual(['forgive', 'wardrobe', 'captainchain']);
+  await l((x) => { Object.assign(x.gull.state, { x: -148, y: 0.5, z: -288.8, vx: 0, vy: 0, vz: 0, mode: 'ground' }); return 0; });
+  expect(await l((x) => (x as unknown as { peckNow: () => boolean }).peckNow())).toBe(true);
+  expect(errors).toEqual([]);
+});
