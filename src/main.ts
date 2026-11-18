@@ -2304,6 +2304,7 @@ function onGags(gags: GagEvent[]): void {
         audio.play('yelp');
         hud.toast('Splat! Right on a tourist!', 1.1);
         notes(quests.onEvent('poopNpc'));
+        if (bellLeft > 0) notes(quests.onEvent('bellPoop')); // splatted while everyone is looking up at the tower
         if (players.length > 1 && combo.hit('poopNpc', g.by ?? 0, simTime, 5)) notes(quests.onEvent('coop:poopNpc'));
         if (g.x !== undefined && g.z !== undefined && spotterHit(partnerLock(g.by ?? 0), { x: g.x, z: g.z })) {
           hud.toast('Spotted and splatted! Nice teamwork.', 1.6);

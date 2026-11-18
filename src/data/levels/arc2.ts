@@ -1,6 +1,9 @@
 import { stage } from '../arcs';
 import { restY } from '../props';
-import { CHEESE_RUN, SAY_PIGEON, STEPS_X, STEPS_BOTTOM_Z, LANE3_X, LANDING_Z, LANDING_Y, SENATE_START } from './senate';
+import { CHEESE_RUN, DING_DONG, SAY_PIGEON, STEPS_X, STEPS_BOTTOM_Z, LANE3_X, LANDING_Z, LANDING_Y, SENATE_START } from './senate';
+import { TRAM, TRAM_SURFING, TURF_WAR, NEW_LOOK, EMPEROR } from './senate2';
+import { CAPTAIN_GULL } from './mischief2';
+import { card, quest } from './arc1';
 
 const FOOT = STEPS_BOTTOM_Z + 9; // the walkway at the foot of the steps
 const VENDOR = { x: LANE3_X - 2.8, z: STEPS_BOTTOM_Z + 3.8 };
@@ -182,4 +185,106 @@ export const SAY_PIGEON_STAGE = stage(2, 2, {
   ],
   defense: false,
   parTime: 300,
+});
+
+/**
+ * Act 2, stage 3: Ding Dong. The Cathedral bell rings every half minute and everyone looks up at the tower for six seconds; the tram
+ * runs on a timetable and a bottle on the track stops it. Three objectives: Bell Heist, Lunch Express, Bell Splat.
+ */
+export const DING_DONG_STAGE = stage(2, 3, {
+  name: '2.3 Ding Dong',
+  blurb: 'When the bell rings, nobody is looking.',
+  district: 'senaatintori',
+  start: SENATE_START,
+  intro: { title: 'Ding Dong', text: 'Noon. The Cathedral bell rings every half minute and everyone looks up at the tower. A bottle on the tram track stops the tram.' },
+  bells: { x: -138.95, z: -370.49, first: 8, every: 28, duration: 6 },
+  tram: TRAM,
+  quests: [],
+  extraQuests: [
+    card({ ...quest(DING_DONG, 'bell'), objectives: [
+      { id: 'wait', text: 'Wait for the bell to ring', kind: 'event', event: 'bell', hint: 'The bell rings every half minute. Be near the picnickers when it starts.', markers: [{ x: -164, z: -314, r: 4, label: 'Picnickers' }] },
+      { id: 'first', text: 'Snatch a sandwich while everyone looks up', kind: 'event', event: 'bellSnatch', after: 'wait', hint: 'For about six seconds nobody is watching the picnic.' },
+      { id: 'second', text: 'And the second one before they look down', kind: 'event', event: 'bellSnatch', after: 'first', hint: 'Quick: one more before the ringing stops.' },
+    ] }, { joke: 'Two picnickers who would never let go of their sandwiches stare at a church tower while a gull empties the blanket.', insight: 'The bell makes the whole square look up, for six seconds.', reaction: 'Everybody gasps at the tower, then at the empty blanket.' }, { wait: 'The bell rang', first: 'you took one sandwich', second: 'and then the other' }),
+    card(quest(TRAM_SURFING, 'lunch'), { joke: 'A tram driver climbs out to clear a bottle from the track and finds his lunch gone.', insight: 'A bottle on the rails stops the tram, and the driver has to get out.', reaction: 'The tram bell rings, the driver climbs down grumbling, and the lunch is yours.' }, { stop: 'You blocked the track with a bottle', lunch: 'and took the driver\'s lunch' }),
+    {
+      id: 'bellsplat',
+      title: 'Bell Splat',
+      teaser: 'Splat someone while everyone looks up.',
+      timed: false,
+      chain: true,
+      joke: { joke: 'Grandma gets splatted while the entire square looks at a bell, and nobody saw a thing.', insight: 'During the bell nobody is looking at you or at her.', reaction: 'She is outraged, drops her bun, and everyone turns round too late.' },
+      objectives: [
+        { id: 'wait', text: 'Wait for the bell', kind: 'event', event: 'bell', recap: 'The bell rang', hint: 'The bell rings every half minute.' },
+        { id: 'splat', text: 'Splat someone while the bell rings', kind: 'event', event: 'bellPoop', after: 'wait', recap: 'you splatted grandma while everyone looked up', hint: 'Poop (F) on someone during the six seconds of ringing.', markers: [{ x: -146, z: -293, r: 5, label: 'Grandma' }] },
+        { id: 'bun', text: 'Take her bun', kind: 'event', event: 'grab:grannyBun', after: 'splat', recap: 'and took her bun', hint: 'She dropped it. Grab it.' },
+      ],
+    },
+  ],
+  coopRequired: [
+    (DING_DONG.coopQuests ?? [])[0],
+    { id: 'bellBombers', title: 'Bell bombers', teaser: 'Two splats under the bell.', timed: false, objectives: [{ id: 'bellBombers', text: 'Both gulls splat someone within five seconds', kind: 'event', event: 'coop:poopNpc', hint: 'One gull each.' }] },
+  ],
+  reactions: [
+    { on: 'bell', witness: { x: -156, z: -300, r: 40, emote: 'alert' } },
+    { on: 'bellSnatch', say: 'A sandwich short!', sound: 'pop' },
+    { on: 'tramBlocked', oblivious: { role: 'driver', seconds: 25 }, witness: { x: -150, z: -273, r: 14, emote: 'alert' } },
+    { on: 'grab:lunch', witness: { x: -172, z: -273, r: 12, emote: 'laugh' }, say: 'His lunch box is empty.' },
+    { on: 'bellPoop', mood: { role: 'granny', mood: 'angry' }, say: 'SPLAT, and nobody saw.', witness: { x: -146, z: -293, r: 14, emote: 'laugh' } },
+    { on: 'grab:grannyBun', say: 'Finders keepers.' },
+  ],
+  triggers: [],
+  tourists: [],
+  extraTourists: [
+    ...(DING_DONG.extraTourists ?? []).slice(0, 2),
+    ...(TRAM_SURFING.extraTourists ?? []).slice(0, 1),
+    { x: -146, z: -293, heading: 0.6, holds: 'bun', holdTag: 'grannyBun', role: 'granny', stationary: true, color: 0xc7b5e0 },
+  ],
+  extraProps: TRAM_SURFING.extraProps,
+  defense: false,
+  parTime: 330,
+  reward: 'flock',
+});
+
+/**
+ * Act 2, stage 4: Turf War. The Pigeon Gang owns the statue (a bun makes friends, salmiakki makes enemies), a workman can be wound up
+ * and cheered up, and a captain's cap makes nobody see a gull (Disguise). Objectives: Forgive and Forget, Hard Hat Soft Heart, Captain Gull.
+ */
+const CAP_SHIFT = { x: -142, z: -268 }; // the Kauppatori layout of the cap puzzle moved onto Senate Square
+const shifted = <T extends { x: number; z: number }>(t: T): T => ({ ...t, x: t.x + CAP_SHIFT.x, z: t.z + CAP_SHIFT.z });
+export const TURF_WAR_STAGE = stage(2, 4, {
+  name: '2.4 Turf War',
+  blurb: 'Win the pigeons, scare them, wear the cap.',
+  district: 'senaatintori',
+  start: SENATE_START,
+  intro: { title: 'Turf War', text: 'Evening. The Pigeon Gang owns the statue and has opinions. A bun makes friends; salmiakki does not. And a certain red cap makes you invisible.' },
+  pigeons: { x: EMPEROR.x, z: EMPEROR.z },
+  quests: [],
+  extraQuests: [
+    card({ ...quest(TURF_WAR, 'both'), id: 'forgive', title: 'Forgive and forget', teaser: 'Befriend the pigeons, then betray them.' }, { joke: 'The pigeons adopt you with a bun, and you scare them off with sweets they hate.', insight: 'Buns make friends, salmiakki makes enemies, and they forgive in a minute.', reaction: 'They swarm you happily, then scatter in disgust while the tourists point.' }, { friends: 'You befriended the Pigeon Gang with a bun', scatter: 'and scattered them with salmiakki' }),
+    card(quest(NEW_LOOK, 'wardrobe'), { joke: 'A foreman is wound up until he buys flowers for his feelings, and a gull takes the bouquet.', insight: 'An angry person who wants comfort follows your taunt to the stall that sells it.', reaction: 'He fumes, follows, buys, beams, and fumes again when the bouquet goes.' }),
+    card({ ...quest(CAPTAIN_GULL, 'captainchain'), objectives: quest(CAPTAIN_GULL, 'captainchain').objectives.map((o) => ({ ...o, markers: o.markers?.map((m) => ({ ...m, x: m.x + CAP_SHIFT.x, z: m.z + CAP_SHIFT.z })) })) }, { joke: 'A seagull in a captain\'s cap strolls up and takes a cone from three guards who never see a gull.', insight: 'The cap makes nobody see a gull: walk right up.', reaction: 'The guards look straight through it, then stare at the empty hand.' }, { wear: 'You put on the captain\'s cap', cone: 'and took a cone from under their noses' }),
+  ],
+  coopRequired: [
+    (TURF_WAR.coopQuests ?? [])[0],
+    { id: 'dressing', title: 'Dressing room', teaser: 'One drops, the other catches.', timed: false, objectives: [{ id: 'dressing', text: 'One gull drops an item, the other picks it up', kind: 'event', event: 'coop:handover', hint: 'Pass it.' }] },
+  ],
+  reactions: [
+    { on: 'pigeonsFriends', witness: { x: EMPEROR.x, z: EMPEROR.z, r: 14, emote: 'heart' }, say: 'The Pigeon Gang adopts you.' },
+    { on: 'pigeonsScattered', witness: { x: EMPEROR.x, z: EMPEROR.z, r: 14, emote: 'laugh' }, say: 'Salmiakki! They flee in disgust.', sound: 'gasp' },
+    { on: 'grab:capCone', witness: { x: -152, z: -285, r: 10, emote: 'alert' } },
+  ],
+  triggers: [],
+  tourists: [],
+  extraTourists: [
+    ...(TURF_WAR.extraTourists ?? []),
+    ...(NEW_LOOK.extraTourists ?? []).slice(1),
+    ...(CAPTAIN_GULL.extraTourists ?? []).map(shifted),
+  ],
+  stations: NEW_LOOK.stations,
+  extraProps: [...(TURF_WAR.extraProps ?? []), ...(NEW_LOOK.extraProps ?? [])],
+  switches: (CAPTAIN_GULL.switches ?? []).map(shifted),
+  defense: false,
+  parTime: 360,
+  reward: 'disguise',
 });

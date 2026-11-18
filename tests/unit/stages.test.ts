@@ -198,3 +198,30 @@ describe('playtest fixes for 2.1 and 2.2', () => {
     for (let i = 1; i < p.length; i++) expect(Math.hypot(p[i].x - p[i - 1].x, p[i].z - p[i - 1].z)).toBeLessThan(3.4);
   });
 });
+
+describe('Act 2 stages 2.3 and 2.4', () => {
+  it('2.3 Ding Dong: bell and tram; three chains; flock call as the reward', () => {
+    const def = LEVELS.find((l) => l.id === 'a2s3')!;
+    expect(def.bells).toBeTruthy();
+    expect(def.tram).toBeTruthy();
+    expect(def.reward).toBe('flock');
+    expect(def.requires).toBe('a2s2');
+    expect(setup('a2s3', true).main).toEqual(['bell', 'lunch', 'bellsplat', 'duoDing', 'bellBombers']);
+    const bell = setup('a2s3').quests.find((q) => q.id === 'bell')!;
+    expect(bell.objectives.map((o) => o.event)).toEqual(['bell', 'bellSnatch', 'bellSnatch']);
+  });
+  it('2.4 Turf War: pigeons and the captain\'s cap, disguise as the reward, the cap puzzle moved onto the square', () => {
+    const def = LEVELS.find((l) => l.id === 'a2s4')!;
+    expect(def.pigeons).toBeTruthy();
+    expect(def.reward).toBe('disguise');
+    expect(def.switches?.[0].effect).toBe('disguise');
+    expect(def.switches![0].x).toBeGreaterThan(-200);
+    expect(setup('a2s4', true).main).toEqual(['forgive', 'wardrobe', 'captainchain', 'duoTurf', 'dressing']);
+    expect(isUnlocked('disguise', { arc: 2, stage: 3 })).toBe(false);
+    expect(isUnlocked('disguise', { arc: 2, stage: 4 })).toBe(true);
+  });
+  it('all four Act 2 stages follow Act 1 in order', () => {
+    const ids = LEVELS.map((l) => l.id);
+    expect(ids.slice(0, 9)).toEqual(['a1s1', 'a1s2', 'a1s3', 'a1s4', 'a1s5', 'a2s1', 'a2s2', 'a2s3', 'a2s4']);
+  });
+});
