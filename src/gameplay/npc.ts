@@ -135,6 +135,8 @@ export interface Npc {
   danceT: number;
   /** Too busy with something to notice the gull (a reaction sets it). */
   obliviousT: number;
+  /** Has just bought comfort food: whoever takes it, even off the floor, sets them off in pursuit. */
+  hadComfort: boolean;
 }
 
 export interface GullInfo {
@@ -181,7 +183,7 @@ export function newNpc(id: number, sp: NpcSpawn): Npc {
     walkPhase: 0, moving: false, speed: 0, seesGull: false, suspicion: 0, nextT: 2,
     wants: sp.wants ?? [], holdType: null, goal: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false,
     mood: 'calm', moodT: 0, craves: sp.craves ?? null, station: null, buyT: 0,
-    follows: sp.follows ?? false, followT: 0, followGap: 2.5, following: false, patrol: sp.patrol ?? null, relentless: sp.relentless ?? false, patrolI: 0, slipT: 0, slideX: 0, slideZ: 0, startleT: 0, tugged: false, infectedT: 0, danceT: 0, obliviousT: 0,
+    follows: sp.follows ?? false, followT: 0, followGap: 2.5, following: false, patrol: sp.patrol ?? null, relentless: sp.relentless ?? false, patrolI: 0, slipT: 0, slideX: 0, slideZ: 0, startleT: 0, tugged: false, infectedT: 0, danceT: 0, obliviousT: 0, hadComfort: false,
   };
 }
 
@@ -442,6 +444,7 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
       n.station = null;
       n.buyT = 0;
       n.craves = null;
+      n.hadComfort = true;
       setMood(n, 'delighted', ev);
       enter(n, 'idle');
       n.nextT = 2;
