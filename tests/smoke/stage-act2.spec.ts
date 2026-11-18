@@ -36,7 +36,7 @@ test('stage 2.2 Say Pigeon!: a pose at the click ruins the photo and ticks the f
   expect(await l((x) => x.quests.quests.map((q) => q.id))).toEqual(['photos', 'caps', 'shutterbug']);
   // stand in front of the photographer's phone and keep posing until the click comes
   for (let i = 0; i < 120 && !(await done(l, 'photos', 'one')); i++) {
-    await l((x) => { Object.assign(x.gull.state, { x: -168, y: 1.0, z: -310.5, vx: 0, vy: 0, vz: 0, mode: 'air' }); x.strikePose('wave'); return 0; });
+    await l((x) => { Object.assign(x.gull.state, { x: -156.5, y: 1.0, z: -311.8, vx: 0, vy: 0, vz: 0, mode: 'air' }); x.strikePose('wave'); return 0; });
     await page.waitForTimeout(400);
   }
   expect(await done(l, 'photos', 'one')).toBe(true);
