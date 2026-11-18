@@ -289,3 +289,25 @@ describe('hard hat soft heart: the flowers on the floor', () => {
     expect(n.mode).not.toBe('chase');
   });
 });
+
+describe('a dive at the hand snatches, a dive at the body bowls over', () => {
+  const fast = (x: number, z: number, heading: number, diveAngle = 0.9): FlightState => ({ x, y: 1.1, z, vx: 0, vy: 0, vz: -24, heading, mode: 'dive', diveAngle } as unknown as FlightState);
+  it('a steep dive does not bowl over someone whose hand the beak is about to take', () => {
+    const { npcs } = setup([{ x: 0, z: 0, heading: 0, holds: 'icecream', role: 'a', color: 0 }]);
+    const n = npcs.npcs[0];
+    const beakAtHand = { x: n.x - Math.sin(n.handAngle) * 0.5, z: n.z - Math.cos(n.handAngle) * 0.5 };
+    // the gull's beak is 0.85 ahead of it (heading 0 faces -z), so put the gull behind the hand
+    expect(npcs.slam(fast(beakAtHand.x, beakAtHand.z + 0.85, 0))).toBe(false);
+    expect(n.mode).not.toBe('slip');
+    expect(n.holding).not.toBeNull();
+  });
+  it('a shallow dive skims through and bowls them over even with the hand in reach', () => {
+    const { npcs } = setup([{ x: 0, z: 0, heading: 0, holds: 'icecream', role: 'a', color: 0 }]);
+    const n = npcs.npcs[0];
+    expect(npcs.slam(fast(n.x - Math.sin(n.handAngle) * 0.5, n.z - Math.cos(n.handAngle) * 0.5 + 0.85, 0, 0.1))).toBe(true);
+  });
+  it('still bowls over someone it hits on the body, or who holds nothing', () => {
+    const { npcs } = setup([{ x: 0, z: 0, heading: 0, role: 'a', color: 0 }]);
+    expect(npcs.slam(fast(0, 0.6, 0))).toBe(true);
+  });
+});
