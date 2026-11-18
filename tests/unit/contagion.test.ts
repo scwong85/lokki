@@ -213,3 +213,14 @@ describe('photos: who is in the picture', () => {
     expect(who).toEqual([0, 1]);
   });
 });
+
+describe('stage 2.2 class: panic spreads', () => {
+  it('a splat on one photographer reaches at least two others', () => {
+    const def = LEVELS.find((l) => l.id === 'a2s2')!;
+    const { npcs, run } = setup(def.extraTourists!.map((t) => ({ ...t })));
+    const src = npcs.npcs.find((n) => n.role === 'selfie')!;
+    (npcs as unknown as { pending: NpcEvent[] }).pending.push({ type: 'panic', npc: src });
+    const ev = run(4);
+    expect(Math.max(...(ev.filter((e) => e.type === 'spread') as { count: number }[]).map((e) => e.count))).toBeGreaterThanOrEqual(2);
+  });
+});

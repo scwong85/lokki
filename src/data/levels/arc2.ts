@@ -28,7 +28,7 @@ export const STEPS_STAGE = stage(2, 1, {
       joke: { joke: 'A family\'s bread cheese rolls down forty steps and lands in the hot-dog cart while the vendor stares.', insight: 'Round things roll straight down a lane: choose the right-hand one.', reaction: 'The family gasps at the empty blanket; the vendor yells at the cart; the queue laughs.' },
       objectives: [
         { id: 'take', text: 'Pick up the round cheese on the landing at the top of the steps', kind: 'event', event: 'grab:cheese', recap: 'You took the family\'s cheese', hint: 'Fly up the Cathedral steps (the white stairway) and grab it with E.', markers: [{ x: LANE3_X, z: LANDING_Z, r: 4, y: LANDING_Y, label: 'Round cheese' }] },
-        { id: 'roll', text: 'Roll it down the right-hand lane into the hot-dog cart', kind: 'event', event: 'cheeseCart', after: 'take', recap: 'rolled it down into the hot-dog cart', hint: 'Put it down at the top of the right lane (E) and let it roll. Low rails keep it in the lane. Missed? Pick it up again.', markers: [{ x: VENDOR.x, z: VENDOR.z, r: 4, label: 'Hot-dog cart' }] },
+        { id: 'roll', text: 'Roll it down the right-hand lane into the hot-dog cart', kind: 'event', event: 'cheeseCart', after: 'take', recap: 'rolled it down into the hot-dog cart', hint: 'Stand at the top of the steps facing down the right-hand lane and TOSS it (Q): round things roll. Any lane that ends at the foot of the steps, by the cart, counts. Missed? Pick it up again.', markers: [{ x: VENDOR.x, z: VENDOR.z, r: 4, label: 'Hot-dog cart' }] },
       ],
     },
     {
@@ -39,7 +39,7 @@ export const STEPS_STAGE = stage(2, 1, {
       chain: true,
       joke: { joke: 'A man who walks the same route every day steps on a fried fish and flies, his lunch with him.', insight: 'Things on the ground trip whoever walks into them, and he walks the same route.', reaction: 'He slips, the bun flies, and the onlookers wince and laugh.' },
       objectives: [
-        { id: 'fish', text: 'Take the fried fish from the foot of the steps', kind: 'event', event: 'grab:slippery', recap: 'You took a fried fish', hint: 'It lies by the steps, off to the right of the walkway.', markers: [{ x: STEPS_X + 8, z: STEPS_BOTTOM_Z + 6, r: 4, label: 'Fish' }] },
+        { id: 'fish', text: 'Take the fried fish from the foot of the steps', kind: 'event', event: 'grab:slippery', recap: 'You took a fried fish', hint: 'It lies on the pavement at the west end of the steps, away from the cart.', markers: [{ x: STEPS_X - 12, z: STEPS_BOTTOM_Z + 6, r: 4, label: 'Fish' }] },
         { id: 'trap', text: 'Put it down on his walkway', kind: 'event', event: 'fishTrap', after: 'fish', recap: 'put it on his walkway', hint: 'The man in the green coat walks back and forth along the foot of the steps. Put the fish down (E) on the pavement in front of him.', markers: [{ x: STEPS_X, z: FOOT, r: 5, label: 'His walkway' }] },
         { id: 'slip', text: 'Watch him walk into it', kind: 'event', event: 'slipped:walker', after: 'trap', recap: 'he slipped on it', hint: 'Wait for him to come past. The fish only works once.' },
         { id: 'bun', text: 'Take his bun while he sits there', kind: 'event', event: 'grab:walkerBun', after: 'slip', recap: 'and his bun was yours', hint: 'It flew out of his hand. Grab it before he gets up.' },
@@ -78,7 +78,7 @@ export const STEPS_STAGE = stage(2, 1, {
   ],
   triggers: [],
   extraTriggers: [
-    { id: 'cheeseCart', kind: 'propInZone', event: 'cheeseCart', propType: 'cheese', zone: { minX: LANE3_X - 3, maxX: LANE3_X + 3, minZ: STEPS_BOTTOM_Z + 0.5, maxZ: STEPS_BOTTOM_Z + 7, maxY: 2 } },
+    { id: 'cheeseCart', kind: 'propInZone', event: 'cheeseCart', propType: 'cheese', zone: { minX: STEPS_X - 14, maxX: LANE3_X + 4, minZ: STEPS_BOTTOM_Z + 0.5, maxZ: STEPS_BOTTOM_Z + 8, maxY: 2 } },
     { id: 'fishTrap', kind: 'propInZone', event: 'fishTrap', propType: 'fish', tag: 'slippery', zone: { minX: STEPS_X - 5, maxX: STEPS_X + 5, minZ: FOOT - 1.8, maxZ: FOOT + 1.8, maxY: 1.5 } },
   ],
   tourists: [],
@@ -90,7 +90,7 @@ export const STEPS_STAGE = stage(2, 1, {
   ],
   extraProps: [
     { type: 'cheese', x: LANE3_X, y: restY('cheese', LANDING_Y), z: LANDING_Z, tag: 'cheese' },
-    { type: 'fish', x: STEPS_X + 8, y: restY('fish'), z: STEPS_BOTTOM_Z + 6, tag: 'slippery' },
+    { type: 'fish', x: STEPS_X - 12, y: restY('fish'), z: STEPS_BOTTOM_Z + 6, tag: 'slippery' },
     { type: 'sausage', x: VENDOR.x + 1.6, y: restY('sausage'), z: VENDOR.z + 0.5, tag: 'cartDog' },
     { type: 'sausage', x: VENDOR.x + 1.6, y: restY('sausage'), z: VENDOR.z - 0.5, tag: 'cartDog' },
   ],
@@ -131,7 +131,7 @@ export const SAY_PIGEON_STAGE = stage(2, 2, {
       chain: true,
       joke: { joke: 'A graduate chases a gull with his cap into the very photo he came to be in.', insight: 'The graduate chases you, and the next photo is right there.', reaction: 'He yells and chases, and the whole class laughs when you fly through the shot.' },
       objectives: [
-        { id: 'cap', text: 'Snatch a cap from a graduate', kind: 'event', event: 'snatch:cap', recap: 'You took a graduate\'s cap', hint: 'A few graduates hold their white caps in their hands.' },
+        { id: 'cap', text: 'Take a graduate\'s cap', kind: 'event', event: 'grab:cap', recap: 'You took a graduate\'s cap', hint: 'A few graduates hold their white caps in their hands.' },
         { id: 'chase', text: 'He comes after you', kind: 'event', event: 'robbed:graduate', after: 'cap', recap: 'he came after you', hint: 'He chases you with his arms up.' },
         { id: 'photo', text: 'Fly through the next photo with the cap', kind: 'event', event: 'photobomb', after: 'chase', recap: 'and you flew through the photo', hint: 'Get in front of a photographer at the click.' },
       ],
@@ -162,13 +162,24 @@ export const SAY_PIGEON_STAGE = stage(2, 2, {
   reactions: [
     { on: 'pose:any', witness: { x: -156, z: -310, r: 14, emote: 'laugh' }, say: 'Say pigeon!' },
     { on: 'pose:new', say: 'A different pose again!' },
+    { on: 'grab:cap', witness: { x: -156.5, z: -312, r: 10, emote: 'alert' }, say: 'A seagull has the cap!' },
     { on: 'robbed:graduate', witness: { x: -156, z: -312, r: 12, emote: 'point' }, say: 'My cap!', sound: 'yelp' },
     { on: 'poopNpc:selfie', mood: { role: 'selfie', mood: 'angry' }, witness: { x: -156, z: -310, r: 12, emote: 'alert' } },
     { on: 'spread:2', say: 'The class scatters!', sound: 'gasp' },
   ],
   triggers: [],
   tourists: [],
-  extraTourists: SAY_PIGEON.extraTourists,
+  // the class stands close together, so one splat on a photographer frightens the people next to her, and they frighten the next
+  extraTourists: [
+    { x: -159.1, z: -310, heading: 0, ice: true, role: 'selfie', stationary: true, color: 0xff8fa3 },
+    { x: -156.5, z: -310, heading: 0, role: 'selfie', stationary: true, color: 0x9ec9f0 },
+    { x: -153.9, z: -310, heading: 0, role: 'selfie', stationary: true, color: 0xc7b5e0 },
+    { x: -158.5, z: -313.2, heading: 0.2, holds: 'cap', hat: 'cap', hatColor: 0xffffff, role: 'graduate', color: 0x2f3a55 },
+    { x: -154.5, z: -313.2, heading: -0.2, holds: 'cap', hat: 'cap', hatColor: 0xffffff, role: 'graduate', color: 0x2f3a55 },
+    { x: -160.8, z: -313.6, heading: 0.3, role: 'student', stationary: true, color: 0x2f3a55 },
+    { x: -156.5, z: -314.4, heading: 0, role: 'student', stationary: true, color: 0x2f3a55 },
+    { x: -152.2, z: -313.6, heading: -0.3, role: 'student', stationary: true, color: 0x2f3a55 },
+  ],
   defense: false,
   parTime: 300,
 });

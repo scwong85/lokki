@@ -178,3 +178,23 @@ describe('Act 2 stages 2.1 and 2.2', () => {
     expect(s.tourists.find((t) => t.role === 'walker')?.patrol?.length).toBe(2);
   });
 });
+
+describe('playtest fixes for 2.1 and 2.2', () => {
+  it('the cheese counts at the foot of any lane, and the fish is far from the sausages', () => {
+    const s = setup('a2s1');
+    const t = s.triggers.find((x) => 'event' in x && x.event === 'cheeseCart') as { zone: { minX: number; maxX: number } };
+    expect(t.zone.maxX - t.zone.minX).toBeGreaterThan(15);
+    const fish = s.props.find((p) => p.tag === 'slippery')!;
+    const dog = s.props.find((p) => p.tag === 'cartDog')!;
+    expect(Math.hypot(fish.x - dog.x, fish.z - dog.z)).toBeGreaterThan(10);
+  });
+  it('taking the cap counts however it is picked up (grab:cap)', () => {
+    const caps = setup('a2s2').quests.find((q) => q.id === 'caps')!;
+    expect(caps.objectives[0].event).toBe('grab:cap');
+  });
+  it('the photographers stand within a fright of each other', () => {
+    const p = setup('a2s2').tourists.filter((t) => t.role === 'selfie');
+    expect(p.length).toBe(3);
+    for (let i = 1; i < p.length; i++) expect(Math.hypot(p[i].x - p[i - 1].x, p[i].z - p[i - 1].z)).toBeLessThan(3.4);
+  });
+});
