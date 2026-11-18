@@ -130,6 +130,8 @@ export interface Npc {
   /** Seconds before a fright can spread to them again, and the dance they are in (jukebox). */
   infectedT: number;
   danceT: number;
+  /** Too busy with something to notice the gull (a reaction sets it). */
+  obliviousT: number;
 }
 
 export interface GullInfo {
@@ -176,7 +178,7 @@ export function newNpc(id: number, sp: NpcSpawn): Npc {
     walkPhase: 0, moving: false, speed: 0, seesGull: false, suspicion: 0, nextT: 2,
     wants: sp.wants ?? [], holdType: null, goal: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false,
     mood: 'calm', moodT: 0, craves: sp.craves ?? null, station: null, buyT: 0,
-    follows: sp.follows ?? false, followT: 0, followGap: 2.5, following: false, patrol: sp.patrol ?? null, patrolI: 0, slipT: 0, slideX: 0, slideZ: 0, startleT: 0, tugged: false, infectedT: 0, danceT: 0,
+    follows: sp.follows ?? false, followT: 0, followGap: 2.5, following: false, patrol: sp.patrol ?? null, patrolI: 0, slipT: 0, slideX: 0, slideZ: 0, startleT: 0, tugged: false, infectedT: 0, danceT: 0, obliviousT: 0,
   };
 }
 
@@ -403,6 +405,7 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
   n.t += dt;
   n.noticeCd = Math.max(0, n.noticeCd - dt);
   n.distractT = Math.max(0, n.distractT - dt);
+  n.obliviousT = Math.max(0, n.obliviousT - dt);
   n.speed = 0;
   const calm = n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat';
   if (n.mode === 'yuck') n.speed = 0;
@@ -447,7 +450,7 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
   }
 
   // ---- senses ----
-  n.seesGull = canSee(n, g, ctx.world);
+  n.seesGull = n.obliviousT <= 0 && canSee(n, g, ctx.world);
   for (const s of noises) {
     if (n.role === 'tour' && calm && Math.hypot(s.x - n.x, s.z - n.z) <= t.hearRange.value * s.loud) {
       // a tour-group member follows a sound: they walk over to see what it is

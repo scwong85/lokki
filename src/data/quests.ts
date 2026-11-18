@@ -30,6 +30,8 @@ export interface ObjectiveDef {
   hint?: string;
   /** Shown on the map while this is the first open objective. */
   markers?: Marker[];
+  /** Past-tense caption for the recap after the chain ('The inspector slipped'). Falls back to the text. */
+  recap?: string;
 }
 
 export interface QuestDef {
@@ -50,6 +52,8 @@ export interface QuestDef {
   hidden?: boolean;
   /** A chain: one objective made of steps that each answer the one before. The note shows the steps done, the one to do now, and `?` for the rest. */
   chain?: boolean;
+  /** The joke card (docs/design/puzzle-quality.md): the funny picture, the one insight, the reactions that show it. */
+  joke?: { joke: string; insight: string; reaction: string };
   /** The city notices when this quest starts: the heat is raised to at least this. */
   startHeat?: number;
   /** Shown while the quest is idle and unlocked. */

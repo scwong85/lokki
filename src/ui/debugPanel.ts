@@ -57,7 +57,19 @@ export class DebugPanel {
     const reset = document.createElement('button');
     reset.textContent = 'Reset';
     reset.addEventListener('click', () => location.reload()); // tuning is not persisted yet
-    body.append(copy, reset);
+    const pt = document.createElement('button');
+    pt.textContent = 'Copy playtest notes';
+    pt.addEventListener('click', async () => {
+      const json = (window as unknown as { __lokki?: { playtest?: { json(): string } } }).__lokki?.playtest?.json() ?? '{}';
+      try {
+        await navigator.clipboard.writeText(json);
+        pt.textContent = 'Copied!';
+      } catch {
+        prompt('Copy playtest notes:', json);
+      }
+      setTimeout(() => (pt.textContent = 'Copy playtest notes'), 1500);
+    });
+    body.append(copy, pt, reset);
 
     addEventListener('keydown', (e) => {
       if (e.code === 'F3') {

@@ -307,6 +307,26 @@ export class NpcManager implements NpcHooks {
     return ev;
   }
 
+  /** Everyone with this role changes mood. */
+  moodRole(role: string, mood: 'calm' | 'annoyed' | 'angry' | 'upset' | 'delighted'): void {
+    for (const n of this.npcs) if (n.role === role) setMood(n, mood, this.pending);
+  }
+
+  /** Everyone with this role looks elsewhere for a while: their hands are open. */
+  distractRole(role: string, seconds: number): void {
+    for (const n of this.npcs) if (n.role === role) n.distractT = Math.max(n.distractT, seconds);
+  }
+
+  /** Everyone with this role is too busy to notice the gull for a while. */
+  obliviousRole(role: string, seconds: number): void {
+    for (const n of this.npcs) if (n.role === role) n.obliviousT = Math.max(n.obliviousT, seconds);
+  }
+
+  /** People within r of a point. */
+  near(x: number, z: number, r: number): Npc[] {
+    return this.npcs.filter((n) => Math.hypot(n.x - x, n.z - z) <= r);
+  }
+
   /** BOO from a hiding place: everyone within `r` jumps, drops what they hold and runs. */
   boo(x: number, z: number, r: number): NpcEvent[] {
     const ev: NpcEvent[] = [];
