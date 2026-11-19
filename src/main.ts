@@ -80,6 +80,7 @@ import { activeMarkers } from './gameplay/questMarkers';
 import type { Marker } from './data/quests';
 import { MarkerPool } from './render/markers';
 import { strollerCount, strollerSpawns } from './gameplay/crowd';
+import { ChainDetector, IdleNudge, badgesEarned } from './gameplay/chainReaction';
 import { ItemGlow } from './render/itemGlow';
 import { wantedItems } from './gameplay/itemGlow';
 import { Waypoints } from './ui/waypoints';
@@ -231,6 +232,15 @@ const quests = new QuestLog(greybox ? [] : setup.quests);
   const raw = quests.onEvent.bind(quests);
   quests.onEvent = (type) => {
     runLog.add(simTime, type);
+    nudge.poke();
+    const hit = isGuest() ? null : chain.feed(simTime, type);
+    if (hit) {
+      runLog.add(simTime, `chain:${hit.kinds}`);
+      hud.toast(`Chain reaction! ×${hit.kinds}`, 2);
+      polaroids.request('Chain reaction!');
+      audio.play('chime');
+      if (players.length === 1) slowmoT = Math.max(slowmoT, tuning.chain.slowmo.value);
+    }
     const r = havoc?.feed(type);
     if (r) {
       havocHud.pop(r);
@@ -282,6 +292,8 @@ const runHud = new RunHud(document.body);
 /** Havoc Hour: the chain scorer for a timed chaos run (null in normal levels), the log of everything that happened, and its screen. */
 const havocHud = new HavocHud(document.body);
 const runLog = new RunLog();
+const chain = new ChainDetector();
+const nudge = new IdleNudge();
 let havoc: HavocRun | null = null;
 let havocShown = false;
 const flock = new FlockSystem(scene);
@@ -1038,6 +1050,18 @@ function peck(sw: NonNullable<LevelDef['switches']>[number], pl: Player): void {
   if (npcs && sw.effect === 'alarm') noise(sw.x, sw.z, tuning.button.alarmLoud.value);
   void s;
 }
+/** An idea for a player who has gone quiet: the tip of the first open step, else a nudge to experiment. */
+const IDEAS = ['Try pecking, pushing or dropping something. What happens?', 'Scout from the air: items sparkle when you are near (H: Hawk-eye lights them all).', 'Someone looks busy. What would make them look away?', 'Try a honk (T), a poop, or a dive at something that looks fragile.'];
+function nudgeText(): string {
+  for (const q of quests.quests) {
+    if (q.status !== 'active') continue;
+    const d = setup.quests.find((x) => x.id === q.id);
+    const i = q.objectives.findIndex((o, k) => !o.done && !(d?.objectives[k].after && !q.objectives.find((x) => x.id === d.objectives[k].after)?.done));
+    const hint = i >= 0 ? d?.objectives[i].hint : undefined;
+    if (hint) return `Idea: ${hint}`;
+  }
+  return `Idea: ${IDEAS[(nudge.count - 1) % IDEAS.length]}`;
+}
 /** The boom box plays for a while (a peck, or being picked up) and the crowd follows it wherever it goes. */
 let boomId: number | null = null;
 function startBoombox(p: { id: number; cur: { p: { x: number; y: number; z: number } } }): void {
@@ -1645,6 +1669,8 @@ function restartLevel(mode: 'normal' | 'speedrun'): void {
   posing.clear();
   lastPose = '';
   levelCleared = false;
+  chain.reset();
+  nudge.poke();
   for (const p of players) p.gull.setStart(level.start?.x ?? start.x, level.start?.z ?? start.z);
   lockId = null;
   combo.reset();
@@ -1787,6 +1813,11 @@ function checkLevelDone(): void {
       notes.push(`New skill: ${sk.name}. ${sk.blurb}`);
       announce.show(`New skill: ${sk.name}`, `${sk.blurb}${sk.key ? ` Press ${sk.key}.` : ''} (K: all skills)`, 'learned');
     }
+  }
+  const earned = badgesEarned(runLog.tally(), chain.best).filter((b) => !save.badges.includes(b.id));
+  if (earned.length) {
+    save = { ...save, badges: [...save.badges, ...earned.map((b) => b.id)] };
+    for (const b of earned) notes.push(`Badge: ${b.name}. ${b.blurb}`);
   }
   const idx = LEVELS.findIndex((l) => l.id === level.id);
   const nextLevel = LEVELS.slice(idx + 1).find((l) => !l.sandbox);
@@ -2657,6 +2688,7 @@ startLoop({
     if (npcs && !isGuest()) {
       const g = gull.state;
       boomboxStep();
+      if (!isGuest() && !levelCleared && !level.sandbox && !havoc && nudge.update(dt, tuning.nudge.after.value, tuning.nudge.every.value)) hud.toast(nudgeText(), 4);
       onNpcEvents(npcs.update(dt, players.map((p) => ({ x: p.gull.state.x, y: p.gull.state.y, z: p.gull.state.z, diving: p.gull.state.mode === 'dive', taunt: p.gull.taunting, hidden: hiddenNow(p.gull.state), disguise: disguiseT > 0 }))));
       const stolen = players.some((p) => interaction.beak(p.id).carried?.stolen === true);
       notes(quests.tick({ dt, carryingStolen: stolen, nearestNpc: Math.min(...players.map((p) => npcs.nearestDistance(p.gull.state))) }));
