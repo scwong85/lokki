@@ -1,6 +1,7 @@
 import { createRng } from '../core/rng';
 import { tuning } from '../core/tuning';
 import type { NpcSpawn } from './npc';
+import { pickRoutine, type Poi } from './routine';
 
 const COATS = [0xf7a1c4, 0x9ec9f0, 0xffd36e, 0xb8e0c8, 0xc7b5e0, 0xf2a35e, 0xe8d5c0, 0x9bd8b0];
 
@@ -27,6 +28,7 @@ export function strollerSpawns(
   count: number,
   walkable: (x: number, z: number) => boolean,
   taken: readonly { x: number; z: number }[] = [],
+  pois: readonly Poi[] = [],
 ): NpcSpawn[] {
   const rng = createRng(hash(levelId));
   const out: NpcSpawn[] = [];
@@ -37,7 +39,7 @@ export function strollerSpawns(
     const x = center.x + Math.cos(a) * r, z = center.z + Math.sin(a) * r;
     if (!walkable(x, z) || used.some((u) => Math.hypot(u.x - x, u.z - z) < 3)) continue;
     used.push({ x, z });
-    out.push({ x, z, heading: rng.range(-Math.PI, Math.PI), role: 'stroller', color: COATS[out.length % COATS.length], wander: tuning.crowd.wander.value });
+    out.push({ x, z, heading: rng.range(-Math.PI, Math.PI), role: 'stroller', color: COATS[out.length % COATS.length], wander: tuning.crowd.wander.value, routine: pois.length ? pickRoutine(pois, rng, 3) : undefined });
   }
   return out;
 }

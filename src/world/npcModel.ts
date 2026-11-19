@@ -20,6 +20,7 @@ export interface NpcView {
   t: number;
   holding: boolean;
   distracted: boolean;
+  stance?: 'none' | 'photo' | 'watch' | 'rest';
   /** Floating text above the head (the selfie countdown "3", "2", "1", then a camera flash). */
   label?: string;
   /** World point the right hand reaches for (ice cream, spray bottle). */
@@ -247,11 +248,11 @@ export class NpcModel {
   apply(n: Npc, time: number): void {
     const h = n.holding !== null ? handPos(n) : undefined;
     const label = n.cleanT > 0 ? '\u{1F9FD}' : n.selfie === 'count' ? String(n.selfieCount) : n.selfie === 'open' ? '\u{1F4F7}' : undefined;
-    this.applyView({ x: n.x, y: n.y, z: n.z, heading: n.heading, mode: n.mode, moving: n.moving, walkPhase: n.walkPhase, t: n.t, holding: n.holding !== null, distracted: n.distractT > 0, hand: h, label }, time);
+    this.applyView({ x: n.x, y: n.y, z: n.z, heading: n.heading, mode: n.mode, moving: n.moving, walkPhase: n.walkPhase, t: n.t, holding: n.holding !== null, distracted: n.distractT > 0, stance: n.stance, hand: h, label }, time);
   }
 
   applyView(n: NpcView, time: number): void {
-    const pose = npcPose({ mode: n.mode, moving: n.moving, walkPhase: n.walkPhase, t: n.t, time, holding: n.holding, distracted: n.distracted });
+    const pose = npcPose({ mode: n.mode, moving: n.moving, walkPhase: n.walkPhase, t: n.t, time, holding: n.holding, distracted: n.distracted, stance: n.stance });
     this.root.position.set(n.x, (n.y ?? 0) + (this.skinned ? 0 : pose.bob), n.z);
     this.root.rotation.y = n.heading;
     this.body.rotation.x = pose.lean;

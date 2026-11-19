@@ -79,6 +79,7 @@ import { comfort, followYawStep, FOLLOW_RATE, LookSmoother, smoothAxis, vignette
 import { activeMarkers } from './gameplay/questMarkers';
 import type { Marker } from './data/quests';
 import { MarkerPool } from './render/markers';
+import { poisFor } from './data/pois';
 import { strollerCount, strollerSpawns } from './gameplay/crowd';
 import { ChainDetector, IdleNudge, badgesEarned } from './gameplay/chainReaction';
 import { Timetable } from './gameplay/timetable';
@@ -193,7 +194,7 @@ for (const sp of [...propSpawns, ...setup.props]) interaction.props.spawn(sp);
 const npcs = greybox ? null : new NpcManager(world, interaction.props, scene, walkable);
 if (npcs) {
   for (const sp of setup.tourists) npcs.spawn(sp);
-  for (const sp of strollerSpawns(level.id, firstStart, strollerCount(level), walkable, setup.tourists)) npcs.spawn(sp);
+  for (const sp of strollerSpawns(level.id, firstStart, strollerCount(level), walkable, setup.tourists, poisFor(level.district))) npcs.spawn(sp);
   npcs.stations = [...(level.stations ?? [])];
   interaction.npcs = npcs;
 }
@@ -1074,7 +1075,7 @@ function timetableStep(dt: number): void {
     if (e.kind === 'ferry') {
       audio.play('horn');
       hud.toast('A ferry comes in. Passengers!', 2);
-      npcs.ferryCrowd({ x: WRONG_FERRY.x, z: WRONG_FERRY.z }, firstStart, Math.round(tuning.timetable.crowd.value), 12, (i) => [0xf7a1c4, 0x9ec9f0, 0xffd36e, 0xb8e0c8, 0xc7b5e0, 0xf2a35e][i % 6]);
+      npcs.ferryCrowd({ x: WRONG_FERRY.x, z: WRONG_FERRY.z }, firstStart, Math.round(tuning.timetable.crowd.value), 12, (i) => [0xf7a1c4, 0x9ec9f0, 0xffd36e, 0xb8e0c8, 0xc7b5e0, 0xf2a35e][i % 6], poisFor(level.district));
     } else if (e.kind === 'rain') {
       rain.on = e.phase === 'start';
       if (e.phase === 'start') hud.toast('A shower! The paving gets slippery.', 2);

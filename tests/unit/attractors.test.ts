@@ -59,6 +59,16 @@ describe('attractors', () => {
     expect(Math.hypot(npcs['npcs'][4].x - 80, npcs['npcs'][4].z)).toBeLessThan(40); // out of range: not drawn in
     expect(Math.max(0, ...ev.filter((e): e is Extract<NpcEvent, { type: 'dancing' }> => e.type === 'dancing').map((e) => e.count))).toBeGreaterThanOrEqual(3);
   });
+  it('somebody shielding an ice cream (watching the gull) is drawn in too, and dances', () => {
+    const { npcs, run } = setup([at(12, 0, { ice: true })]);
+    const n = npcs['npcs'][0];
+    n.mode = 'shield';
+    n.shieldFrom = 0;
+    npcs.playMusic(0, 0, 60, 30, 4.5);
+    run(30);
+    expect(Math.hypot(n.x, n.z)).toBeLessThan(6);
+    expect(n.mode).toBe('dance');
+  });
   it('the crowd follows a moving source and drifts off when the music ends', () => {
     const { npcs, run } = setup([at(5, 0), at(-5, 3)]);
     npcs.playMusic(0, 0, 10, 60, 4.5);

@@ -223,6 +223,8 @@ export const tuning = {
   },
   npc: {
     walkSpeed: p(1.4, 0.5, 4, 0.1),
+    stuckSeconds: p(6, 2, 30, 1), // someone sent somewhere who gets no closer for this long, and is nearly there, counts as arrived
+    stuckRange: p(14, 3, 40, 1),
     runSpeed: p(3.6, 1, 7, 0.1), // panic and chase
     turnRate: p(3.5, 0.5, 10, 0.1), // rad/s
     sightRange: p(14, 3, 40, 0.5),

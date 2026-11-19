@@ -129,7 +129,7 @@ export const QUESTS: QuestDef[] = [
     objectives: [
       { id: 'steal', text: 'Steal the map from the pink tourist at the east side', kind: 'event', event: 'snatch:map', hint: STEAL_TIP },
       { id: 'sea', text: 'Drop it in the harbour', kind: 'event', event: 'mapInSea', after: 'steal', hint: 'Fly out over the water and let go (E).' },
-      { id: 'ferry', text: 'Watch them head for the wrong ferry', kind: 'event', event: 'wrongFerry', after: 'sea', markers: [{ x: WRONG_FERRY.x, z: WRONG_FERRY.z, r: 4, label: 'Wrong ferry' }] },
+      { id: 'ferry', text: 'Watch them head for the wrong ferry', kind: 'event', event: 'wrongFerry', after: 'sea', hint: 'Wait a moment: he trudges off to the wrong ferry at the end of the quay. Keep clear of him so he does not notice you.', markers: [{ x: WRONG_FERRY.x, z: WRONG_FERRY.z, r: 4, label: 'Wrong ferry' }] },
     ],
   },
   {
