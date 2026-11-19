@@ -31,7 +31,7 @@ test('Grand Opening: the whole chain runs on real triggers (crowd, scissors, rib
   expect(await done(page, 'opening', 'scissors')).toBe(true);
   expect(await done(page, 'opening', 'cut')).toBe(false);
   // five guests come to the ribbon: the crowd step, and then the cut
-  await page.evaluate(() => { const l = (window as unknown as { __lokki: Lk }).__lokki; l.npcs.npcs.filter((n) => n.role === 'guest').slice(0, 5).forEach((n, i) => { n.x = -12 + i; n.z = -9; }); });
+  await page.evaluate(() => { const l = (window as unknown as { __lokki: Lk }).__lokki; l.npcs.npcs.filter((n) => n.role === 'guest').slice(0, 4).forEach((n, i) => { n.x = -12 + i; n.z = -9; }); });
   await expect.poll(() => done(page, 'opening', 'crowd'), { timeout: 60_000, intervals: [1000] }).toBe(true);
   await expect.poll(() => done(page, 'opening', 'cut'), { timeout: 60_000, intervals: [1000] }).toBe(true);
   expect(await page.evaluate(() => (window as unknown as { __lokki: Lk }).__lokki.npcs.npcs.find((n) => n.role === 'mayor')!.mood)).toBe('angry'); // the world reacts
@@ -56,5 +56,18 @@ test('Fire Drill: the alarm empties the stall and sends the guard off; the sprin
   expect(await page.evaluate(() => (window as unknown as { __lokki: Lk }).__lokki.peckNow())).toBe(true); // the alarm
   await expect.poll(() => done(page, 'drill', 'stall'), { timeout: 300_000, intervals: [3000] }).toBe(true);
   await expect.poll(() => done(page, 'drill', 'guard'), { timeout: 300_000, intervals: [3000] }).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('Grand Opening: pecking the jukebox by the ribbon draws a crowd to the ribbon (the crowd step ticks on its own)', async ({ page }) => {
+  test.setTimeout(500_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await open(page, 'grand-opening');
+  await page.evaluate(() => { const l = (window as unknown as { __lokki: Lk }).__lokki; Object.assign(l.gull.state, { x: -13.5, y: 0.4, z: -9.8, vx: 0, vy: 0, vz: 0, mode: 'ground' }); });
+  await expect.poll(async () => {
+    await page.evaluate(() => (window as unknown as { __lokki: Lk }).__lokki.peckNow()); // keep the music up (a peck during the cooldown does nothing)
+    return done(page, 'opening', 'crowd');
+  }, { timeout: 420_000, intervals: [4000] }).toBe(true);
   expect(errors).toEqual([]);
 });

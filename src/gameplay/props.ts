@@ -238,6 +238,11 @@ export class PropManager {
         p.lastVel.set(0, 0, 0);
         continue;
       }
+      if (!p.body.isDynamic()) {
+        // nobody holds it any more but it is still pinned in the air (a hold that was never released): let it fall
+        p.body.setBodyType(this.phys.R.RigidBodyType.Dynamic, true);
+        p.collider.setCollisionGroups(GROUPS.PROP);
+      }
       if (t.y < -20 || Math.abs(t.x) > 700 || Math.abs(t.z) > 700) {
         this.reset(p);
         continue;
