@@ -193,6 +193,7 @@ export class Interaction {
       if (t) return `Hold E: tug the ${t.def.name} (mash E to pull harder)`;
     }
     if (!pick) return this.npcs?.blockedHint(this.beakPos(s)) ?? '';
+    if (pick.tooHeavy && pick.prop.type === 'boombox') return 'E: peck the boom box (Fat bird carries it)';
     return pick.tooHeavy ? `${pick.prop.def.name}: too heavy` : `E grab ${pick.prop.def.name}`;
   }
 

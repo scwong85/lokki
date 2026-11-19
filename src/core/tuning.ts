@@ -461,6 +461,12 @@ export const tuning = {
     scareRadius: p(5, 1, 12, 0.5), // people this close to the table jump when the cloth is yanked
     launch: p(5, 1, 12, 0.5), // how hard the goods fly off
   },
+  boombox: {
+    seconds: p(30, 5, 120, 1), // how long a peck keeps it playing
+    range: p(30, 8, 80, 1), // how far people hear it and come over
+    gather: p(4.5, 2, 10, 0.5), // they dance this close
+    pulse: p(1.2, 0.3, 4, 0.1), // seconds between calls
+  },
   dance: {
     seconds: p(9, 2, 30, 1), // how long the jukebox makes people dance
     range: p(20, 4, 60, 1), // how far the music carries

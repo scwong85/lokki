@@ -97,6 +97,12 @@ function buildParts(type: PropType, g: THREE.Group): void {
     case 'sausage':
       g.add(mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.24, 8), 0xc4724a, 0, 0, 0).rotateZ(Math.PI / 2));
       break;
+    case 'boombox':
+      g.add(mesh(new THREE.BoxGeometry(0.68, 0.32, 0.28), 0xe05a8b, 0, 0, 0));
+      g.add(mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.04, 12), 0x2a2a35, -0.18, 0, 0.15).rotateX(Math.PI / 2));
+      g.add(mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.04, 12), 0x2a2a35, 0.18, 0, 0.15).rotateX(Math.PI / 2));
+      g.add(mesh(new THREE.BoxGeometry(0.4, 0.03, 0.03), 0xffd36e, 0, 0.19, 0));
+      break;
     case 'sunscreen':
       g.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.18, 8), 0xffd23f, 0, 0, 0));
       g.add(mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.05, 8), 0xffffff, 0, 0.11, 0));

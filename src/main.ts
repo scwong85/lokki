@@ -1004,6 +1004,7 @@ function peck(sw: NonNullable<LevelDef['switches']>[number], pl: Player): void {
   if (npcs && sw.effect === 'dance') {
     const evs = npcs.danceNear(sw.x, sw.z, tuning.dance.range.value, tuning.dance.seconds.value);
     onNpcEvents(evs);
+    npcs.playMusic(sw.x, sw.z, tuning.dance.seconds.value, tuning.dance.range.value, tuning.boombox.gather.value); // free people come over, too
   }
   if (npcs && sw.effect === 'soak') {
     const t = sw.target ?? sw;
@@ -1036,6 +1037,26 @@ function peck(sw: NonNullable<LevelDef['switches']>[number], pl: Player): void {
   if (npcs && sw.effect === 'summon' && sw.role) npcs.sendRole(sw.role, [{ x: sw.x + 1.4, z: sw.z, name: 'bell' }]);
   if (npcs && sw.effect === 'alarm') noise(sw.x, sw.z, tuning.button.alarmLoud.value);
   void s;
+}
+/** The boom box plays for a while (a peck, or being picked up) and the crowd follows it wherever it goes. */
+let boomId: number | null = null;
+function startBoombox(p: { id: number; cur: { p: { x: number; y: number; z: number } } }): void {
+  if (!npcs || isGuest()) return;
+  boomId = p.id;
+  npcs.playMusic(p.cur.p.x, p.cur.p.z, tuning.boombox.seconds.value, tuning.boombox.range.value, tuning.boombox.gather.value);
+  audio.play('jukebox');
+  notes(quests.onEvent('pecked:boombox'));
+  hud.toast('Music! People are coming.', 1.6);
+  fx('stars', { x: p.cur.p.x, y: p.cur.p.y + 0.6, z: p.cur.p.z }, 0.8);
+}
+function boomboxStep(): void {
+  if (boomId === null || !npcs) return;
+  const p = interaction.props.byId(boomId);
+  if (!p || p.broken || !npcs.musicPlaying) {
+    boomId = null;
+    return;
+  }
+  npcs.moveMusic(p.cur.p.x, p.cur.p.z);
 }
 function setupSenate(): void {
   if (tramView) scene.remove(tramView.group);
@@ -2220,6 +2241,7 @@ function onGags(gags: GagEvent[]): void {
         break;
       }
       case 'grab':
+        if (g.prop.type === 'boombox') startBoombox(g.prop);
         tutorial.event('grab');
         audio.play('pop');
         (players[g.by ?? 0]?.gull ?? gull).openBeak(0.25);
@@ -2257,7 +2279,8 @@ function onGags(gags: GagEvent[]): void {
         lastHolder.set(g.prop.id, { by: g.by ?? 0, t: simTime });
         break;
       case 'heavy':
-        hud.toast(`The ${g.prop.def.name} is too heavy!`, 0.8);
+        if (g.prop.type === 'boombox') startBoombox(g.prop);
+        else hud.toast(`The ${g.prop.def.name} is too heavy!`, 0.8);
         break;
       case 'splat':
         audio.play('splat');
@@ -2633,6 +2656,7 @@ startLoop({
     else onGags(interaction.step(dt, simTime, gull.state));
     if (npcs && !isGuest()) {
       const g = gull.state;
+      boomboxStep();
       onNpcEvents(npcs.update(dt, players.map((p) => ({ x: p.gull.state.x, y: p.gull.state.y, z: p.gull.state.z, diving: p.gull.state.mode === 'dive', taunt: p.gull.taunting, hidden: hiddenNow(p.gull.state), disguise: disguiseT > 0 }))));
       const stolen = players.some((p) => interaction.beak(p.id).carried?.stolen === true);
       notes(quests.tick({ dt, carryingStolen: stolen, nearestNpc: Math.min(...players.map((p) => npcs.nearestDistance(p.gull.state))) }));
