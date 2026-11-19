@@ -72,6 +72,14 @@ describe('pigeon gang', () => {
     expect(r.shove!.x).toBeGreaterThan(0);
     expect(g.update(0.1, null, []).shove).toBeNull();
   });
+  it('friends from the start (Pigeon Diplomacy) still take a bun, and it still counts', () => {
+    const g = new PigeonGang(at);
+    g.mode = 'friends';
+    g.wasFriends = true;
+    expect(g.update(0.1, null, [{ type: 'bun', x: 2, z: 0 }]).events.map((e) => e.type)).toEqual(['fed']);
+    expect(g.mode).toBe('friends');
+    expect(g.update(0.1, null, [{ type: 'bun', x: 80, z: 0 }]).events).toEqual([]);
+  });
   it('a bun makes friends, salmiakki scatters, and they come back as friends', () => {
     const g = new PigeonGang(at);
     expect(g.update(0.1, null, [{ type: 'bun', x: 2, z: 0 }]).events.map((e) => e.type)).toContain('befriended');

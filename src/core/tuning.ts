@@ -149,8 +149,6 @@ export const tuning = {
     landSquash: p(0.22, 0, 0.5, 0.01),
     hopStretch: p(0.2, 0, 0.5, 0.01),
     snatchStretch: p(0.3, 0, 0.6, 0.01),
-    snatchSlowmo: p(0.16, 0, 0.5, 0.01), // seconds of slow motion on a snatch (single player only)
-    slowmoScale: p(0.35, 0.1, 1, 0.05),
     emoteSeconds: p(1.6, 0.5, 4, 0.1),
     puffs: p(1, 0, 1, 1), // particles on/off
     shake: p(1, 0, 1, 0.1), // screen shake strength (0 = off)
@@ -212,7 +210,6 @@ export const tuning = {
     window: p(8, 3, 20, 1), // seconds in which different reactions make a chain
     need: p(3, 2, 8, 1), // different reactions for a chain reaction
     cooldown: p(15, 3, 60, 1),
-    slowmo: p(1, 0, 2, 0.1), // seconds of slow motion on a chain (single player)
   },
   nudge: {
     after: p(75, 20, 300, 5), // seconds of quiet before the first idea

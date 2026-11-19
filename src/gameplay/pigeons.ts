@@ -7,7 +7,7 @@ import { tuning } from '../core/tuning';
 export type GangMode = 'guarding' | 'friends' | 'scattered';
 
 export interface GangEvent {
-  type: 'befriended' | 'scattered' | 'back' | 'chase';
+  type: 'befriended' | 'fed' | 'scattered' | 'back' | 'chase';
 }
 
 export interface GangDef {
@@ -54,6 +54,8 @@ export class PigeonGang {
         this.wasFriends = true;
         this.awayT = 0;
         events.push({ type: 'befriended' });
+      } else if (d.type === 'bun' && this.mode === 'friends') {
+        events.push({ type: 'fed' }); // already friends (Pigeon Diplomacy): they still take the bun, and it still counts as winning them over
       } else if (d.type === 'salmiakki' && this.mode !== 'scattered') {
         this.mode = 'scattered';
         this.awayT = t.scatterSeconds.value;

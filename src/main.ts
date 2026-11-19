@@ -240,7 +240,6 @@ const quests = new QuestLog(greybox ? [] : setup.quests);
       hud.toast(`Chain reaction! ×${hit.kinds}`, 2);
       polaroids.request('Chain reaction!');
       audio.play('chime');
-      if (players.length === 1) slowmoT = Math.max(slowmoT, tuning.chain.slowmo.value);
     }
     const r = havoc?.feed(type);
     if (r) {
@@ -1257,13 +1256,13 @@ function stepSenate(dt: number): void {
     }
     for (const e of r.events) {
       if (e.type === 'chase') hud.toast('The Pigeon Gang mobs you! Bring them a bun.', 1.8);
-      else if (e.type === 'befriended' || e.type === 'scattered') {
-        const gone = free.find((p) => p.type === (e.type === 'befriended' ? 'bun' : 'salmiakki') && Math.hypot(p.cur.p.x - gang!.def.x, p.cur.p.z - gang!.def.z) < tuning.pigeons.guardRadius.value + tuning.pigeons.feedRadius.value);
+      else if (e.type === 'befriended' || e.type === 'fed' || e.type === 'scattered') {
+        const gone = free.find((p) => p.type === (e.type === 'scattered' ? 'salmiakki' : 'bun') && Math.hypot(p.cur.p.x - gang!.def.x, p.cur.p.z - gang!.def.z) < tuning.pigeons.guardRadius.value + tuning.pigeons.feedRadius.value);
         if (gone) interaction.props.destroy(gone);
-        hud.toast(e.type === 'befriended' ? 'The Pigeon Gang loves you. You are an honorary pigeon!' : 'Pfft! The pigeons hate salmiakki and scatter!', 2);
-        audio.play(e.type === 'befriended' ? 'pop' : 'chime');
-        fx(e.type === 'befriended' ? 'hearts' : 'feathers', { x: gang.def.x, y: 1, z: gang.def.z }, 1.5);
-        notes(quests.onEvent(e.type === 'befriended' ? 'pigeonsFriends' : 'pigeonsScattered'));
+        hud.toast(e.type === 'scattered' ? 'Pfft! The pigeons hate salmiakki and scatter!' : e.type === 'fed' ? 'The Pigeon Gang gobbles the bun. Old friends!' : 'The Pigeon Gang loves you. You are an honorary pigeon!', 2);
+        audio.play(e.type === 'scattered' ? 'chime' : 'pop');
+        fx(e.type === 'scattered' ? 'feathers' : 'hearts', { x: gang.def.x, y: 1, z: gang.def.z }, 1.5);
+        notes(quests.onEvent(e.type === 'scattered' ? 'pigeonsScattered' : 'pigeonsFriends'));
         notes(quests.onEvent('pigeonsSettled'));
       }
     }
@@ -1484,13 +1483,12 @@ function stepDistrictRemote(dt: number): void {
   }
 }
 
-/** Juice (G1) and co-op teamwork (F1): emotes over heads, particles, slow motion, taunt, passes, spotter, rescue. */
+/** Juice (G1) and co-op teamwork (F1): emotes over heads, particles, taunt, passes, spotter, rescue. */
 const emotes = new Emotes();
 const puffs = new Puffs();
 scene.add(emotes.group, puffs.mesh);
 const passes = new PassTracker();
 const tangle = new Tangle();
-let slowmoT = 0;
 const tauntT: number[] = [];
 const tapHolds: TapHold[] = [];
 const lookSmoother = new LookSmoother();
@@ -1555,7 +1553,6 @@ function resetCoopJuice(): void {
   tangle.reset();
   emotes.clear();
   npcModeSeen.clear();
-  slowmoT = 0;
   for (const p of players) p.gull.taunting = p.gull.tangled = false;
 }
 const NPC_EMOTE: Record<string, EmoteKind | undefined> = { notice: 'alert', shield: 'anger', chase: 'anger', panic: 'sweat', yuck: 'facepalm', cheer: 'heart' };
@@ -2110,8 +2107,7 @@ function notes(list: QuestNote[]): void {
     } else if (n.type === 'won') {
       audio.play('win');
       if (def.chain && !level.sandbox) {
-        // the accomplishment beat: a moment of slow motion on the punchline, then what you did, step by step
-        if (players.length === 1) slowmoT = Math.max(slowmoT, 1.1);
+        // the accomplishment beat: what you did, step by step
         announce.show(`${def.title}: you did it`, recapOf(def.objectives.filter((o) => o.kind === 'event')), 'learned');
         askRating(def.id, def.title);
       }
@@ -2410,8 +2406,7 @@ function onGags(gags: GagEvent[]): void {
           const thief = players[g.by ?? 0] ?? players[0];
           fx('stars', g.prop.cur.p);
           thief.gull.squash.kick(tuning.juice.snatchStretch.value);
-          if (players.length === 1) slowmoT = tuning.juice.snatchSlowmo.value;
-          else if (decoyCovers(g.by ?? 0, thief.gull.state, players.map((pl) => ({ x: pl.gull.state.x, z: pl.gull.state.z, taunt: pl.gull.taunting })))) {
+          if (decoyCovers(g.by ?? 0, thief.gull.state, players.map((pl) => ({ x: pl.gull.state.x, z: pl.gull.state.z, taunt: pl.gull.taunting })))) {
             hud.toast('Perfect decoy! They never looked.', 1.6);
             emoteOver(players.find((pl) => pl !== thief && pl.gull.taunting), 'laugh');
             notes(quests.onEvent('coop:decoy'));
@@ -2488,7 +2483,6 @@ function onGags(gags: GagEvent[]): void {
 applyLevelRules(); // the first level's own rules (heat, lunch, current)
 
 startLoop({
-  timeScale: () => (slowmoT > 0 ? 1 - (1 - tuning.juice.slowmoScale.value) * comfort.mods.slowmo : 1),
   update(dt) {
     simTime += dt;
     music.setTier(musicDirector.update(dt, defense?.heat.tier ?? 0, quests.quests.some((q) => q.id === 'finale' && q.status === 'active')));
@@ -2871,7 +2865,6 @@ startLoop({
       havocHud.results(havoc, Math.max(prev, havoc.score), newBest, `${runLog.events.length} things happened`);
       audio.play('win');
       fx('confetti', { x: gull.state.x, y: gull.state.y + 1.2, z: gull.state.z });
-      if (players.length === 1) slowmoT = 0.8;
     }
     juiceStep(dt);
     updateTargets(targets, dt);
@@ -2962,7 +2955,6 @@ startLoop({
     if (havoc) havocHud.update(havoc);
     emotes.update(frameDt);
     puffs.update(frameDt);
-    slowmoT = Math.max(0, slowmoT - frameDt);
     rippleT -= frameDt;
     if (s.mode === 'ground' && s.overWater && rippleT <= 0) {
       rippleT = Math.hypot(s.vx, s.vz) > 0.4 ? 0.45 : 1.6; // paddling makes more rings than floating
