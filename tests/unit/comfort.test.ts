@@ -7,7 +7,7 @@ import { tuning } from '../../src/core/tuning';
 describe('comfort presets', () => {
   it('get gentler step by step: less FOV kick, roll, shake, look-ahead and slow motion, more vignette and smoothing', () => {
     const s = COMFORT.standard, g = COMFORT.gentle, c = COMFORT.calm;
-    for (const k of ['fovKick', 'roll', 'shake', 'lookAhead', 'slowmo'] as const) {
+    for (const k of ['fovKick', 'roll', 'shake', 'lookAhead'] as const) {
       expect(s[k], k).toBeGreaterThan(g[k]);
       expect(g[k], k).toBeGreaterThanOrEqual(c[k]);
     }

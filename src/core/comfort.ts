@@ -7,12 +7,11 @@ export type Comfort = 'standard' | 'gentle' | 'calm';
 export type CamFollow = 'off' | 'gentle' | 'strong';
 
 export interface ComfortMods {
-  /** Multipliers on the dive FOV kick, camera roll, screen shake, look-ahead and slow-motion. */
+  /** Multipliers on the dive FOV kick, camera roll, screen shakeand look-ahead. */
   fovKick: number;
   roll: number;
   shake: number;
   lookAhead: number;
-  slowmo: number;
   /** How dark the vignette gets at its strongest (0 = never shown). */
   vignette: number;
   /** Time constant (s) of the steering smoothing, and of the mouse-look smoothing. */
@@ -21,9 +20,9 @@ export interface ComfortMods {
 }
 
 export const COMFORT: Record<Comfort, ComfortMods> = {
-  standard: { fovKick: 1, roll: 1, shake: 1, lookAhead: 1, slowmo: 1, vignette: 0, stickTau: 0.07, lookTau: 0 },
-  gentle: { fovKick: 0.4, roll: 0.35, shake: 0.5, lookAhead: 0.5, slowmo: 0.5, vignette: 0.35, stickTau: 0.1, lookTau: 0.03 },
-  calm: { fovKick: 0, roll: 0, shake: 0.15, lookAhead: 0.25, slowmo: 0, vignette: 0.6, stickTau: 0.14, lookTau: 0.06 },
+  standard: { fovKick: 1, roll: 1, shake: 1, lookAhead: 1, vignette: 0, stickTau: 0.07, lookTau: 0 },
+  gentle: { fovKick: 0.4, roll: 0.35, shake: 0.5, lookAhead: 0.5, vignette: 0.35, stickTau: 0.1, lookTau: 0.03 },
+  calm: { fovKick: 0, roll: 0, shake: 0.15, lookAhead: 0.25, vignette: 0.6, stickTau: 0.14, lookTau: 0.06 },
 };
 
 export const FOLLOW_RATE: Record<CamFollow, number> = { off: 0, gentle: 0.5, strong: 1.3 };
