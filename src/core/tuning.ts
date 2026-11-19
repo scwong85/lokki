@@ -190,6 +190,16 @@ export const tuning = {
     noiseSpeed: p(2.5, 0.5, 20, 0.5), // impact speed that makes a noisy prop clatter
     thumpSpeed: p(4.5, 1, 20, 0.5), // any prop landing this hard makes a quiet thump people can hear (tossing things distracts)
   },
+  chain: {
+    window: p(8, 3, 20, 1), // seconds in which different reactions make a chain
+    need: p(3, 2, 8, 1), // different reactions for a chain reaction
+    cooldown: p(15, 3, 60, 1),
+    slowmo: p(1, 0, 2, 0.1), // seconds of slow motion on a chain (single player)
+  },
+  nudge: {
+    after: p(75, 20, 300, 5), // seconds of quiet before the first idea
+    every: p(60, 20, 300, 5), // and between ideas
+  },
   crowd: {
     strollers: p(6, 0, 14, 1), // background walkers added to every campaign stage
     wander: p(14, 4, 30, 1), // how far they stroll from where they start

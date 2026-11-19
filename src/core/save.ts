@@ -38,9 +38,11 @@ export interface SaveData {
   level: string;
   /** Best Havoc Hour score. */
   havocBest: number;
+  /** Badges earned for chains and crowds (ids from gameplay/chainReaction). */
+  badges: string[];
 }
 
-export const blankSave = (): SaveData => ({ version: 1, skills: [], questsWon: [], replayUnlocked: false, extrasOn: false, bestTime: null, speedrunBest: null, clears: 0, muted: false, skin: 'herring', levels: {}, level: 'a1s1', havocBest: 0 });
+export const blankSave = (): SaveData => ({ version: 1, skills: [], questsWon: [], replayUnlocked: false, extrasOn: false, bestTime: null, speedrunBest: null, clears: 0, muted: false, skin: 'herring', levels: {}, level: 'a1s1', havocBest: 0, badges: [] });
 
 /** The small part of the Storage API we need (so tests can pass a fake). */
 export interface StorageLike {
@@ -67,6 +69,7 @@ export function sanitize(raw: unknown): SaveData {
   d.muted = r.muted === true;
   d.levels = sanitizeLevels(r.levels);
   d.level = typeof r.level === 'string' ? r.level : 'sandbox';
+  d.badges = Array.isArray(r.badges) ? (r.badges as unknown[]).filter((x): x is string => typeof x === 'string').slice(0, 50) : [];
   d.havocBest = typeof r.havocBest === 'number' && Number.isFinite(r.havocBest) && r.havocBest > 0 ? Math.floor(r.havocBest) : 0;
   d.skin = typeof r.skin === 'string' && GULL_SKINS.some((s) => s.id === r.skin) ? r.skin : 'herring';
   return d;
