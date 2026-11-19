@@ -114,6 +114,10 @@ export interface Npc {
   holdType: PropType | null;
   /** Forced destination (e.g. the wrong ferry); cleared on arrival. */
   goal: { x: number; z: number; name: string } | null;
+  /** Progress towards the goal: the best distance so far, how long without getting closer, and which goal that is about. */
+  goalD: number;
+  stuckT: number;
+  goalRef: { x: number; z: number; name: string } | null;
   role: string;
   stationary: boolean;
   /** Stroll distance for a free walker, and for a roaming stationary person (0 = stays put). */
@@ -194,7 +198,7 @@ export function newNpc(id: number, sp: NpcSpawn): Npc {
     id, x: sp.x, z: sp.z, heading: h, mode: 'idle', t: 0, homeX: sp.x, homeZ: sp.z, selfie: 'idle', selfieCount: 0, cleanT: 0, cleanSplats: 0, signX: sp.signAt?.x ?? sp.x, signZ: sp.signAt?.z ?? sp.z, targetX: null, targetZ: null,
     holding: null, shieldFrom: h, handAngle: h - Math.PI / 2, distractT: 0, noiseX: 0, noiseZ: 0, lostSightT: 0, noticeCd: 0,
     walkPhase: 0, moving: false, speed: 0, seesGull: false, suspicion: 0, wary: 0, nextT: 2,
-    wants: sp.wants ?? [], holdType: null, goal: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false, wanderR: sp.wander ?? 10, roam: sp.roam ?? 0,
+    wants: sp.wants ?? [], holdType: null, goal: null, goalD: Infinity, stuckT: 0, goalRef: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false, wanderR: sp.wander ?? 10, roam: sp.roam ?? 0,
     mood: 'calm', moodT: 0, craves: sp.craves ?? null, station: null, buyT: 0,
     follows: sp.follows ?? false, followT: 0, followGap: 2.5, following: false, patrol: sp.patrol ?? null, relentless: sp.relentless ?? false, patrolI: 0, slipT: 0, slideX: 0, slideZ: 0, startleT: 0, tugged: false, infectedT: 0, danceT: 0, obliviousT: 0, hadComfort: false, y: sp.y ?? 0,
   };
@@ -579,7 +583,13 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
       if (n.targetX === null || n.targetZ === null) pickWanderTarget(n, ctx);
       const tx = n.targetX!, tz = n.targetZ!;
       n.moving = moveToward(n, tx, tz, t.walkSpeed.value, dt, ctx);
-      if (n.goal && Math.hypot(n.goal.x - n.x, n.goal.z - n.z) < 2) {
+      if (n.goal) {
+        // a wall or a stall in the way: someone who has not got any closer for a while, and is nearly there, counts as arrived
+        const gd = Math.hypot(n.goal.x - n.x, n.goal.z - n.z);
+        if (n.goalRef !== n.goal) { n.goalRef = n.goal; n.goalD = Infinity; n.stuckT = 0; }
+        if (gd < n.goalD - 0.05) { n.goalD = gd; n.stuckT = 0; } else n.stuckT += dt;
+      }
+      if (n.goal && (Math.hypot(n.goal.x - n.x, n.goal.z - n.z) < 2 || (n.stuckT > t.stuckSeconds.value && Math.hypot(n.goal.x - n.x, n.goal.z - n.z) < t.stuckRange.value))) {
         ev.push({ type: 'arrived', npc: n, goal: n.goal.name });
         n.goal = null;
         enter(n, 'idle');

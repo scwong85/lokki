@@ -43,6 +43,8 @@ export class NpcManager implements NpcHooks {
   private items = new Map<number, Prop>();
   /** Who an item was snatched from (quests send the victim somewhere afterwards). */
   private victimOf = new Map<number, number>();
+  /** Who a prop was in the hand of at the start (a fallback victim if its theft was not recorded). */
+  private firstHolder = new Map<number, number>();
   /** Who dropped which prop (so someone who will not let go can chase the thief who picks it up). */
   private droppedBy = new Map<number, number>();
   /** Wanted items being eaten: consumed when the timer runs out. */
@@ -87,6 +89,7 @@ export class NpcManager implements NpcHooks {
     n.holding = prop.id;
     n.holdType = type;
     this.items.set(n.id, prop);
+    this.firstHolder.set(prop.id, n.id);
   }
 
   /**
@@ -641,7 +644,7 @@ export class NpcManager implements NpcHooks {
 
   /** Send whoever an item was snatched from to a place (e.g. the wrong ferry). Returns true if there was such a victim. */
   sendVictimTo(propId: number, x: number, z: number, name: string): boolean {
-    const id = this.victimOf.get(propId);
+    const id = this.victimOf.get(propId) ?? this.firstHolder.get(propId);
     const n = this.npcs.find((o) => o.id === id);
     if (!n) return false;
     n.goal = { x, z, name };
