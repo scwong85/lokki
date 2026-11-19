@@ -32,8 +32,10 @@ export function wantedItems(defs: readonly QuestDef[], quests: readonly QuestSta
       if (o.done) return;
       const od = d.objectives[i];
       if (od.after && !q.objectives.find((x) => x.id === od.after)?.done) return;
-      const m = od.event?.match(/^(?:grab|snatch):(.+)$/);
-      if (m) out.add(m[1]);
+      for (const ev of [od.event, ...(od.events ?? [])]) {
+        const m = ev?.match(/^(?:grab|snatch):(.+)$/);
+        if (m) out.add(m[1]);
+      }
     });
   }
   return out;

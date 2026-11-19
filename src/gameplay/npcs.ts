@@ -474,6 +474,22 @@ export class NpcManager implements NpcHooks {
     return ev;
   }
 
+  /** Watchers (M95): somebody who minds a prop notices when it is gone, and goes after the gull if they can see it. */
+  private watchStep(): NpcEvent[] {
+    const ev: NpcEvent[] = [];
+    for (const n of this.npcs) {
+      if (!n.watch || n.watchCd > 0 || !(n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat' || n.mode === 'notice' || n.mode === 'shield' || n.mode === 'recover')) continue;
+      const p = this.props.props.find((x) => x.tag === n.watch && !x.broken);
+      const gone = !p || p.carried || Math.hypot(p.cur.p.x - p.spawn.x, p.cur.p.z - p.spawn.z) > 2.5 || p.cur.p.y > p.spawn.y + 1.5;
+      if (!gone || !n.seesGull || n.distractT > 0 || n.obliviousT > 0) continue;
+      n.watchCd = 12;
+      n.relentless = true;
+      ev.push(...startle(n, 'snatched')); // they chase
+      ev.push({ type: 'caught', npc: n });
+    }
+    return ev;
+  }
+
   /** A honk sends free people (strollers, passengers, partygoers) away from the gull: about ten metres, on the first walkable side. */
   private shoo(n: Npc, gx: number, gz: number): void {
     const away = Math.atan2(n.z - gz, n.x - gx);
@@ -587,6 +603,7 @@ export class NpcManager implements NpcHooks {
     this.clock += dt;
     ev.push(...this.musicStep(dt, tuning.boombox.pulse.value));
     this.gossipStep();
+    ev.push(...this.watchStep());
     ev.push(...this.crumbStep(dt));
     for (const h of this.hazards) h.ttl -= dt;
     this.hazards = this.hazards.filter((h) => h.ttl > 0);

@@ -67,6 +67,8 @@ export interface NpcSpawn {
   routine?: Poi[];
   /** A stationary person who is not nailed down: strolls up to this far from their spot, waits, and strolls again (never leaves the area). */
   roam?: number;
+  /** Keeps an eye on the prop with this tag: if it is taken away and this person sees the gull, they notice and give chase (M95). */
+  watch?: string;
 }
 
 export interface Npc {
@@ -126,6 +128,8 @@ export interface Npc {
   /** Stroll distance for a free walker, and for a roaming stationary person (0 = stays put). */
   wanderR: number;
   roam: number;
+  watch: string | null;
+  watchCd: number;
   /** The stops of a walk, which one is next, the stop being walked to or lingered at, and what they are doing there. */
   routine: Poi[] | null;
   routineI: number;
@@ -184,7 +188,7 @@ export interface Noise {
   loud: number;
 }
 
-export type NpcEvent = { type: 'reclaimed'; npc: Npc; propType: PropType } | { type: 'cheer'; npc: Npc } | { type: 'arrived'; npc: Npc; goal: string } | { type: 'yuck'; npc: Npc } | { type: 'tookItem'; npc: Npc; propType: PropType } | { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc } | { type: 'selfieClick'; npc: Npc; inFrame: boolean; framed: number; /** Which gulls (by index) are in the picture. */ who: number[] } | { type: 'signSplat'; npc: Npc; splats: number } | { type: 'cleanerRobbed'; npc: Npc } | { type: 'snatchUnseen'; npc: Npc } | { type: 'review'; npc: Npc } | { type: 'soaked'; npc: Npc } | { type: 'scared'; npc: Npc; carried: boolean } | { type: 'mood'; npc: Npc; mood: Mood } | { type: 'atStation'; npc: Npc; station: string } | { type: 'bought'; npc: Npc; station: string; propType: PropType } | { type: 'slipped'; npc: Npc } | { type: 'startled'; npc: Npc; dropped: boolean } | { type: 'spread'; count: number } | { type: 'slam' } | { type: 'boo'; npc: Npc } | { type: 'knockdown'; count: number } | { type: 'dancing'; count: number } | { type: 'crumb'; npc: Npc; count: number } | { type: 'crumbCall'; npc: Npc };
+export type NpcEvent = { type: 'reclaimed'; npc: Npc; propType: PropType } | { type: 'cheer'; npc: Npc } | { type: 'arrived'; npc: Npc; goal: string } | { type: 'yuck'; npc: Npc } | { type: 'tookItem'; npc: Npc; propType: PropType } | { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc } | { type: 'selfieClick'; npc: Npc; inFrame: boolean; framed: number; /** Which gulls (by index) are in the picture. */ who: number[] } | { type: 'signSplat'; npc: Npc; splats: number } | { type: 'cleanerRobbed'; npc: Npc } | { type: 'snatchUnseen'; npc: Npc } | { type: 'review'; npc: Npc } | { type: 'soaked'; npc: Npc } | { type: 'scared'; npc: Npc; carried: boolean } | { type: 'mood'; npc: Npc; mood: Mood } | { type: 'atStation'; npc: Npc; station: string } | { type: 'bought'; npc: Npc; station: string; propType: PropType } | { type: 'slipped'; npc: Npc } | { type: 'startled'; npc: Npc; dropped: boolean } | { type: 'spread'; count: number } | { type: 'slam' } | { type: 'boo'; npc: Npc } | { type: 'knockdown'; count: number } | { type: 'dancing'; count: number } | { type: 'crumb'; npc: Npc; count: number } | { type: 'crumbCall'; npc: Npc } | { type: 'caught'; npc: Npc } | { type: 'danced'; npc: Npc };
 
 export interface NpcCtx {
   world: World;
@@ -206,7 +210,7 @@ export function newNpc(id: number, sp: NpcSpawn): Npc {
     id, x: sp.x, z: sp.z, heading: h, mode: 'idle', t: 0, homeX: sp.x, homeZ: sp.z, selfie: 'idle', selfieCount: 0, cleanT: 0, cleanSplats: 0, signX: sp.signAt?.x ?? sp.x, signZ: sp.signAt?.z ?? sp.z, targetX: null, targetZ: null,
     holding: null, shieldFrom: h, handAngle: h - Math.PI / 2, distractT: 0, noiseX: 0, noiseZ: 0, lostSightT: 0, noticeCd: 0,
     walkPhase: 0, moving: false, speed: 0, seesGull: false, suspicion: 0, wary: 0, nextT: 2,
-    wants: sp.wants ?? [], holdType: null, goal: null, goalD: Infinity, stuckT: 0, goalRef: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false, wanderR: sp.wander ?? 10, roam: sp.roam ?? 0, routine: sp.routine ?? null, routineI: 0, stop: null, stance: 'none',
+    wants: sp.wants ?? [], holdType: null, goal: null, goalD: Infinity, stuckT: 0, goalRef: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false, wanderR: sp.wander ?? 10, roam: sp.roam ?? 0, watch: sp.watch ?? null, watchCd: 0, routine: sp.routine ?? null, routineI: 0, stop: null, stance: 'none',
     mood: 'calm', moodT: 0, craves: sp.craves ?? null, station: null, buyT: 0,
     follows: sp.follows ?? false, followT: 0, followGap: 2.5, following: false, patrol: sp.patrol ?? null, relentless: sp.relentless ?? false, patrolI: 0, slipT: 0, slideX: 0, slideZ: 0, startleT: 0, tugged: false, infectedT: 0, danceT: 0, obliviousT: 0, hadComfort: false, y: sp.y ?? 0,
   };
@@ -432,6 +436,7 @@ export function startDance(n: Npc, seconds: number, ev: NpcEvent[]): void {
   enter(n, 'dance');
   n.danceT = seconds;
   setMood(n, 'delighted', ev);
+  ev.push({ type: 'danced', npc: n });
 }
 
 /**
@@ -457,6 +462,7 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
   n.t += dt;
   n.noticeCd = Math.max(0, n.noticeCd - dt);
   n.wary = Math.max(0, n.wary - dt);
+  n.watchCd = Math.max(0, n.watchCd - dt);
   if (n.mode !== 'idle' && n.mode !== 'walk' && n.stance !== 'none') n.stance = 'none'; // a fright ends the pose
   n.distractT = Math.max(0, n.distractT - dt);
   n.obliviousT = Math.max(0, n.obliviousT - dt);
