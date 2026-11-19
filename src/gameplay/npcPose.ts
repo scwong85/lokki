@@ -9,6 +9,8 @@ export interface NpcPoseInput {
   holding: boolean;
   /** Looking at a noise instead of the gull. */
   distracted?: boolean;
+  /** What a person standing about is doing: taking a photo, looking at something, resting. */
+  stance?: 'none' | 'photo' | 'watch' | 'rest';
 }
 
 export interface NpcPose {
@@ -34,6 +36,11 @@ export function npcPose(i: NpcPoseInput): NpcPose {
 }
 
 function basePose(i: NpcPoseInput): NpcPose {
+  if (i.mode === 'idle' && i.stance && i.stance !== 'none') {
+    if (i.stance === 'photo') return { legSwing: 0, armSwing: 0, armRaise: 0.62 + Math.sin(i.time * 1.3) * 0.04, lean: -0.06, bob: 0, indicator: 'none' }; // phone up
+    if (i.stance === 'watch') return { legSwing: 0, armSwing: 0, armRaise: 0.14, lean: -0.03, bob: Math.sin(i.time * 1.1) * 0.006, indicator: 'none' };
+    return { legSwing: 0, armSwing: 0, armRaise: 0, lean: 0.1, bob: Math.sin(i.time * 1.4) * 0.012, indicator: 'none' }; // a slouch
+  }
   const stride = i.moving ? 1 : 0;
   switch (i.mode) {
     case 'walk':

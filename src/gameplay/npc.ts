@@ -1,3 +1,4 @@
+import { lingerSeconds, standingSpot, type Poi, type Stance } from './routine';
 import { tuning } from '../core/tuning';
 import type { Rng } from '../core/rng';
 import type { World } from '../world/collision';
@@ -62,6 +63,8 @@ export interface NpcSpawn {
   relentless?: boolean;
   /** How far a free walker strolls from where it started (default 10 m). */
   wander?: number;
+  /** A walk of stops (take a photo of the statue, watch the ferry, rest): the places are visited in order, with a pause at each. */
+  routine?: Poi[];
   /** A stationary person who is not nailed down: strolls up to this far from their spot, waits, and strolls again (never leaves the area). */
   roam?: number;
 }
@@ -123,6 +126,11 @@ export interface Npc {
   /** Stroll distance for a free walker, and for a roaming stationary person (0 = stays put). */
   wanderR: number;
   roam: number;
+  /** The stops of a walk, which one is next, the stop being walked to or lingered at, and what they are doing there. */
+  routine: Poi[] | null;
+  routineI: number;
+  stop: Poi | null;
+  stance: Stance;
   mood: Mood;
   /** Seconds in the current mood. */
   moodT: number;
@@ -198,7 +206,7 @@ export function newNpc(id: number, sp: NpcSpawn): Npc {
     id, x: sp.x, z: sp.z, heading: h, mode: 'idle', t: 0, homeX: sp.x, homeZ: sp.z, selfie: 'idle', selfieCount: 0, cleanT: 0, cleanSplats: 0, signX: sp.signAt?.x ?? sp.x, signZ: sp.signAt?.z ?? sp.z, targetX: null, targetZ: null,
     holding: null, shieldFrom: h, handAngle: h - Math.PI / 2, distractT: 0, noiseX: 0, noiseZ: 0, lostSightT: 0, noticeCd: 0,
     walkPhase: 0, moving: false, speed: 0, seesGull: false, suspicion: 0, wary: 0, nextT: 2,
-    wants: sp.wants ?? [], holdType: null, goal: null, goalD: Infinity, stuckT: 0, goalRef: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false, wanderR: sp.wander ?? 10, roam: sp.roam ?? 0,
+    wants: sp.wants ?? [], holdType: null, goal: null, goalD: Infinity, stuckT: 0, goalRef: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false, wanderR: sp.wander ?? 10, roam: sp.roam ?? 0, routine: sp.routine ?? null, routineI: 0, stop: null, stance: 'none',
     mood: 'calm', moodT: 0, craves: sp.craves ?? null, station: null, buyT: 0,
     follows: sp.follows ?? false, followT: 0, followGap: 2.5, following: false, patrol: sp.patrol ?? null, relentless: sp.relentless ?? false, patrolI: 0, slipT: 0, slideX: 0, slideZ: 0, startleT: 0, tugged: false, infectedT: 0, danceT: 0, obliviousT: 0, hadComfort: false, y: sp.y ?? 0,
   };
@@ -319,6 +327,17 @@ function pickWanderTarget(n: Npc, ctx: NpcCtx): void {
     n.targetZ = n.goal.z;
     return;
   }
+  if (n.routine?.length) {
+    const poi = n.routine[n.routineI++ % n.routine.length];
+    for (let k = 0; k < 6; k++) {
+      const s = standingSpot(poi, n.id, k);
+      if (!ctx.walkable(s.x, s.z)) continue;
+      n.targetX = s.x;
+      n.targetZ = s.z;
+      n.stop = poi;
+      return;
+    }
+  }
   for (let i = 0; i < 8; i++) {
     const a = ctx.rng.range(0, Math.PI * 2);
     const r = n.roam > 0 ? ctx.rng.range(Math.min(1.5, n.roam), n.roam) : ctx.rng.range(Math.min(3, n.wanderR), n.wanderR);
@@ -438,6 +457,7 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
   n.t += dt;
   n.noticeCd = Math.max(0, n.noticeCd - dt);
   n.wary = Math.max(0, n.wary - dt);
+  if (n.mode !== 'idle' && n.mode !== 'walk' && n.stance !== 'none') n.stance = 'none'; // a fright ends the pose
   n.distractT = Math.max(0, n.distractT - dt);
   n.obliviousT = Math.max(0, n.obliviousT - dt);
   n.speed = 0;
@@ -553,6 +573,7 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
   switch (n.mode) {
     case 'idle': {
       if (n.distractT > 0) faceToward(n, n.noiseX, n.noiseZ, dt);
+      else if (n.stance !== 'none' && n.stop) faceToward(n, n.stop.x, n.stop.z, dt);
       if (n.stationary && !n.goal && !(n.roam > 0)) {
         n.t = 0; // waiting in place
         break;
@@ -563,6 +584,8 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
           n.nextT = ctx.rng.range(2, 3.5);
         } else {
           enter(n, 'walk');
+          n.stance = 'none';
+          n.stop = null;
           pickWanderTarget(n, ctx);
         }
       }
@@ -594,9 +617,13 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
         n.goal = null;
         enter(n, 'idle');
         n.nextT = ctx.rng.range(2, 5);
-      } else if (Math.hypot(tx - n.x, tz - n.z) < 0.6 || n.t > (n.goal ? 40 : 8)) {
+      } else if (Math.hypot(tx - n.x, tz - n.z) < 0.6 || n.t > (n.goal ? 40 : n.stop ? 30 : 8)) {
         enter(n, 'idle');
         n.nextT = n.roam > 0 ? ctx.rng.range(5, 11) : ctx.rng.range(2, 5);
+        if (n.stop) {
+          n.stance = n.stop.kind; // at the landmark: take the photo, look, rest
+          n.nextT = lingerSeconds(n.stop.kind, ctx.rng);
+        }
       }
       break;
     }

@@ -7,7 +7,8 @@ import { tuning } from '../core/tuning';
 import { restY, type PropType } from '../data/props';
 import type { Target } from './targets';
 import { npcPull } from './tug';
-import { BODY_HEIGHT, BODY_RADIUS, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn, type Station, slip, honkAt, setMood, isCalm, scareJump, startDance, canBeLured, gatherSlot } from './npc';
+import { pickRoutine, type Poi } from './routine';
+import { BODY_HEIGHT, BODY_RADIUS, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn, type Station, slip, honkAt, setMood, isCalm, scareJump, startDance, gatherSlot } from './npc';
 import type { GrabCandidate } from './grab';
 import type { HitSphere } from './poop';
 import type { NpcHooks } from './interaction';
@@ -321,15 +322,16 @@ export class NpcManager implements NpcHooks {
   }
 
   /** A ferry comes in: up to `max` passengers step off at the quay (the same people are reused for the next ferry). */
-  ferryCrowd(at: { x: number; z: number }, to: { x: number; z: number }, count: number, max: number, color: (i: number) => number): void {
+  ferryCrowd(at: { x: number; z: number }, to: { x: number; z: number }, count: number, max: number, color: (i: number) => number, pois: readonly Poi[] = []): void {
     const mine = this.npcs.filter((n) => n.role === 'passenger');
     for (let i = 0; i < count; i++) {
       const x = at.x + (i % 3) * 1.2, z = at.z + Math.floor(i / 3) * 1.2;
       let n = mine[i];
-      if (!n && mine.length + i < max) n = this.spawn({ x, z, heading: 0, role: 'passenger', color: color(i), wander: 16 });
+      if (!n && mine.length + i < max) n = this.spawn({ x, z, heading: 0, role: 'passenger', color: color(i), wander: 16, routine: pois.length ? pickRoutine(pois, this.rng, 3) : undefined });
       if (!n) continue;
       n.x = x;
       n.z = z;
+      if (pois.length) { n.routine = pickRoutine(pois, this.rng, 3); n.routineI = 0; n.stop = null; n.stance = 'none'; }
       n.homeX = to.x; // once ashore they stroll around the square, not back at the quay
       n.homeZ = to.z;
       n.goal = { x: to.x + (i - count / 2) * 1.5, z: to.z, name: 'ferry-walk' };
@@ -388,13 +390,20 @@ export class NpcManager implements NpcHooks {
         } else if (n.danceT > 1) n.danceT = 1; // the music moved on: stop and follow it
         continue;
       }
-      if (!canBeLured(n)) continue;
-      if (d <= m.gather) {
+      if (d <= m.gather && isCalm(n) && (!n.stationary || n.roam > 0)) {
+        // close enough: the music wins even over somebody guarding an ice cream (nobody guards while dancing)
         startDance(n, 4, ev);
         n.heading = Math.atan2(-(m.x - n.x), -(m.z - n.z));
         dancers++;
-      } else {
+      } else if (d > m.gather && isCalm(n) && !n.goal && !n.following && n.buyT === 0 && !n.tugged && (!n.stationary || n.roam > 0)) {
+        // even somebody guarding an ice cream puts it down to the beat: they stop watching the gull and walk over
         const s = gatherSlot(n.id, m.x, m.z);
+        if (n.mode === 'shield' || n.mode === 'notice') {
+          n.mode = 'walk';
+          n.t = 0;
+        }
+        n.obliviousT = Math.max(n.obliviousT, pulse * 3);
+        n.suspicion = 0;
         n.goal = { x: s.x, z: s.z, name: 'music' };
         n.targetX = s.x;
         n.targetZ = s.z;
