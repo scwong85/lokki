@@ -190,6 +190,12 @@ export const tuning = {
     noiseSpeed: p(2.5, 0.5, 20, 0.5), // impact speed that makes a noisy prop clatter
     thumpSpeed: p(4.5, 1, 20, 0.5), // any prop landing this hard makes a quiet thump people can hear (tossing things distracts)
   },
+  crowd: {
+    strollers: p(6, 0, 14, 1), // background walkers added to every campaign stage
+    wander: p(14, 4, 30, 1), // how far they stroll from where they start
+    minRadius: p(6, 2, 20, 1), // spawn ring around the start
+    maxRadius: p(30, 10, 60, 1),
+  },
   npc: {
     walkSpeed: p(1.4, 0.5, 4, 0.1),
     runSpeed: p(3.6, 1, 7, 0.1), // panic and chase

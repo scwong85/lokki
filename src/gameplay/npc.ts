@@ -60,6 +60,10 @@ export interface NpcSpawn {
   y?: number;
   /** Chases a thief for a long time and fast (a graduate whose cap was taken). */
   relentless?: boolean;
+  /** How far a free walker strolls from where it started (default 10 m). */
+  wander?: number;
+  /** A stationary person who is not nailed down: strolls up to this far from their spot, waits, and strolls again (never leaves the area). */
+  roam?: number;
 }
 
 export interface Npc {
@@ -110,6 +114,9 @@ export interface Npc {
   goal: { x: number; z: number; name: string } | null;
   role: string;
   stationary: boolean;
+  /** Stroll distance for a free walker, and for a roaming stationary person (0 = stays put). */
+  wanderR: number;
+  roam: number;
   mood: Mood;
   /** Seconds in the current mood. */
   moodT: number;
@@ -185,7 +192,7 @@ export function newNpc(id: number, sp: NpcSpawn): Npc {
     id, x: sp.x, z: sp.z, heading: h, mode: 'idle', t: 0, homeX: sp.x, homeZ: sp.z, selfie: 'idle', selfieCount: 0, cleanT: 0, cleanSplats: 0, signX: sp.signAt?.x ?? sp.x, signZ: sp.signAt?.z ?? sp.z, targetX: null, targetZ: null,
     holding: null, shieldFrom: h, handAngle: h - Math.PI / 2, distractT: 0, noiseX: 0, noiseZ: 0, lostSightT: 0, noticeCd: 0,
     walkPhase: 0, moving: false, speed: 0, seesGull: false, suspicion: 0, nextT: 2,
-    wants: sp.wants ?? [], holdType: null, goal: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false,
+    wants: sp.wants ?? [], holdType: null, goal: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false, wanderR: sp.wander ?? 10, roam: sp.roam ?? 0,
     mood: 'calm', moodT: 0, craves: sp.craves ?? null, station: null, buyT: 0,
     follows: sp.follows ?? false, followT: 0, followGap: 2.5, following: false, patrol: sp.patrol ?? null, relentless: sp.relentless ?? false, patrolI: 0, slipT: 0, slideX: 0, slideZ: 0, startleT: 0, tugged: false, infectedT: 0, danceT: 0, obliviousT: 0, hadComfort: false, y: sp.y ?? 0,
   };
@@ -308,7 +315,7 @@ function pickWanderTarget(n: Npc, ctx: NpcCtx): void {
   }
   for (let i = 0; i < 8; i++) {
     const a = ctx.rng.range(0, Math.PI * 2);
-    const r = ctx.rng.range(3, 10);
+    const r = n.roam > 0 ? ctx.rng.range(Math.min(1.5, n.roam), n.roam) : ctx.rng.range(Math.min(3, n.wanderR), n.wanderR);
     const x = n.homeX + Math.cos(a) * r, z = n.homeZ + Math.sin(a) * r;
     if (ctx.walkable(x, z)) {
       n.targetX = x;
@@ -528,7 +535,7 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
   switch (n.mode) {
     case 'idle': {
       if (n.distractT > 0) faceToward(n, n.noiseX, n.noiseZ, dt);
-      if (n.stationary && !n.goal) {
+      if (n.stationary && !n.goal && !(n.roam > 0)) {
         n.t = 0; // waiting in place
         break;
       }
@@ -565,7 +572,7 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
         n.nextT = ctx.rng.range(2, 5);
       } else if (Math.hypot(tx - n.x, tz - n.z) < 0.6 || n.t > (n.goal ? 40 : 8)) {
         enter(n, 'idle');
-        n.nextT = ctx.rng.range(2, 5);
+        n.nextT = n.roam > 0 ? ctx.rng.range(5, 11) : ctx.rng.range(2, 5);
       }
       break;
     }

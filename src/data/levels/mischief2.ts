@@ -129,7 +129,7 @@ export const HUSH_PUPPY: LevelDef = {
   tourists: [],
   extraTourists: [
     { x: -194, z: -49, heading: 0.5, role: 'owner', stationary: true, color: 0x9ec9f0 },
-    { x: -188, z: -49, heading: -0.4, role: 'picnic', stationary: true, color: 0xf7a1c4 },
+    { x: -188, z: -49, heading: -0.4, role: 'picnic', stationary: true, roam: 3, color: 0xf7a1c4 },
   ],
   extraProps: [
     { type: 'sausage', x: -190.4, y: restY('sausage'), z: -52 },

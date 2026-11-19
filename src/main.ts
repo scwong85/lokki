@@ -79,6 +79,7 @@ import { comfort, followYawStep, FOLLOW_RATE, LookSmoother, smoothAxis, vignette
 import { activeMarkers } from './gameplay/questMarkers';
 import type { Marker } from './data/quests';
 import { MarkerPool } from './render/markers';
+import { strollerCount, strollerSpawns } from './gameplay/crowd';
 import { ItemGlow } from './render/itemGlow';
 import { wantedItems } from './gameplay/itemGlow';
 import { Waypoints } from './ui/waypoints';
@@ -190,6 +191,7 @@ for (const sp of [...propSpawns, ...setup.props]) interaction.props.spawn(sp);
 const npcs = greybox ? null : new NpcManager(world, interaction.props, scene, walkable);
 if (npcs) {
   for (const sp of setup.tourists) npcs.spawn(sp);
+  for (const sp of strollerSpawns(level.id, firstStart, strollerCount(level), walkable, setup.tourists)) npcs.spawn(sp);
   npcs.stations = [...(level.stations ?? [])];
   interaction.npcs = npcs;
 }
