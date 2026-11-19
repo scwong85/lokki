@@ -46,3 +46,24 @@ test('stage 2.5: a bun by the statue befriends the pigeons, and there is a bun t
   await expect.poll(() => page.evaluate(() => (window as unknown as { __lokki: Lk }).__lokki.quests.quests.find((q) => q.id === 'ceremony')!.objectives.find((o) => o.id === 'pigeons')!.done), { timeout: 20_000 }).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('stage 2.5 with Pigeon Diplomacy (friends from the start): a bun still wins the first step', async ({ page }) => {
+  test.setTimeout(240_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.addInitScript(() => localStorage.setItem('lokki-options-v1', JSON.stringify({ graphics: 'low', tutorialDone: true })));
+  await page.goto('/?level=a2s5&play');
+  await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 120_000 });
+  type Lk = {
+    skills: { unlock(id: string): unknown };
+    loadLevel(id: string): void;
+    interaction: { props: { spawn(s: object): unknown } };
+    quests: { quests: { id: string; objectives: { id: string; done: boolean }[] }[] };
+    gang: { mode: string };
+  };
+  await page.evaluate(() => { const l = (window as unknown as { __lokki: Lk }).__lokki; l.skills.unlock('pigeons'); l.loadLevel('a2s5'); });
+  expect(await page.evaluate(() => (window as unknown as { __lokki: Lk }).__lokki.gang.mode)).toBe('friends');
+  await page.evaluate(() => (window as unknown as { __lokki: Lk }).__lokki.interaction.props.spawn({ type: 'bun', x: -156.5, y: 0.4, z: -296.5 }));
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __lokki: Lk }).__lokki.quests.quests.find((q) => q.id === 'ceremony')!.objectives.find((o) => o.id === 'pigeons')!.done), { timeout: 60_000, intervals: [500] }).toBe(true);
+  expect(errors).toEqual([]);
+});

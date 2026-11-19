@@ -1257,13 +1257,13 @@ function stepSenate(dt: number): void {
     }
     for (const e of r.events) {
       if (e.type === 'chase') hud.toast('The Pigeon Gang mobs you! Bring them a bun.', 1.8);
-      else if (e.type === 'befriended' || e.type === 'scattered') {
-        const gone = free.find((p) => p.type === (e.type === 'befriended' ? 'bun' : 'salmiakki') && Math.hypot(p.cur.p.x - gang!.def.x, p.cur.p.z - gang!.def.z) < tuning.pigeons.guardRadius.value + tuning.pigeons.feedRadius.value);
+      else if (e.type === 'befriended' || e.type === 'fed' || e.type === 'scattered') {
+        const gone = free.find((p) => p.type === (e.type === 'scattered' ? 'salmiakki' : 'bun') && Math.hypot(p.cur.p.x - gang!.def.x, p.cur.p.z - gang!.def.z) < tuning.pigeons.guardRadius.value + tuning.pigeons.feedRadius.value);
         if (gone) interaction.props.destroy(gone);
-        hud.toast(e.type === 'befriended' ? 'The Pigeon Gang loves you. You are an honorary pigeon!' : 'Pfft! The pigeons hate salmiakki and scatter!', 2);
-        audio.play(e.type === 'befriended' ? 'pop' : 'chime');
-        fx(e.type === 'befriended' ? 'hearts' : 'feathers', { x: gang.def.x, y: 1, z: gang.def.z }, 1.5);
-        notes(quests.onEvent(e.type === 'befriended' ? 'pigeonsFriends' : 'pigeonsScattered'));
+        hud.toast(e.type === 'scattered' ? 'Pfft! The pigeons hate salmiakki and scatter!' : e.type === 'fed' ? 'The Pigeon Gang gobbles the bun. Old friends!' : 'The Pigeon Gang loves you. You are an honorary pigeon!', 2);
+        audio.play(e.type === 'scattered' ? 'chime' : 'pop');
+        fx(e.type === 'scattered' ? 'feathers' : 'hearts', { x: gang.def.x, y: 1, z: gang.def.z }, 1.5);
+        notes(quests.onEvent(e.type === 'scattered' ? 'pigeonsScattered' : 'pigeonsFriends'));
         notes(quests.onEvent('pigeonsSettled'));
       }
     }
