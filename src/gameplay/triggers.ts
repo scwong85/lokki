@@ -11,7 +11,7 @@ export interface Zone3 {
 
 export type TriggerDef =
   /** A loose prop (not in the beak or a hand) of this type/tag lies in the zone (or floats in the sea). */
-  | { id: string; kind: 'propInZone'; event: string; propType?: PropType; tag?: string; zone: Zone3 | 'sea'; count?: number }
+  | { id: string; kind: 'propInZone'; event: string; propType?: PropType; tag?: string; zone: Zone3 | 'sea'; count?: number; /** Only counts once this other trigger has fired (the crowd must be there before the ribbon is cut). */ needs?: string }
   /** At least `count` people with this role stand in the zone. */
   | { id: string; kind: 'npcsInZone'; event: string; role: string; zone: Zone3; count: number }
   /** The zone empties: it held at least `min` people (any role with '*') and now holds at most `max`. Fires once, when the square has been cleared. */
@@ -87,6 +87,7 @@ export class TriggerSystem {
         if (d.kind === 'gullInZone' && d.repeat) this.inside.set(d.id, inZone(d.zone, ctx.gull.x, ctx.gull.y, ctx.gull.z) && (!d.grounded || ctx.gull.grounded)); // keep track while nobody wants it
         continue;
       }
+      if (d.kind === 'propInZone' && d.needs && !this.fired.has(d.needs)) continue;
       let hit: boolean;
       if (d.kind === 'carryLanded') hit = !!ctx.carried && ctx.carried.type === d.propType && (d.airborne || ctx.gull.grounded) && ctx.gull.y >= d.minY && (!d.zone || inZone(d.zone, ctx.gull.x, ctx.gull.y, ctx.gull.z));
       else if (d.kind === 'npcsInZone') hit = (ctx.npcs ?? []).filter((n) => (d.role === '*' || n.role === d.role) && inZone(d.zone, n.x, 0, n.z)).length >= d.count;

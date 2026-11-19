@@ -97,6 +97,11 @@ function buildParts(type: PropType, g: THREE.Group): void {
     case 'sausage':
       g.add(mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.24, 8), 0xc4724a, 0, 0, 0).rotateZ(Math.PI / 2));
       break;
+    case 'scissors':
+      for (const s of [-1, 1]) g.add(mesh(new THREE.BoxGeometry(0.34, 0.025, 0.05), 0xc9d3dc, 0.02, 0, s * 0.03).rotateY(s * 0.12)); // two blades
+      g.add(mesh(new THREE.TorusGeometry(0.05, 0.015, 5, 8), 0xd9402f, -0.16, 0, 0.06).rotateX(Math.PI / 2));
+      g.add(mesh(new THREE.TorusGeometry(0.05, 0.015, 5, 8), 0xd9402f, -0.16, 0, -0.06).rotateX(Math.PI / 2));
+      break;
     case 'pie':
       g.add(mesh(new THREE.CylinderGeometry(0.27, 0.25, 0.14, 16), 0xe8a93a, 0, 0, 0)); // the golden crust
       g.add(mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.03, 16), 0xf5c75a, 0, 0.08, 0));

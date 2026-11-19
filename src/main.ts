@@ -80,7 +80,7 @@ import { activeMarkers } from './gameplay/questMarkers';
 import type { Marker } from './data/quests';
 import { MarkerPool } from './render/markers';
 import { ladderSteps } from './gameplay/hintLadder';
-import { buildDecor, TABLE_TOP } from './render/decor';
+import { buildDecor, setRibbonCut, TABLE_TOP } from './render/decor';
 import { poisFor } from './data/pois';
 import { strollerCount, strollerSpawns } from './gameplay/crowd';
 import { ChainDetector, IdleNudge, badgesEarned } from './gameplay/chainReaction';
@@ -239,6 +239,7 @@ const quests = new QuestLog(greybox ? [] : setup.quests);
   const raw = quests.onEvent.bind(quests);
   quests.onEvent = (type) => {
     runLog.add(simTime, type);
+    if (type === 'ribbonCut') for (const r of decorRibbons) setRibbonCut(r, true);
     nudge.poke();
     const hit = isGuest() ? null : chain.feed(simTime, type);
     if (hit) {
@@ -913,16 +914,20 @@ function hiddenNow(s: { x: number; z: number; vx: number; vz: number; mode: stri
   return (level.hides ?? []).some((h) => Math.hypot(h.x - s.x, h.z - s.z) < h.r);
 }
 const switchCd = new Map<string, number>();
+/** The ribbon decor of this level (it is cut when the `ribbonCut` event fires). */
+const decorRibbons: THREE.Group[] = [];
 const decorBoxes: import('@dimforge/rapier3d-compat').Collider[] = [];
 function setupSwitches(): void {
   for (const g of switchViews) scene.remove(g);
   switchViews.length = 0;
   for (const c of decorBoxes) phys.removeCollider(c);
   decorBoxes.length = 0;
+  decorRibbons.length = 0;
   for (const d of level.decor ?? []) {
     const view = buildDecor(d);
     scene.add(view);
     switchViews.push(view);
+    if (d.kind === 'ribbon') decorRibbons.push(view);
     if (d.kind === 'table') decorBoxes.push(phys.addStaticBox(d.x, TABLE_TOP.y, d.z, TABLE_TOP.hx, TABLE_TOP.hy, TABLE_TOP.hz)); // (tables are not rotated in the levels that use them)
   }
   dominoes = [];
