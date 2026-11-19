@@ -190,6 +190,24 @@ export const tuning = {
     noiseSpeed: p(2.5, 0.5, 20, 0.5), // impact speed that makes a noisy prop clatter
     thumpSpeed: p(4.5, 1, 20, 0.5), // any prop landing this hard makes a quiet thump people can hear (tossing things distracts)
   },
+  timetable: {
+    ferryFirst: p(50, 10, 300, 5), // seconds until the first ferry comes in
+    ferryGap: p(150, 30, 600, 10),
+    rainFirst: p(90, 20, 600, 10),
+    rainGap: p(200, 40, 900, 10),
+    rainSeconds: p(30, 5, 90, 1), // how long a shower lasts
+    gustFirst: p(70, 10, 600, 5),
+    gustGap: p(120, 20, 600, 10),
+    gustSeconds: p(5, 1, 20, 1),
+    gustPush: p(3.2, 0.5, 8, 0.1), // how hard a gust shoves light things
+    crowd: p(6, 2, 12, 1), // passengers who step off a ferry
+    puddles: p(1.4, 0.3, 5, 0.1), // seconds between new puddles in the rain
+  },
+  gossip: {
+    seconds: p(90, 10, 300, 5), // how long people stay wary after seeing a panic nearby
+    range: p(14, 3, 40, 1),
+    suspicion: p(2.2, 1, 5, 0.1), // how much faster a wary person grows suspicious
+  },
   chain: {
     window: p(8, 3, 20, 1), // seconds in which different reactions make a chain
     need: p(3, 2, 8, 1), // different reactions for a chain reaction

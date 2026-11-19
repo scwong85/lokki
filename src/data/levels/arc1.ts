@@ -19,6 +19,7 @@ const DOCK_MESS = { x: 6, z: -10.5 };
  * gulls must also finish. Design: docs/design/arcs.md and docs/design/puzzle-quality.md.
  */
 export const FIRST_LIGHT = stage(1, 1, {
+  timetable: ['ferry'],
   name: '1.1 First Light',
   blurb: 'Dawn on the quay: fly, dive, snatch, carry.',
   intro: { title: 'First Light', text: 'Dawn on the Market Square. Fly with Space, dive with Shift, grab with E. Breakfast is in the tourists\' hands.' },

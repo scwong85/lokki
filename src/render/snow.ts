@@ -7,12 +7,13 @@ export class Snow {
   private pos: Float32Array;
   private n = 0;
 
-  constructor() {
+  /** How fast the drops fall (1 = snowflakes; rain is much faster) and how much they drift sideways. */
+  constructor(private fall = 1, private drift = 1, color = 0xffffff, size = 0.18) {
     const max = 600;
     this.pos = new Float32Array(max * 3);
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
-    this.points = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.18, transparent: true, opacity: 0.85, depthWrite: false }));
+    this.points = new THREE.Points(geo, new THREE.PointsMaterial({ color, size, transparent: true, opacity: 0.85, depthWrite: false }));
     this.points.frustumCulled = false;
     this.points.visible = false;
     this.seed();
@@ -37,8 +38,8 @@ export class Snow {
     this.points.geometry.setDrawRange(0, this.n);
     for (let i = 0; i < this.n; i++) {
       let x = this.pos[i * 3], y = this.pos[i * 3 + 1];
-      y -= (1.6 + (i % 5) * 0.25) * dt;
-      x += Math.sin(time * 0.7 + i) * 0.4 * dt;
+      y -= (1.6 + (i % 5) * 0.25) * this.fall * dt;
+      x += Math.sin(time * 0.7 + i) * 0.4 * this.drift * dt;
       if (y < 0) y += 30;
       this.pos[i * 3] = x;
       this.pos[i * 3 + 1] = y;

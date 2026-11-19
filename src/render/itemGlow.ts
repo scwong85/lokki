@@ -29,7 +29,7 @@ export class ItemGlow {
     }
   }
 
-  update(props: readonly Prop[], from: { x: number; y: number; z: number }, wanted: ReadonlySet<string>, hawk: boolean, mode: Highlight, time: number): void {
+  update(props: readonly Prop[], from: { x: number; y: number; z: number }, wanted: ReadonlySet<string>, hawk: boolean, mode: Highlight, time: number, spots: readonly { x: number; y: number; z: number }[] = []): void {
     let n = 0;
     if (mode !== 'off') {
       for (const p of props) {
@@ -46,6 +46,20 @@ export class ItemGlow {
         s.position.set(pos.x, pos.y + 0.35 + Math.sin(time * 2.4 + p.id) * 0.08, pos.z);
         s.scale.setScalar((isWanted ? 1.5 : 0.9) * pulse * (1 + d * 0.012));
         s.material.opacity = lvl;
+      }
+    }
+    // a faint, slow sparkle where something hidden is going on (a secret to-do): closer than 30 m, or any distance under Hawk-eye
+    if (mode !== 'off') {
+      for (const sp of spots) {
+        if (n >= this.max) break;
+        const d = Math.hypot(sp.x - from.x, sp.z - from.z);
+        const lvl = glowLevel(d, false, hawk, mode === 'strong' ? 'strong' : 'subtle') > 0 || d < 30 ? 0.5 + Math.sin(time * 1.5 + sp.x) * 0.25 : 0;
+        if (lvl <= 0) continue;
+        const s = this.pool[n++];
+        s.visible = true;
+        s.position.set(sp.x, sp.y + 1.2 + Math.sin(time + sp.z) * 0.2, sp.z);
+        s.scale.setScalar(2.2);
+        s.material.opacity = lvl * 0.7;
       }
     }
     for (let i = n; i < this.pool.length; i++) this.pool[i].visible = false;

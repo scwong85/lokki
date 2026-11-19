@@ -27,6 +27,7 @@ export const SANDBOX: LevelDef = {
   blurb: 'The whole Market Square: every quest, the finale and the city at full alert.',
   district: 'kauppatori',
   sandbox: true,
+  timetable: ['ferry', 'rain', 'gust'],
   quests: ['icecream', 'swap', 'cap', 'bun', 'map', 'date', 'toy', 'finale', 'extras', 'bonus'],
   triggers: ['capDelivered', 'mapInSea', 'finaleStart', 'bunRing'],
   tourists: 'all',

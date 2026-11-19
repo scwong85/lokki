@@ -302,6 +302,40 @@ export class NpcManager implements NpcHooks {
     return k;
   }
 
+  private lastMode = new Map<number, string>();
+
+  /** Somebody panics or gives chase: the people close by notice, and stay wary of gulls for a while. */
+  private gossipStep(): void {
+    for (const n of this.npcs) {
+      const was = this.lastMode.get(n.id);
+      this.lastMode.set(n.id, n.mode);
+      if (was === n.mode || (n.mode !== 'panic' && n.mode !== 'chase')) continue;
+      for (const o of this.npcs) {
+        if (o === n || o.mode === 'panic' || o.mode === 'chase') continue;
+        if (Math.hypot(o.x - n.x, o.z - n.z) <= tuning.gossip.range.value) o.wary = Math.max(o.wary, tuning.gossip.seconds.value);
+      }
+    }
+  }
+
+  /** A ferry comes in: up to `max` passengers step off at the quay (the same people are reused for the next ferry). */
+  ferryCrowd(at: { x: number; z: number }, to: { x: number; z: number }, count: number, max: number, color: (i: number) => number): void {
+    const mine = this.npcs.filter((n) => n.role === 'passenger');
+    for (let i = 0; i < count; i++) {
+      const x = at.x + (i % 3) * 1.2, z = at.z + Math.floor(i / 3) * 1.2;
+      let n = mine[i];
+      if (!n && mine.length + i < max) n = this.spawn({ x, z, heading: 0, role: 'passenger', color: color(i), wander: 16 });
+      if (!n) continue;
+      n.x = x;
+      n.z = z;
+      n.homeX = to.x; // once ashore they stroll around the square, not back at the quay
+      n.homeZ = to.z;
+      n.goal = { x: to.x + (i - count / 2) * 1.5, z: to.z, name: 'ferry-walk' };
+      n.targetX = n.goal.x;
+      n.targetZ = n.goal.z;
+      n.nextT = 0;
+    }
+  }
+
   /** A playing music source (a boom box, a jukebox): free people come over and dance until `until`. */
   music: { x: number; z: number; until: number; range: number; gather: number } | null = null;
   private musicT = 0;
@@ -467,6 +501,7 @@ export class NpcManager implements NpcHooks {
     const ctx = { world: this.world, walkable: this.walkable, rng: this.rng, stations: this.stations };
     this.clock += dt;
     ev.push(...this.musicStep(dt, tuning.boombox.pulse.value));
+    this.gossipStep();
     for (const h of this.hazards) h.ttl -= dt;
     this.hazards = this.hazards.filter((h) => h.ttl > 0);
     // the conga line: followers stay behind the gull in the order they are in (nearest first)
