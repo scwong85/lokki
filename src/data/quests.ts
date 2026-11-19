@@ -23,6 +23,8 @@ export interface ObjectiveDef {
   /** 'event': done after `count` matching events. 'escape': carry the stolen item far away from everyone for a while. */
   kind: 'event' | 'escape';
   event?: QuestEventType;
+  /** More ways to finish the same step (M95): any one of these events counts, as well as `event`. */
+  events?: QuestEventType[];
   count?: number;
   /** Only counts once this objective is done. */
   after?: string;

@@ -138,9 +138,10 @@ export class QuestLog {
       if (q.status === 'idle') for (const e of d.startOn ?? []) w.add(e);
       if (q.status !== 'active') continue;
       d.objectives.forEach((od, i) => {
-        if (q.objectives[i].done || od.kind !== 'event' || !od.event) return;
+        if (q.objectives[i].done || od.kind !== 'event' || !(od.event || od.events)) return;
         if (od.after && !q.objectives.find((x) => x.id === od.after)?.done) return;
-        w.add(od.event);
+        if (od.event) w.add(od.event);
+        for (const e of od.events ?? []) w.add(e);
       });
     }
     return w;
@@ -181,7 +182,7 @@ export class QuestLog {
       if (q.status !== 'active') continue;
       d.objectives.forEach((od, i) => {
         const o = q.objectives[i];
-        if (o.done || od.kind !== 'event' || od.event !== type) return;
+        if (o.done || od.kind !== 'event' || !(od.event === type || od.events?.includes(type))) return;
         if (od.after && !q.objectives.find((x) => x.id === od.after)?.done) return;
         o.count++;
         if (o.count >= (od.count ?? 1)) {

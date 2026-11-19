@@ -2227,6 +2227,11 @@ function onNpcEvents(evs: NpcEvent[]): void {
       audio.play('thud');
       notes(quests.onEvent(`knockdown:${e.count}`));
       if (e.count === 4) polaroids.request('Strike!');
+    } else if (e.type === 'caught') {
+      emoteAtNpc(e.npc, 'anger');
+      audio.play('gasp');
+      hud.toast('Spotted with the loot!', 1.4);
+      notes(quests.onEvent(`caught:${e.npc.role}`));
     } else if (e.type === 'crumbCall') {
       emoteAtNpc(e.npc, 'alert'); // somebody spotted the food
     } else if (e.type === 'crumb') {
@@ -2275,7 +2280,10 @@ function onNpcEvents(evs: NpcEvent[]): void {
     } else if (e.type === 'snatchUnseen') {
       hud.toast('They never saw it coming.', 1.6);
       notes(quests.onEvent('snatchUnseen'));
+    } else if (e.type === 'danced') {
+      notes(quests.onEvent(`dancing:${e.npc.role}`));
     } else if (e.type === 'distracted') {
+      notes(quests.onEvent(`distract:${e.npc.role}`)); // somebody looked away (holding something or not)
       if (e.npc.holding !== null) {
         hud.toast('They look away...', 1.2);
         notes(quests.onEvent('distract'));

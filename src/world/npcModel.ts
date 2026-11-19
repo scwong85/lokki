@@ -21,6 +21,8 @@ export interface NpcView {
   holding: boolean;
   distracted: boolean;
   stance?: 'none' | 'photo' | 'watch' | 'rest';
+  /** 0..1, how suspicious of the gull they are (the gauge over their head). */
+  suspicion?: number;
   /** Floating text above the head (the selfie countdown "3", "2", "1", then a camera flash). */
   label?: string;
   /** World point the right hand reaches for (ice cream, spray bottle). */
@@ -62,6 +64,8 @@ export class NpcModel {
   private armR = new THREE.Group();
   private indicator = new THREE.Group();
   private alarmMat = new THREE.MeshBasicMaterial({ color: 0xffd166 });
+  /** Attention gauge (M95): a dot over the head that swells and reddens as the person grows suspicious of the gull. */
+  private gauge = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffe08a, depthTest: false, transparent: true, opacity: 0.9 }));
   private exclaim = new THREE.Group();
   private question = new THREE.Group();
 
@@ -185,6 +189,9 @@ export class NpcModel {
     this.indicator.position.y = 2.65;
     this.indicator.visible = false;
     this.root.add(this.indicator);
+    this.gauge.renderOrder = 11;
+    this.gauge.visible = false;
+    this.root.add(this.gauge);
 
     if (opts.umbrella) {
       const u = new THREE.Group();
@@ -248,7 +255,7 @@ export class NpcModel {
   apply(n: Npc, time: number): void {
     const h = n.holding !== null ? handPos(n) : undefined;
     const label = n.cleanT > 0 ? '\u{1F9FD}' : n.selfie === 'count' ? String(n.selfieCount) : n.selfie === 'open' ? '\u{1F4F7}' : undefined;
-    this.applyView({ x: n.x, y: n.y, z: n.z, heading: n.heading, mode: n.mode, moving: n.moving, walkPhase: n.walkPhase, t: n.t, holding: n.holding !== null, distracted: n.distractT > 0, stance: n.stance, hand: h, label }, time);
+    this.applyView({ x: n.x, y: n.y, z: n.z, heading: n.heading, mode: n.mode, moving: n.moving, walkPhase: n.walkPhase, t: n.t, holding: n.holding !== null, distracted: n.distractT > 0, stance: n.stance, suspicion: n.suspicion, hand: h, label }, time);
   }
 
   applyView(n: NpcView, time: number): void {
@@ -261,6 +268,13 @@ export class NpcModel {
     this.question.visible = pose.indicator === 'distracted';
     this.alarmMat.color.setHex(pose.indicator === 'alarm' ? 0xff6b6b : 0xffd166);
     this.indicator.position.y = (this.skinned ? 2.3 : 2.65) + Math.sin(time * 8) * 0.05;
+    const sus = n.suspicion ?? 0;
+    this.gauge.visible = sus > 0.06 && pose.indicator === 'none';
+    if (this.gauge.visible) {
+      this.gauge.position.y = this.skinned ? 2.3 : 2.65;
+      this.gauge.scale.setScalar(0.5 + sus * 1.6);
+      (this.gauge.material as THREE.MeshBasicMaterial).color.setHex(sus > 0.75 ? 0xff6b6b : sus > 0.4 ? 0xffb347 : 0xffe08a);
+    }
     this.setLabel(n.label);
     if (this.skinned) {
       this.animateSkinned(n, pose.armRaise, time);
