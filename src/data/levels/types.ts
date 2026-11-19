@@ -5,6 +5,7 @@ import type { SkillId } from '../skills';
 import type { NpcSpawn, Station } from '../../gameplay/npc';
 import type { PropSpawn } from '../../gameplay/props';
 import type { DeterrentId } from '../../gameplay/deterrents';
+import type { PropType } from '../props';
 
 /**
  * One level: a short visit to a district with its own to-do list, cast and rules (M12). Plain data; the game builds
@@ -72,6 +73,8 @@ export interface LevelDef {
   /** Ids of existing world triggers (from `TRIGGERS`) this level needs. */
   triggers: string[];
   extraTriggers?: TriggerDef[];
+  /** Food lying on the ground (these prop types, untagged) draws free people who are not busy: they walk over and eat it (M91). */
+  crumbs?: PropType[];
   /** Which of the shared tourists take part: their `role`s ('any' = every tourist without a special role), or 'all'. */
   tourists: 'all' | string[];
   /** Stalls where people who crave something can buy it (comfort food). The goods are props placed on the counter. */

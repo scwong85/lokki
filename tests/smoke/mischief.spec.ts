@@ -18,7 +18,7 @@ const open = async (page: Page, level: string) => {
 };
 
 test('Wet Floor: a puddle on the route makes the pacing inspector slip, and his lunch is up for grabs', async ({ page }) => {
-  test.setTimeout(240_000);
+  test.setTimeout(360_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   const l = await open(page, 'wet-floor');
@@ -28,7 +28,7 @@ test('Wet Floor: a puddle on the route makes the pacing inspector slip, and his 
   await l((x) => { x.quests.onEvent('trapSet'); return 0; });
   // put a puddle on his path a little ahead of where he is, and wait for him to walk into it
   await l((x) => { const n = x.npcs.npcs.find((m) => m.role === 'inspector')!; x.npcs.addHazard(n.x + 4, -20, 60, 2.5); x.npcs.addHazard(n.x - 4, -20, 60, 2.5); return 0; });
-  await expect.poll(steps, { timeout: 120_000 }).toEqual(['trap', 'slip']);
+  await expect.poll(steps, { timeout: 300_000, intervals: [2000] }).toEqual(['trap', 'slip']); // he only walks half the time (the other half he eats), and the sim runs slowly in software rendering
   expect(await l((x) => x.npcs.npcs.find((m) => m.role === 'inspector')!.mood)).not.toBe('calm');
   // his lunch is on the ground (or being carried off by nobody): a free bun tagged for the quest exists
   expect(await l((x) => x.interaction.props.props.some((p) => p.tag === 'inspLunch' && p.heldBy === null))).toBe(true);

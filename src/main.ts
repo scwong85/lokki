@@ -196,6 +196,7 @@ if (npcs) {
   for (const sp of setup.tourists) npcs.spawn(sp);
   for (const sp of strollerSpawns(level.id, firstStart, strollerCount(level), walkable, setup.tourists, poisFor(level.district))) npcs.spawn(sp);
   npcs.stations = [...(level.stations ?? [])];
+  npcs.crumbs = [...(level.crumbs ?? [])];
   interaction.npcs = npcs;
 }
 const makeDefense = (): CityDefense | null => (greybox || !setup.defense ? null : new CityDefense(world, scene, walkable));
@@ -1761,7 +1762,7 @@ function loadLevel(id: string): void {
   npcs?.clearAll();
   for (const sp of [...propSpawns, ...setup.props]) interaction.props.spawn(sp);
   if (npcs) for (const sp of setup.tourists) npcs.spawn(sp);
-  if (npcs) npcs.stations = [...(level.stations ?? [])];
+  if (npcs) { npcs.stations = [...(level.stations ?? [])]; npcs.crumbs = [...(level.crumbs ?? [])]; npcs.crumbsEaten = 0; }
   defense?.dispose();
   defense = makeDefense();
   heatMeter?.remove();
@@ -2205,6 +2206,10 @@ function onNpcEvents(evs: NpcEvent[]): void {
       audio.play('thud');
       notes(quests.onEvent(`knockdown:${e.count}`));
       if (e.count === 4) polaroids.request('Strike!');
+    } else if (e.type === 'crumb') {
+      audio.play('pop');
+      fx('hearts', { x: e.npc.x, y: 1.8, z: e.npc.z }, 0.6);
+      for (let i = 1; i <= e.count; i++) notes(quests.onEvent(`crumbs:${i}`));
     } else if (e.type === 'dancing') {
       for (let i = 1; i <= e.count; i++) notes(quests.onEvent(`dancers:${i}`));
       if (e.count >= 4) polaroids.request('Dance party!');

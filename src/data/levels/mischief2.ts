@@ -181,3 +181,74 @@ export const BLOCK_PARTY: LevelDef = {
   start: { x: -14, z: -34 },
   parTime: 300,
 };
+
+const sq = (x: number, z: number, r: number) => ({ minX: x - r, maxX: x + r, minZ: z - r, maxZ: z + r });
+const BYSTANDERS = (pts: [number, number][]) => pts.map(([x, z], i) => ({ x, z, heading: i, role: 'bystander', color: [0xf7a1c4, 0x9ec9f0, 0xffd36e, 0xb8e0c8, 0xc7b5e0, 0xf2a35e][i % 6] }));
+
+/** M17. Shoo! (repulsor): a honk sends free people away; clear the stall, then take what the crowd was guarding. */
+export const SHOO: LevelDef = {
+  id: 'shoo',
+  name: 'M17. Shoo!',
+  blurb: 'A honk sends the crowd packing. Clear the stall, take the cone.',
+  district: 'kauppatori',
+  series: 'Mischief (new)',
+  quests: [],
+  extraQuests: [
+    {
+      id: 'shoochain',
+      title: 'Shoo!',
+      teaser: 'Honk the crowd away from the stall, then take the cone.',
+      timed: false,
+      chain: true,
+      objectives: [
+        { id: 'clear', text: 'Honk the crowd away from the stall (T)', kind: 'event', event: 'squareClear', hint: 'Stand near the crowd and honk: everyone jumps and walks away from you.', markers: [{ x: -6, z: -20, r: 7, label: 'The crowd' }] },
+        { id: 'cone', text: 'Take the cone from the empty stall', kind: 'event', event: 'grab:shooCone', after: 'clear', hint: 'Nobody is guarding it now: grab it (E).' },
+        { ...finish, after: 'cone' },
+      ],
+    },
+  ],
+  triggers: [],
+  extraTriggers: [{ id: 'squareClear', kind: 'npcsClear', event: 'squareClear', role: 'bystander', zone: sq(-6, -20, 7), min: 4, max: 0 }],
+  tourists: [],
+  extraTourists: BYSTANDERS([[-9, -22], [-3, -22], [-6, -17], [-10, -18], [-2, -18], [-6, -24]]),
+  extraProps: [{ type: 'icecream', x: -6, y: restY('icecream'), z: -20, tag: 'shooCone' }],
+  strollers: 0,
+  defense: false,
+  start: { x: -6, z: -34 },
+  parTime: 240,
+};
+
+/** M18. Breadcrumbs (food attractor): drop buns in a line and a crowd comes to eat, and gathers where the trail ends. */
+export const BREADCRUMBS: LevelDef = {
+  id: 'breadcrumbs',
+  name: 'M18. Breadcrumbs',
+  blurb: 'Hungry people follow a trail of buns. Lay one, and gather a crowd.',
+  district: 'kauppatori',
+  series: 'Mischief (new)',
+  quests: [],
+  extraQuests: [
+    {
+      id: 'crumbchain',
+      title: 'Breadcrumbs',
+      teaser: 'Lay a trail of buns and gather four people at the bench.',
+      timed: false,
+      chain: true,
+      objectives: [
+        { id: 'bun', text: 'Pick up a bun (E)', kind: 'event', event: 'grab:bun', hint: 'The buns lie on the ground by the crates.', markers: [{ x: -24, z: -30, r: 4, label: 'Buns' }] },
+        { id: 'trail', text: 'Let three buns be eaten', kind: 'event', event: 'crumbs:3', after: 'bun', hint: 'Put a bun down (E) near a hungry person. Land beside them, drop it, step back.' },
+        { id: 'crowd', text: 'Get four people to the bench', kind: 'event', event: 'crowdAtBench', after: 'trail', hint: 'Drop the next buns by the bench: the crowd comes to eat them there.', markers: [{ x: -6, z: -14, r: 6, label: 'Bench' }] },
+        { ...finish, after: 'crowd' },
+      ],
+    },
+  ],
+  triggers: [],
+  extraTriggers: [{ id: 'crowdAtBench', kind: 'npcsInZone', event: 'crowdAtBench', role: 'bystander', zone: sq(-6, -14, 6), count: 4 }],
+  tourists: [],
+  extraTourists: BYSTANDERS([[-16, -22], [-14, -8], [4, -8], [6, -20], [-22, -16], [2, -26]]),
+  extraProps: [-26, -25, -24, -23, -22].map((x) => ({ type: 'bun' as const, x, y: restY('bun'), z: -30 })),
+  crumbs: ['bun'],
+  strollers: 0,
+  defense: false,
+  start: { x: -24, z: -36 },
+  parTime: 300,
+};
