@@ -3,7 +3,7 @@ import type { QuestState } from './quest';
 
 /** Which map markers to show now: the open objectives' spots of each active quest, and the start spot of an unlocked idle quest. */
 /** Markers for quests to start and objectives in progress (`activeOnly`: skip the not-yet-started quests). */
-export function activeMarkers(defs: readonly QuestDef[], quests: readonly QuestState[], activeOnly = false): Marker[] {
+export function activeMarkers(defs: readonly QuestDef[], quests: readonly QuestState[], activeOnly = false, rungOf?: (quest: string, objective: string) => number): Marker[] {
   const out: Marker[] = [];
   for (const q of quests) {
     const d = defs.find((x) => x.id === q.id);
@@ -20,7 +20,8 @@ export function activeMarkers(defs: readonly QuestDef[], quests: readonly QuestS
       if (o.done) return;
       const od = d.objectives[i];
       if (od.after && !q.objectives.find((x) => x.id === od.after)?.done) return;
-      if (od.markers) out.push(...od.markers);
+      // a step on the hint ladder shows its marker only once the ladder has got that far (rung 2: a cue from the world)
+      if (od.markers && !(od.nudge && rungOf && rungOf(q.id, od.id) < 2)) out.push(...od.markers);
     });
   }
   return out;
