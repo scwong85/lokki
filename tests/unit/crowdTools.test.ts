@@ -68,6 +68,15 @@ describe('crumbs (food draws free people)', () => {
     expect(npcs.crumbsEaten).toBe(3);
     for (const n of npcs['npcs']) expect(Math.hypot(n.homeX, n.homeZ)).toBeLessThan(3);
   });
+  it('somebody 15 m away still spots it (and shows it), but not somebody 40 m away', () => {
+    const { npcs, props, run } = setup([at(15, 0), at(40, 0)]);
+    npcs.crumbs = ['bun'];
+    props.spawn({ type: 'bun', x: 0, y: 0.1, z: 0 });
+    const ev = run(1.5);
+    expect(ev.filter((e) => e.type === 'crumbCall')).toHaveLength(1);
+    expect(npcs['npcs'][0].goal?.name).toBe('crumb');
+    expect(npcs['npcs'][1].goal).toBeNull();
+  });
   it('nothing happens when the level has no crumbs', () => {
     const { npcs, props, run } = setup([at(2, 0)]);
     props.spawn({ type: 'bun', x: 0, y: 0.1, z: 0 });

@@ -173,6 +173,8 @@ if (greybox) {
 }
 // the gull starts where the level says (a stage in Senate Square must not begin at the Market Square)
 const firstStart = { x: level.start?.x ?? start.x, z: level.start?.z ?? start.z };
+/** Where the gull starts in the level that is loaded now (levels change in place, so this is not a constant). */
+const levelStart = (): { x: number; z: number } => ({ x: level.start?.x ?? start.x, z: level.start?.z ?? start.z });
 const gull = new Gull(firstStart);
 phys.createGullBody(GULL_RADIUS, firstStart.x, GULL_RADIUS, firstStart.z);
 const interaction = new Interaction(phys, world, scene);
@@ -194,7 +196,7 @@ for (const sp of [...propSpawns, ...setup.props]) interaction.props.spawn(sp);
 const npcs = greybox ? null : new NpcManager(world, interaction.props, scene, walkable);
 if (npcs) {
   for (const sp of setup.tourists) npcs.spawn(sp);
-  for (const sp of strollerSpawns(level.id, firstStart, strollerCount(level), walkable, setup.tourists, poisFor(level.district))) npcs.spawn(sp);
+  for (const sp of strollerSpawns(level.id, levelStart(), strollerCount(level), walkable, setup.tourists, poisFor(level.district))) npcs.spawn(sp);
   npcs.stations = [...(level.stations ?? [])];
   npcs.crumbs = [...(level.crumbs ?? [])];
   interaction.npcs = npcs;
@@ -1076,7 +1078,7 @@ function timetableStep(dt: number): void {
     if (e.kind === 'ferry') {
       audio.play('horn');
       hud.toast('A ferry comes in. Passengers!', 2);
-      npcs.ferryCrowd({ x: WRONG_FERRY.x, z: WRONG_FERRY.z }, firstStart, Math.round(tuning.timetable.crowd.value), 12, (i) => [0xf7a1c4, 0x9ec9f0, 0xffd36e, 0xb8e0c8, 0xc7b5e0, 0xf2a35e][i % 6], poisFor(level.district));
+      npcs.ferryCrowd({ x: WRONG_FERRY.x, z: WRONG_FERRY.z }, levelStart(), Math.round(tuning.timetable.crowd.value), 12, (i) => [0xf7a1c4, 0x9ec9f0, 0xffd36e, 0xb8e0c8, 0xc7b5e0, 0xf2a35e][i % 6], poisFor(level.district));
     } else if (e.kind === 'rain') {
       rain.on = e.phase === 'start';
       if (e.phase === 'start') hud.toast('A shower! The paving gets slippery.', 2);
@@ -1761,7 +1763,11 @@ function loadLevel(id: string): void {
   interaction.props.clearAll();
   npcs?.clearAll();
   for (const sp of [...propSpawns, ...setup.props]) interaction.props.spawn(sp);
-  if (npcs) for (const sp of setup.tourists) npcs.spawn(sp);
+  if (npcs) {
+    for (const sp of setup.tourists) npcs.spawn(sp);
+    // the background crowd: the same people whether the level is the first one loaded or picked from the menu later
+    for (const sp of strollerSpawns(level.id, levelStart(), strollerCount(level), walkable, setup.tourists, poisFor(level.district))) npcs.spawn(sp);
+  }
   if (npcs) { npcs.stations = [...(level.stations ?? [])]; npcs.crumbs = [...(level.crumbs ?? [])]; npcs.crumbsEaten = 0; }
   defense?.dispose();
   defense = makeDefense();
@@ -2206,6 +2212,8 @@ function onNpcEvents(evs: NpcEvent[]): void {
       audio.play('thud');
       notes(quests.onEvent(`knockdown:${e.count}`));
       if (e.count === 4) polaroids.request('Strike!');
+    } else if (e.type === 'crumbCall') {
+      emoteAtNpc(e.npc, 'alert'); // somebody spotted the food
     } else if (e.type === 'crumb') {
       audio.play('pop');
       fx('hearts', { x: e.npc.x, y: 1.8, z: e.npc.z }, 0.6);
