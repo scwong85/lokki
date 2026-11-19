@@ -317,7 +317,7 @@ export const KEY_STAGE = stage(2, 5, {
       chain: true,
       joke: { joke: 'During the mayor\'s big moment a seagull poses for the front page, takes the golden key while the bell rings, and gives it to the pigeons.', insight: 'The bell makes everyone look up at the tower: that is when the key is unguarded.', reaction: 'The pigeons adopt you, the front page gets a bird, the mayor looks at the bell, and the key is gone.' },
       objectives: [
-        { id: 'pigeons', text: 'Win the Pigeon Gang over with a bun', kind: 'event', event: 'pigeonsFriends', recap: 'You won the Pigeon Gang over', hint: 'Put a bun down by the statue.', markers: [{ x: EMPEROR.x, z: EMPEROR.z, r: 8, label: 'Pigeon Gang' }] },
+        { id: 'pigeons', text: 'Win the Pigeon Gang over with a bun', kind: 'event', event: 'pigeonsFriends', recap: 'You won the Pigeon Gang over', hint: 'Take a bun (the picnic bench, or the one lying by the statue) and put it down by the statue.', markers: [{ x: EMPEROR.x, z: EMPEROR.z, r: 8, label: 'Pigeon Gang' }] },
         { id: 'photo', text: 'Pose in the front-page photo (keys 1 to 4)', kind: 'event', event: 'pose:any', after: 'pigeons', recap: 'posed for the front page', hint: 'The front-page photographer counts 3, 2, 1 in front of the stage. Strike a pose at the click.', markers: [{ x: -156.5, z: -312, r: 4, label: 'Photographer' }] },
         { id: 'bell', text: 'Wait for the bell', kind: 'event', event: 'bell', after: 'photo', recap: 'waited for the bell', hint: 'The bell rings every 30 seconds.' },
         { id: 'key', text: 'Grab the golden key from the podium', kind: 'event', event: 'grab:key', after: 'bell', recap: 'took the key while everyone looked up', hint: 'Everyone looks at the tower for six seconds. The mayor guards the podium the rest of the time.', markers: [{ x: -156.5, z: -322, r: 3, label: 'Key' }] },
@@ -358,11 +358,11 @@ export const KEY_STAGE = stage(2, 5, {
   triggers: [],
   tourists: [],
   extraTourists: [
-    ...(KEY_TO_THE_CITY.extraTourists ?? []).slice(0, 3),
+    ...(KEY_TO_THE_CITY.extraTourists ?? []), // includes the picnicker with the bun for the pigeons (the library's bun is a snack for the other to-do)
     ...(LIBRARY_RULE.extraTourists ?? []),
     ...(CONCERT_NIGHT.extraTourists ?? []).map((t) => (t.role === 'conductor' ? { ...t, y: STAGE.top } : t)),
   ],
-  extraProps: [...(KEY_TO_THE_CITY.extraProps ?? []), ...(CONCERT_NIGHT.extraProps ?? [])],
+  extraProps: [...(KEY_TO_THE_CITY.extraProps ?? []), ...(CONCERT_NIGHT.extraProps ?? []), { type: 'bun', x: -147, y: restY('bun'), z: -296 }], // a spare bun by the statue, so the pigeons can always be won
   defense: false,
   parTime: 480,
   reward: 'pigeons',
