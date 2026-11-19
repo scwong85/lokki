@@ -469,6 +469,78 @@ export class NpcManager implements NpcHooks {
       if (Math.hypot(n.x - x, n.z - z) > range) continue;
       const r = honkAt(n, x, z, ev);
       if (r === 'drop') this.dropHeld(n);
+      if (r && !n.goal && (!n.stationary || n.roam > 0) && !n.following && n.buyT === 0) this.shoo(n, x, z);
+    }
+    return ev;
+  }
+
+  /** A honk sends free people (strollers, passengers, partygoers) away from the gull: about ten metres, on the first walkable side. */
+  private shoo(n: Npc, gx: number, gz: number): void {
+    const away = Math.atan2(n.z - gz, n.x - gx);
+    for (const off of [0, 0.7, -0.7, 1.4, -1.4]) {
+      const x = n.x + Math.cos(away + off) * 10, z = n.z + Math.sin(away + off) * 10;
+      if (!this.walkable(x, z)) continue;
+      n.goal = { x, z, name: 'shoo' };
+      n.targetX = x;
+      n.targetZ = z;
+      return;
+    }
+  }
+
+  /** Food lying about: free people who are not busy walk over and eat it. Set by the level. */
+  crumbs: PropType[] = [];
+  private crumbT = 0;
+  private crumbTarget = new Map<number, number>();
+  crumbsEaten = 0;
+
+  private crumbStep(dt: number): NpcEvent[] {
+    if (!this.crumbs.length) return [];
+    this.crumbT -= dt;
+    if (this.crumbT > 0) return [];
+    this.crumbT = 0.8;
+    const ev: NpcEvent[] = [];
+    const loose = this.props.free().filter((p) => this.crumbs.includes(p.type) && p.tag === undefined && !p.lost && p.cur.p.y < 0.8 && !p.stolen);
+    // people already walking to a crumb: eat it when they get there; forget it when it is gone
+    for (const [nid, pid] of [...this.crumbTarget]) {
+      const n = this.npcs.find((o) => o.id === nid);
+      const p = loose.find((o) => o.id === pid);
+      if (!n || !p) {
+        if (n?.goal?.name === 'crumb') n.goal = null;
+        this.crumbTarget.delete(nid);
+        continue;
+      }
+      const near = Math.hypot(p.cur.p.x - n.x, p.cur.p.z - n.z) < 2.4; // a walker counts as arrived two metres out, and their goal is gone by then
+      if (!near && n.goal?.name !== 'crumb') {
+        this.crumbTarget.delete(nid); // something else took them away
+        continue;
+      }
+      if (near) {
+        this.props.destroy(p);
+        n.goal = null;
+        n.homeX = n.x; // they stay around where they ate: a crowd gathers where the crumbs lead
+        n.homeZ = n.z;
+        this.crumbTarget.delete(nid);
+        this.crumbsEaten++;
+        ev.push({ type: 'crumb', npc: n, count: this.crumbsEaten });
+        setMood(n, 'delighted', ev);
+      }
+    }
+    const taken = new Set(this.crumbTarget.values());
+    for (const p of loose) {
+      if (taken.has(p.id)) continue;
+      let best: Npc | null = null;
+      let bd = tuning.crowd.crumbRange.value;
+      for (const n of this.npcs) {
+        if (!(n.mode === 'idle' || n.mode === 'walk') || n.goal || n.following || n.buyT !== 0 || n.tugged || (n.stationary && !(n.roam > 0)) || n.holding !== null) continue;
+        const d = Math.hypot(n.x - p.cur.p.x, n.z - p.cur.p.z);
+        if (d < bd) { bd = d; best = n; }
+      }
+      if (!best) continue;
+      best.goal = { x: p.cur.p.x, z: p.cur.p.z, name: 'crumb' };
+      best.targetX = p.cur.p.x;
+      best.targetZ = p.cur.p.z;
+      best.nextT = 0;
+      this.crumbTarget.set(best.id, p.id);
     }
     return ev;
   }
@@ -514,6 +586,7 @@ export class NpcManager implements NpcHooks {
     this.clock += dt;
     ev.push(...this.musicStep(dt, tuning.boombox.pulse.value));
     this.gossipStep();
+    ev.push(...this.crumbStep(dt));
     for (const h of this.hazards) h.ttl -= dt;
     this.hazards = this.hazards.filter((h) => h.ttl > 0);
     // the conga line: followers stay behind the gull in the order they are in (nearest first)

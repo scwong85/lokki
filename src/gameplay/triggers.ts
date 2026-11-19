@@ -14,6 +14,8 @@ export type TriggerDef =
   | { id: string; kind: 'propInZone'; event: string; propType?: PropType; tag?: string; zone: Zone3 | 'sea'; count?: number }
   /** At least `count` people with this role stand in the zone. */
   | { id: string; kind: 'npcsInZone'; event: string; role: string; zone: Zone3; count: number }
+  /** The zone empties: it held at least `min` people (any role with '*') and now holds at most `max`. Fires once, when the square has been cleared. */
+  | { id: string; kind: 'npcsClear'; event: string; role: string; zone: Zone3; min: number; max: number }
   /** The gull stands/flies in the zone. */
   | { id: string; kind: 'gullInZone'; event: string; zone: Zone3; grounded?: boolean; /** Fires every time the gull enters, not just once. */ repeat?: boolean }
   /** The gull has paddled on the sea for this many seconds in total. */
@@ -58,6 +60,7 @@ export class TriggerSystem {
   private index = new Map<string, number>();
   private swimT = new Map<string, number>();
   private inside = new Map<string, boolean>();
+  private wasFull = new Set<string>();
 
   constructor(private defs: readonly TriggerDef[]) {}
 
@@ -86,7 +89,12 @@ export class TriggerSystem {
       }
       let hit: boolean;
       if (d.kind === 'carryLanded') hit = !!ctx.carried && ctx.carried.type === d.propType && (d.airborne || ctx.gull.grounded) && ctx.gull.y >= d.minY && (!d.zone || inZone(d.zone, ctx.gull.x, ctx.gull.y, ctx.gull.z));
-      else if (d.kind === 'npcsInZone') hit = (ctx.npcs ?? []).filter((n) => n.role === d.role && inZone(d.zone, n.x, 0, n.z)).length >= d.count;
+      else if (d.kind === 'npcsInZone') hit = (ctx.npcs ?? []).filter((n) => (d.role === '*' || n.role === d.role) && inZone(d.zone, n.x, 0, n.z)).length >= d.count;
+      else if (d.kind === 'npcsClear') {
+        const here = (ctx.npcs ?? []).filter((n) => (d.role === '*' || n.role === d.role) && inZone(d.zone, n.x, 0, n.z)).length;
+        if (here >= d.min) this.wasFull.add(d.id);
+        hit = this.wasFull.has(d.id) && here <= d.max;
+      }
       else if (d.kind === 'swim') {
         if (ctx.gull.grounded && !ctx.isLand(ctx.gull.x, ctx.gull.z) && ctx.gull.y < 1.5) this.swimT.set(d.id, (this.swimT.get(d.id) ?? 0) + (ctx.dt ?? 0));
         hit = (this.swimT.get(d.id) ?? 0) >= d.seconds;
@@ -122,5 +130,6 @@ export class TriggerSystem {
     this.index.clear();
     this.swimT.clear();
     this.inside.clear();
+    this.wasFull.clear();
   }
 }
