@@ -235,7 +235,7 @@ export const BREADCRUMBS: LevelDef = {
       chain: true,
       objectives: [
         { id: 'bun', text: 'Pick up a bun (E)', kind: 'event', event: 'grab:bun', hint: 'The buns lie on the ground by the crates.', markers: [{ x: -24, z: -30, r: 4, label: 'Buns' }] },
-        { id: 'trail', text: 'Let three buns be eaten', kind: 'event', event: 'crumbs:3', after: 'bun', hint: 'Put a bun down (E) near a hungry person. Land beside them, drop it, step back.' },
+        { id: 'trail', text: 'Let three buns be eaten', kind: 'event', event: 'crumbs:3', after: 'bun', hint: 'Put a bun down (E) anywhere in the square: anybody within about 18 m spots it (a ! over their head) and comes to eat. Then step back.' },
         { id: 'crowd', text: 'Get four people to the bench', kind: 'event', event: 'crowdAtBench', after: 'trail', hint: 'Drop the next buns by the bench: the crowd comes to eat them there.', markers: [{ x: -6, z: -14, r: 6, label: 'Bench' }] },
         { ...finish, after: 'crowd' },
       ],
@@ -244,7 +244,7 @@ export const BREADCRUMBS: LevelDef = {
   triggers: [],
   extraTriggers: [{ id: 'crowdAtBench', kind: 'npcsInZone', event: 'crowdAtBench', role: 'bystander', zone: sq(-6, -14, 6), count: 4 }],
   tourists: [],
-  extraTourists: BYSTANDERS([[-16, -22], [-14, -8], [4, -8], [6, -20], [-22, -16], [2, -26]]),
+  extraTourists: BYSTANDERS([[-16, -24], [-12, -12], [-2, -14], [-4, -24], [-20, -18], [-10, -28]]),
   extraProps: [-26, -25, -24, -23, -22].map((x) => ({ type: 'bun' as const, x, y: restY('bun'), z: -30 })),
   crumbs: ['bun'],
   strollers: 0,

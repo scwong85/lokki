@@ -541,6 +541,7 @@ export class NpcManager implements NpcHooks {
       best.targetZ = p.cur.p.z;
       best.nextT = 0;
       this.crumbTarget.set(best.id, p.id);
+      ev.push({ type: 'crumbCall', npc: best });
     }
     return ev;
   }
