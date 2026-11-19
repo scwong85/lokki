@@ -223,6 +223,20 @@ export const STRINGS_ATTACHED = stage(1, 3, {
 });
 
 /**
+ * The jukebox as a crowd magnet (M90): the people are not nailed to their spots any more. Everyone who is not busy walks over to the music,
+ * so the step is "get five people dancing" and the crowd has to be brought together (the jukebox, or the boom box carried to them).
+ */
+const crowdParty = (q: QuestDef): QuestDef => ({
+  ...q,
+  objectives: q.objectives.map((o) =>
+    o.id === 'dance'
+      ? { ...o, text: 'Get five people dancing', event: 'dancers:5', hint: 'Music draws everyone who is not busy: peck the jukebox (E), or carry the boom box to the crowd (it is heavy: Fat bird).' }
+      : o,
+  ),
+});
+const PARTYGOERS = (JUKEBOX_HERO.extraTourists ?? []).map((t) => ({ ...t, stationary: false, post: false, role: 'partygoer' }));
+
+/**
  * Act 1, stage 4: Mood Swings. People have moods: an angry tourist follows a taunting gull to a stall and buys comfort food, a slippery
  * floor trips the inspector, a jukebox makes strangers dance. Objectives: Map and Cone, Wet Floor, Jukebox Hero.
  */
@@ -234,7 +248,7 @@ export const MOOD_SWINGS = stage(1, 4, {
   extraQuests: [
     card(quest(MAP_AND_CONE, 'mapcone'), { joke: 'A lost tourist chases you across the square, buys himself an ice cream to feel better, and you take that too.', insight: 'An angry person who wants comfort follows your taunt to the stall.', reaction: 'He fumes, follows, buys, beams, and then fumes again.' }, { map: 'You took his map', lure: 'he followed you to the ice cream stall', buy: 'bought himself a cone', cone: 'and you took that too' }),
     card(quest(WET_FLOOR, 'wetfloor'), { joke: 'A very serious man in a hi-vis vest walks into a puddle on his own route.', insight: 'A splat stays wet, and he walks the same route every time.', reaction: 'He slips, his lunch flies, the onlookers wince and laugh.' }, { trap: 'You splatted his route', slip: 'he slipped', lunch: 'and his lunch was yours' }),
-    card(quest(JUKEBOX_HERO, 'jukechain'), { joke: 'The jukebox plays and strangers dance, too happy to guard their ice creams.', insight: 'Dancers do not guard anything.', reaction: 'They sway, spin, and cheer while a gull takes the cone.' }, { peck: 'You pecked the jukebox', dance: 'four people danced', cone: 'and one dancer lost a cone' }),
+    card(crowdParty(quest(JUKEBOX_HERO, 'jukechain')), { joke: 'The jukebox plays and the whole square drifts over to dance, too happy to guard their ice creams.', insight: 'Dancers do not guard anything.', reaction: 'They sway, spin, and cheer while a gull takes the cone.' }, { peck: 'You pecked the jukebox', dance: 'five people danced', cone: 'and one dancer lost a cone' }),
   ],
   reactions: [
     { on: 'grab:inspLunch', witness: { x: 16, z: -20, r: 14, emote: 'laugh' }, say: 'The inspector is not amused.' },
@@ -263,10 +277,13 @@ export const MOOD_SWINGS = stage(1, 4, {
   extraTourists: [
     ...(MAP_AND_CONE.extraTourists ?? []).slice(0, 1),
     ...(WET_FLOOR.extraTourists ?? []).slice(0, 1),
-    ...(JUKEBOX_HERO.extraTourists ?? []),
+    ...PARTYGOERS,
+    // the rest of the crowd: people with nothing to do who drift to any music
+    { x: -18, z: -26, heading: 0.5, role: 'partygoer', color: 0xc7b5e0 },
+    { x: 8, z: -24, heading: -2, role: 'partygoer', color: 0xf2a35e },
   ],
   stations: MAP_AND_CONE.stations,
-  extraProps: MAP_AND_CONE.extraProps,
+  extraProps: [...(MAP_AND_CONE.extraProps ?? []), { type: 'boombox', x: 14, y: restY('boombox'), z: -30 }],
   splatZones: WET_FLOOR.splatZones,
   switches: JUKEBOX_HERO.switches,
   start: { x: 0, z: -32 },
