@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 /** Scenery that makes a puzzle readable at a glance: a buffet table, a picnic blanket with a basket. Plain meshes (and a solid top for the table). */
-export type DecorKind = 'table' | 'blanket';
+export type DecorKind = 'table' | 'blanket' | 'kiosk' | 'ribbon' | 'muster';
 export interface DecorDef {
   kind: DecorKind;
   x: number;
@@ -47,6 +47,76 @@ export function buildDecor(d: DecorDef): THREE.Group {
       bun.position.set(x, TABLE_TOP.y + 0.15, 0.25);
       g.add(plate, bun);
     }
+  } else if (d.kind === 'kiosk') {
+    // a little ice-cream kiosk: counter, striped awning, a sign
+    const counter = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.0, 1.2), m(0xfff1d6));
+    counter.position.y = 0.5;
+    const top = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.08, 1.4), m(0xe05a8b));
+    top.position.y = 1.04;
+    const awning = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.1, 2.0), m(0xf7a1c4));
+    awning.position.set(0, 2.3, 0.3);
+    awning.rotation.x = 0.18;
+    for (const x of [-1.7, 1.7]) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.3, 6), m(0xffffff));
+      post.position.set(x, 1.15, 0.9);
+      g.add(post);
+    }
+    const sign = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.5, 0.06), m(0xfff7dc));
+    sign.position.set(0, 2.7, -0.2);
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.5, 8), m(0xd9a066));
+    cone.position.set(0, 2.72, -0.15);
+    cone.rotation.x = Math.PI;
+    const scoop = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), m(0xf7a1c4));
+    scoop.position.set(0, 3.05, -0.15);
+    g.add(counter, top, awning, sign, cone, scoop);
+  } else if (d.kind === 'ribbon') {
+    // two posts with a red ribbon between them; `cut` shows two limp halves instead
+    for (const x of [-3, 3]) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 1.1, 8), m(0xffffff));
+      post.position.set(x, 0.55, 0);
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), m(0xe0b43a));
+      ball.position.set(x, 1.15, 0);
+      g.add(post, ball);
+    }
+    const whole = new THREE.Mesh(new THREE.BoxGeometry(6, 0.14, 0.02), m(0xd9402f));
+    whole.position.y = 0.95;
+    whole.name = 'whole';
+    const cut = new THREE.Group();
+    cut.name = 'cut';
+    cut.visible = false;
+    for (const s of [-1, 1]) {
+      const half = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.14, 0.02), m(0xd9402f));
+      half.position.set(s * 1.7, 0.62, 0);
+      half.rotation.z = s * 1.0;
+      cut.add(half);
+    }
+    g.add(whole, cut);
+  } else if (d.kind === 'muster') {
+    // the fire-drill assembly point: a big green sign on a pole, and a green patch on the ground
+    const c = document.createElement('canvas');
+    c.width = 256;
+    c.height = 160;
+    const x = c.getContext('2d')!;
+    x.fillStyle = '#2e9d5f';
+    x.fillRect(0, 0, 256, 160);
+    x.strokeStyle = '#ffffff';
+    x.lineWidth = 8;
+    x.strokeRect(10, 10, 236, 140);
+    x.fillStyle = '#ffffff';
+    x.font = 'bold 44px system-ui, sans-serif';
+    x.textAlign = 'center';
+    x.fillText('MUSTER', 128, 75);
+    x.font = 'bold 28px system-ui, sans-serif';
+    x.fillText('assembly point', 128, 118);
+    const tex = new THREE.CanvasTexture(c);
+    const face = new THREE.MeshBasicMaterial({ map: tex });
+    const sign = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.5, 0.08), [m(0xffffff), m(0xffffff), m(0xffffff), m(0xffffff), face, face]);
+    sign.position.y = 2.6;
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.4, 6), m(0xffffff));
+    pole.position.y = 1.2;
+    const patch = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 0.06, 20), m(0x9fd8b0));
+    patch.position.y = 0.04;
+    g.add(sign, pole, patch);
   } else {
     // a thin slab (not a plane), raised clear of the paving so it never z-fights with the ground
     const top = new THREE.MeshLambertMaterial({ map: checker('#d9402f', '#fff7ea') });
@@ -66,4 +136,12 @@ export function buildDecor(d: DecorDef): THREE.Group {
   g.position.set(d.x, 0, d.z);
   g.rotation.y = d.rot ?? 0;
   return g;
+}
+
+/** Show the ribbon cut (two limp halves) or whole again. */
+export function setRibbonCut(view: THREE.Group, cut: boolean): void {
+  const whole = view.getObjectByName('whole');
+  const halves = view.getObjectByName('cut');
+  if (whole) whole.visible = !cut;
+  if (halves) halves.visible = cut;
 }
