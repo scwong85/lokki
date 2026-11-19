@@ -87,8 +87,8 @@ describe('the buffet level', () => {
   it('loads into a level setup with its cast, pie, switches and triggers', () => {
     const s = levelSetup(l, QUESTS, [], TOURIST_SPAWNS);
     expect(s.quests.map((x) => x.id)).toEqual(['buffet']);
-    expect(s.tourists.filter((t) => t.watch === 'pie').map((t) => t.role).sort()).toEqual(['chef', 'granny', 'maitre']);
-    expect(l.extraProps?.some((p) => p.tag === 'pie')).toBe(true);
+    expect(s.tourists.filter((t) => t.watch === 'goldenPie').map((t) => t.role).sort()).toEqual(['chef', 'granny', 'maitre']);
+    expect(l.extraProps?.some((p) => p.tag === 'goldenPie')).toBe(true);
     expect(l.switches?.map((x) => x.effect).sort()).toEqual(['dance', 'summon']);
   });
   it('the two guard steps each accept at least three ways, in any order; the carry comes after the pie', () => {

@@ -36,6 +36,8 @@ export interface ObjectiveDef {
    */
   outcome?: string;
   nudge?: string;
+  /** The marker shows from the start even on the ladder (for a place or thing, not a method: the pie, the blanket). */
+  showMarker?: boolean;
   /** Shown on the map while this is the first open objective. */
   markers?: Marker[];
   /** Past-tense caption for the recap after the chain ('The inspector slipped'). Falls back to the text. */

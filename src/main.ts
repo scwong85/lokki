@@ -80,6 +80,7 @@ import { activeMarkers } from './gameplay/questMarkers';
 import type { Marker } from './data/quests';
 import { MarkerPool } from './render/markers';
 import { ladderSteps } from './gameplay/hintLadder';
+import { buildDecor, TABLE_TOP } from './render/decor';
 import { poisFor } from './data/pois';
 import { strollerCount, strollerSpawns } from './gameplay/crowd';
 import { ChainDetector, IdleNudge, badgesEarned } from './gameplay/chainReaction';
@@ -912,9 +913,18 @@ function hiddenNow(s: { x: number; z: number; vx: number; vz: number; mode: stri
   return (level.hides ?? []).some((h) => Math.hypot(h.x - s.x, h.z - s.z) < h.r);
 }
 const switchCd = new Map<string, number>();
+const decorBoxes: import('@dimforge/rapier3d-compat').Collider[] = [];
 function setupSwitches(): void {
   for (const g of switchViews) scene.remove(g);
   switchViews.length = 0;
+  for (const c of decorBoxes) phys.removeCollider(c);
+  decorBoxes.length = 0;
+  for (const d of level.decor ?? []) {
+    const view = buildDecor(d);
+    scene.add(view);
+    switchViews.push(view);
+    if (d.kind === 'table') decorBoxes.push(phys.addStaticBox(d.x, TABLE_TOP.y, d.z, TABLE_TOP.hx, TABLE_TOP.hy, TABLE_TOP.hz)); // (tables are not rotated in the levels that use them)
+  }
   dominoes = [];
   swept.clear();
   disguiseT = 0;
@@ -1120,6 +1130,37 @@ function askHint(): void {
   hud.toast(r >= 3 ? 'Here is how.' : r === 2 ? 'Look for the marker on the map.' : 'A hint appeared on the note.', 1.4);
 }
 todo.onAsk = askHint;
+/** Caught red-handed (M96): a watcher who has chased the gull down takes the loot back to where it was, and the gull is thrown back, dazed. */
+function watchersCatch(): void {
+  if (!npcs || isGuest()) return;
+  const loot = interaction.carried;
+  if (!loot?.tag) return;
+  const s = gull.state;
+  for (const n of npcs.npcs) {
+    if (n.watch !== loot.tag || n.mode !== 'chase' || Math.hypot(n.x - s.x, n.z - s.z) > tuning.watch.catchRange.value || s.y - n.y > 2.4) continue;
+    const back = interaction.dropCarried(s, 0);
+    if (back) {
+      interaction.props.reset(back); // straight back where it was
+      back.lost = false;
+    }
+    const dx = s.x - n.x, dz = s.z - n.z, d = Math.hypot(dx, dz) || 1;
+    s.vx = (dx / d) * tuning.watch.shove.value;
+    s.vz = (dz / d) * tuning.watch.shove.value;
+    s.stunT = Math.max(s.stunT, tuning.watch.stun.value);
+    n.watchCd = tuning.watch.cooldown.value;
+    n.relentless = false;
+    n.mode = 'idle'; // back to minding things
+    n.t = 0;
+    n.nextT = 2;
+    cam.shake(0.5);
+    audio.play('bonk');
+    hud.flash('#ffb347');
+    hud.toast(`${n.name ?? 'They'} caught you! The ${loot.def.name} goes straight back on the table.`, 2.4);
+    emoteAtNpc(n, 'laugh');
+    notes(quests.onEvent(`gotcha:${n.role}`));
+    return;
+  }
+}
 /** An idea for a player who has gone quiet: the tip of the first open step, else a nudge to experiment. */
 const IDEAS = ['Try pecking, pushing or dropping something. What happens?', 'Scout from the air: items sparkle when you are near (H: Hawk-eye lights them all).', 'Someone looks busy. What would make them look away?', 'Try a honk (T), a poop, or a dive at something that looks fragile.'];
 function nudgeText(): string {
@@ -2779,6 +2820,7 @@ startLoop({
     if (npcs && !isGuest()) {
       const g = gull.state;
       boomboxStep();
+      watchersCatch();
       if (!levelCleared) todo.ladder.tick(dt, ladderSteps(setup.quests, quests.quests));
       if (!isGuest()) timetableStep(dt);
       if (!isGuest() && !levelCleared && !level.sandbox && !havoc && nudge.update(dt, tuning.nudge.after.value, tuning.nudge.every.value)) hud.toast(nudgeText(), 4);

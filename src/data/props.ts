@@ -7,7 +7,7 @@ export type Shape =
   | { kind: 'cyl'; hh: number; r: number }
   | { kind: 'capsule'; hh: number; r: number };
 
-export type PropType = 'icecream' | 'fish' | 'bun' | 'cap' | 'tophat' | 'bottle' | 'bin' | 'crate' | 'chair' | 'candy' | 'salmiakki' | 'map' | 'toy' | 'flowers' | 'sign' | 'soup' | 'herring' | 'owl' | 'balloon' | 'ring' | 'battery' | 'cheese' | 'glasses' | 'scarf' | 'baton' | 'berries' | 'ball' | 'sausage' | 'sunscreen' | 'boombox';
+export type PropType = 'icecream' | 'fish' | 'bun' | 'cap' | 'tophat' | 'bottle' | 'bin' | 'crate' | 'chair' | 'candy' | 'salmiakki' | 'map' | 'toy' | 'flowers' | 'sign' | 'soup' | 'herring' | 'owl' | 'balloon' | 'ring' | 'battery' | 'cheese' | 'glasses' | 'scarf' | 'baton' | 'berries' | 'ball' | 'sausage' | 'sunscreen' | 'boombox' | 'pie';
 
 export interface PropDef {
   name: string;
@@ -40,6 +40,7 @@ export const PROPS: Record<PropType, PropDef> = {
   berries: { name: 'strawberries', tags: ['edible', 'throwable'], mass: 0.25, shape: { kind: 'cyl', hh: 0.06, r: 0.14 }, radius: 0.35 },
   ball: { name: 'ball', tags: ['throwable'], mass: 0.2, shape: { kind: 'ball', r: 0.16 }, radius: 0.35 },
   sausage: { name: 'sausage', tags: ['edible', 'throwable'], mass: 0.12, shape: { kind: 'box', hx: 0.12, hy: 0.04, hz: 0.04 }, radius: 0.3 },
+  pie: { name: 'golden fish pie', tags: ['edible', 'throwable', 'shiny'], mass: 0.6, shape: { kind: 'cyl', hh: 0.07, r: 0.26 }, radius: 0.4 },
   boombox: { name: 'boom box', tags: ['noisy', 'shiny'], mass: 4.5, shape: { kind: 'box', hx: 0.34, hy: 0.16, hz: 0.14 }, radius: 0.5 },
   sunscreen: { name: 'sunscreen', tags: ['throwable'], mass: 0.2, shape: { kind: 'cyl', hh: 0.1, r: 0.05 }, radius: 0.28 },
   baton: { name: 'baton', tags: ['throwable', 'shiny'], mass: 0.05, shape: { kind: 'box', hx: 0.2, hy: 0.02, hz: 0.02 }, radius: 0.3 },

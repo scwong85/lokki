@@ -36,6 +36,16 @@ export class PhysicsWorld {
     return this.world.createCollider(desc);
   }
 
+  /** A solid box (a table): props rest on it. Remove it with `removeCollider` when the level goes. */
+  addStaticBox(cx: number, cy: number, cz: number, hx: number, hy: number, hz: number): Collider {
+    const desc = this.R.ColliderDesc.cuboid(hx, hy, hz).setTranslation(cx, cy, cz).setCollisionGroups(GROUPS.STATIC).setFriction(tuning.physics.friction.value);
+    return this.world.createCollider(desc);
+  }
+
+  removeCollider(c: Collider): void {
+    this.world.removeCollider(c, false);
+  }
+
   /** Kinematic body that follows the gull so dives and shoves push props around. */
   createGullBody(radius: number, x: number, y: number, z: number): RigidBody {
     const body = this.world.createRigidBody(this.R.RigidBodyDesc.kinematicPositionBased().setTranslation(x, y, z));

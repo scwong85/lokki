@@ -73,6 +73,8 @@ export interface LevelDef {
   /** Ids of existing world triggers (from `TRIGGERS`) this level needs. */
   triggers: string[];
   extraTriggers?: TriggerDef[];
+  /** Scenery that makes a puzzle readable: a buffet table (solid top, so things rest on it), a picnic blanket. */
+  decor?: { kind: 'table' | 'blanket'; x: number; z: number; rot?: number }[];
   /** Food lying on the ground (these prop types, untagged) draws free people who are not busy: they walk over and eat it (M91). */
   crumbs?: PropType[];
   /** Which of the shared tourists take part: their `role`s ('any' = every tourist without a special role), or 'all'. */
