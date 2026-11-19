@@ -79,6 +79,7 @@ import { comfort, followYawStep, FOLLOW_RATE, LookSmoother, smoothAxis, vignette
 import { activeMarkers } from './gameplay/questMarkers';
 import type { Marker } from './data/quests';
 import { MarkerPool } from './render/markers';
+import { ladderSteps } from './gameplay/hintLadder';
 import { poisFor } from './data/pois';
 import { strollerCount, strollerSpawns } from './gameplay/crowd';
 import { ChainDetector, IdleNudge, badgesEarned } from './gameplay/chainReaction';
@@ -1106,6 +1107,19 @@ function timetableStep(dt: number): void {
     }
   }
 }
+/** Where the hint ladder has got to for a step; steps without ladder data are always fully shown. */
+const rungOf = (quest: string, objective: string): number => todo.ladder.rung(`${quest}:${objective}`);
+/** "Just tell me" (J, or the ? on the note): the next rung of the steps being worked on now. */
+function askHint(): void {
+  const cur = ladderSteps(setup.quests, quests.quests);
+  if (!cur.length) {
+    hud.toast('No hint needed here: it is all in the note.', 1.4);
+    return;
+  }
+  const r = todo.ladder.ask(cur);
+  hud.toast(r >= 3 ? 'Here is how.' : r === 2 ? 'Look for the marker on the map.' : 'A hint appeared on the note.', 1.4);
+}
+todo.onAsk = askHint;
 /** An idea for a player who has gone quiet: the tip of the first open step, else a nudge to experiment. */
 const IDEAS = ['Try pecking, pushing or dropping something. What happens?', 'Scout from the air: items sparkle when you are near (H: Hawk-eye lights them all).', 'Someone looks busy. What would make them look away?', 'Try a honk (T), a poop, or a dive at something that looks fragile.'];
 function nudgeText(): string {
@@ -1727,6 +1741,7 @@ function restartLevel(mode: 'normal' | 'speedrun'): void {
   levelCleared = false;
   chain.reset();
   nudge.poke();
+  todo.ladder.reset();
   timetable = level.timetable?.length ? new Timetable(level.timetable, 17) : null;
   rain.on = false;
   puddleT = 0;
@@ -2519,6 +2534,7 @@ startLoop({
       if (menuNav.panel() && !title.visible) menuNav.handle('b');
       else if (!title.visible) optionsPanel.show();
     }
+    if (input.wasPressed('KeyJ') && !menuOpen()) askHint();
     if (input.wasPressed('KeyU')) {
       options.hud = nextHudMode(options.hud);
       hudF = applyHud(options.hud);
@@ -2755,6 +2771,7 @@ startLoop({
     if (npcs && !isGuest()) {
       const g = gull.state;
       boomboxStep();
+      if (!levelCleared) todo.ladder.tick(dt, ladderSteps(setup.quests, quests.quests));
       if (!isGuest()) timetableStep(dt);
       if (!isGuest() && !levelCleared && !level.sandbox && !havoc && nudge.update(dt, tuning.nudge.after.value, tuning.nudge.every.value)) hud.toast(nudgeText(), 4);
       onNpcEvents(npcs.update(dt, players.map((p) => ({ x: p.gull.state.x, y: p.gull.state.y, z: p.gull.state.z, diving: p.gull.state.mode === 'dive', taunt: p.gull.taunting, hidden: hiddenNow(p.gull.state), disguise: disguiseT > 0 }))));
@@ -2894,8 +2911,8 @@ startLoop({
     defense?.render(simTime, frameDt);
     if (defense && heatMeter) heatMeter.update(defense.heat, defense.response, defense.hawkReady, defense.hawkActive);
     // quest spots, plus a marker on any item that was knocked out of the beak (so it can never be lost)
-    const markers: Marker[] = greybox ? [] : activeMarkers(setup.quests, quests.quests);
-    const labelled = hudF.waypoints === 'all' ? markers : hudF.waypoints === 'active' ? activeMarkers(setup.quests, quests.quests, true) : [];
+    const markers: Marker[] = greybox ? [] : activeMarkers(setup.quests, quests.quests, false, rungOf);
+    const labelled = hudF.waypoints === 'all' ? markers : hudF.waypoints === 'active' ? activeMarkers(setup.quests, quests.quests, true, rungOf) : [];
     // a small timer on its own when the to-do note is hidden
     const timed = hudF.miniTimer ? quests.quests.find((q) => q.status === 'active' && q.timed) : undefined;
     miniTimer.hidden = !timed;
@@ -2913,6 +2930,7 @@ startLoop({
     markerPool.update(markers, simTime);
     itemGlow.update(greybox ? [] : interaction.props.props, gull.position, wantedItems(setup.quests, quests.quests), defense?.hawkActive === true, options.highlight, simTime, secretSpots());
     waypoints.update(labelled, cam.camera, gull.position, innerWidth, innerHeight);
+    todo.ladder.mode = options.hints;
     todo.update(quests.quests, npcs ? npcs.nearestDistance(gull.state) : Infinity, interaction.carried?.stolen === true);
     targets.forEach((t, i) => (targetMeshes[i].visible = t.cooldown === 0));
     const s = gull.state;

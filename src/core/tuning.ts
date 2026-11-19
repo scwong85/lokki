@@ -188,6 +188,11 @@ export const tuning = {
     noiseSpeed: p(2.5, 0.5, 20, 0.5), // impact speed that makes a noisy prop clatter
     thumpSpeed: p(4.5, 1, 20, 0.5), // any prop landing this hard makes a quiet thump people can hear (tossing things distracts)
   },
+  hints: {
+    nudgeAfter: p(25, 5, 120, 1), // seconds without progress before a step adds a cryptic line
+    cueAfter: p(55, 10, 240, 1), // ... then its marker on the map
+    hintAfter: p(90, 15, 360, 1), // ... then the full hint
+  },
   timetable: {
     ferryFirst: p(50, 10, 300, 5), // seconds until the first ferry comes in
     ferryGap: p(150, 30, 600, 10),

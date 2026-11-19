@@ -1,6 +1,7 @@
 import { tuning } from './tuning';
 import { COMFORT, comfort, type CamFollow, type Comfort } from './comfort';
 import type { StorageLike } from './save';
+import { HINT_MODES, type HintMode } from '../gameplay/hintLadder';
 import { HIGHLIGHTS, type Highlight } from '../gameplay/itemGlow';
 import { HUD_MODES, type HudMode } from '../ui/hudMode';
 
@@ -20,6 +21,8 @@ export interface Options {
   inkLook: boolean;
   /** Sparkle on loose items: off, subtle or strong. */
   highlight: Highlight;
+  /** How hints come: gradually (the default), all at once, or only when asked (J). */
+  hints: HintMode;
   /** How much HUD to show (full / minimal / off). */
   hud: HudMode;
   /** Touch: how fast dragging turns the view. */
@@ -47,6 +50,7 @@ export const defaultOptions = (): Options => ({
   graphics: 'high',
   inkLook: true,
   highlight: 'subtle',
+  hints: 'ladder',
   hud: 'full',
   touchLook: 2.6,
   touchHand: 'right',
@@ -81,6 +85,7 @@ export function sanitizeOptions(raw: unknown, base: Options = defaultOptions()):
   o.tutorialDone = r.tutorialDone === true;
   o.graphics = r.graphics === 'low' ? 'low' : 'high';
   o.inkLook = r.inkLook !== false;
+  o.hints = HINT_MODES.includes(r.hints as HintMode) ? (r.hints as HintMode) : 'ladder';
   o.highlight = HIGHLIGHTS.includes(r.highlight as Highlight) ? (r.highlight as Highlight) : 'subtle';
   o.touchHand = r.touchHand === 'left' ? 'left' : 'right';
   o.comfort = r.comfort === 'gentle' || r.comfort === 'calm' ? r.comfort : 'standard';

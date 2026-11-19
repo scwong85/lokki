@@ -230,7 +230,7 @@ const crowdParty = (q: QuestDef): QuestDef => ({
   ...q,
   objectives: q.objectives.map((o) =>
     o.id === 'dance'
-      ? { ...o, text: 'Get five people dancing', event: 'dancers:5', hint: 'Music draws everyone who is not busy: peck the jukebox (E), or carry the boom box to the crowd (it is heavy: Fat bird).' }
+      ? { ...o, text: 'Get five people dancing', outcome: 'A whole crowd should be dancing.', nudge: 'Music draws everyone who is not busy.', event: 'dancers:5', hint: 'Music draws everyone who is not busy: peck the jukebox (E), or carry the boom box to the crowd (it is heavy: Fat bird).' }
       : o,
   ),
 });

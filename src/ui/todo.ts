@@ -1,6 +1,7 @@
 import type { QuestState } from '../gameplay/quest';
 import { QUESTS, type QuestDef } from '../data/quests';
 import { tuning } from '../core/tuning';
+import { HintLadder, stepKey } from '../gameplay/hintLadder';
 
 /**
  * Paper-note to-do list. Compact: active quests show their objectives (with a tip under the first open one),
@@ -15,15 +16,22 @@ export class Todo {
   /** The level's quest definitions and its secret to-dos (shown as "???" until done). */
   defs: readonly QuestDef[] = QUESTS;
   secret: ReadonlySet<string> = new Set();
+  /** The hint ladder: steps with a `nudge` show only their outcome until it climbs. */
+  ladder = new HintLadder();
+  /** The player taps the ? on the note (or presses J): the next rung. */
+  onAsk: () => void = () => {};
 
   constructor(root: HTMLElement) {
     this.el = document.createElement('div');
     this.el.id = 'todo';
     root.appendChild(this.el);
+    this.el.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest?.('.askhint')) this.onAsk();
+    });
   }
 
   update(quests: readonly QuestState[], nearestNpc = Infinity, carryingStolen = false): void {
-    const sig = quests.map((q) => `${q.id}:${q.status}:${q.objectives.map((o) => `${o.done ? 1 : 0}${o.count}`).join('')}`).join('|');
+    const sig = quests.map((q) => `${q.id}:${q.status}:${q.objectives.map((o) => `${o.done ? 1 : 0}${o.count}${this.ladder.rung(stepKey(q.id, o.id))}`).join('')}`).join('|') + this.ladder.mode;
     if (sig !== this.last) {
       this.last = sig;
       this.timers.clear();
@@ -67,8 +75,13 @@ export class Todo {
         const blocked = !!od?.after && !q.objectives.find((x) => x.id === od.after)?.done;
         if (blocked && !firstOpen && !o.done) return `<li class="later"><span>&#9744;</span> ${def?.chain ? '<i>?</i>' : o.text}</li>`;
         const extra = firstOpen && od?.kind === 'escape' ? ` <span class="esc" data-q="${q.id}"></span>` : '';
-        const hint = firstOpen && od?.hint ? `<div class="hint">${od.hint}</div>` : '';
-        return `<li class="${o.done ? 'done' : ''}"><span>${o.done ? '&#9745;' : '&#9744;'}</span> ${o.text}${(od?.count ?? 1) > 1 ? ` <b class="cnt">(${Math.min(o.count, od!.count!)}/${od!.count})</b>` : ''}${extra}${hint}</li>`;
+        // a step on the hint ladder: the wish first, then a cryptic line, then (the marker on the map), then the full hint
+        const rung = od?.nudge ? this.ladder.rung(stepKey(q.id, o.id)) : 3;
+        const label = od?.nudge && rung < 3 ? od.outcome ?? o.text : o.text;
+        const lines = od?.nudge ? [rung >= 1 ? od.nudge : '', rung >= 3 ? od.hint ?? '' : ''].filter(Boolean) : [od?.hint ?? ''].filter(Boolean);
+        const ask = firstOpen && od?.nudge && rung < 3 ? ` <button type="button" class="askhint" title="Give me a hint (J)">?</button>` : '';
+        const hint = firstOpen ? lines.map((l) => `<div class="hint">${l}</div>`).join('') : '';
+        return `<li class="${o.done ? 'done' : ''}"><span>${o.done ? '&#9745;' : '&#9744;'}</span> ${label}${ask}${(od?.count ?? 1) > 1 ? ` <b class="cnt">(${Math.min(o.count, od!.count!)}/${od!.count})</b>` : ''}${extra}${hint}</li>`;
       })
       .join('');
     // the always-on side lists (little extras, bonus) are marked so the minimal HUD can leave them out

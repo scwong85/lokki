@@ -28,6 +28,12 @@ export interface ObjectiveDef {
   after?: string;
   /** Short tip shown under the first unfinished objective. */
   hint?: string;
+  /**
+   * The hint ladder (M94). With a `nudge`, the step shows `outcome` (the wish, no method) as its text and nothing under it at first; after a while the
+   * `nudge` (a cryptic line), then its map `markers`, then the full `hint`. Without a `nudge` the step behaves as before.
+   */
+  outcome?: string;
+  nudge?: string;
   /** Shown on the map while this is the first open objective. */
   markers?: Marker[];
   /** Past-tense caption for the recap after the chain ('The inspector slipped'). Falls back to the text. */
