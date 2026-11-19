@@ -68,7 +68,7 @@ export class NpcManager implements NpcHooks {
   spawn(sp: NpcSpawn): Npc {
     const n = newNpc(this.nextId++, sp);
     this.spawns.set(n.id, sp);
-    const model = new NpcModel(sp.color, n.id, { hat: sp.hat, hatColor: sp.hatColor });
+    const model = new NpcModel(sp.color, n.id, { hat: sp.hat, hatColor: sp.hatColor, name: sp.name });
     model.root.scale.setScalar(sp.scale ?? 1);
     this.parent.add(model.root);
     this.models.set(n.id, model);

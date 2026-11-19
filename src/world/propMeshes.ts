@@ -97,6 +97,12 @@ function buildParts(type: PropType, g: THREE.Group): void {
     case 'sausage':
       g.add(mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.24, 8), 0xc4724a, 0, 0, 0).rotateZ(Math.PI / 2));
       break;
+    case 'pie':
+      g.add(mesh(new THREE.CylinderGeometry(0.27, 0.25, 0.14, 16), 0xe8a93a, 0, 0, 0)); // the golden crust
+      g.add(mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.03, 16), 0xf5c75a, 0, 0.08, 0));
+      for (const a of [0.4, 1.2, 2.0, 2.8]) g.add(mesh(new THREE.BoxGeometry(0.42, 0.02, 0.035), 0xb97722, 0, 0.1, 0).rotateY(a)); // the lattice
+      g.add(mesh(new THREE.ConeGeometry(0.06, 0.2, 5), 0x9fb8c8, 0.3, 0.12, 0).rotateZ(-Math.PI / 2)); // a fish tail sticks out, like a kalakukko
+      break;
     case 'boombox':
       g.add(mesh(new THREE.BoxGeometry(0.68, 0.32, 0.28), 0xe05a8b, 0, 0, 0));
       g.add(mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.04, 12), 0x2a2a35, -0.18, 0, 0.15).rotateX(Math.PI / 2));

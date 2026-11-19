@@ -21,7 +21,7 @@ export function activeMarkers(defs: readonly QuestDef[], quests: readonly QuestS
       const od = d.objectives[i];
       if (od.after && !q.objectives.find((x) => x.id === od.after)?.done) return;
       // a step on the hint ladder shows its marker only once the ladder has got that far (rung 2: a cue from the world)
-      if (od.markers && !(od.nudge && rungOf && rungOf(q.id, od.id) < 2)) out.push(...od.markers);
+      if (od.markers && !(od.nudge && !od.showMarker && rungOf && rungOf(q.id, od.id) < 2)) out.push(...od.markers);
     });
   }
   return out;

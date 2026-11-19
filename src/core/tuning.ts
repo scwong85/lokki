@@ -188,6 +188,12 @@ export const tuning = {
     noiseSpeed: p(2.5, 0.5, 20, 0.5), // impact speed that makes a noisy prop clatter
     thumpSpeed: p(4.5, 1, 20, 0.5), // any prop landing this hard makes a quiet thump people can hear (tossing things distracts)
   },
+  watch: {
+    catchRange: p(1.8, 0.8, 4, 0.1), // a watcher who reaches the gull this closely takes the loot back
+    stun: p(1.4, 0, 4, 0.1), // seconds the gull is dazed
+    shove: p(7, 0, 15, 0.5), // how hard it is thrown back
+    cooldown: p(18, 3, 60, 1), // before the same watcher can catch it again
+  },
   hints: {
     nudgeAfter: p(25, 5, 120, 1), // seconds without progress before a step adds a cryptic line
     cueAfter: p(55, 10, 240, 1), // ... then its marker on the map

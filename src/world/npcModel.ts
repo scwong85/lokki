@@ -30,7 +30,9 @@ export interface NpcView {
 }
 
 export interface NpcModelOptions {
-  hat?: 'sun' | 'cap' | 'top';
+  hat?: 'sun' | 'cap' | 'top' | 'chef';
+  /** A name tag floating over the head ('Chef'), so people can be told apart at a glance. */
+  name?: string;
   umbrella?: boolean;
   hatColor?: number;
   /** Trouser colour (else seeded). */
@@ -73,6 +75,7 @@ export class NpcModel {
 
   constructor(color: number, seed: number, opts: NpcModelOptions = {}) {
     this.root.add(this.body);
+    if (opts.name) this.addNameTag(opts.name);
     if (NpcModel.assets) this.buildSkinned(NpcModel.assets, color, seed, opts);
     else this.buildCapsule(color, seed, opts);
     this.body.traverse((c) => {
@@ -113,6 +116,16 @@ export class NpcModel {
   private hatMesh(opts: NpcModelOptions): THREE.Object3D {
     const hat = new THREE.Group();
     const hatColor = opts.hatColor ?? 0xfff1d6;
+    if (opts.hat === 'chef') {
+      // a tall puffy toque
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.12, 12), mat(hatColor));
+      band.position.y = -0.02;
+      const puff = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), mat(hatColor));
+      puff.position.y = 0.17;
+      puff.scale.y = 1.15;
+      hat.add(band, puff);
+      return mergeColored(hat);
+    }
     const r = opts.hat === 'cap' ? 0.15 : opts.hat === 'top' ? 0.2 : 0.3;
     const brim = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.025, 12), mat(hatColor));
     brim.position.set(0, -0.06, opts.hat === 'cap' ? -0.06 : 0);
@@ -211,6 +224,28 @@ export class NpcModel {
   private labelText = '';
 
   /** Big floating text above the head (selfie countdown); hidden when undefined. */
+  /** A pill with the person's name, floating over the head (the gull can tell the chef from the granny at a glance). */
+  private addNameTag(text: string): void {
+    const c = document.createElement('canvas');
+    c.width = 256;
+    c.height = 72;
+    const g = c.getContext('2d')!;
+    g.fillStyle = 'rgba(255,255,255,0.9)';
+    g.beginPath();
+    g.roundRect(4, 6, 248, 60, 28);
+    g.fill();
+    g.fillStyle = '#3a3a4a';
+    g.font = 'bold 40px system-ui, sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(text, 128, 38);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthTest: false }));
+    sp.scale.set(1.5, 0.42, 1);
+    sp.position.y = 3.2;
+    sp.renderOrder = 13;
+    this.root.add(sp);
+  }
+
   private setLabel(text: string | undefined): void {
     if (!text) {
       if (this.labelSprite) this.labelSprite.visible = false;
