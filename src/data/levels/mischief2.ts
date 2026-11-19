@@ -140,3 +140,43 @@ export const HUSH_PUPPY: LevelDef = {
   defense: false,
   parTime: 240,
 };
+
+/** M16. Block Party (attractors): a boom box draws the whole square; carry it and the crowd follows. */
+export const BLOCK_PARTY: LevelDef = {
+  id: 'block-party',
+  name: 'M16. Block Party',
+  blurb: 'Peck the boom box. Everyone comes to dance. Carry it with Fat bird and they follow.',
+  district: 'kauppatori',
+  series: 'Mischief (new)',
+  quests: [],
+  extraQuests: [
+    {
+      id: 'partychain',
+      title: 'Block Party',
+      teaser: 'Start the music, get a crowd dancing, then take a dancer\'s ice cream.',
+      timed: false,
+      chain: true,
+      objectives: [
+        { id: 'play', text: 'Start the music (E on the boom box)', kind: 'event', event: 'pecked:boombox', hint: 'The pink boom box by the wall. Without Fat bird you peck it; with it you can lift it and the crowd follows.', markers: [{ x: -14, z: -20, r: 4, label: 'Boom box' }] },
+        { id: 'dance', text: 'Get five people dancing', kind: 'event', event: 'dancers:5', after: 'play', hint: 'Everyone who is not busy walks over. Wait for them, or carry the box to them.' },
+        { id: 'cone', text: 'Take a dancer\'s ice cream', kind: 'event', event: 'grab:partyCone', hint: 'Dancers are too happy to guard. Grab the cone with E.' },
+        { ...finish, after: 'cone' },
+      ],
+    },
+  ],
+  triggers: [],
+  tourists: [],
+  extraProps: [{ type: 'boombox', x: -14, y: 0.4, z: -20 }],
+  extraTourists: [
+    { x: -4, z: -14, heading: 0.4, ice: true, holdTag: 'partyCone', role: 'partygoer', color: 0xf7a1c4 },
+    { x: 6, z: -22, heading: -0.4, ice: true, holdTag: 'partyCone', role: 'partygoer', color: 0x9ec9f0 },
+    { x: 0, z: -30, heading: 0.9, ice: true, holdTag: 'partyCone', role: 'partygoer', color: 0xffd36e },
+    { x: -12, z: -10, heading: -0.9, ice: true, holdTag: 'partyCone', role: 'partygoer', color: 0xb8e0c8 },
+    { x: 10, z: -12, heading: 0.2, role: 'partygoer', color: 0xc7b5e0 },
+    { x: 2, z: -6, heading: 2.2, role: 'partygoer', color: 0xf2a35e },
+  ],
+  strollers: 4,
+  defense: false,
+  start: { x: -14, z: -34 },
+  parTime: 300,
+};

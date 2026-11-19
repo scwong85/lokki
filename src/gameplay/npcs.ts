@@ -7,7 +7,7 @@ import { tuning } from '../core/tuning';
 import { restY, type PropType } from '../data/props';
 import type { Target } from './targets';
 import { npcPull } from './tug';
-import { BODY_HEIGHT, BODY_RADIUS, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn, type Station, slip, honkAt, setMood, isCalm, scareJump, startDance } from './npc';
+import { BODY_HEIGHT, BODY_RADIUS, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn, type Station, slip, honkAt, setMood, isCalm, scareJump, startDance, canBeLured, gatherSlot } from './npc';
 import type { GrabCandidate } from './grab';
 import type { HitSphere } from './poop';
 import type { NpcHooks } from './interaction';
@@ -302,6 +302,74 @@ export class NpcManager implements NpcHooks {
     return k;
   }
 
+  /** A playing music source (a boom box, a jukebox): free people come over and dance until `until`. */
+  music: { x: number; z: number; until: number; range: number; gather: number } | null = null;
+  private musicT = 0;
+  private musicDancers = 0;
+
+  playMusic(x: number, z: number, seconds: number, range: number, gather: number): void {
+    this.music = { x, z, until: this.clock + seconds, range, gather };
+    this.musicT = 0;
+    this.musicDancers = 0;
+  }
+
+  stopMusic(): void {
+    this.music = null;
+  }
+
+  /** The source moves (a carried boom box): the crowd follows it. */
+  moveMusic(x: number, z: number): void {
+    if (this.music) {
+      this.music.x = x;
+      this.music.z = z;
+    }
+  }
+
+  get musicPlaying(): boolean {
+    return !!this.music && this.clock < this.music.until;
+  }
+
+  private musicStep(dt: number, pulse: number): NpcEvent[] {
+    const m = this.music;
+    if (!m) return [];
+    if (this.clock >= m.until) {
+      this.music = null;
+      return [];
+    }
+    this.musicT -= dt;
+    if (this.musicT > 0) return [];
+    this.musicT = pulse;
+    const ev: NpcEvent[] = [];
+    let dancers = 0;
+    for (const n of this.npcs) {
+      const d = Math.hypot(n.x - m.x, n.z - m.z);
+      if (d > m.range) continue;
+      if (n.mode === 'dance') {
+        if (d <= m.gather * 1.5) {
+          dancers++;
+          if (n.danceT < 2.5) n.danceT = 2.5; // keeps dancing while the music plays
+        } else if (n.danceT > 1) n.danceT = 1; // the music moved on: stop and follow it
+        continue;
+      }
+      if (!canBeLured(n)) continue;
+      if (d <= m.gather) {
+        startDance(n, 4, ev);
+        n.heading = Math.atan2(-(m.x - n.x), -(m.z - n.z));
+        dancers++;
+      } else {
+        const s = gatherSlot(n.id, m.x, m.z);
+        n.goal = { x: s.x, z: s.z, name: 'music' };
+        n.targetX = s.x;
+        n.targetZ = s.z;
+        n.nextT = 0;
+        n.distractT = 0;
+      }
+    }
+    if (dancers > this.musicDancers) ev.push({ type: 'dancing', count: dancers });
+    this.musicDancers = dancers;
+    return ev;
+  }
+
   /** The jukebox plays: calm people within `r` dance for `seconds`. Returns how many. */
   danceNear(x: number, z: number, r: number, seconds: number): NpcEvent[] {
     const ev: NpcEvent[] = [];
@@ -398,6 +466,7 @@ export class NpcManager implements NpcHooks {
     const ev: NpcEvent[] = this.pending.splice(0);
     const ctx = { world: this.world, walkable: this.walkable, rng: this.rng, stations: this.stations };
     this.clock += dt;
+    ev.push(...this.musicStep(dt, tuning.boombox.pulse.value));
     for (const h of this.hazards) h.ttl -= dt;
     this.hazards = this.hazards.filter((h) => h.ttl > 0);
     // the conga line: followers stay behind the gull in the order they are in (nearest first)

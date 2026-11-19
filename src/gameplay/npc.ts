@@ -383,6 +383,17 @@ export const SLIP_SECONDS = 2.4;
 /** Can this person be frightened or knocked by what is going on around them? (busy people are not reached.) */
 export const isCalm = (n: Npc): boolean => (n.mode === 'idle' || n.mode === 'walk' || n.mode === 'notice' || n.mode === 'shield' || n.mode === 'eat' || n.mode === 'recover' || n.mode === 'cheer' || n.mode === 'dance') && !n.following && n.buyT === 0 && !n.tugged;
 
+/** Free people (strollers, bystanders on a leash) who are not busy can be drawn to music; the cast of a puzzle cannot. */
+export const canBeLured = (n: Npc): boolean =>
+  (n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat' || n.mode === 'recover') && !n.goal && !n.following && n.buyT === 0 && !n.tugged && (!n.stationary || n.roam > 0);
+
+/** Where the i-th listener stands around a source: a loose ring, spread by id so nobody piles up. */
+export function gatherSlot(id: number, cx: number, cz: number): { x: number; z: number } {
+  const a = id * 2.399963;
+  const r = 1.8 + (id % 3) * 0.7;
+  return { x: cx + Math.cos(a) * r, z: cz + Math.sin(a) * r };
+}
+
 /** A fright from a neighbour: a jump and a flinch (no running). */
 export function scareJump(n: Npc, ev: NpcEvent[]): void {
   enter(n, 'startle');
