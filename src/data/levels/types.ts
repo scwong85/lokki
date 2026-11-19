@@ -80,6 +80,8 @@ export interface LevelDef {
   extraTourists?: NpcSpawn[];
   /** How many background strollers walk about (default: tuning.crowd.strollers on campaign stages, none elsewhere). */
   strollers?: number;
+  /** Things that happen on a schedule: a ferry comes in (a crowd steps off), a shower, a gust of wind. */
+  timetable?: ('ferry' | 'rain' | 'gust')[];
   /** Props placed just for this level (on top of the city's own). */
   extraProps?: PropSpawn[];
   /** The level that must be cleared first (shown locked until then). */

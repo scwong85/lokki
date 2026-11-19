@@ -176,6 +176,7 @@ export const BLOCK_PARTY: LevelDef = {
     { x: 2, z: -6, heading: 2.2, role: 'partygoer', color: 0xf2a35e },
   ],
   strollers: 4,
+  timetable: ['ferry'],
   defense: false,
   start: { x: -14, z: -34 },
   parTime: 300,

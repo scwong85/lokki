@@ -104,6 +104,8 @@ export interface Npc {
   seesGull: boolean;
   /** 0..1: how close a calm person is to noticing the gull (it builds while the gull is in sight, and fades when it is not). */
   suspicion: number;
+  /** Seconds left of being wary: this person saw somebody panic nearby and watches for the gull more closely. */
+  wary: number;
   /** Mode timers for idle/eat cycling. */
   nextT: number;
   /** Items it picks up when free and on the ground nearby. */
@@ -191,7 +193,7 @@ export function newNpc(id: number, sp: NpcSpawn): Npc {
   return {
     id, x: sp.x, z: sp.z, heading: h, mode: 'idle', t: 0, homeX: sp.x, homeZ: sp.z, selfie: 'idle', selfieCount: 0, cleanT: 0, cleanSplats: 0, signX: sp.signAt?.x ?? sp.x, signZ: sp.signAt?.z ?? sp.z, targetX: null, targetZ: null,
     holding: null, shieldFrom: h, handAngle: h - Math.PI / 2, distractT: 0, noiseX: 0, noiseZ: 0, lostSightT: 0, noticeCd: 0,
-    walkPhase: 0, moving: false, speed: 0, seesGull: false, suspicion: 0, nextT: 2,
+    walkPhase: 0, moving: false, speed: 0, seesGull: false, suspicion: 0, wary: 0, nextT: 2,
     wants: sp.wants ?? [], holdType: null, goal: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false, wanderR: sp.wander ?? 10, roam: sp.roam ?? 0,
     mood: 'calm', moodT: 0, craves: sp.craves ?? null, station: null, buyT: 0,
     follows: sp.follows ?? false, followT: 0, followGap: 2.5, following: false, patrol: sp.patrol ?? null, relentless: sp.relentless ?? false, patrolI: 0, slipT: 0, slideX: 0, slideZ: 0, startleT: 0, tugged: false, infectedT: 0, danceT: 0, obliviousT: 0, hadComfort: false, y: sp.y ?? 0,
@@ -431,6 +433,7 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
   const ev: NpcEvent[] = [];
   n.t += dt;
   n.noticeCd = Math.max(0, n.noticeCd - dt);
+  n.wary = Math.max(0, n.wary - dt);
   n.distractT = Math.max(0, n.distractT - dt);
   n.obliviousT = Math.max(0, n.obliviousT - dt);
   n.speed = 0;
@@ -499,7 +502,7 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
 
   // ---- reactions ----
   // seeing the gull is not noticing it: suspicion builds while it is in sight (twice as fast for a diving gull) and fades when it is not
-  if (calm && n.seesGull && n.distractT <= 0 && n.mood !== 'delighted') n.suspicion = Math.min(1, n.suspicion + (dt / t.noticeBuild.value) * (g.diving ? 2 : 1));
+  if (calm && n.seesGull && n.distractT <= 0 && n.mood !== 'delighted') n.suspicion = Math.min(1, n.suspicion + (dt / t.noticeBuild.value) * (g.diving ? 2 : 1) * (n.wary > 0 ? tuning.gossip.suspicion.value : 1));
   else n.suspicion = Math.max(0, n.suspicion - dt * t.suspicionFade.value);
   if (calm && n.suspicion >= 1 && n.noticeCd <= 0 && n.distractT <= 0) {
     n.suspicion = 0;

@@ -15,6 +15,7 @@ const VENDOR = { x: LANE3_X - 2.8, z: STEPS_BOTTOM_Z + 3.8 };
  * walk off his cart. Design: docs/design/act2.md.
  */
 export const STEPS_STAGE = stage(2, 1, {
+  timetable: ['rain'],
   name: '2.1 Steps',
   blurb: 'The Cathedral steps: roll things, trip people.',
   district: 'senaatintori',

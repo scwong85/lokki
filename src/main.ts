@@ -81,6 +81,7 @@ import type { Marker } from './data/quests';
 import { MarkerPool } from './render/markers';
 import { strollerCount, strollerSpawns } from './gameplay/crowd';
 import { ChainDetector, IdleNudge, badgesEarned } from './gameplay/chainReaction';
+import { Timetable } from './gameplay/timetable';
 import { ItemGlow } from './render/itemGlow';
 import { wantedItems } from './gameplay/itemGlow';
 import { Waypoints } from './ui/waypoints';
@@ -1050,6 +1051,58 @@ function peck(sw: NonNullable<LevelDef['switches']>[number], pl: Player): void {
   if (npcs && sw.effect === 'alarm') noise(sw.x, sw.z, tuning.button.alarmLoud.value);
   void s;
 }
+/** Where the not-yet-won secret to-dos start (their first marker): the secret trail. */
+function secretSpots(): { x: number; y: number; z: number }[] {
+  const out: { x: number; y: number; z: number }[] = [];
+  for (const id of setup.secret) {
+    const q = quests.quests.find((x) => x.id === id);
+    const d = setup.quests.find((x) => x.id === id);
+    if (!q || !d || q.status === 'won') continue;
+    const m = d.startMarkers?.[0] ?? d.objectives[0].markers?.[0];
+    if (m) out.push({ x: m.x, y: m.y ?? 0, z: m.z });
+  }
+  return out;
+}
+/** The day's timetable: ferries, showers and gusts, the same every time a level is played. */
+let timetable: Timetable | null = null;
+let puddleT = 0;
+let gustT = 0;
+let gustDir = 0;
+function timetableStep(dt: number): void {
+  if (!timetable || !npcs) return;
+  for (const e of timetable.update(dt)) {
+    runLog.add(simTime, `timetable:${e.kind}:${e.phase}`);
+    if (e.kind === 'ferry') {
+      audio.play('horn');
+      hud.toast('A ferry comes in. Passengers!', 2);
+      npcs.ferryCrowd({ x: WRONG_FERRY.x, z: WRONG_FERRY.z }, firstStart, Math.round(tuning.timetable.crowd.value), 12, (i) => [0xf7a1c4, 0x9ec9f0, 0xffd36e, 0xb8e0c8, 0xc7b5e0, 0xf2a35e][i % 6]);
+    } else if (e.kind === 'rain') {
+      rain.on = e.phase === 'start';
+      if (e.phase === 'start') hud.toast('A shower! The paving gets slippery.', 2);
+    } else if (e.kind === 'gust' && e.phase === 'start') {
+      gustT = tuning.timetable.gustSeconds.value;
+      gustDir = (simTime * 1.7) % (Math.PI * 2);
+      hud.toast('A gust of wind!', 1.6);
+    }
+  }
+  if (timetable.active('rain')) {
+    puddleT -= dt;
+    if (puddleT <= 0) {
+      puddleT = tuning.timetable.puddles.value;
+      const a = (simTime * 12.9898) % (Math.PI * 2), r = 4 + ((simTime * 7.3) % 18);
+      const x = gull.state.x + Math.cos(a) * r, z = gull.state.z + Math.sin(a) * r;
+      if (walkable(x, z)) npcs.addHazard(x, z, 35, 1.5);
+    }
+  }
+  if (gustT > 0) {
+    gustT -= dt;
+    const push = tuning.timetable.gustPush.value;
+    for (const p of interaction.props.free()) {
+      if (PROPS[p.type].mass > tuning.gust.maxMass.value || p.cur.p.y > 3) continue;
+      if (Math.floor(simTime * 4) !== Math.floor((simTime - dt) * 4)) interaction.props.release(p, { x: Math.cos(gustDir) * push, y: 1.2, z: Math.sin(gustDir) * push });
+    }
+  }
+}
 /** An idea for a player who has gone quiet: the tip of the first open step, else a nudge to experiment. */
 const IDEAS = ['Try pecking, pushing or dropping something. What happens?', 'Scout from the air: items sparkle when you are near (H: Hawk-eye lights them all).', 'Someone looks busy. What would make them look away?', 'Try a honk (T), a poop, or a dive at something that looks fragile.'];
 function nudgeText(): string {
@@ -1581,6 +1634,8 @@ function partnerLock(mine: number): { x: number; y: number; z: number } | null {
 
 const snow = new Snow();
 scene.add(snow.points);
+const rain = new Snow(9, 0.1, 0xaecbe8, 0.1); // a shower: the same cloud of points, falling fast
+scene.add(rain.points);
 /** The sea: you swim in it and things float, except in winter levels when it is frozen ice (walk on it). */
 function applySeaRules(): void {
   if (greybox) return;
@@ -1671,6 +1726,10 @@ function restartLevel(mode: 'normal' | 'speedrun'): void {
   levelCleared = false;
   chain.reset();
   nudge.poke();
+  timetable = level.timetable?.length ? new Timetable(level.timetable, 17) : null;
+  rain.on = false;
+  puddleT = 0;
+  gustT = 0;
   for (const p of players) p.gull.setStart(level.start?.x ?? start.x, level.start?.z ?? start.z);
   lockId = null;
   combo.reset();
@@ -2688,6 +2747,7 @@ startLoop({
     if (npcs && !isGuest()) {
       const g = gull.state;
       boomboxStep();
+      if (!isGuest()) timetableStep(dt);
       if (!isGuest() && !levelCleared && !level.sandbox && !havoc && nudge.update(dt, tuning.nudge.after.value, tuning.nudge.every.value)) hud.toast(nudgeText(), 4);
       onNpcEvents(npcs.update(dt, players.map((p) => ({ x: p.gull.state.x, y: p.gull.state.y, z: p.gull.state.z, diving: p.gull.state.mode === 'dive', taunt: p.gull.taunting, hidden: hiddenNow(p.gull.state), disguise: disguiseT > 0 }))));
       const stolen = players.some((p) => interaction.beak(p.id).carried?.stolen === true);
@@ -2792,6 +2852,7 @@ startLoop({
     }
     streetLife?.update(dt, gull.state);
     snow.update(dt, gull.state, simTime);
+    rain.update(dt, gull.state, simTime);
     if (!isGuest()) stepKalleGame(dt);
     if (!isGuest()) stepSenate(dt);
     if (!isGuest()) stepEsplanadi(dt);
@@ -2843,7 +2904,7 @@ startLoop({
     skillsPanel.updateBar(skills, abilities);
     runHud.update(runTimer, save.speedrunBest);
     markerPool.update(markers, simTime);
-    itemGlow.update(greybox ? [] : interaction.props.props, gull.position, wantedItems(setup.quests, quests.quests), defense?.hawkActive === true, options.highlight, simTime);
+    itemGlow.update(greybox ? [] : interaction.props.props, gull.position, wantedItems(setup.quests, quests.quests), defense?.hawkActive === true, options.highlight, simTime, secretSpots());
     waypoints.update(labelled, cam.camera, gull.position, innerWidth, innerHeight);
     todo.update(quests.quests, npcs ? npcs.nearestDistance(gull.state) : Infinity, interaction.carried?.stolen === true);
     targets.forEach((t, i) => (targetMeshes[i].visible = t.cooldown === 0));
