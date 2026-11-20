@@ -64,6 +64,7 @@ export const FIRST_LIGHT = stage(1, 1, {
     },
   ],
   reactions: [
+    { on: 'snatch:icecream', say: 'The selfie tourist: "My ice cream! I was COUNTING!"', witness: { x: SELFIE_SPOT.x, z: SELFIE_SPOT.z, r: 14, emote: 'laugh' } },
     { on: 'robbed', witness: { x: SELFIE_SPOT.x, z: SELFIE_SPOT.z, r: 16, emote: 'laugh' }, say: 'Hey! My ice cream!', sound: 'yelp' },
     { on: 'mapInSea', witness: { x: 0, z: -6, r: 14, emote: 'point' }, say: 'The wind took it. Or was it a gull?' },
     { on: 'wrongFerry', sound: 'horn', witness: { x: 0, z: -6, r: 16, emote: 'laugh' } },
@@ -135,6 +136,7 @@ export const FISH_MARKET = stage(1, 2, {
     card(quest(HONK, 'honkchain'), { joke: 'Four grown adults admiring the sea jump out of their skin and drop their cones.', insight: 'A honk only drops things for people who have their backs to you.', reaction: 'They jump, the cones fly, the others turn and stare.' }, { honk: 'You honked behind two people', take: 'and took what they dropped' }),
   ],
   reactions: [
+    { on: 'grab:honkCone', say: 'A gull flies off with the cone. Its owner stares at an empty hand.', witness: { role: 'tourist', r: 6, emote: 'laugh' } },
     { on: 'snatch:fish', witness: { x: -13, z: -13, r: 14, emote: 'laugh' }, say: 'His fish! He turns round too late.', sound: 'gasp' },
     { on: 'snatch:icecream', witness: { x: 24, z: -12, r: 12, emote: 'alert' } },
     { on: 'honkDrop', witness: { x: 0, z: -10, r: 14, emote: 'laugh' } },
@@ -184,6 +186,8 @@ export const STRINGS_ATTACHED = stage(1, 3, {
     card(quest(RED_BUTTON, 'buttonchain'), { joke: 'Someone presses the sprinkler button and a whole queue is soaked.', insight: 'Buttons are pecked from a safe distance.', reaction: 'The queue is drenched and drops its cones.' }, { alarm: 'You rang the alarm', sprinkle: 'pressed the sprinkler button', cone: 'and took a dropped cone' }),
   ],
   reactions: [
+    { on: 'grab:booCone', say: 'The peeker: "The BUSH took my ice cream!"', witness: { role: 'peeker', r: 5, emote: 'anger' } },
+    { on: 'grab:btnCone', say: 'A soaked queue watches a gull take the last dry cone.', witness: { role: 'queuer', r: 4, emote: 'laugh' } },
     { on: 'grab:tugSoup', mood: { role: 'soupman', mood: 'upset' }, say: 'My soup!', sound: 'yelp' },
     { on: 'grab:tugBalloon', witness: { x: 20, z: -15, r: 10, emote: 'point' }, say: 'The balloon floats off with a gull.' },
     { on: 'grab:tugBun', mood: { role: 'bunman', mood: 'upset' }, witness: { x: -29, z: -17, r: 8, emote: 'laugh' } },
@@ -191,6 +195,8 @@ export const STRINGS_ATTACHED = stage(1, 3, {
     { on: 'boo:peeker', witness: { x: -8, z: -14, r: 12, emote: 'alert' } },
     { on: 'grab:booCone', say: 'The bush has an ice cream now.' },
     { on: 'grab:richLunch', witness: { x: -33, z: -17, r: 12, emote: 'laugh' }, say: 'His lunch. Not any more.' },
+    { on: 'pecked:alarm', say: 'The queue: "Fire?!" Nobody moves. It is only a test.', witness: { x: 0, z: -12, r: 10, emote: 'question' } },
+    { on: 'pecked:sprinkle', say: 'The whole queue: "AAAH! My hair!"', sound: 'gasp', witness: { x: 0, z: -12, r: 10, emote: 'anger' } },
   ],
   secret: ['buttonchain'],
   coopRequired: [
@@ -251,6 +257,8 @@ export const MOOD_SWINGS = stage(1, 4, {
     card(crowdParty(quest(JUKEBOX_HERO, 'jukechain')), { joke: 'The jukebox plays and the whole square drifts over to dance, too happy to guard their ice creams.', insight: 'Dancers do not guard anything.', reaction: 'They sway, spin, and cheer while a gull takes the cone.' }, { peck: 'You pecked the jukebox', dance: 'five people danced', cone: 'and one dancer lost a cone' }),
   ],
   reactions: [
+    { on: 'robbed:mapper', say: 'He bought it to feel better. Now he feels worse.', witness: { role: 'mapper', r: 8, emote: 'anger' } },
+    { on: 'grab:danceCone', say: 'Still dancing. Still no ice cream.', witness: { role: 'partygoer', r: 4, emote: 'laugh' } },
     { on: 'grab:inspLunch', witness: { x: 16, z: -20, r: 14, emote: 'laugh' }, say: 'The inspector is not amused.' },
     { on: 'grab:danceCone', witness: { x: -6, z: -18, r: 10, emote: 'heart' } },
     { on: 'bought:mapper', say: 'He feels a little better.', sound: 'pop' },
@@ -324,6 +332,8 @@ export const THE_WARDEN_STAGE = stage(1, 5, {
     },
   ],
   reactions: [
+    { on: 'grab:rushCone', say: 'The queue stops panicking, and notices one cone is missing.', witness: { role: 'queuer', r: 4, emote: 'laugh' } },
+    { on: 'grab:strikeCone', say: 'Bowled over, and robbed.', witness: { role: 'bowler', r: 4, emote: 'facepalm' } },
     { on: 'grab:wardenSandwich', hunt: true, say: 'My sandwich!', sound: 'whistle', witness: { x: -20, z: -10, r: 14, emote: 'laugh' } },
     { on: 'poopWarden', witness: { x: -20, z: -10, r: 16, emote: 'laugh' } },
     { on: 'spread:5', say: 'PANIC!', witness: { x: -5, z: -11, r: 14, emote: 'laugh' } },

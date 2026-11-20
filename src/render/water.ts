@@ -12,7 +12,9 @@ export class Water {
   private mat: THREE.MeshLambertMaterial | null = null;
 
   constructor(land: { rings: number[][] }[], isLand: (x: number, z: number) => boolean) {
-    const mat = new THREE.MeshLambertMaterial({ color: palette.water });
+    // pushed back in depth (and a few centimetres down): from a low camera the sea used to win against the paving 2 cm above it,
+    // so people on the quay looked as if they stood in the water
+    const mat = new THREE.MeshLambertMaterial({ color: palette.water, polygonOffset: true, polygonOffsetFactor: 4, polygonOffsetUnits: 8 });
     mat.onBeforeCompile = (sh) => {
       sh.uniforms.uTime = this.uniforms.uTime;
       sh.uniforms.uWave = this.uniforms.uWave;
@@ -38,6 +40,8 @@ export class Water {
     this.mat = mat;
     const sea = new THREE.Mesh(new THREE.PlaneGeometry(8000, 8000), mat);
     sea.rotation.x = -Math.PI / 2;
+    sea.position.y = -0.05;
+    sea.renderOrder = -1;
     sea.receiveShadow = true;
     this.group.add(sea);
     this.group.add(shoreStrips(land, isLand));

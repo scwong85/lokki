@@ -17,7 +17,7 @@ export interface Reaction {
   /** Everyone with this role is too busy to notice the gull for a while (so the plan can play out). */
   oblivious?: { role: string; seconds: number };
   /** Everyone within `r` of the point reacts with an emote (the audience). */
-  witness?: { x: number; z: number; r: number; emote: EmoteKind };
+  witness?: { x?: number; z?: number; r: number; emote: EmoteKind; /** Centre it on the people with this role (the victim) instead of a fixed spot: the victim and everybody around them react. */ role?: string };
   /** A line shown for a moment. */
   say?: string;
   sound?: Sfx;
@@ -34,7 +34,7 @@ export interface Reaction {
 export const reactionsFor = (list: readonly Reaction[] | undefined, event: string): Reaction[] => (list ?? []).filter((r) => r.on === event);
 
 /** Events that count as a person or the city reacting (for the chain test). */
-export const REACTION_EVENT = /^(robbed|mood|atStation|bought|slipped|soaked|honkDrop|knockdown|spread|dancers|signSplat|poopNpc|poopWarden|wardenHunt|dodge|bunAtDock|mapInSea|wrongFerry|distract|tugWin|snatch|pecked|dancing|boo|slammed|pose|bellPoop|bellSnatch|tramBlocked|pigeons)/;
+export const REACTION_EVENT = /^(robbed|mood|atStation|bought|slipped|soaked|honkDrop|knockdown|spread|dancers|signSplat|poopNpc|poopWarden|wardenHunt|dodge|bunAtDock|mapInSea|wrongFerry|distract|tugWin|dancing|boo|slammed|bellPoop|bellSnatch|tramBlocked|pigeons)/;
 
 /**
  * Should reaction number `index` play now, the `count`-th time its event happens? With `nth` only on that occurrence; with `repeat`

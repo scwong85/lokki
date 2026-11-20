@@ -74,6 +74,7 @@ export const STEPS_STAGE = stage(2, 1, {
     },
   ],
   reactions: [
+    { on: 'grab:walkerBun', say: 'He sits in his puddle with nothing at all.', witness: { role: 'walker', r: 8, emote: 'anger' } },
     { on: 'grab:cheese', witness: { x: LANE3_X, z: LANDING_Z, r: 10, emote: 'alert' }, say: 'The family gasps. Their cheese!' },
     { on: 'cheeseCart', mood: { role: 'hotdog', mood: 'angry' }, witness: { x: VENDOR.x, z: VENDOR.z, r: 14, emote: 'laugh' }, say: 'Cheese in the cart!', sound: 'clatter' },
     { on: 'slipped:walker', witness: { x: STEPS_X, z: FOOT, r: 14, emote: 'laugh' } },
@@ -165,6 +166,9 @@ export const SAY_PIGEON_STAGE = stage(2, 2, {
     },
   ],
   reactions: [
+    { on: 'pose:new', nth: 2, say: 'Three photos, three gulls. The album is ruined.', witness: { role: 'selfie', r: 6, emote: 'facepalm' } },
+    { on: 'photobomb', say: 'The graduation photo: one graduate, one gull, one cap.', witness: { role: 'graduate', r: 8, emote: 'laugh' } },
+    { on: 'spread:2', witness: { role: 'selfie', r: 8, emote: 'laugh' } },
     { on: 'pose:any', witness: { x: -156, z: -310, r: 14, emote: 'laugh' }, say: 'Say pigeon!' },
     { on: 'pose:new', say: 'A different pose again!' },
     { on: 'grab:cap', witness: { x: -156.5, z: -312, r: 10, emote: 'alert' }, say: 'A seagull has the cap!' },
@@ -228,6 +232,8 @@ export const DING_DONG_STAGE = stage(2, 3, {
     { id: 'bellBombers', title: 'Bell bombers', teaser: 'Two splats under the bell.', timed: false, objectives: [{ id: 'bellBombers', text: 'Both gulls splat someone within five seconds', kind: 'event', event: 'coop:poopNpc', hint: 'One gull each.' }] },
   ],
   reactions: [
+    { on: 'bellSnatch', nth: 2, say: 'Two bells, two sandwiches, one gull.', witness: { role: 'picnic', r: 6, emote: 'anger' } },
+    { on: 'grab:grannyBun', say: 'Granny: "My bun! You little..."', witness: { role: 'granny', r: 8, emote: 'anger' } },
     { on: 'bell', witness: { x: -156, z: -300, r: 40, emote: 'alert' } },
     { on: 'bellSnatch', say: 'A sandwich short!', sound: 'pop' },
     { on: 'tramBlocked', oblivious: { role: 'driver', seconds: 25 }, witness: { x: -150, z: -273, r: 14, emote: 'alert' } },
@@ -272,8 +278,10 @@ export const TURF_WAR_STAGE = stage(2, 4, {
     { id: 'dressing', title: 'Dressing room', teaser: 'One drops, the other catches.', timed: false, objectives: [{ id: 'dressing', text: 'One gull drops an item, the other picks it up', kind: 'event', event: 'coop:handover', hint: 'Pass it.' }] },
   ],
   reactions: [
+    { on: 'robbed:hardhat', say: 'His comfort flowers, gone too.', witness: { role: 'hardhat', r: 8, emote: 'anger' } },
     { on: 'pigeonsFriends', witness: { x: EMPEROR.x, z: EMPEROR.z, r: 14, emote: 'heart' }, say: 'The Pigeon Gang adopts you.' },
     { on: 'pigeonsScattered', witness: { x: EMPEROR.x, z: EMPEROR.z, r: 14, emote: 'laugh' }, say: 'Salmiakki! They flee in disgust.', sound: 'gasp' },
+    { on: 'pecked:cap', say: 'The guards salute a very small captain.', witness: { x: -152, z: -285, r: 10, emote: 'question' } },
     { on: 'grab:capCone', witness: { x: -152, z: -285, r: 10, emote: 'alert' } },
   ],
   triggers: [],
@@ -349,6 +357,7 @@ export const KEY_STAGE = stage(2, 5, {
     { on: 'hushed', say: 'SHHH!', sound: 'whistle' },
     { on: 'poopNpc:librarian', witness: { x: LIBRARY.x - 11, z: LIBRARY.z + 8, r: 14, emote: 'laugh' } },
     { on: 'mimicQuiet', witness: { x: -166, z: -303, r: 16, emote: 'alert' }, say: 'Every phone in the crowd rings!', sound: 'chime' },
+    { on: 'conducted', say: 'The band follows the gull. The conductor follows the band.', witness: { role: 'conductor', r: 10, emote: 'facepalm' } },
     { on: 'grab:baton', witness: { x: -179, z: -301, r: 10, emote: 'point' } },
   ],
   extraTriggers: [
