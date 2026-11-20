@@ -2235,6 +2235,7 @@ function emoteAtNpc(n: { id: number; x: number; z: number }, kind: EmoteKind | n
 }
 function onNpcEvents(evs: NpcEvent[]): void {
   for (const e of evs) {
+    if (e.type === 'arrived') notes(quests.onEvent(`arrived:${e.goal}:${e.npc.role}`)); // somebody got where they were sent (the bell, the muster)
     if (e.type === 'noticed') {
       audio.play('gasp');
       notes(quests.onEvent('alert'));

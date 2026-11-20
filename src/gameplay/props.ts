@@ -36,6 +36,8 @@ export interface Prop {
   stolen: boolean;
   /** Knocked out of the beak by a spray, swat or net: shown with a marker until picked up again. */
   lost: boolean;
+  /** A gull has had it in its beak since it was last put back (then its owner only takes it back if it lies close to them). */
+  byGull: boolean;
   broken: boolean;
   dirty: number;
   tipped: boolean;
@@ -103,7 +105,7 @@ export class PropManager {
     this.parent.add(mesh);
     const prop: Prop = {
       id: this.nextId++, type: sp.type, tag: sp.tag, def, spawn: sp, body, collider, mesh,
-      carried: false, heldBy: null, stolen: false, lost: false, broken: false, dirty: 0, tipped: false, impactCd: 0.3, ignoreGrab: 0,
+      carried: false, heldBy: null, stolen: false, lost: false, byGull: false, broken: false, dirty: 0, tipped: false, impactCd: 0.3, ignoreGrab: 0,
       prev: { p: new THREE.Vector3(sp.x, sp.y, sp.z), q: new THREE.Quaternion() },
       cur: { p: new THREE.Vector3(sp.x, sp.y, sp.z), q: new THREE.Quaternion() },
       lastVel: new THREE.Vector3(),
@@ -162,6 +164,7 @@ export class PropManager {
   }
 
   grab(p: Prop): void {
+    p.byGull = true;
     if (p.heldBy !== null) p.stolen = true;
     p.lost = false;
     p.heldBy = null;
@@ -300,6 +303,7 @@ export class PropManager {
     p.heldBy = null;
     p.stolen = false;
     p.lost = false;
+    p.byGull = false;
     p.tipped = false;
     p.impactCd = 0.5;
     p.cur.p.set(sp.x, sp.y, sp.z);

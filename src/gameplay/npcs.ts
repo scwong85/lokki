@@ -180,7 +180,7 @@ export class NpcManager implements NpcHooks {
   /** Someone who keeps their place walks back to it after a fright or a fall, and takes back a cone that lies unclaimed. */
   private backToPost(n: Npc, dt: number): void {
     const sp = this.spawns.get(n.id);
-    if (!sp?.post || n.mode !== 'idle' || n.goal || n.following || n.tugged) return;
+    if (!sp?.post || n.mode !== 'idle' || n.goal || n.following || n.tugged || n.buyT > 0) return; // (not while off buying a treat: that pulled them back to their spot every step)
     const dx = sp.x - n.x, dz = sp.z - n.z;
     const d = Math.hypot(dx, dz);
     if (d > 0.25) {
@@ -194,7 +194,9 @@ export class NpcManager implements NpcHooks {
     }
     n.heading = sp.heading ?? n.heading;
     const prop = this.items.get(n.id);
-    if (n.holding === null && prop && prop.heldBy === null && !prop.carried) {
+    // what they dropped themselves (knocked over, a fright) comes back to them wherever it fell; something a gull has carried off
+    // and put down elsewhere only counts as theirs again if it lies close to their spot (it used to jump back into their hand)
+    if (n.holding === null && prop && prop.heldBy === null && !prop.carried && (!prop.byGull || (Math.hypot(prop.cur.p.x - sp.x, prop.cur.p.z - sp.z) <= tuning.npc.reclaimRange.value && prop.cur.p.y < 1.4))) {
       this.props.reset(prop);
       this.props.attach(prop, n.id);
       n.holding = prop.id;
@@ -970,6 +972,8 @@ export class NpcManager implements NpcHooks {
       if (n.role !== role) continue;
       const g = goals[i++ % goals.length];
       n.goal = { ...g };
+      n.homeX = g.x; // sent somewhere, they stay around there (a fire drill crowd does not drift home)
+      n.homeZ = g.z;
       n.stationary = false;
       n.follows = false; // sent off: no longer in the conga line
       n.followT = 0;
