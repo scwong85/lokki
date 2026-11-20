@@ -42,3 +42,19 @@ describe('somebody who keeps their place takes their own item back', () => {
     expect(scissors.heldBy).toBe(mayor.id);
   });
 });
+
+describe('somebody who keeps their place can still go and buy a treat', () => {
+  it('an angry Mayor with a craving walks to the kiosk and buys (his post no longer pulls him back)', () => {
+    const phys = new PhysicsWorld(RAPIER);
+    const props = new PropManager(phys, new THREE.Group());
+    const npcs = new NpcManager(new World(), props, new THREE.Group(), () => true, 2);
+    npcs.stations = [{ id: 'kiosk', x: 0, z: -6, r: 9, sells: 'icecream', goods: { dz: 0 } }];
+    props.spawn({ type: 'icecream', x: 0, y: 0.2, z: -6.5 });
+    const m = npcs.spawn({ x: 0, z: 0, heading: 0, color: 1, role: 'mayor', stationary: true, post: true, craves: 'icecream' });
+    m.mood = 'angry';
+    const ev: string[] = [];
+    for (let i = 0; i < 60 * 20; i++) { props.beforeStep(DT); phys.step(); props.afterStep(); for (const e of npcs.update(DT, { x: 900, y: 20, z: 900, diving: false })) ev.push(e.type); }
+    expect(ev).toContain('bought');
+    expect(m.holdType).toBe('icecream');
+  });
+});

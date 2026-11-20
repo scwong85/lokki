@@ -180,7 +180,7 @@ export class NpcManager implements NpcHooks {
   /** Someone who keeps their place walks back to it after a fright or a fall, and takes back a cone that lies unclaimed. */
   private backToPost(n: Npc, dt: number): void {
     const sp = this.spawns.get(n.id);
-    if (!sp?.post || n.mode !== 'idle' || n.goal || n.following || n.tugged) return;
+    if (!sp?.post || n.mode !== 'idle' || n.goal || n.following || n.tugged || n.buyT > 0) return; // (not while off buying a treat: that pulled them back to their spot every step)
     const dx = sp.x - n.x, dz = sp.z - n.z;
     const d = Math.hypot(dx, dz);
     if (d > 0.25) {
