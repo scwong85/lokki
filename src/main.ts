@@ -923,6 +923,16 @@ function setupSwitches(): void {
   for (const c of decorBoxes) phys.removeCollider(c);
   decorBoxes.length = 0;
   decorRibbons.length = 0;
+  // solid furniture for the gull and for people: tables, kiosks, jukeboxes and buttons (the tables' tops are perches)
+  world.furniture.length = 0;
+  const solid = (x: number, z: number, hx: number, hz: number, h: number, kind: 'perch' | 'prop'): void => {
+    world.furniture.push({ min: [x - hx, 0, z - hz], max: [x + hx, h, z + hz], kind, color: 0 });
+  };
+  for (const d of level.decor ?? []) {
+    if (d.kind === 'table') solid(d.x, d.z, TABLE_TOP.hx, TABLE_TOP.hz, TABLE_TOP.y + TABLE_TOP.hy, 'perch');
+    else if (d.kind === 'kiosk') solid(d.x, d.z, 1.6, 0.6, 1.08, 'perch');
+  }
+  for (const sw of level.switches ?? []) if (sw.effect === 'dance' || sw.effect === 'alarm' || sw.effect === 'soak') solid(sw.x, sw.z, 0.55, 0.35, 1.5, 'perch');
   for (const d of level.decor ?? []) {
     const view = buildDecor(d);
     scene.add(view);

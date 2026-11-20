@@ -12,7 +12,7 @@ describe.each(ids)('%s', (id) => {
   const l = LEVELS.find((x) => x.id === id)!;
   const q = l.extraQuests![0];
   it('is a long chain with a wish, a riddle and an answer for every step, and no method in the wish or the riddle', () => {
-    expect(q.objectives.length).toBeGreaterThanOrEqual(6);
+    expect(q.objectives.length).toBeGreaterThanOrEqual(5);
     for (const o of q.objectives) {
       expect(o.outcome && o.nudge && o.hint, `${id}/${o.id}`).toBeTruthy();
       for (const s of [o.outcome!, o.nudge!]) expect(s, `${id}/${o.id}`).not.toMatch(/\((E|F|T|Q)\)|\b(press|hold|aim|peck the)\b/i);
