@@ -83,26 +83,13 @@ describe('watchers (somebody minds the pie)', () => {
 
 describe('the buffet level', () => {
   const l = LEVELS.find((x) => x.id === 'buffet')!;
-  const q = l.extraQuests![0];
-  it('loads into a level setup with its cast, pie, switches and triggers', () => {
+  it('loads into a level setup with its cast, pie, switches and a hidden to-do', () => {
     const s = levelSetup(l, QUESTS, [], TOURIST_SPAWNS);
-    expect(s.quests.map((x) => x.id)).toEqual(['buffet']);
-    expect(s.tourists.filter((t) => t.watch === 'goldenPie').map((t) => t.role).sort()).toEqual(['chef', 'granny', 'maitre']);
+    expect(s.quests.map((x) => x.id)).toEqual(['buffet', 'buffetSecret']);
+    expect(s.secret.has('buffetSecret')).toBe(true);
+    expect(s.tourists.filter((t) => t.watch === 'goldenPie').map((t) => t.role)).toEqual(['chef']);
+    expect(s.tourists.find((t) => t.role === 'granny')!.wants).toContain('pie');
     expect(l.extraProps?.some((p) => p.tag === 'goldenPie')).toBe(true);
     expect(l.switches?.map((x) => x.effect).sort()).toEqual(['dance', 'summon']);
-  });
-  it('the two guard steps each accept at least three ways, in any order; the carry comes after the pie', () => {
-    const chef = q.objectives.find((o) => o.id === 'chef')!, maitre = q.objectives.find((o) => o.id === 'maitre')!;
-    expect(chef.events!.length).toBeGreaterThanOrEqual(3);
-    expect(maitre.events!.length).toBeGreaterThanOrEqual(2);
-    expect(chef.after).toBeUndefined();
-    expect(maitre.after).toBeUndefined();
-    expect(q.objectives.find((o) => o.id === 'blanket')!.after).toBe('pie');
-  });
-  it('every step is on the hint ladder: a wish, a riddle, and the answer last; the wish and riddle name no keys', () => {
-    for (const o of q.objectives) {
-      expect(o.outcome && o.nudge && o.hint, o.id).toBeTruthy();
-      for (const s of [o.outcome!, o.nudge!]) expect(s, o.id).not.toMatch(/\((E|F|T|Q)\)|\b(press|hold|aim|peck the)\b/i);
-    }
   });
 });

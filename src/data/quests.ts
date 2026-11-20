@@ -36,6 +36,8 @@ export interface ObjectiveDef {
    */
   outcome?: string;
   nudge?: string;
+  /** Who the joke is on (a role): the person whose pride, routine or property this step lands on (docs/design/hooky-objectives-research.md). */
+  victim?: string;
   /** The marker shows from the start even on the ladder (for a place or thing, not a method: the pie, the blanket). */
   showMarker?: boolean;
   /** Shown on the map while this is the first open objective. */
