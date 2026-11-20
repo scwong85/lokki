@@ -150,6 +150,7 @@ export const tuning = {
     hopStretch: p(0.2, 0, 0.5, 0.01),
     snatchStretch: p(0.3, 0, 0.6, 0.01),
     emoteSeconds: p(1.6, 0.5, 4, 0.1),
+    punchlineDelay: p(0.5, 0, 2, 0.05), // seconds after a to-do before its photo is taken (the victim's reaction is showing by then)
     puffs: p(1, 0, 1, 1), // particles on/off
     shake: p(1, 0, 1, 0.1), // screen shake strength (0 = off)
     shakeDecay: p(5, 1, 20, 0.5), // how fast a shake dies down
