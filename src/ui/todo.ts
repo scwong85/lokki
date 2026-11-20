@@ -16,6 +16,8 @@ export class Todo {
   /** The level's quest definitions and its secret to-dos (shown as "???" until done). */
   defs: readonly QuestDef[] = QUESTS;
   secret: ReadonlySet<string> = new Set();
+  /** Hidden to-dos the gull is near now: they show half their title. */
+  revealNear: ReadonlySet<string> = new Set();
   /** The hint ladder: steps with a `nudge` show only their outcome until it climbs. */
   ladder = new HintLadder();
   /** The player taps the ? on the note (or presses J): the next rung. */
@@ -31,7 +33,7 @@ export class Todo {
   }
 
   update(quests: readonly QuestState[], nearestNpc = Infinity, carryingStolen = false): void {
-    const sig = quests.map((q) => `${q.id}:${q.status}:${q.objectives.map((o) => `${o.done ? 1 : 0}${o.count}${this.ladder.rung(stepKey(q.id, o.id))}`).join('')}`).join('|') + this.ladder.mode;
+    const sig = quests.map((q) => `${q.id}:${q.status}:${q.objectives.map((o) => `${o.done ? 1 : 0}${o.count}${this.ladder.rung(stepKey(q.id, o.id))}`).join('')}${this.revealNear.has(q.id) ? 'r' : ''}`).join('|') + this.ladder.mode;
     if (sig !== this.last) {
       this.last = sig;
       this.timers.clear();
@@ -61,7 +63,10 @@ export class Todo {
 
   private quest(q: QuestState): string {
     const def = this.defs.find((d) => d.id === q.id);
-    if (this.secret.has(q.id) && q.status !== 'won') return `<div class="q secret"><div class="qt">???</div><div class="teaser">Something to discover…</div></div>`;
+    if (this.secret.has(q.id) && q.status !== 'won') {
+      const half = this.revealNear.has(q.id) && def?.reveal ? `??? …${def.reveal.text}` : '???';
+      return `<div class="q secret"><div class="qt">${half}</div><div class="teaser">Something to discover…</div></div>`;
+    }
     const timer = q.timed && q.status === 'active' ? ` <span class="timer" data-q="${q.id}"></span>` : '';
     if (q.status === 'locked' && def?.hidden) return '';
     if (q.status === 'locked') return `<div class="q locked"><div class="qt">&#128274; ${q.title}</div><div class="teaser">Finish the other quests first.</div></div>`;

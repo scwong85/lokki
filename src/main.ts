@@ -40,7 +40,7 @@ import { QuestLog, type QuestNote } from './gameplay/quest';
 import { QUESTS } from './data/quests';
 import { LEVELS, levelById } from './data/levels';
 import type { LevelDef } from './data/levels/types';
-import { reactionsFor } from './data/reactions';
+import { reactionPlays, reactionsFor } from './data/reactions';
 import { PlaytestLog, RATING_KEYS, recapOf } from './core/playtest';
 import { introducedAt, isUnlocked, parseGate, switchMech, type Gate, type MechId } from './gameplay/mechanics';
 import { levelProgress, levelSetup, levelStars, levelUnlocked, mergeRecord, starCount } from './gameplay/level';
@@ -566,13 +566,21 @@ function strikePose(pl: Player | undefined, kind: string): void {
 function photoPoses(who: number[]): string[] {
   return who.map((i) => players[i]).filter(Boolean).map((p) => posing.get(p.id)).filter((x): x is { kind: string; until: number } => !!x && x.until >= simTime).map((x) => x.kind);
 }
+/** Little things that happen a moment later (the second half of a double take). */
+const beats: { at: number; run: () => void }[] = [];
+function beatsStep(): void {
+  for (let i = beats.length - 1; i >= 0; i--) if (simTime >= beats[i].at) beats.splice(i, 1)[0].run();
+}
 const reactionsDone = new Set<string>();
+/** How many times each quest event has happened in this level (for reactions that escalate). */
+const eventCounts = new Map<string, number>();
 /** The world answers a quest event (docs/design/puzzle-quality.md): a person's mood, someone walks over, an audience laughs. */
 function runReactions(event: string): void {
   if (isGuest()) return;
+  const count = (eventCounts.get(event) ?? 0) + 1;
+  eventCounts.set(event, count);
   reactionsFor(level.reactions, event).forEach((r, i) => {
-    if (reactionsDone.has(`${level.id}:${event}:${i}`)) return;
-    reactionsDone.add(`${level.id}:${event}:${i}`);
+    if (!reactionPlays(r, `${level.id}:${event}:${i}`, count, reactionsDone)) return; // the first, second, third time can each get their own beat
     if (r.mood) npcs?.moodRole(r.mood.role, r.mood.mood);
     if (r.send) npcs?.sendRole(r.send.role, r.send.goals);
     if (r.distract) npcs?.distractRole(r.distract.role, r.distract.seconds);
@@ -1034,6 +1042,16 @@ function setupSwitches(): void {
 function switchNear(s: { x: number; z: number }): NonNullable<LevelDef['switches']>[number] | null {
   for (const sw of level.switches ?? []) if (mech(switchMech(sw.effect)) && Math.hypot(sw.x - s.x, sw.z - s.z) < 2.4 && (switchCd.get(sw.id) ?? 0) <= 0) return sw;
   return null;
+}
+/** A splat or a thrown thing that lands on a switch sets it off, as a peck would (ring the bell from the sky, M101). */
+function hitSwitch(x: number, z: number): void {
+  if (isGuest()) return;
+  for (const sw of level.switches ?? []) {
+    if (!mech(switchMech(sw.effect)) || (switchCd.get(sw.id) ?? 0) > 0 || Math.hypot(sw.x - x, sw.z - z) > tuning.watch.hitRange.value) continue;
+    peck(sw, players[0]);
+    notes(quests.onEvent(`hit:${sw.id}`));
+    return;
+  }
 }
 function peck(sw: NonNullable<LevelDef['switches']>[number], pl: Player): void {
   switchCd.set(sw.id, sw.cooldown ?? 4);
@@ -1792,6 +1810,8 @@ function applyLevelRules(): void {
 
 function restartLevel(mode: 'normal' | 'speedrun'): void {
   reactionsDone.clear();
+  eventCounts.clear();
+  beats.length = 0;
   posing.clear();
   lastPose = '';
   levelCleared = false;
@@ -1941,6 +1961,11 @@ function checkLevelDone(): void {
   const notes = [
     `${'★'.repeat(n)}${'☆'.repeat(3 - n)}  ·  ${stars[0] ? '★' : '☆'} cleared  ·  ${stars[1] ? '★' : '☆'} every to-do (secrets too)  ·  ${stars[2] ? '★' : '☆'} under ${fmtClear(level.parTime ?? 0)}`,
   ];
+  // the hidden to-dos: how many are still out there (an open loop to come back for)
+  if (setup.secret.size) {
+    const found = [...setup.secret].filter((id) => quests.quests.find((q) => q.id === id)?.status === 'won').length;
+    notes.push(found === setup.secret.size ? `Secret to-dos: all ${found} found.` : `Secret to-dos: ${found} of ${setup.secret.size} found. ${setup.secret.size - found} still hidden in this level.`);
+  }
   if (level.endingNote) notes.push(level.endingNote);
   if (level.reward) {
     const sk = skills.unlock(level.reward);
@@ -2284,6 +2309,23 @@ function onNpcEvents(evs: NpcEvent[]): void {
       audio.play('thud');
       notes(quests.onEvent(`knockdown:${e.count}`));
       if (e.count === 4) polaroids.request('Strike!');
+    } else if (e.type === 'sawWith') {
+      // the cross-wire: "that is MY pie!" They march over to the culprit, who looks up, puzzled
+      emoteAtNpc(e.npc, 'anger');
+      emoteAtNpc(e.other, 'question');
+      npcs?.sendTo(e.npc, e.other.x, e.other.z, 'confront');
+      notes(quests.onEvent(`sawWith:${e.npc.role}:${e.other.role}`));
+    } else if (e.type === 'ritual') {
+      notes(quests.onEvent(`ritual:${e.npc.role}`));
+    } else if (e.type === 'discovered') {
+      // the double take: a puzzled look at the empty spot, then (a moment later) the penny drops
+      const who = e.npc;
+      emoteAtNpc(who, 'question');
+      beats.push({ at: simTime + tuning.watch.doubleTake.value, run: () => {
+        emoteAtNpc(who, 'anger');
+        audio.play('gasp');
+        notes(quests.onEvent(`discovered:${who.role}`));
+      } });
     } else if (e.type === 'caught') {
       emoteAtNpc(e.npc, 'anger');
       audio.play('gasp');
@@ -2467,6 +2509,7 @@ function onGags(gags: GagEvent[]): void {
         noise(g.x, g.z, 0.4);
         if (!isGuest()) {
           npcs?.addHazard(g.x, g.z); // a wet patch: whoever walks through it slips
+          hitSwitch(g.x, g.z);
           for (const z of level.splatZones ?? []) if (g.x >= z.zone.minX && g.x <= z.zone.maxX && g.z >= z.zone.minZ && g.z <= z.zone.maxZ) notes(quests.onEvent(z.event));
         }
         break;
@@ -2551,6 +2594,7 @@ function onGags(gags: GagEvent[]): void {
         heat('break');
         stats.add('break');
         if (g.prop.type === 'bottle') notes(quests.onEvent('breakBottle'));
+        hitSwitch(t.x, t.z);
         break;
       }
       case 'clatter': {
@@ -2558,6 +2602,7 @@ function onGags(gags: GagEvent[]): void {
         audio.play(g.quiet ? 'thud' : 'clatter');
         noise(g.prop.cur.p.x, g.prop.cur.p.z, g.quiet ? 0.6 : 1);
         if (!g.quiet) heat('clatter');
+        hitSwitch(g.prop.cur.p.x, g.prop.cur.p.z);
         break;
       }
       case 'tipped': {
@@ -2836,6 +2881,7 @@ startLoop({
     if (npcs && !isGuest()) {
       const g = gull.state;
       boomboxStep();
+      beatsStep();
       watchersCatch();
       if (!levelCleared) todo.ladder.tick(dt, ladderSteps(setup.quests, quests.quests));
       if (!isGuest()) timetableStep(dt);
@@ -2997,6 +3043,7 @@ startLoop({
     itemGlow.update(greybox ? [] : interaction.props.props, gull.position, wantedItems(setup.quests, quests.quests), defense?.hawkActive === true, options.highlight, simTime, secretSpots());
     waypoints.update(labelled, cam.camera, gull.position, innerWidth, innerHeight);
     todo.ladder.mode = options.hints;
+    todo.revealNear = new Set(setup.quests.filter((q) => q.reveal && setup.secret.has(q.id) && Math.hypot(q.reveal.x - gull.state.x, q.reveal.z - gull.state.z) <= q.reveal.r).map((q) => q.id));
     todo.update(quests.quests, npcs ? npcs.nearestDistance(gull.state) : Infinity, interaction.carried?.stolen === true);
     targets.forEach((t, i) => (targetMeshes[i].visible = t.cooldown === 0));
     const s = gull.state;

@@ -71,6 +71,8 @@ export interface QuestDef {
   /** Shown while the quest is idle and unlocked. */
   startMarkers?: Marker[];
   objectives: ObjectiveDef[];
+  /** A hidden to-do half-reveals itself when the gull comes near this spot ("??? …Granny's sweet tooth"), M103. */
+  reveal?: { x: number; z: number; r: number; text: string };
 }
 
 const MAIN = ['icecream', 'swap', 'cap', 'bun', 'map', 'date', 'toy'];

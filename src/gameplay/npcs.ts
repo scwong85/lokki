@@ -8,7 +8,8 @@ import { restY, type PropType } from '../data/props';
 import type { Target } from './targets';
 import { npcPull } from './tug';
 import { pickRoutine, type Poi } from './routine';
-import { BODY_HEIGHT, BODY_RADIUS, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn, type Station, slip, honkAt, setMood, isCalm, scareJump, startDance, gatherSlot } from './npc';
+import { ritualLabel, ritualState } from './ritual';
+import { BODY_HEIGHT, BODY_RADIUS, canSee, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn, type Station, slip, honkAt, setMood, isCalm, scareJump, startDance, gatherSlot } from './npc';
 import type { GrabCandidate } from './grab';
 import type { HitSphere } from './poop';
 import type { NpcHooks } from './interaction';
@@ -476,14 +477,61 @@ export class NpcManager implements NpcHooks {
     return ev;
   }
 
+  /** A ritual (M102): the countdown over the head, then a few seconds with their eyes elsewhere. Busy, frightened or chasing people skip it. */
+  private ritualStep(n: Npc): NpcEvent[] {
+    const r = n.ritual!;
+    const calmNow = n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat';
+    const st = ritualState(this.clock, r);
+    n.ritualLabel = calmNow ? ritualLabel(st, r) : undefined;
+    if (!calmNow || st.phase !== 'hold') {
+      if (st.phase !== 'hold') n.ritualOn = false;
+      return [];
+    }
+    const fresh = !n.ritualOn; // the first step of this ritual
+    n.ritualOn = true;
+    n.obliviousT = Math.max(n.obliviousT, r.hold - st.t); // eyes shut, or on the watch: they see nothing
+    if (r.lookAt) {
+      // ...or they turn to something (the Mayor to his crowd)
+      n.distractT = Math.max(n.distractT, 0.3);
+      n.noiseX = r.lookAt.x;
+      n.noiseZ = r.lookAt.z;
+    }
+    return fresh ? [{ type: 'ritual', npc: n }] : [];
+  }
+
   /** Watchers (M95): somebody who minds a prop notices when it is gone, and goes after the gull if they can see it. */
-  private watchStep(): NpcEvent[] {
+  private watchStep(dt: number): NpcEvent[] {
     const ev: NpcEvent[] = [];
     for (const n of this.npcs) {
       if (!n.watch || n.watchCd > 0 || !(n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat' || n.mode === 'notice' || n.mode === 'shield' || n.mode === 'recover')) continue;
       const p = this.props.props.find((x) => x.tag === n.watch && !x.broken);
       const gone = !p || p.carried || Math.hypot(p.cur.p.x - p.spawn.x, p.cur.p.z - p.spawn.z) > 2.5 || p.cur.p.y > p.spawn.y + 1.5;
-      if (!gone || !n.seesGull || n.distractT > 0 || n.obliviousT > 0) continue;
+      if (!gone) {
+        n.missT = 0;
+        n.discovered = false; // it is back: they can lose it again
+        n.sawHolder = null;
+        continue;
+      }
+      // the neighbours (M103): their item in somebody else's hands, and they can see that person: they march over
+      if (p && p.heldBy !== null && p.heldBy !== n.id && n.sawHolder !== p.heldBy && n.obliviousT <= 0) {
+        const other = this.npcs.find((o) => o.id === p.heldBy);
+        if (other && canSee(n, { x: other.x, y: 1.6 + other.y, z: other.z, diving: false }, this.world, tuning.watch.seeOthers.value)) {
+          n.sawHolder = other.id;
+          ev.push({ type: 'sawWith', npc: n, other });
+          continue;
+        }
+      }
+      // the discovery: back at their spot (or near where it was) and not busy, they notice it is gone, even if they never saw who took it
+      const home = this.spawns.get(n.id);
+      const nearSpot = p ? Math.hypot(n.x - p.spawn.x, n.z - p.spawn.z) < tuning.watch.discoverRange.value : !!home && Math.hypot(n.x - home.x, n.z - home.z) < 1.5;
+      if (!n.discovered && nearSpot && n.distractT <= 0 && n.obliviousT <= 0 && (n.mode === 'idle' || n.mode === 'walk')) {
+        n.missT += dt;
+        if (n.missT >= tuning.watch.discoverDelay.value) {
+          n.discovered = true;
+          ev.push({ type: 'discovered', npc: n });
+        }
+      }
+      if (!n.seesGull || n.distractT > 0 || n.obliviousT > 0) continue;
       n.watchCd = 12;
       n.relentless = true;
       ev.push(...startle(n, 'snatched')); // they chase
@@ -605,7 +653,7 @@ export class NpcManager implements NpcHooks {
     this.clock += dt;
     ev.push(...this.musicStep(dt, tuning.boombox.pulse.value));
     this.gossipStep();
-    ev.push(...this.watchStep());
+    ev.push(...this.watchStep(dt));
     ev.push(...this.crumbStep(dt));
     for (const h of this.hazards) h.ttl -= dt;
     this.hazards = this.hazards.filter((h) => h.ttl > 0);
@@ -618,6 +666,7 @@ export class NpcManager implements NpcHooks {
     for (const n of this.npcs) {
       if (n.role === 'selfie' || n.role === 'blogger') ev.push(...this.selfieStep(n, gulls)); // the blogger photographs her dish on the same rhythm
       if (n.role === 'cleaner') this.cleanStep(n, dt);
+      if (n.ritual) ev.push(...this.ritualStep(n));
       const near = gulls.length === 1 ? gulls[0] : watchedGull(n, gulls);
       const stepped = stepNpc(n, near, this.noises, dt, ctx);
       for (const e of stepped) if (e.type === 'bought') this.serve(e.npc, e.station, e.propType);
@@ -742,6 +791,17 @@ export class NpcManager implements NpcHooks {
       break;
     }
     return ev;
+  }
+
+  /** Send one person somewhere (to confront a neighbour). They stay around there for a while. */
+  sendTo(n: Npc, x: number, z: number, name: string): void {
+    const dx = n.x - x, dz = n.z - z, d = Math.hypot(dx, dz) || 1;
+    n.goal = { x: x + (dx / d) * 1.4, z: z + (dz / d) * 1.4, name }; // stop in front of them, not on top
+    if (n.mode === 'idle' || n.mode === 'recover' || n.mode === 'eat' || n.mode === 'notice' || n.mode === 'shield') {
+      n.mode = 'walk';
+      n.t = 0;
+      n.targetX = n.targetZ = null;
+    }
   }
 
   /** Send whoever an item was snatched from to a place (e.g. the wrong ferry). Returns true if there was such a victim. */
