@@ -80,6 +80,7 @@ export const BUFFET: LevelDef = {
       id: 'buffetSecret',
       title: 'A nasty surprise',
       teaser: 'Granny has a sweet tooth. Not every sweet is sweet.',
+      reveal: { x: GRANNY.x, z: GRANNY.z, r: 8, text: 'Granny\'s sweet tooth' },
       timed: false,
       objectives: [{ id: 'yuck', victim: 'granny', text: 'Give Granny salmiakki', kind: 'event', event: 'yuck', hint: 'Salmiakki looks like sweets. She does not know that until she bites.' }],
     },
@@ -127,6 +128,8 @@ export const BUFFET: LevelDef = {
     // the finale: Granny is delighted, the Chef storms over and sees it
     { on: 'tookItem:pie', say: 'MY PIE! Granny!', sound: 'gasp', mood: { role: 'chef', mood: 'angry' }, send: { role: 'chef', goals: [{ x: GRANNY.x + 1.5, z: GRANNY.z - 1.2, name: 'pieScene' }] }, witness: { x: GRANNY.x, z: GRANNY.z, r: 18, emote: 'laugh' } },
     { on: 'tookItem:pie', witness: { x: GRANNY.x, z: GRANNY.z, r: 2, emote: 'heart' } },
+    { on: 'sawWith:chef:granny', say: 'The Chef: "Is that... MY PIE?"', witness: { x: GRANNY.x, z: GRANNY.z, r: 16, emote: 'laugh' }, repeat: true },
+    { on: 'arrived:confront:chef', say: 'Granny: "Lovely pie, dear. Bit dry."', witness: { x: GRANNY.x, z: GRANNY.z, r: 16, emote: 'laugh' }, repeat: true },
     { on: 'yuck', say: 'Salmiakki! Who leaves salmiakki on a picnic?', witness: { x: GRANNY.x, z: GRANNY.z, r: 14, emote: 'laugh' } },
     { on: 'caught:chef', say: 'Thief! My pie!' },
     { on: 'gotcha:chef', say: 'Not my pie!', sound: 'bonk' },

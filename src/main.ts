@@ -1961,6 +1961,11 @@ function checkLevelDone(): void {
   const notes = [
     `${'★'.repeat(n)}${'☆'.repeat(3 - n)}  ·  ${stars[0] ? '★' : '☆'} cleared  ·  ${stars[1] ? '★' : '☆'} every to-do (secrets too)  ·  ${stars[2] ? '★' : '☆'} under ${fmtClear(level.parTime ?? 0)}`,
   ];
+  // the hidden to-dos: how many are still out there (an open loop to come back for)
+  if (setup.secret.size) {
+    const found = [...setup.secret].filter((id) => quests.quests.find((q) => q.id === id)?.status === 'won').length;
+    notes.push(found === setup.secret.size ? `Secret to-dos: all ${found} found.` : `Secret to-dos: ${found} of ${setup.secret.size} found. ${setup.secret.size - found} still hidden in this level.`);
+  }
   if (level.endingNote) notes.push(level.endingNote);
   if (level.reward) {
     const sk = skills.unlock(level.reward);
@@ -2304,6 +2309,12 @@ function onNpcEvents(evs: NpcEvent[]): void {
       audio.play('thud');
       notes(quests.onEvent(`knockdown:${e.count}`));
       if (e.count === 4) polaroids.request('Strike!');
+    } else if (e.type === 'sawWith') {
+      // the cross-wire: "that is MY pie!" They march over to the culprit, who looks up, puzzled
+      emoteAtNpc(e.npc, 'anger');
+      emoteAtNpc(e.other, 'question');
+      npcs?.sendTo(e.npc, e.other.x, e.other.z, 'confront');
+      notes(quests.onEvent(`sawWith:${e.npc.role}:${e.other.role}`));
     } else if (e.type === 'ritual') {
       notes(quests.onEvent(`ritual:${e.npc.role}`));
     } else if (e.type === 'discovered') {
@@ -3032,6 +3043,7 @@ startLoop({
     itemGlow.update(greybox ? [] : interaction.props.props, gull.position, wantedItems(setup.quests, quests.quests), defense?.hawkActive === true, options.highlight, simTime, secretSpots());
     waypoints.update(labelled, cam.camera, gull.position, innerWidth, innerHeight);
     todo.ladder.mode = options.hints;
+    todo.revealNear = new Set(setup.quests.filter((q) => q.reveal && setup.secret.has(q.id) && Math.hypot(q.reveal.x - gull.state.x, q.reveal.z - gull.state.z) <= q.reveal.r).map((q) => q.id));
     todo.update(quests.quests, npcs ? npcs.nearestDistance(gull.state) : Infinity, interaction.carried?.stolen === true);
     targets.forEach((t, i) => (targetMeshes[i].visible = t.cooldown === 0));
     const s = gull.state;

@@ -9,7 +9,7 @@ import type { Target } from './targets';
 import { npcPull } from './tug';
 import { pickRoutine, type Poi } from './routine';
 import { ritualLabel, ritualState } from './ritual';
-import { BODY_HEIGHT, BODY_RADIUS, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn, type Station, slip, honkAt, setMood, isCalm, scareJump, startDance, gatherSlot } from './npc';
+import { BODY_HEIGHT, BODY_RADIUS, canSee, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn, type Station, slip, honkAt, setMood, isCalm, scareJump, startDance, gatherSlot } from './npc';
 import type { GrabCandidate } from './grab';
 import type { HitSphere } from './poop';
 import type { NpcHooks } from './interaction';
@@ -509,7 +509,17 @@ export class NpcManager implements NpcHooks {
       if (!gone) {
         n.missT = 0;
         n.discovered = false; // it is back: they can lose it again
+        n.sawHolder = null;
         continue;
+      }
+      // the neighbours (M103): their item in somebody else's hands, and they can see that person: they march over
+      if (p && p.heldBy !== null && p.heldBy !== n.id && n.sawHolder !== p.heldBy && n.obliviousT <= 0) {
+        const other = this.npcs.find((o) => o.id === p.heldBy);
+        if (other && canSee(n, { x: other.x, y: 1.6 + other.y, z: other.z, diving: false }, this.world, tuning.watch.seeOthers.value)) {
+          n.sawHolder = other.id;
+          ev.push({ type: 'sawWith', npc: n, other });
+          continue;
+        }
       }
       // the discovery: back at their spot (or near where it was) and not busy, they notice it is gone, even if they never saw who took it
       const home = this.spawns.get(n.id);
@@ -781,6 +791,17 @@ export class NpcManager implements NpcHooks {
       break;
     }
     return ev;
+  }
+
+  /** Send one person somewhere (to confront a neighbour). They stay around there for a while. */
+  sendTo(n: Npc, x: number, z: number, name: string): void {
+    const dx = n.x - x, dz = n.z - z, d = Math.hypot(dx, dz) || 1;
+    n.goal = { x: x + (dx / d) * 1.4, z: z + (dz / d) * 1.4, name }; // stop in front of them, not on top
+    if (n.mode === 'idle' || n.mode === 'recover' || n.mode === 'eat' || n.mode === 'notice' || n.mode === 'shield') {
+      n.mode = 'walk';
+      n.t = 0;
+      n.targetX = n.targetZ = null;
+    }
   }
 
   /** Send whoever an item was snatched from to a place (e.g. the wrong ferry). Returns true if there was such a victim. */

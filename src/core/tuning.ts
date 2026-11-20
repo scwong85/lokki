@@ -195,6 +195,7 @@ export const tuning = {
     cooldown: p(18, 3, 60, 1), // before the same watcher can catch it again
     discoverRange: p(7, 2, 20, 0.5), // somebody this close to where their item was notices it has gone
     discoverDelay: p(1.2, 0, 6, 0.1), // after this long (seconds)
+    seeOthers: p(2, 0.5, 4, 0.1), // a watcher spots their item in somebody else's hands this many times further than they spot a gull
     hitRange: p(1.4, 0.3, 4, 0.1), // a splat or a thrown thing this close to a switch sets it off
     doubleTake: p(1.3, 0.2, 4, 0.1), // seconds between the puzzled look and the anger
   },
