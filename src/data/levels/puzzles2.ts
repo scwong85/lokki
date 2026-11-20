@@ -9,6 +9,7 @@ const guests = (pts: [number, number][]) => pts.map(([x, z], i) => ({ x, z, head
 // P2. The Grand Opening
 // ---------------------------------------------------------------------------------------------------------------------------------
 const KIOSK = { x: -10, z: -15 };
+const JUKE = { x: -13.5, z: -11.5 }; // right by the ribbon: music gathers people round the jukebox, so it has to stand where the crowd should be
 const RIBBON = { x: -10, z: -10.5 };
 const PRESS = { x: -4, z: -9 };
 
@@ -37,10 +38,10 @@ export const GRAND_OPENING: LevelDef = {
       objectives: [
         {
           id: 'crowd',
-          text: 'Get five people to wait at the ribbon (music or food)',
-          outcome: 'Five people should be waiting by the red ribbon, expecting something.',
+          text: 'Get a crowd to wait at the ribbon (music or food)',
+          outcome: 'A crowd (four or more) should be waiting by the red ribbon, expecting something.',
           nudge: 'People gather for things they like: music, and food.',
-          hint: 'Peck the jukebox (E): everyone not busy comes to dance. Or lay buns on the ground near the ribbon: hungry people come to eat.',
+          hint: 'Peck the jukebox beside the ribbon (E): everyone not busy comes over to dance round it. Or lay buns on the ground by the ribbon: hungry people come to eat them, and stay.',
           kind: 'event',
           event: 'crowdAtKiosk',
           markers: [{ x: RIBBON.x, z: RIBBON.z, r: 6, label: 'The ribbon' }],
@@ -61,7 +62,7 @@ export const GRAND_OPENING: LevelDef = {
           text: 'Drop the scissors on the ribbon, in front of the crowd',
           outcome: 'The ribbon should be cut, with everyone watching.',
           nudge: 'Scissors cut ribbons. A ribbon is cut properly only before an audience.',
-          hint: 'Put the scissors down (E) on the red ribbon once five people are waiting.',
+          hint: 'Put the scissors down (E) on the red ribbon once a crowd is waiting.',
           kind: 'event',
           event: 'ribbonCut',
           after: 'scissors',
@@ -95,8 +96,10 @@ export const GRAND_OPENING: LevelDef = {
   ],
   triggers: [],
   extraTriggers: [
-    { id: 'crowdAtKiosk', kind: 'npcsInZone', event: 'crowdAtKiosk', role: 'guest', zone: zone(RIBBON.x, RIBBON.z, 6), count: 5 },
+    { id: 'crowdAtKiosk', kind: 'npcsInZone', event: 'crowdAtKiosk', role: 'guest', zone: zone(RIBBON.x, RIBBON.z, 7.5), count: 4 },
     { id: 'ribbonCut', kind: 'propInZone', event: 'ribbonCut', propType: 'scissors', tag: 'scissors', zone: zone(RIBBON.x, RIBBON.z, 3.2, 2), needs: 'crowdAtKiosk' },
+    // the scissors on the ribbon with nobody to watch: a nudge (once)
+    { id: 'ribbonDry', kind: 'propInZone', event: 'ribbonDry', propType: 'scissors', tag: 'scissors', zone: zone(RIBBON.x, RIBBON.z, 3.2, 2), unless: 'crowdAtKiosk', always: true },
     { id: 'coneAtPress', kind: 'propInZone', event: 'coneAtPress', propType: 'icecream', tag: 'firstCone', zone: zone(PRESS.x, PRESS.z, 2.6, 2) },
   ],
   tourists: [],
@@ -115,8 +118,9 @@ export const GRAND_OPENING: LevelDef = {
     { kind: 'kiosk', x: KIOSK.x, z: KIOSK.z },
     { kind: 'ribbon', x: RIBBON.x, z: RIBBON.z },
   ],
-  switches: [{ id: 'juke', x: -20, z: -12, label: 'jukebox', effect: 'dance', cooldown: 8 }],
+  switches: [{ id: 'juke', x: JUKE.x, z: JUKE.z, label: 'jukebox', effect: 'dance', cooldown: 8 }],
   reactions: [
+    { on: 'ribbonDry', say: 'Cutting a ribbon with nobody watching? Where is the audience?', sound: 'gasp' },
     { on: 'ribbonCut', say: 'The ribbon is cut! Hooray!', sound: 'pop', mood: { role: 'vendor', mood: 'delighted' }, oblivious: { role: 'vendor', seconds: 22 }, witness: { x: RIBBON.x, z: RIBBON.z, r: 16, emote: 'heart' } },
     { on: 'ribbonCut', mood: { role: 'mayor', mood: 'angry' } },
     { on: 'coneAtPress', say: 'FRONT PAGE: the first cone, and no suspect.', sound: 'chime', witness: { x: PRESS.x, z: PRESS.z, r: 12, emote: 'laugh' } },

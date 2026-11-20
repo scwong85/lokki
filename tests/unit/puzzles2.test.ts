@@ -60,6 +60,20 @@ describe('the trigger that needs a crowd first (the ribbon)', () => {
     t.update(ctx(2), new Set(['crowd']));
     expect(t.update(ctx(0), new Set(['cut']))).toEqual(['cut']); // the crowd came once: enough
   });
+  it('the scissors on the ribbon with no crowd give a one-off nudge instead (a trigger that fires without a step wanting it)', () => {
+    const t = new TriggerSystem([
+      { id: 'crowd', kind: 'npcsInZone', event: 'crowd', role: 'guest', zone: { minX: -5, maxX: 5, minZ: -5, maxZ: 5 }, count: 2 },
+      { id: 'dry', kind: 'propInZone', event: 'dry', propType: 'scissors', tag: 's', zone: { minX: -3, maxX: 3, minZ: -3, maxZ: 3, maxY: 2 }, unless: 'crowd', always: true },
+    ]);
+    expect(t.update(ctx(0), new Set())).toEqual(['dry']); // nobody wants it, it fires all the same
+    expect(t.update(ctx(0), new Set())).toEqual([]); // once
+    const u = new TriggerSystem([
+      { id: 'crowd', kind: 'npcsInZone', event: 'crowd', role: 'guest', zone: { minX: -5, maxX: 5, minZ: -5, maxZ: 5 }, count: 2 },
+      { id: 'dry', kind: 'propInZone', event: 'dry', propType: 'scissors', tag: 's', zone: { minX: -3, maxX: 3, minZ: -3, maxZ: 3, maxY: 2 }, unless: 'crowd', always: true },
+    ]);
+    u.update(ctx(2), new Set(['crowd']));
+    expect(u.update(ctx(0), new Set())).toEqual([]); // the crowd has been: no nudge
+  });
   it('the quest steps in order: crowd and scissors in any order, then the cut', () => {
     const l = LEVELS.find((x) => x.id === 'grand-opening')!;
     const log = new QuestLog(l.extraQuests!);
