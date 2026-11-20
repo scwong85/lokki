@@ -67,7 +67,7 @@ export const BUFFET: LevelDef = {
           victim: 'chef',
           text: 'Make Granny eat the Chef\'s golden pie',
           outcome: 'Make Granny eat the Chef\'s golden pie, and let him see it.',
-          nudge: 'Granny eats anything sweet that comes near her blanket. The Chef only watches his table.',
+          nudge: 'Granny eats anything sweet that comes near her blanket. The Chef only watches his table, except when he tastes his own cooking: he counts himself in and shuts his eyes.',
           hint: 'Take the pie when the Chef is not looking (the bell helps) and put it down (E) on Granny\'s red-checked blanket. She eats it; he comes to look.',
           kind: 'event',
           event: 'tookItem:pie',
@@ -88,7 +88,7 @@ export const BUFFET: LevelDef = {
   triggers: [],
   tourists: [],
   extraTourists: [
-    { x: TABLE.x, z: TABLE.z - 2, heading: Math.PI, role: 'chef', name: 'Chef', stationary: true, post: true, watch: 'goldenPie', color: 0xffffff, hat: 'chef', hatColor: 0xffffff },
+    { x: TABLE.x, z: TABLE.z - 2, heading: Math.PI, role: 'chef', name: 'Chef', stationary: true, post: true, watch: 'goldenPie', ritual: { every: 24, hold: 4, icon: '😋', phase: 6 }, color: 0xffffff, hat: 'chef', hatColor: 0xffffff },
     { x: TABLE.x - 8, z: TABLE.z + 4, heading: Math.PI / 2, role: 'maitre', name: 'Maître', patrol: [{ x: TABLE.x + 8, z: TABLE.z + 4 }, { x: TABLE.x - 8, z: TABLE.z + 4 }], color: 0x2f3a55, hat: 'top', hatColor: 0x2a2a35 },
     { x: GRANNY.x - 1.2, z: GRANNY.z + 0.6, heading: Math.PI / 2, role: 'granny', name: 'Granny', stationary: true, post: true, wants: ['pie', 'salmiakki'], color: 0xb9a1d6, hat: 'sun', hatColor: 0xe6d9f5 },
     // the guests: the audience (they laugh), and happy to dance
@@ -119,6 +119,7 @@ export const BUFFET: LevelDef = {
     { on: 'arrived:bell:chef', nth: 2, witness: { x: TABLE.x, z: TABLE.z, r: 18, emote: 'point' } },
     { on: 'arrived:bell:chef', nth: 3, say: 'The Chef: "That is IT. I am never answering that bell again."', sound: 'gasp', mood: { role: 'chef', mood: 'angry' }, witness: { x: BELL.x, z: BELL.z, r: 3, emote: 'facepalm' } },
     { on: 'arrived:bell:chef', nth: 3, witness: { x: TABLE.x, z: TABLE.z, r: 20, emote: 'laugh' } },
+    { on: 'ritual:chef', nth: 1, say: 'The Chef: "Three, two, one... mmm. Perfection." (eyes shut)' },
     { on: 'discovered:chef', say: 'The Chef: "My pie...? WHERE IS MY PIE?"', witness: { x: TABLE.x, z: TABLE.z, r: 16, emote: 'laugh' }, repeat: true },
     { on: 'slipped:maitre', say: 'Ahem. That was intentional.', witness: { x: TABLE.x, z: TABLE.z + 4, r: 16, emote: 'laugh' } },
     { on: 'poopNpc:maitre', say: 'This jacket was pressed this morning!', witness: { x: TABLE.x, z: TABLE.z + 4, r: 16, emote: 'point' } },

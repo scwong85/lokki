@@ -2304,6 +2304,8 @@ function onNpcEvents(evs: NpcEvent[]): void {
       audio.play('thud');
       notes(quests.onEvent(`knockdown:${e.count}`));
       if (e.count === 4) polaroids.request('Strike!');
+    } else if (e.type === 'ritual') {
+      notes(quests.onEvent(`ritual:${e.npc.role}`));
     } else if (e.type === 'discovered') {
       // the double take: a puzzled look at the empty spot, then (a moment later) the penny drops
       const who = e.npc;

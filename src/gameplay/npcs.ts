@@ -8,6 +8,7 @@ import { restY, type PropType } from '../data/props';
 import type { Target } from './targets';
 import { npcPull } from './tug';
 import { pickRoutine, type Poi } from './routine';
+import { ritualLabel, ritualState } from './ritual';
 import { BODY_HEIGHT, BODY_RADIUS, guardState, handPos, newNpc, snatchable, snatchState, startle, stepNpc, type GullInfo, type Noise, type Npc, type NpcEvent, type NpcSpawn, type Station, slip, honkAt, setMood, isCalm, scareJump, startDance, gatherSlot } from './npc';
 import type { GrabCandidate } from './grab';
 import type { HitSphere } from './poop';
@@ -476,6 +477,28 @@ export class NpcManager implements NpcHooks {
     return ev;
   }
 
+  /** A ritual (M102): the countdown over the head, then a few seconds with their eyes elsewhere. Busy, frightened or chasing people skip it. */
+  private ritualStep(n: Npc): NpcEvent[] {
+    const r = n.ritual!;
+    const calmNow = n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat';
+    const st = ritualState(this.clock, r);
+    n.ritualLabel = calmNow ? ritualLabel(st, r) : undefined;
+    if (!calmNow || st.phase !== 'hold') {
+      if (st.phase !== 'hold') n.ritualOn = false;
+      return [];
+    }
+    const fresh = !n.ritualOn; // the first step of this ritual
+    n.ritualOn = true;
+    n.obliviousT = Math.max(n.obliviousT, r.hold - st.t); // eyes shut, or on the watch: they see nothing
+    if (r.lookAt) {
+      // ...or they turn to something (the Mayor to his crowd)
+      n.distractT = Math.max(n.distractT, 0.3);
+      n.noiseX = r.lookAt.x;
+      n.noiseZ = r.lookAt.z;
+    }
+    return fresh ? [{ type: 'ritual', npc: n }] : [];
+  }
+
   /** Watchers (M95): somebody who minds a prop notices when it is gone, and goes after the gull if they can see it. */
   private watchStep(dt: number): NpcEvent[] {
     const ev: NpcEvent[] = [];
@@ -633,6 +656,7 @@ export class NpcManager implements NpcHooks {
     for (const n of this.npcs) {
       if (n.role === 'selfie' || n.role === 'blogger') ev.push(...this.selfieStep(n, gulls)); // the blogger photographs her dish on the same rhythm
       if (n.role === 'cleaner') this.cleanStep(n, dt);
+      if (n.ritual) ev.push(...this.ritualStep(n));
       const near = gulls.length === 1 ? gulls[0] : watchedGull(n, gulls);
       const stepped = stepNpc(n, near, this.noises, dt, ctx);
       for (const e of stepped) if (e.type === 'bought') this.serve(e.npc, e.station, e.propType);
