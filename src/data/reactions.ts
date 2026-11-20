@@ -25,9 +25,25 @@ export interface Reaction {
   hunt?: boolean;
   /** Another quest event this reaction causes (it can start the next step). */
   emit?: string;
+  /** Only on this occurrence of the event (1 = the first time, 2 = the second...): a reaction that escalates (M101). Without it, the reaction plays the first time only, unless `repeat`. */
+  nth?: number;
+  /** Plays every time the event happens. */
+  repeat?: boolean;
 }
 
 export const reactionsFor = (list: readonly Reaction[] | undefined, event: string): Reaction[] => (list ?? []).filter((r) => r.on === event);
 
 /** Events that count as a person or the city reacting (for the chain test). */
 export const REACTION_EVENT = /^(robbed|mood|atStation|bought|slipped|soaked|honkDrop|knockdown|spread|dancers|signSplat|poopNpc|poopWarden|wardenHunt|dodge|bunAtDock|mapInSea|wrongFerry|distract|tugWin|snatch|pecked|dancing|boo|slammed|pose|bellPoop|bellSnatch|tramBlocked|pigeons)/;
+
+/**
+ * Should reaction number `index` play now, the `count`-th time its event happens? With `nth` only on that occurrence; with `repeat`
+ * every time; otherwise the first time only (`done` remembers which ones have played; it is updated).
+ */
+export function reactionPlays(r: Reaction, key: string, count: number, done: Set<string>): boolean {
+  if (r.nth !== undefined) return count === r.nth;
+  if (r.repeat) return true;
+  if (done.has(key)) return false;
+  done.add(key);
+  return true;
+}

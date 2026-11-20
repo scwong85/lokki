@@ -477,13 +477,28 @@ export class NpcManager implements NpcHooks {
   }
 
   /** Watchers (M95): somebody who minds a prop notices when it is gone, and goes after the gull if they can see it. */
-  private watchStep(): NpcEvent[] {
+  private watchStep(dt: number): NpcEvent[] {
     const ev: NpcEvent[] = [];
     for (const n of this.npcs) {
       if (!n.watch || n.watchCd > 0 || !(n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat' || n.mode === 'notice' || n.mode === 'shield' || n.mode === 'recover')) continue;
       const p = this.props.props.find((x) => x.tag === n.watch && !x.broken);
       const gone = !p || p.carried || Math.hypot(p.cur.p.x - p.spawn.x, p.cur.p.z - p.spawn.z) > 2.5 || p.cur.p.y > p.spawn.y + 1.5;
-      if (!gone || !n.seesGull || n.distractT > 0 || n.obliviousT > 0) continue;
+      if (!gone) {
+        n.missT = 0;
+        n.discovered = false; // it is back: they can lose it again
+        continue;
+      }
+      // the discovery: back at their spot (or near where it was) and not busy, they notice it is gone, even if they never saw who took it
+      const home = this.spawns.get(n.id);
+      const nearSpot = p ? Math.hypot(n.x - p.spawn.x, n.z - p.spawn.z) < tuning.watch.discoverRange.value : !!home && Math.hypot(n.x - home.x, n.z - home.z) < 1.5;
+      if (!n.discovered && nearSpot && n.distractT <= 0 && n.obliviousT <= 0 && (n.mode === 'idle' || n.mode === 'walk')) {
+        n.missT += dt;
+        if (n.missT >= tuning.watch.discoverDelay.value) {
+          n.discovered = true;
+          ev.push({ type: 'discovered', npc: n });
+        }
+      }
+      if (!n.seesGull || n.distractT > 0 || n.obliviousT > 0) continue;
       n.watchCd = 12;
       n.relentless = true;
       ev.push(...startle(n, 'snatched')); // they chase
@@ -605,7 +620,7 @@ export class NpcManager implements NpcHooks {
     this.clock += dt;
     ev.push(...this.musicStep(dt, tuning.boombox.pulse.value));
     this.gossipStep();
-    ev.push(...this.watchStep());
+    ev.push(...this.watchStep(dt));
     ev.push(...this.crumbStep(dt));
     for (const h of this.hazards) h.ttl -= dt;
     this.hazards = this.hazards.filter((h) => h.ttl > 0);
