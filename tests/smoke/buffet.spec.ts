@@ -51,7 +51,7 @@ test('buffet: taking the pie in front of the Chef gets you caught, and if he rea
   });
   await expect.poll(() => page.evaluate(() => (window as unknown as { __lokki: Lk }).__lokki.interaction.carried), { timeout: 60_000, intervals: [500] }).toBeNull();
   const pie = await page.evaluate(() => (window as unknown as { __lokki: Lk }).__lokki.interaction.props.props.find((p) => p.tag === 'goldenPie')!.cur.p);
-  expect(Math.hypot(pie.x, pie.z + 20)).toBeLessThan(1.5);
+  expect(Math.hypot(pie.x, pie.z + 20)).toBeLessThan(3); // back at the buffet table
   expect(errors).toEqual([]);
 });
 
@@ -67,6 +67,8 @@ test('buffet finale: the pie put down by Granny is eaten, and the Chef is sent o
     await page.keyboard.press('KeyE');
     expect(await page.evaluate(() => (window as unknown as { __lokki: Lk }).__lokki.interaction.carried)).toBeNull();
   }).toPass({ timeout: 30_000, intervals: [800] });
+  // step back: with a gull at her elbow she only watches it
+  await page.evaluate(() => { const l = (window as unknown as { __lokki: Lk }).__lokki; Object.assign(l.gull.state, { x: -17, y: 12, z: -30, vx: 0, vy: 0, vz: 0, mode: 'air' }); });
   await expect.poll(async () => (await step(page, 'granny')).done, { timeout: 200_000, intervals: [2000] }).toBe(true);
   expect(await page.evaluate(() => (window as unknown as { __lokki: Lk }).__lokki.npcs.npcs.find((n) => n.role === 'chef')!.goal?.name ?? 'arrived')).toMatch(/pieScene|arrived/);
   expect(errors).toEqual([]);

@@ -241,7 +241,7 @@ export const FIRE_DRILL: LevelDef = {
     { id: 'spray', x: -30, z: -12, label: 'sprinkler button', effect: 'soak', cooldown: 12, target: { x: STALL.x, z: STALL.z - 1.8 } },
   ],
   reactions: [
-    { on: 'pecked:alarm', say: 'The Guard: "FIRE DRILL! Everyone to the assembly point! Walk, do not run!"', sound: 'alarm', send: { role: 'guest', goals: musterRing(5) } },
+    { on: 'pecked:alarm', say: 'The Guard: "FIRE DRILL! Everyone to the assembly point! Walk, do not run!"', sound: 'alarm', send: { role: 'guest', goals: musterRing(5) }, oblivious: { role: 'guest', seconds: 25 } }, // they march; a gull on the way does not stop them
     { on: 'pecked:alarm', send: { role: 'guard', goals: [{ x: MUSTER.x + 2.6, z: MUSTER.z + 0.6, name: 'muster' }] } },
     { on: 'musterFull', say: 'The Guard: "Head count... all present! Excellent drill, everyone."', witness: { x: MUSTER.x, z: MUSTER.z, r: 5, emote: 'question' } },
     { on: 'soaked:cleaner', say: 'The Fishmonger: "My counter! My beautiful counter!"', distract: { role: 'cleaner', seconds: 8 }, witness: { x: STALL.x, z: STALL.z + 3, r: 14, emote: 'laugh' } },

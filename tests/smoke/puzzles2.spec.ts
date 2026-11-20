@@ -51,6 +51,7 @@ test('Fire Drill: the alarm marches the queue to the muster; the sprinkler soaks
   await expect.poll(() => done(page, 'drill', 'soak'), { timeout: 120_000, intervals: [2000] }).toBe(true);
   await goto(-14, -11);
   expect(await page.evaluate(() => (window as unknown as { __lokki: Lk }).__lokki.peckNow())).toBe(true); // the alarm
+  await page.evaluate(() => { const l = (window as unknown as { __lokki: Lk }).__lokki; Object.assign(l.gull.state, { x: -20, y: 12, z: -30, vx: 0, vy: 0, vz: 0, mode: 'air' }); }); // and fly off
   await expect.poll(() => done(page, 'drill', 'drill'), { timeout: 300_000, intervals: [3000] }).toBe(true);
   // the Fishmonger arrives at the muster (as if chasing the gull): the Guard puts him in line
   await page.evaluate(() => { const l = (window as unknown as { __lokki: Lk }).__lokki; const m = l.npcs.npcs.find((n) => n.role === 'cleaner')!; m.x = -5; m.z = -9; });
