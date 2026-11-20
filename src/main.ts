@@ -273,7 +273,12 @@ if (level.sandbox) quests.restoreWon(save.questsWon); // finished quests belong 
 const triggers = new TriggerSystem(greybox ? [] : setup.triggers);
 const stats = new LevelStats();
 const levelComplete = new LevelComplete(document.body);
+const polaroidsProjectV = new THREE.Vector3();
 const polaroids = new Polaroids(document.body);
+polaroids.project = (p) => {
+  polaroidsProjectV.set(p.x, p.y, p.z).project(cam.camera);
+  return { x: (polaroidsProjectV.x + 1) / 2, y: (1 - polaroidsProjectV.y) / 2, onScreen: polaroidsProjectV.z < 1 && Math.abs(polaroidsProjectV.x) < 0.95 && Math.abs(polaroidsProjectV.y) < 0.95 };
+};
 const tugEl = document.createElement('div'); // the tug-of-war meter
 tugEl.id = 'tugbar';
 tugEl.hidden = true;
@@ -565,6 +570,18 @@ function strikePose(pl: Player | undefined, kind: string): void {
 }
 function photoPoses(who: number[]): string[] {
   return who.map((i) => players[i]).filter(Boolean).map((p) => posing.get(p.id)).filter((x): x is { kind: string; until: number } => !!x && x.until >= simTime).map((x) => x.kind);
+}
+/**
+ * The punchline photo (M104): a to-do with a victim is photographed a beat later (when their reaction shows), framed on the victim's
+ * head rather than the middle of the screen. No slow motion and no camera move (both felt wrong, M87): only the picture.
+ */
+function punchlinePhoto(role: string, caption: string): void {
+  const victim = () => {
+    const s = gull.state;
+    const n = npcs?.npcs.filter((x) => x.role === role).sort((a, b) => Math.hypot(a.x - s.x, a.z - s.z) - Math.hypot(b.x - s.x, b.z - s.z))[0];
+    return n ? { x: n.x, y: n.y + 1.7, z: n.z } : null;
+  };
+  beats.push({ at: simTime + tuning.juice.punchlineDelay.value, run: () => polaroids.request(caption, victim) });
 }
 /** Little things that happen a moment later (the second half of a double take). */
 const beats: { at: number; run: () => void }[] = [];
@@ -2200,7 +2217,9 @@ function notes(list: QuestNote[]): void {
     } else if (n.type === 'objective') {
       const text = q.objectives.find((o) => o.id === n.objective)!.text;
       hud.toast(`✓ ${text}`, 1.6);
-      polaroids.request(text);
+      const victim = def.objectives.find((o) => o.id === n.objective)?.victim;
+      if (victim) punchlinePhoto(victim, def.objectives.find((o) => o.id === n.objective)?.outcome ?? text);
+      else polaroids.request(text);
       gull.wiggleT = 0.8;
       fx('stars', { x: gull.state.x, y: gull.state.y + 0.8, z: gull.state.z }, 0.6);
       if (n.quest === 'date' && n.objective === 'splat') {
@@ -2324,6 +2343,7 @@ function onNpcEvents(evs: NpcEvent[]): void {
       beats.push({ at: simTime + tuning.watch.doubleTake.value, run: () => {
         emoteAtNpc(who, 'anger');
         audio.play('gasp');
+        punchlinePhoto(who.role, `${who.name ?? 'Somebody'}: "WHERE IS IT?"`);
         notes(quests.onEvent(`discovered:${who.role}`));
       } });
     } else if (e.type === 'caught') {

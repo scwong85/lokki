@@ -28,12 +28,31 @@ export function pickShowcase(list: Polaroid[], n = 3): Polaroid[] {
 const W = 300, H = 330, PHOTO = 268;
 
 /**
+ * Which part of the screen to cut out for a photo: a rectangle of the photo's shape, as large as fits, centred on the focus point
+ * (0..1 across and down; the screen centre when there is none), and kept inside the screen. The punchline photo (M104) centres on
+ * the victim's face instead of the middle of the screen.
+ */
+export function cropRect(srcW: number, srcH: number, aspect: number, focus: { x: number; y: number } | null, zoom = 1): { x: number; y: number; w: number; h: number } {
+  let w = srcW, h = srcW / aspect;
+  if (h > srcH) { h = srcH; w = h * aspect; }
+  w /= zoom;
+  h /= zoom;
+  const fx = (focus?.x ?? 0.5) * srcW, fy = (focus?.y ?? 0.5) * srcH;
+  const x = Math.min(srcW - w, Math.max(0, fx - w / 2));
+  const y = Math.min(srcH - h, Math.max(0, fy - h / 2));
+  return { x, y, w, h };
+}
+
+/**
  * Polaroids: ask for one at a fun moment, and it is taken from the game canvas right after the next frame is drawn
  * (a WebGL canvas can only be read then). Each gets a white frame and a caption, pops up for a moment, and goes in the album.
  */
 export class Polaroids {
   album: Polaroid[] = [];
   private pending: string | null = null;
+  /** Where the photo should look (a person's head), and how a world point lands on the screen (set by the game). */
+  private focus: (() => { x: number; y: number; z: number } | null) | null = null;
+  project: ((p: { x: number; y: number; z: number }) => { x: number; y: number; onScreen: boolean }) | null = null;
   private cooldown = 0;
   private popup: HTMLImageElement;
 
@@ -50,9 +69,10 @@ export class Polaroids {
   }
 
   /** Ask for a photo of this moment (ignored if one was taken a second ago). */
-  request(caption: string): void {
+  request(caption: string, focus?: () => { x: number; y: number; z: number } | null): void {
     if (!this.enabled || this.cooldown > 0) return;
     this.pending = fitCaption(caption);
+    this.focus = focus ?? null;
   }
 
   tick(dt: number): void {
@@ -75,9 +95,12 @@ export class Polaroids {
     // cover-crop the middle of the screen into a square-ish picture
     const m = 16;
     const ar = PHOTO / (PHOTO * 0.84);
-    let sw = source.width, sh = source.width / ar;
-    if (sh > source.height) { sh = source.height; sw = sh * ar; }
-    g.drawImage(source, (source.width - sw) / 2, (source.height - sh) / 2, sw, sh, m, m, PHOTO, PHOTO * 0.84);
+    // the punchline: frame the victim (zoomed in a little) when they are on screen, else the middle of the screen
+    const at = this.focus?.();
+    const scr = at && this.project ? this.project(at) : null;
+    const r = cropRect(source.width, source.height, ar, scr?.onScreen ? scr : null, scr?.onScreen ? 1.7 : 1);
+    this.focus = null;
+    g.drawImage(source, r.x, r.y, r.w, r.h, m, m, PHOTO, PHOTO * 0.84);
     g.strokeStyle = 'rgba(0,0,0,.12)';
     g.strokeRect(m + 0.5, m + 0.5, PHOTO - 1, PHOTO * 0.84 - 1);
     g.fillStyle = '#4a4033';
