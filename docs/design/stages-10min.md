@@ -11,6 +11,8 @@ Status: **plan.** Stage **1.2 The Gull Picnic** (section 6) is built in M107 (`d
 - The pigeon raid never steals: it mobs you until a honk or a bun, then the pigeons stay as polite guests (open question 3: the gentle version).
 - Bottle Service keeps its own ending (the tourist's ice cream).
 
+**Playtest result (2026-11-21): the picnic took about 5 minutes, not 10.** Why, and the redesign (spread out, two-to-three-step rows, three courses, a Market Guard): `docs/design/picnic-v2.md`. For all 20 stages: a stage gets long from distance, chained rows, courses and something in the way, not from more rows.
+
 **Open questions, decided for now (change after the playtest):** the headline clears the stage, and side orders and secrets are the second star (2); the raid is gentle (3); all rows are open at once (4).
 
 Playtest note behind it: *"Each stage is too short."* The goal now is at least 10 minutes per stage. That means a richer world: more people, more things to pick up and interact with, and to-dos you discover on the spot.
