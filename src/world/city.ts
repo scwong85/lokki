@@ -13,6 +13,7 @@ import type { PropSpawn } from '../gameplay/props';
 import cityJson from '../../data/generated/kauppatori.json';
 import { GROUND_ROWS, awningColour, balconies, groundRuns, turretCorner, bays, hash, pitchedFits, pitchedRoof, rectInfo, roofRise, storeys, wantsPitched, windowPlan, type V3 } from './facade';
 import { ERAS, FACADES_BY_CODE, styleKit } from './buildingStyle';
+import { roofColours } from './roofColour';
 import { ATLAS_ROWS, GROUND_ROW_COUNT, windowAtlas, windowGlow, windowGlowAtlas } from '../render/facadeTextures';
 import { tuning } from '../core/tuning';
 import { planDressing } from './dressingPlan';
@@ -23,7 +24,7 @@ import { asphaltTexture, grassTexture, pavingTexture } from '../render/groundTex
 
 interface CityData {
   half: number;
-  buildings: { id: number; h: number; c: number; rings: number[][]; style?: string; /** Era and facade material from the register (M108), 0 or missing = unknown. */ e?: number; f?: number }[];
+  buildings: { id: number; h: number; c: number; rings: number[][]; style?: string; /** Era and facade material from the register (M108), 0 or missing = unknown. */ e?: number; f?: number; /** Roof colour class from the orthophoto (M110), 0 or missing = unknown. */ r?: number }[];
   land: { rings: number[][] }[];
   streets: { rings: number[][] }[];
   parks: { rings: number[][] }[];
@@ -300,6 +301,8 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
   const pal = paletteAt(mx / (b.rings[0].length / 2), mz / (b.rings[0].length / 2));
   // the real building's era and facade material pick its style kit (M108); without register data, the district rules
   const kit = !style && tuning.render.realStyle.value > 0 && (b.e || b.f) ? styleKit(ERAS[b.e ?? 0] ?? 'unknown', FACADES_BY_CODE[b.f ?? 0] ?? 'unknown') : null;
+  // the real roof colour (orthophoto, M110) wins over the era's and the district's roof colours
+  const realRoof = !style && tuning.render.realRoofs.value > 0 ? roofColours(b.r) : null;
   const wallHex = style ? STYLE_WALLS[style] ?? 0xfdfaf2 : kit?.walls ? kit.walls[hash(b.id) % kit.walls.length] : b.c === 4 ? 0xfdfaf2 : pal.walls[hash(b.id) % pal.walls.length];
   const wall = new THREE.Color(wallHex);
   const foot = wall.clone().multiplyScalar(1 - tuning.render.ao.value);
@@ -476,7 +479,7 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
         extrude(upper, pr);
         prisms.push(pr);
       };
-      const roofSet = kit?.roofs ?? pal.pitched;
+      const roofSet = realRoof ?? kit?.roofs ?? pal.pitched;
       const roofCol = roofSet[hash(b.id, 470) % roofSet.length];
       layer(1.75, h - 4.5, h + 2.0, trim.getHex());
       layer(2.05, h + 2.0, h + 2.6, roofCol);
@@ -504,7 +507,7 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
   if (pitched && r) {
     const rise = roofRise(r.short);
     const hip = r.long / r.short < 1.3;
-    const roofSet = kit?.roofs ?? pal.pitched;
+    const roofSet = realRoof ?? kit?.roofs ?? pal.pitched;
     const roofHex = style ? STYLE_ROOFS[style] ?? pal.pitched[0] : roofSet[hash(b.id, 3) % roofSet.length];
     const roofC = new THREE.Color(roofHex);
     const roof = pitchedRoof(r, h, rise, hip);
@@ -548,7 +551,8 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
     }
   } else {
     // flat roof
-    const roofHex = style ? STYLE_ROOFS[style] ?? pal.flat[0] : pal.flat[hash(b.id, 11) % pal.flat.length];
+    const flatSet = realRoof ?? pal.flat;
+    const roofHex = style ? STYLE_ROOFS[style] ?? pal.flat[0] : flatSet[hash(b.id, 11) % flatSet.length];
     const roofC = new THREE.Color(roofHex);
     const rh = mansard ? h + mansard.rise : h; // the height of the roof top (clutter stands on it)
     const roofRings = mansard ? mansard.top : b.rings;

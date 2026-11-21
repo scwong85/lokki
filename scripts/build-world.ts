@@ -11,6 +11,9 @@ import {
 } from './lib/geo.ts';
 import { FETCH_MARGIN, MAP_HALF, ORIGIN_LONLAT } from './lib/config.ts';
 import { eraCode, eraOf, facadeCode, facadeOf, yearOf } from '../src/world/buildingStyle.ts';
+import { classifyRoof, roofCode } from '../src/world/roofColour.ts';
+import { loadOrtho } from './lib/orthophoto.ts';
+import { medianColour, roofPixels } from './lib/roofSample.ts';
 import { existsSync } from 'node:fs';
 
 interface Feature {
@@ -46,6 +49,8 @@ function localRings(poly: number[][][], tol: number): Ring[] {
 const PASTELS = 4; // cream, peach, mint, lilac (palette indices resolved at runtime)
 // the register's facade material and completion year (M108, data/raw/register.json from `npm run data:fetch-real`): era and facade codes
 const register: Record<string, { facade?: string; built?: string }> = existsSync('data/raw/register.json') ? JSON.parse(readFileSync('data/raw/register.json', 'utf8')).buildings : {};
+// the roof colour class of each building, sampled from the orthophoto (M110, data/raw/ortho); without the photos there is no roof code
+const ortho = existsSync('data/raw/ortho/ortho.json') ? loadOrtho(origin) : null;
 const buildings = [];
 for (const f of readLayer('buildings')) {
   for (const poly of polygons(f)) {
@@ -57,12 +62,15 @@ for (const f of readLayer('buildings')) {
     const reg = register[String(p.id)];
     const e = reg ? eraCode(eraOf(yearOf(reg.built))) : 0;
     const fc = reg ? facadeCode(facadeOf(reg.facade)) : 0;
+    const roof = ortho ? medianColour(roofPixels(rings.map(flat), ortho.at)) : null;
+    const rc = roof ? roofCode(classifyRoof(...roof)) : 0;
     buildings.push({
       id: p.id as number,
       h: heightFromFloors(p.floors as number | null),
       c: hashId(p.id as number) % PASTELS,
       ...(e ? { e } : {}),
       ...(fc ? { f: fc } : {}),
+      ...(rc ? { r: rc } : {}),
       rings: rings.map(flat),
     });
   }

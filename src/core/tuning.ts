@@ -457,6 +457,7 @@ export const tuning = {
   },
   render: {
     realStyle: p(1, 0, 1, 1), // 1: buildings take their style from their real era and facade material (M108); 0: the old district rules
+    realRoofs: p(1, 0, 1, 1), // 1: roofs take their colour class from the aerial photo (M110); 0: the era and district roof colours
     fogNear: p(150, 0, 400, 1),
     fogFar: p(700, 100, 1500, 1),
     nightLight: p(0.38, 0.1, 1, 0.02), // how bright the lights are at dusk (the night market)
