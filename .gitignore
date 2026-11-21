@@ -2,3 +2,7 @@ node_modules
 dist
 test-results
 playwright-report
+
+# Helsinki reality mesh tiles (M108): too big for git and Git LFS bandwidth; keep them outside the repo, commit only derived data
+data/raw/mesh/*
+!data/raw/mesh/README.md

@@ -14,6 +14,8 @@ Kept for a possible **photorealistic mode** later and for **sampling real wall c
 Unzip into `data/raw/mesh/` keeping the service's folder names, then add a line to `data/raw/SOURCES.md` (date, area, format, file count, total size).
 
 ## Git
+**Update (2026-11-21): the mesh is no longer in git.** `.gitignore` ignores everything in `data/raw/mesh/` except this README, so tiles stay on your disk. The text below is the old plan (Git LFS), kept for reference; the `.gitattributes` rule stays as a safety net.
+
 The files are large (expect hundreds of MB). `.gitattributes` stores everything under `data/raw/mesh/` (except this README) in **Git LFS**:
 
 ```bash
