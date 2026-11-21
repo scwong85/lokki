@@ -11,7 +11,7 @@ export interface Reaction {
   /** Everyone with this role changes mood. */
   mood?: { role: string; mood: 'calm' | 'annoyed' | 'angry' | 'upset' | 'delighted' };
   /** Everyone with this role walks to these places (like the ruined date). */
-  send?: { role: string; goals: { x: number; z: number; name: string }[] };
+  send?: { role: string; goals: { x: number; z: number; name: string }[]; /** They stay there for good (no going back to their post). */ stay?: boolean };
   /** Everyone with this role is looking elsewhere for a while (their hands are open). */
   distract?: { role: string; seconds: number };
   /** Everyone with this role is too busy to notice the gull for a while (so the plan can play out). */
@@ -29,6 +29,8 @@ export interface Reaction {
   nth?: number;
   /** Plays every time the event happens. */
   repeat?: boolean;
+  /** Something turns up (the fisherman reels in a boot): a prop placed here. */
+  spawn?: { type: import('./props').PropType; x: number; z: number; tag?: string };
 }
 
 export const reactionsFor = (list: readonly Reaction[] | undefined, event: string): Reaction[] => (list ?? []).filter((r) => r.on === event);

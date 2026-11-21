@@ -1,6 +1,17 @@
 # Ten-minute stages: the campaign rebuilt (20 stages, 4 acts)
 
-Status: **plan for review. Nothing is built.** One stage is written out in full (section 6, **1.2 The Gull Picnic**) so we can check the format before writing the other nineteen.
+Status: **plan.** Stage **1.2 The Gull Picnic** (section 6) is built in M107 (`docs/milestones/M107.md`); the other nineteen wait for its playtest.
+
+**Built differently from section 6 (M107), cheaper or clearer in play:**
+- The market hall is a new pavilion (`hall` decor) on the open paving south of the tents, not the real Old Market Hall (that is 250 m away).
+- The Captain's coffee: he leaves it by the bollard when the ferry comes in (the ferry itself does not move).
+- The Diner's cone just drops (it does not fly in an arc).
+- Granny's scarf: she dozes (a ritual), no sneeze.
+- The second secret is the Fisherman's boot (the radio is too heavy before Fat bird).
+- The pigeon raid never steals: it mobs you until a honk or a bun, then the pigeons stay as polite guests (open question 3: the gentle version).
+- Bottle Service keeps its own ending (the tourist's ice cream).
+
+**Open questions, decided for now (change after the playtest):** the headline clears the stage, and side orders and secrets are the second star (2); the raid is gentle (3); all rows are open at once (4).
 
 Playtest note behind it: *"Each stage is too short."* The goal now is at least 10 minutes per stage. That means a richer world: more people, more things to pick up and interact with, and to-dos you discover on the spot.
 

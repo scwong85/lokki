@@ -248,6 +248,7 @@ export const tuning = {
     turnRate: p(3.5, 0.5, 10, 0.1), // rad/s
     sightRange: p(14, 3, 40, 0.5),
     sightConeDeg: p(130, 30, 360, 5),
+    flourishCatch: p(3, 0.5, 8, 0.25), // m: a person who tossed something up in a flourish catches it again if it lands this near (M107)
     eatSightFactor: p(0.45, 0.1, 1, 0.05), // eating tourists are distracted
     blindAboveDeg: p(55, 20, 90, 1), // gulls straight overhead are not seen
     noticeTime: p(0.4, 0.1, 2, 0.05),
@@ -566,6 +567,13 @@ export const tuning = {
     vignette: p(0.22, 0, 0.8, 0.02), // dark corners
     saturation: p(1.08, 0.5, 1.5, 0.02), // colour boost
     tilt: p(0, 0, 3, 0.1), // tilt-shift blur at the top and bottom of the screen (0 = off)
+  },
+  // the gull picnic (M107): guests land as the rows come in, the Pigeon Gang raids it halfway
+  picnic: {
+    guestFlySeconds: p(2.4, 0.5, 6, 0.1), // a guest gull's glide in to its seat
+    zoneHalf: p(3.2, 1, 6, 0.1), // m: half the size of the blanket zone on the roof (things dropped inside count)
+    raidRing: p(2.2, 1, 5, 0.1), // m: how close round the blanket the raiding pigeons sit
+    raidRange: p(9, 3, 20, 0.5), // m: a honk this near the picnic scatters the raid
   },
 };
 

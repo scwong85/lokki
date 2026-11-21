@@ -100,9 +100,9 @@ export class PigeonView {
     this.birds.forEach((bd, i) => {
       const b = bd.root;
       const a = (i / this.birds.length) * Math.PI * 2 + (mode === 'guarding' ? 0 : this.t * 0.2);
-      const r = 3.2 + (i % 3) * 0.8 + this.away * 24;
+      const r = (this.gang.def.ring ?? 3.2) + (i % 3) * 0.5 + this.away * 24;
       const hop = flying ? 3 + this.away * 18 : Math.max(0, Math.sin(this.t * 6 + i * 2.1)) * (mode === 'friends' ? 0.18 : 0.06);
-      b.position.set(x + Math.cos(a) * r, 0.2 + hop, z + Math.sin(a) * r);
+      b.position.set(x + Math.cos(a) * r, (this.gang.def.y ?? 0) + 0.2 + hop, z + Math.sin(a) * r);
       b.rotation.y = -a + Math.PI / 2;
       // the head bobs forward and back as it pecks about; wings beat while it flies off
       bd.head.position.z = 0.27 + Math.max(0, Math.sin(this.t * 7 + i * 1.7)) * 0.05;

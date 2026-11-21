@@ -16,7 +16,7 @@ test('stage 1.2: poop and toss unlocked, tug locked; a honk from behind drops co
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript(() => localStorage.setItem('lokki-options-v1', JSON.stringify({ graphics: 'low', tutorialDone: true })));
-  await page.goto('/?level=a1s2&play');
+  await page.goto('/?level=fish-market&play');
   await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 90_000 });
   const l = L(page);
   expect(await l((x) => x.gate)).toEqual({ arc: 1, stage: 2 });

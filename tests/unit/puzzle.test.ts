@@ -30,8 +30,10 @@ describe('puzzle quality: every stage chain', () => {
       });
     }
     it(`${def.id}: every reaction answers a step of the level`, () => {
-      const all = new Set(setup.quests.flatMap((q) => q.objectives.map((o) => o.event ?? '')));
-      for (const r of def.reactions ?? []) expect(all.has(r.on), `reaction on ${r.on}`).toBe(true);
+      const all = new Set(setup.quests.flatMap((q) => q.objectives.flatMap((o) => [o.event ?? '', ...(o.events ?? [])])));
+      // a ten-minute stage (M107) also has the world answer the traits it is built on: a ritual, a bell, a bite, a ferry, a discovery
+      const world = setup.quests.some((q) => q.collect) ? /^(ritual|flourishLost|discovered|sawWith|arrived|hit|pecked|gotcha|splash|ferryIn|honkDrop|picnicFeast|grab|snatch)/ : /^$/;
+      for (const r of def.reactions ?? []) expect(all.has(r.on) || world.test(r.on), `reaction on ${r.on}`).toBe(true);
     });
   }
 });

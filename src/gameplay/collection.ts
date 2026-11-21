@@ -1,0 +1,67 @@
+import type { QuestDef } from '../data/quests';
+import type { QuestState } from './quest';
+import { stepKey } from './hintLadder';
+
+/**
+ * Collection to-dos (M107, docs/design/stages-10min.md section 5): a headline goal with rows you discover on the spot. A row is "???"
+ * until the gull has been near its place (then a half title, "??? …something fishy"), and the full wish once it has been right there.
+ * Both stick. The row the gull is at now is the one the hint ladder works on. Pure logic.
+ */
+export type RowSight = 'hidden' | 'seen' | 'known';
+
+/** How much nearer than the reveal radius "right there" is, and how far the half title reaches. */
+export const SEEN_FACTOR = 2;
+export const FOCUS_FACTOR = 2.5;
+
+export class RowScout {
+  private seen = new Set<string>();
+  private known = new Set<string>();
+  /** The row being worked on (the last known, open row the gull was near), as a ladder key. */
+  focus: string | null = null;
+
+  sight(key: string): RowSight {
+    return this.known.has(key) ? 'known' : this.seen.has(key) ? 'seen' : 'hidden';
+  }
+
+  reset(): void {
+    this.seen.clear();
+    this.known.clear();
+    this.focus = null;
+  }
+
+  /** Look around: which rows the gull has come near. */
+  update(defs: readonly QuestDef[], quests: readonly QuestState[], gull: { x: number; z: number }): void {
+    let best: { key: string; d: number } | null = null;
+    for (const d of defs) {
+      if (!d.collect) continue;
+      const q = quests.find((x) => x.id === d.id);
+      if (!q || q.status !== 'active') continue;
+      d.objectives.forEach((od, i) => {
+        if (!od.row) return;
+        const key = stepKey(d.id, od.id);
+        const dist = Math.hypot(od.row.reveal.x - gull.x, od.row.reveal.z - gull.z);
+        if (dist <= od.row.reveal.r * SEEN_FACTOR) this.seen.add(key);
+        if (dist <= od.row.reveal.r) this.known.add(key);
+        if (!q.objectives[i].done && this.known.has(key) && dist <= od.row.reveal.r * FOCUS_FACTOR && (!best || dist < best.d)) best = { key, d: dist };
+      });
+    }
+    if (best) this.focus = (best as { key: string }).key;
+    else if (this.focus) {
+      // the focus stays on a row until it is done
+      const [qid, oid] = this.focus.split(':');
+      const q = quests.find((x) => x.id === qid);
+      if (!q || q.objectives.find((o) => o.id === oid)?.done) this.focus = null;
+    }
+  }
+}
+
+/** Rows done out of rows in a collection to-do. */
+export function rowCount(def: QuestDef, q: QuestState): { done: number; total: number } {
+  let done = 0, total = 0;
+  def.objectives.forEach((od, i) => {
+    if (!od.row) return;
+    total++;
+    if (q.objectives[i]?.done) done++;
+  });
+  return { done, total };
+}

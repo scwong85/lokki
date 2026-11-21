@@ -17,6 +17,8 @@ export interface Ritual {
   countdown?: number;
   /** They turn to look at this during the ritual (else they just shut their eyes where they stand). */
   lookAt?: { x: number; z: number };
+  /** The flourish (M107): at the start of the hold they toss what is in their hand straight up at this speed (m/s), and catch it at the end if it is still near. While it is in the air a gull can take it. */
+  toss?: number;
 }
 
 export interface RitualState {

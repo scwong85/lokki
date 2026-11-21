@@ -7,6 +7,7 @@ import { RUSH_HOUR, STRIKE, HONK, TUG_OF_WAR, PEEKABOO, RED_BUTTON, WET_FLOOR, J
 import { CITY_STRIKES } from './cityStrikes';
 import { MAP_AND_CONE } from './mapAndCone';
 import { QUESTS, type QuestDef } from '../quests';
+import type { LevelDef } from './types';
 
 /** Where the bench bun lies, and the dockhand who keeps the quay spotless. */
 const BENCH = { x: -10, z: -12 };
@@ -122,10 +123,10 @@ const EAST = 14;
 const eastQuest = (q: QuestDef): QuestDef => ({ ...q, objectives: q.objectives.map((o) => ({ ...o, markers: o.markers?.map((m) => ({ ...m, x: m.x + EAST })) })) });
 
 /**
- * Act 1, stage 2: Fish Market. Poop and wind, tossing, the honk, and noise: sight and hearing. Three objectives (the Clean Freak,
- * Bottle Service, Honk!), each already a chain, and two co-op objectives.
+ * The old Act 1, stage 2: Fish Market (three short chains: the Clean Freak, Bottle Service, Honk!). Replaced in the campaign by
+ * The Gull Picnic (M107, `picnic.ts`), which uses these chains as side orders; kept in the Playground with stage 1.2's mechanics.
  */
-export const FISH_MARKET = stage(1, 2, {
+const FISH_MARKET_STAGE = stage(1, 2, {
   name: '1.2 Fish Market',
   blurb: 'Poop, toss, honk: people see and hear.',
   intro: { title: 'Fish Market', text: 'Morning at the market hall. People look where they face and listen to noise: use both.' },
@@ -169,6 +170,7 @@ export const FISH_MARKET = stage(1, 2, {
   parTime: 300,
   reward: 'fatbird',
 });
+export const FISH_MARKET: LevelDef = { ...FISH_MARKET_STAGE, id: 'fish-market', name: 'Fish Market (the old 1.2)', series: 'Short stages (old)', arc: undefined, stage: undefined, requires: undefined, reward: undefined, gate: { arc: 1, stage: 2 } };
 
 /**
  * Act 1, stage 3: Strings Attached. The city fights back (heat, spray vendors, scare lines), and you learn the ground tug, hiding in

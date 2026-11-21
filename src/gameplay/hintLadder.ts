@@ -53,13 +53,21 @@ export class HintLadder {
   }
 }
 
-/** The keys of the ladder steps being worked on right now: the first open step of each active quest that has a `nudge` (and whose `after` is done). */
-export function ladderSteps(defs: readonly QuestDef[], quests: readonly QuestState[]): string[] {
+/**
+ * The keys of the ladder steps being worked on right now: the first open step of each active quest that has a `nudge` (and whose `after` is done).
+ * A collection to-do (M107) works on one row at a time: the one the gull is at (`focus`), if it has a nudge.
+ */
+export function ladderSteps(defs: readonly QuestDef[], quests: readonly QuestState[], focus: string | null = null): string[] {
   const out: string[] = [];
   for (const q of quests) {
     if (q.status !== 'active') continue;
     const d = defs.find((x) => x.id === q.id);
     if (!d) continue;
+    if (d.collect) {
+      const i = q.objectives.findIndex((o) => focus === stepKey(q.id, o.id) && !o.done);
+      if (i >= 0 && d.objectives[i].nudge) out.push(stepKey(q.id, q.objectives[i].id));
+      continue;
+    }
     const i = q.objectives.findIndex((o, k) => !o.done && !(d.objectives[k].after && !q.objectives.find((x) => x.id === d.objectives[k].after)?.done));
     if (i >= 0 && d.objectives[i].nudge) out.push(stepKey(q.id, q.objectives[i].id));
   }

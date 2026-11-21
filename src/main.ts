@@ -62,6 +62,8 @@ import { RunLog } from './gameplay/runLog';
 import { HavocHud } from './ui/havocHud';
 import { Tram } from './gameplay/tram';
 import { PigeonGang } from './gameplay/pigeons';
+import { PicnicGuests } from './world/picnicGuests';
+import { PICNIC_COMMENTS } from './data/levels/picnic';
 import { Sunbathers } from './gameplay/sunbathers';
 import { Dog } from './gameplay/dogs';
 import { Sprinklers } from './gameplay/sprinklers';
@@ -80,7 +82,7 @@ import { activeMarkers } from './gameplay/questMarkers';
 import type { Marker } from './data/quests';
 import { MarkerPool } from './render/markers';
 import { ladderSteps } from './gameplay/hintLadder';
-import { buildDecor, setRibbonCut, TABLE_TOP } from './render/decor';
+import { buildDecor, setRibbonCut, TABLE_TOP, HALL } from './render/decor';
 import { poisFor } from './data/pois';
 import { strollerCount, strollerSpawns } from './gameplay/crowd';
 import { ChainDetector, IdleNudge, badgesEarned } from './gameplay/chainReaction';
@@ -299,6 +301,7 @@ scene.add(itemGlow.group);
 const todo = new Todo(document.body);
 todo.defs = setup.quests;
 todo.secret = setup.secret;
+todo.side = setup.side;
 const skillsPanel = new SkillsPanel(document.body, (id) => pickSkin(id));
 const runHud = new RunHud(document.body);
 /** Havoc Hour: the chain scorer for a timed chaos run (null in normal levels), the log of everything that happened, and its screen. */
@@ -375,7 +378,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { scene, gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get gate() { return gate; }, applyGates, get hidden() { return hiddenNow(gull.state); }, get playtest() { return playtest; }, strikePose: (k: string) => strikePose(players[0], k), photoPoses, get switches() { return level.switches ?? []; }, peckNow: () => { const sw = switchNear(gull.state); if (sw) peck(sw, players[0]); return !!sw; }, get tugProgress() { return interaction.tugProgress(0); }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { scene, gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get gate() { return gate; }, applyGates, get hidden() { return hiddenNow(gull.state); }, get playtest() { return playtest; }, strikePose: (k: string) => strikePose(players[0], k), photoPoses, get switches() { return level.switches ?? []; }, peckNow: () => { const sw = switchNear(gull.state); if (sw) peck(sw, players[0]); return !!sw; }, get tugProgress() { return interaction.tugProgress(0); }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get picnicGuests() { return guests; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -599,7 +602,7 @@ function runReactions(event: string): void {
   reactionsFor(level.reactions, event).forEach((r, i) => {
     if (!reactionPlays(r, `${level.id}:${event}:${i}`, count, reactionsDone)) return; // the first, second, third time can each get their own beat
     if (r.mood) npcs?.moodRole(r.mood.role, r.mood.mood);
-    if (r.send) npcs?.sendRole(r.send.role, r.send.goals);
+    if (r.send) npcs?.sendRole(r.send.role, r.send.goals, r.send.stay);
     if (r.distract) npcs?.distractRole(r.distract.role, r.distract.seconds);
     if (r.oblivious) npcs?.obliviousRole(r.oblivious.role, r.oblivious.seconds);
     if (r.witness && npcs) {
@@ -610,6 +613,10 @@ function runReactions(event: string): void {
     }
     if (r.say) hud.toast(r.say, 2.2);
     if (r.sound) audio.play(r.sound);
+    if (r.spawn) {
+      interaction.props.spawn({ type: r.spawn.type, x: r.spawn.x, y: restY(r.spawn.type), z: r.spawn.z, tag: r.spawn.tag });
+      fx('stars', { x: r.spawn.x, y: 0.8, z: r.spawn.z }, 0.6);
+    }
     if (r.hunt) defense?.alertWarden();
     if (r.emit) notes(quests.onEvent(r.emit));
   });
@@ -959,7 +966,8 @@ function setupSwitches(): void {
     world.furniture.push({ min: [x - hx, 0, z - hz], max: [x + hx, h, z + hz], kind, color: 0 });
   };
   for (const d of level.decor ?? []) {
-    if (d.kind === 'table') solid(d.x, d.z, TABLE_TOP.hx, TABLE_TOP.hz, TABLE_TOP.y + TABLE_TOP.hy, 'perch');
+    if (d.kind === 'table' || d.kind === 'stall') solid(d.x, d.z, TABLE_TOP.hx, TABLE_TOP.hz, TABLE_TOP.y + TABLE_TOP.hy, 'perch');
+    else if (d.kind === 'hall') solid(d.x, d.z, HALL.hx, HALL.hz, HALL.h, 'perch');
     else if (d.kind === 'kiosk') solid(d.x, d.z, 1.6, 0.6, 1.08, 'perch');
   }
   for (const sw of level.switches ?? []) if (sw.effect === 'dance' || sw.effect === 'alarm' || sw.effect === 'soak') solid(sw.x, sw.z, 0.55, 0.35, 1.5, 'perch');
@@ -968,7 +976,8 @@ function setupSwitches(): void {
     scene.add(view);
     switchViews.push(view);
     if (d.kind === 'ribbon') decorRibbons.push(view);
-    if (d.kind === 'table') decorBoxes.push(phys.addStaticBox(d.x, TABLE_TOP.y, d.z, TABLE_TOP.hx, TABLE_TOP.hy, TABLE_TOP.hz)); // (tables are not rotated in the levels that use them)
+    if (d.kind === 'table' || d.kind === 'stall') decorBoxes.push(phys.addStaticBox(d.x, TABLE_TOP.y, d.z, TABLE_TOP.hx, TABLE_TOP.hy, TABLE_TOP.hz)); // (tables are not rotated in the levels that use them)
+    if (d.kind === 'hall') decorBoxes.push(phys.addStaticBox(d.x, HALL.h / 2, d.z, HALL.hx, HALL.h / 2, HALL.hz)); // things put down on the roof stay there
   }
   dominoes = [];
   swept.clear();
@@ -1037,10 +1046,11 @@ function setupSwitches(): void {
       continue;
     }
     if (sw.effect === 'summon') {
-      const bell = new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0xffd36e }));
-      bell.position.set(sw.x, 0.9, sw.z);
-      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.9, 8), new THREE.MeshLambertMaterial({ color: 0x8b6b4a }));
-      base.position.set(sw.x, 0.45, sw.z);
+      const by = sw.y ?? 0, tall = sw.hitOnly ? 1.6 : 0.9; // a door bell or a gong stands taller, out of beak's reach
+      const bell = new THREE.Mesh(new THREE.SphereGeometry(sw.hitOnly ? 0.45 : 0.35, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0xffd36e }));
+      bell.position.set(sw.x, by + tall, sw.z);
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, tall, 8), new THREE.MeshLambertMaterial({ color: 0x8b6b4a }));
+      base.position.set(sw.x, by + tall / 2, sw.z);
       scene.add(bell, base);
       switchViews.push(bell, base);
       continue;
@@ -1062,14 +1072,15 @@ function setupSwitches(): void {
 }
 /** The switch the gull is next to (nothing carried), if any. */
 function switchNear(s: { x: number; z: number }): NonNullable<LevelDef['switches']>[number] | null {
-  for (const sw of level.switches ?? []) if (mech(switchMech(sw.effect)) && Math.hypot(sw.x - s.x, sw.z - s.z) < 2.4 && (switchCd.get(sw.id) ?? 0) <= 0) return sw;
+  for (const sw of level.switches ?? []) if (!sw.hitOnly && (sw.free || mech(switchMech(sw.effect))) && Math.hypot(sw.x - s.x, sw.z - s.z) < 2.4 && (switchCd.get(sw.id) ?? 0) <= 0) return sw;
   return null;
 }
 /** A splat or a thrown thing that lands on a switch sets it off, as a peck would (ring the bell from the sky, M101). */
 function hitSwitch(x: number, z: number): void {
   if (isGuest()) return;
   for (const sw of level.switches ?? []) {
-    if (!mech(switchMech(sw.effect)) || (switchCd.get(sw.id) ?? 0) > 0 || Math.hypot(sw.x - x, sw.z - z) > tuning.watch.hitRange.value) continue;
+    // a hit-only switch (a door bell, a gong on a roof) needs something to throw or drop, not the peck
+    if (!(sw.free || (sw.hitOnly ? mech('toss') || mech('poop') : mech(switchMech(sw.effect)))) || (switchCd.get(sw.id) ?? 0) > 0 || Math.hypot(sw.x - x, sw.z - z) > tuning.watch.hitRange.value) continue;
     peck(sw, players[0]);
     notes(quests.onEvent(`hit:${sw.id}`));
     return;
@@ -1144,6 +1155,7 @@ function timetableStep(dt: number): void {
     if (e.kind === 'ferry') {
       audio.play('horn');
       hud.toast('A ferry comes in. Passengers!', 2);
+      notes(quests.onEvent('ferryIn')); // the people who work the ferry react (M107)
       npcs.ferryCrowd({ x: WRONG_FERRY.x, z: WRONG_FERRY.z }, levelStart(), Math.round(tuning.timetable.crowd.value), 12, (i) => [0xf7a1c4, 0x9ec9f0, 0xffd36e, 0xb8e0c8, 0xc7b5e0, 0xf2a35e][i % 6], poisFor(level.district));
     } else if (e.kind === 'rain') {
       rain.on = e.phase === 'start';
@@ -1176,7 +1188,7 @@ function timetableStep(dt: number): void {
 const rungOf = (quest: string, objective: string): number => todo.ladder.rung(`${quest}:${objective}`);
 /** "Just tell me" (J, or the ? on the note): the next rung of the steps being worked on now. */
 function askHint(): void {
-  const cur = ladderSteps(setup.quests, quests.quests);
+  const cur = ladderSteps(setup.quests, quests.quests, todo.scout.focus);
   if (!cur.length) {
     hud.toast('No hint needed here: it is all in the note.', 1.4);
     return;
@@ -1247,6 +1259,70 @@ function boomboxStep(): void {
     return;
   }
   npcs.moveMusic(p.cur.p.x, p.cur.p.z);
+}
+/** The gull picnic (M107): guest gulls that land as rows are delivered, and the Pigeon Gang's raid halfway. */
+let guests: PicnicGuests | null = null;
+let picnicRows = 0;
+function setupPicnic(): void {
+  if (guests) scene.remove(guests.group);
+  guests = null;
+  picnicRows = 0;
+  commented.clear();
+  seatsDone = false;
+  const p = level.picnic;
+  if (!p) return;
+  guests = new PicnicGuests(p, p.guests);
+  scene.add(guests.group);
+}
+/** A row was delivered: a guest flies in; at the halfway mark the pigeons notice. */
+function picnicRow(): void {
+  const p = level.picnic;
+  if (!p || !guests) return;
+  picnicRows++;
+  guests.arrive();
+  audio.play('chime');
+  if (picnicRows === p.raidAt) startRaid();
+}
+/** The Pigeon Gang flies up and sits round the picnic, mobbing any gull that comes near: a honk (or a bun) settles it. */
+function startRaid(): void {
+  const p = level.picnic;
+  if (!p || gang) return;
+  gang = new PigeonGang({ x: p.x, z: p.z, y: p.y, ring: tuning.picnic.raidRing.value });
+  gangView = new PigeonView(gang, Math.round(tuning.pigeons.count.value));
+  scene.add(gangView.group);
+  hud.toast('Uninvited guests! The Pigeon Gang is on your picnic.', 2.4);
+  audio.play('gasp');
+  notes(quests.setFlag('raid', true));
+  notes(quests.onEvent('raid'));
+}
+const commented = new Set<number>();
+let seatsDone = false;
+/** The picnic each step: the guests comment on things that are not on the menu; two gulls sitting down together after the gong (co-op). */
+function picnicStep(): void {
+  const p = level.picnic;
+  if (!p || isGuest()) return;
+  const menu = new Set((level.extraTriggers ?? []).filter((t) => t.kind === 'propInZone' && t.event.startsWith('picnic:')).map((t) => (t as { tag?: string }).tag));
+  const half = tuning.picnic.zoneHalf.value;
+  const on = (x: number, y: number, z: number) => Math.abs(x - p.x) <= half && Math.abs(z - p.z) <= half && y >= p.y - 0.4;
+  for (const pr of interaction.props.free()) {
+    if (commented.has(pr.id) || (pr.tag && menu.has(pr.tag)) || !on(pr.cur.p.x, pr.cur.p.y, pr.cur.p.z)) continue;
+    commented.add(pr.id);
+    hud.toast(PICNIC_COMMENTS[pr.type] ?? `The guests stare at the ${pr.def.name}.`, 2);
+  }
+  if (!seatsDone && players.length > 1 && quests.quests.find((q) => q.id === 'picnicGong')?.status === 'won' && players.every((pl) => pl.gull.state.mode === 'ground' && on(pl.gull.state.x, pl.gull.state.y, pl.gull.state.z))) {
+    seatsDone = true;
+    notes(quests.onEvent('coop:seats'));
+  }
+}
+/** A honk near the raid scatters it, and they come back as polite guests (friends), not as a mob. */
+function shooRaid(x: number, z: number): void {
+  const p = level.picnic;
+  if (!p || !gang || gang.mode !== 'guarding' || Math.hypot(x - p.x, z - p.z) > tuning.picnic.raidRange.value) return;
+  gang.mode = 'scattered';
+  gang.wasFriends = true;
+  fx('feathers', { x: p.x, y: p.y + 0.8, z: p.z }, 1.5);
+  hud.toast('Shoo! The pigeons scatter off your picnic.', 1.8);
+  notes(quests.onEvent('raidShooed'));
 }
 function setupSenate(): void {
   if (tramView) scene.remove(tramView.group);
@@ -1362,8 +1438,9 @@ function stepSenate(dt: number): void {
       const d = Math.hypot(pl.gull.state.x - gang.def.x, pl.gull.state.z - gang.def.z);
       if (d < nd) { nd = d; near = pl.gull.state; }
     }
-    const dropped = free.filter((p) => (p.type === 'bun' || p.type === 'salmiakki') && p.cur.p.y < 1.4).map((p) => ({ type: p.type, x: p.cur.p.x, z: p.cur.p.z }));
-    const r = gang.update(dt, near && near.y < 7 ? near : null, dropped);
+    const gy = gang.def.y ?? 0;
+    const dropped = free.filter((p) => (p.type === 'bun' || p.type === 'salmiakki') && Math.abs(p.cur.p.y - gy) < 1.4).map((p) => ({ type: p.type, x: p.cur.p.x, z: p.cur.p.z }));
+    const r = gang.update(dt, near && near.y < gy + 7 ? near : null, dropped);
     if (r.shove) {
       const pl = gulls.find((q) => q.gull.state === near);
       if (pl) pl.gull.carry(r.shove.x, r.shove.z);
@@ -1636,7 +1713,8 @@ function honk(pl: Player): void {
     if (hiddenNow(s)) onNpcEvents(npcs.boo(s.x, s.z, tuning.hide.booRange.value));
     onNpcEvents(npcs.honk(s.x, s.z, tuning.honk.range.value));
   }
-  gang?.honk(s.x, s.z, tuning.honk.range.value);
+  if (level.picnic) shooRaid(s.x, s.z);
+  else gang?.honk(s.x, s.z, tuning.honk.range.value);
   if (mech('dogcall')) for (const d of dogs) if (Math.hypot(d.dog.x - s.x, d.dog.z - s.z) < tuning.honk.range.value * 2.5) d.dog.summon(s.x, s.z);
   if (sunbathers) for (const sb of sunbathers.list) if (sb.state === 'asleep' && Math.hypot(sb.x - s.x, sb.z - s.z) < tuning.honk.range.value * 0.6) { sb.state = 'awake'; sb.t = tuning.sun.awakeSeconds.value; }
 }
@@ -1811,6 +1889,7 @@ function applyLevelRules(): void {
   sky.apply(skyById(level.sky ?? (level.night ? 'night' : 'noon')));
   setupKalle();
   setupSenate();
+  setupPicnic();
   setupSwitches();
   applyGates();
   setupEsplanadi();
@@ -1840,7 +1919,7 @@ function restartLevel(mode: 'normal' | 'speedrun'): void {
   chain.reset();
   nudge.poke();
   todo.ladder.reset();
-  timetable = level.timetable?.length ? new Timetable(level.timetable, 17) : null;
+  timetable = level.timetable?.length ? new Timetable(level.timetable, 17, level.ferryGap) : null;
   rain.on = false;
   puddleT = 0;
   gustT = 0;
@@ -1891,6 +1970,8 @@ function loadLevel(id: string): void {
   triggers.load(greybox ? [] : setup.triggers);
   todo.defs = setup.quests;
   todo.secret = setup.secret;
+  todo.side = setup.side;
+  todo.scout.reset();
   title.hide();
   levelSelect.hide();
   levelComplete.hide();
@@ -2220,6 +2301,7 @@ function notes(list: QuestNote[]): void {
       if (n.quest === 'finale') interaction.restock((pr) => pr.type === 'chair' || pr.tag === 'stallBun'); // knocked-over chairs and a taken pastry come back for the finale
       if (def.startHeat && defense) onDefense(defense.ensureHeat(def.startHeat));
     } else if (n.type === 'objective') {
+      if (def.collect && def.objectives.find((o) => o.id === n.objective)?.row) picnicRow();
       const text = q.objectives.find((o) => o.id === n.objective)!.text;
       hud.toast(`✓ ${text}`, 1.6);
       const victim = def.objectives.find((o) => o.id === n.objective)?.victim;
@@ -2234,6 +2316,10 @@ function notes(list: QuestNote[]): void {
       }
     } else if (n.type === 'won') {
       audio.play('win');
+      if (n.quest === 'picnicGong' && guests) {
+        guests.feasting = true; // the gong: the guests tuck in, and the victims come to look
+        notes(quests.onEvent('picnicFeast'));
+      }
       if (def.chain && !level.sandbox) {
         // the accomplishment beat: what you did, step by step
         announce.show(`${def.title}: you did it`, recapOf(def.objectives.filter((o) => o.kind === 'event')), 'learned');
@@ -2341,6 +2427,9 @@ function onNpcEvents(evs: NpcEvent[]): void {
       notes(quests.onEvent(`sawWith:${e.npc.role}:${e.other.role}`));
     } else if (e.type === 'ritual') {
       notes(quests.onEvent(`ritual:${e.npc.role}`));
+    } else if (e.type === 'flourishLost') {
+      emoteAtNpc(e.npc, 'question'); // he reaches up for it, and it is not coming back down
+      notes(quests.onEvent(`flourishLost:${e.npc.role}`));
     } else if (e.type === 'discovered') {
       // the double take: a puzzled look at the empty spot, then (a moment later) the penny drops
       const who = e.npc;
@@ -2908,7 +2997,7 @@ startLoop({
       boomboxStep();
       beatsStep();
       watchersCatch();
-      if (!levelCleared) todo.ladder.tick(dt, ladderSteps(setup.quests, quests.quests));
+      if (!levelCleared) todo.ladder.tick(dt, ladderSteps(setup.quests, quests.quests, todo.scout.focus));
       if (!isGuest()) timetableStep(dt);
       if (!isGuest() && !levelCleared && !level.sandbox && !havoc && nudge.update(dt, tuning.nudge.after.value, tuning.nudge.every.value)) hud.toast(nudgeText(), 4);
       onNpcEvents(npcs.update(dt, players.map((p) => ({ x: p.gull.state.x, y: p.gull.state.y, z: p.gull.state.z, diving: p.gull.state.mode === 'dive', taunt: p.gull.taunting, hidden: hiddenNow(p.gull.state), disguise: disguiseT > 0 }))));
@@ -3017,6 +3106,7 @@ startLoop({
     rain.update(dt, gull.state, simTime);
     if (!isGuest()) stepKalleGame(dt);
     if (!isGuest()) stepSenate(dt);
+    picnicStep();
     if (!isGuest()) stepEsplanadi(dt);
     ambientStep(dt);
     if (!isGuest()) coopStep(dt);
@@ -3045,6 +3135,7 @@ startLoop({
     npcs?.render(simTime, interaction.beakPos(gull.state), cam.camera.quaternion);
     streetLife?.render(simTime, gull.state);
     kalleView?.render(frameDt);
+    guests?.update(frameDt);
     defense?.render(simTime, frameDt);
     if (defense && heatMeter) heatMeter.update(defense.heat, defense.response, defense.hawkReady, defense.hawkActive);
     // quest spots, plus a marker on any item that was knocked out of the beak (so it can never be lost)
@@ -3069,6 +3160,7 @@ startLoop({
     waypoints.update(labelled, cam.camera, gull.position, innerWidth, innerHeight);
     todo.ladder.mode = options.hints;
     todo.revealNear = new Set(setup.quests.filter((q) => q.reveal && setup.secret.has(q.id) && Math.hypot(q.reveal.x - gull.state.x, q.reveal.z - gull.state.z) <= q.reveal.r).map((q) => q.id));
+    todo.scout.update(setup.quests, quests.quests, gull.state);
     todo.update(quests.quests, npcs ? npcs.nearestDistance(gull.state) : Infinity, interaction.carried?.stolen === true);
     targets.forEach((t, i) => (targetMeshes[i].visible = t.cooldown === 0));
     const s = gull.state;
