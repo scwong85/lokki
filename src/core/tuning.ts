@@ -570,6 +570,14 @@ export const tuning = {
     saturation: p(1.08, 0.5, 1.5, 0.02), // colour boost
     tilt: p(0, 0, 3, 0.1), // tilt-shift blur at the top and bottom of the screen (0 = off)
   },
+  // the Market Guard (M111): sight, whistle and curiosity
+  guard: {
+    whistleRange: p(14, 4, 30, 1), // m: he sees a gull carrying loot this far off (and in line of sight) and blows the whistle
+    cooldown: p(9, 2, 40, 1), // s before he can whistle again
+    noiseStop: p(4, 1, 10, 0.5), // m short of a noise he stops to look
+    shove: p(7, 1, 14, 0.5), // m/s the whistle shoves a gull away
+    stun: p(0.9, 0.2, 3, 0.1), // s a whistled gull is dazed
+  },
   // the gull picnic (M107): guests land as the rows come in, the Pigeon Gang raids it halfway
   picnic: {
     guestFlySeconds: p(2.4, 0.5, 6, 0.1), // a guest gull's glide in to its seat

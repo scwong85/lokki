@@ -1,4 +1,4 @@
-import type { QuestDef } from '../data/quests';
+import type { ObjectiveDef, QuestDef } from '../data/quests';
 import type { QuestState } from './quest';
 import { stepKey } from './hintLadder';
 
@@ -37,7 +37,7 @@ export class RowScout {
       const q = quests.find((x) => x.id === d.id);
       if (!q || q.status !== 'active') continue;
       d.objectives.forEach((od, i) => {
-        if (!od.row) return;
+        if (!od.row || rowLocked(d, q, i)) return; // a row in a course that is not open yet cannot be found
         const key = stepKey(d.id, od.id);
         const dist = Math.hypot(od.row.reveal.x - gull.x, od.row.reveal.z - gull.z);
         if (dist <= od.row.reveal.r * SEEN_FACTOR) this.seen.add(key);
@@ -65,3 +65,35 @@ export function rowCount(def: QuestDef, q: QuestState): { done: number; total: n
   });
   return { done, total };
 }
+
+/** The course a row belongs to (rows without one are in course 1). */
+export const courseOf = (od: ObjectiveDef): number => od.row?.course ?? 1;
+
+/** Rows of a collection that are in this course. */
+export function courseRows(def: QuestDef, course: number): number[] {
+  const out: number[] = [];
+  def.objectives.forEach((od, i) => {
+    if (od.row && courseOf(od) === course) out.push(i);
+  });
+  return out;
+}
+
+/** Is every row of this course done? (A course with no rows counts as done.) */
+export function courseDone(def: QuestDef, q: QuestState, course: number): boolean {
+  return courseRows(def, course).every((i) => q.objectives[i]?.done);
+}
+
+/** A course is open when every course before it is done (M111). Rows outside a collection are always open. */
+export function courseOpen(def: QuestDef, q: QuestState, course: number): boolean {
+  for (let c = 1; c < course; c++) if (!courseDone(def, q, c)) return false;
+  return true;
+}
+
+/** Is this objective a row that cannot be worked on yet? */
+export function rowLocked(def: QuestDef, q: QuestState, i: number): boolean {
+  const od = def.objectives[i];
+  return !!def.collect && !!od?.row && !courseOpen(def, q, courseOf(od));
+}
+
+/** The highest course number a collection has. */
+export const courseCount = (def: QuestDef): number => def.objectives.reduce((m, od) => (od.row ? Math.max(m, courseOf(od)) : m), 1);

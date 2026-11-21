@@ -1,5 +1,6 @@
 import { tuning } from '../core/tuning';
 import type { QuestDef, QuestEventType } from '../data/quests';
+import { courseDone, courseOf, rowLocked } from './collection';
 
 export type QuestStatus = 'locked' | 'idle' | 'active' | 'won' | 'lost';
 
@@ -37,6 +38,8 @@ export type QuestNote =
   | { type: 'won'; quest: string }
   | { type: 'lost'; quest: string }
   | { type: 'unlocked'; quest: string }
+  /** A course of a collection was served: every row in it is done (M111). */
+  | { type: 'course'; quest: string; course: number }
   | { type: 'retry'; quest: string };
 
 /** Runs the quest definitions: events and ticks in, state and notifications out. Pure logic. */
@@ -140,6 +143,7 @@ export class QuestLog {
       d.objectives.forEach((od, i) => {
         if (q.objectives[i].done || od.kind !== 'event' || !(od.event || od.events)) return;
         if (od.after && !q.objectives.find((x) => x.id === od.after)?.done) return;
+        if (rowLocked(d, q, i)) return;
         if (od.event) w.add(od.event);
         for (const e of od.events ?? []) w.add(e);
       });
@@ -184,10 +188,12 @@ export class QuestLog {
         const o = q.objectives[i];
         if (o.done || od.kind !== 'event' || !(od.event === type || od.events?.includes(type))) return;
         if (od.after && !q.objectives.find((x) => x.id === od.after)?.done) return;
+        if (rowLocked(d, q, i)) return; // a row in a course that is not open yet does not count
         o.count++;
         if (o.count >= (od.count ?? 1)) {
           o.done = true;
           notes.push({ type: 'objective', quest: q.id, objective: o.id });
+          if (od.row && courseDone(d, q, courseOf(od))) notes.push({ type: 'course', quest: q.id, course: courseOf(od) });
         }
       });
       this.finishCheck(q, notes);

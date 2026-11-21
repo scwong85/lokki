@@ -1,5 +1,6 @@
 import type { Marker, QuestDef } from '../data/quests';
 import type { QuestState } from './quest';
+import { rowLocked } from './collection';
 
 /** Which map markers to show now: the open objectives' spots of each active quest, and the start spot of an unlocked idle quest. */
 /** Markers for quests to start and objectives in progress (`activeOnly`: skip the not-yet-started quests). */
@@ -21,6 +22,7 @@ export function activeMarkers(defs: readonly QuestDef[], quests: readonly QuestS
       if (o.done) return;
       const od = d.objectives[i];
       if (od.after && !q.objectives.find((x) => x.id === od.after)?.done) return;
+      if (rowLocked(d, q, i)) return; // a course that is not open yet
       // a step on the hint ladder shows its marker only once the ladder has got that far (rung 2: a cue from the world)
       if (od.markers && !(od.nudge && !od.showMarker && rungOf && rungOf(q.id, od.id) < 2)) out.push(...od.markers);
     });
