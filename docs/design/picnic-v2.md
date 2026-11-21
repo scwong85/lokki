@@ -171,8 +171,10 @@ Everything else is in M107 already (the collection note, row scouting, the flour
 
 The table in section 2 replaces "more rows" as the way to make a stage long. For every stage: spread the places, write rows as 2–3-step chains, open them in courses, and put at least one thing in the way. I'd also **apply it to 1.1 First Light** (at 3 minutes it is the shortest stage, and the first one a new player meets) once the picnic works.
 
-## 11. Open questions
+## 11. Decisions (2026-11-21)
 
-1. **The Guard in 1.2:** are you happy with a new character who confiscates, instead of turning on the vendors and heat (which belong to 1.3)?
-2. **The raid taking an item back:** fair pressure, or annoying? (It costs one trip and only happens if you ignore the pigeons for a minute.)
-3. **Courses:** three of two rows, as written, or two of three?
+1. **The Guard in 1.2:** yes. He uses only sight and hearing; vendors and heat stay in 1.3.
+2. **The raid taking an item back:** yes (one trip, only if the pigeons are ignored for a minute).
+3. **Courses:** "either", so three courses of two rows, as written.
+
+Next: M111 (engine) and M112 (content), as in section 9.

@@ -494,7 +494,7 @@ What we have, the 13 stage formats, the 20 stages, and 1.2 The Gull Picnic writt
 The first ten-minute stage: a collection of six rows found on the spot, each with its own owner and trick; guest gulls; the pigeon raid; the dinner gong; side orders and secrets. Engine: collection to-dos, side orders, the flourish, hit-only switches, reactions that spawn things and send people for good, the ferry as a quest event. Details: `docs/milestones/M107.md`.
 
 ### M109 — Plan: The Gull Picnic version two (S)
-The M107 playtest said about 5 minutes, not 10. The redesign: owners 55–110 m from the roof, rows as two-to-three-step chains, three courses of two rows, a Market Guard who confiscates carried loot, pigeons that race for the cone, and a time-per-row report. Docs only. Details: `docs/design/picnic-v2.md`. Next, after your answers: M111 engine, M112 content.
+The M107 playtest said about 5 minutes, not 10. The redesign: owners 55–110 m from the roof, rows as two-to-three-step chains, three courses of two rows, a Market Guard who confiscates carried loot, pigeons that race for the cone, and a time-per-row report. Docs only. Details: `docs/design/picnic-v2.md`. Decisions made (the Guard yes, the raid taking an item yes, three courses of two). Next: M111 engine, M112 content.
 
 ### M108 — Real city R1: style from the register (S–M)
 Research (`docs/design/realistic-city-research.md`): Helsinki's own CC BY data, not Google. Built: each building's era (from its completion year) and facade material pick a style kit (colours, roof, windows, turrets, balconies); the register fields, the 2025 orthophoto and a CityGML fetch script are saved for R2 (real roofs) and R3 (real colours); a Git LFS slot for the reality mesh. Details: `docs/milestones/M108.md`.
