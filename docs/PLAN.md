@@ -241,6 +241,7 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [ ] M107 Stage 1.2 The Gull Picnic: the first ten-minute collection stage, **decision gate 4** (built on `m107-gull-picnic`, awaiting playtest)
 - [ ] M108 Real city R1: buildings styled by their real era and facade material; real-city data snapshot (register, orthophoto, CityGML script, mesh slot) (built on `m108-real-city-research`, merged)
 - [ ] M109 Plan: The Gull Picnic version two, after the playtest said 5 minutes (`docs/design/picnic-v2.md`; built on `m109-picnic-v2-plan`)
+- [ ] M110 Real city R3 (roofs): roof colours sampled from the aerial photo (built on `m110-roof-colours`)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -498,6 +499,9 @@ The M107 playtest said about 5 minutes, not 10. The redesign: owners 55–110 m 
 
 ### M108 — Real city R1: style from the register (S–M)
 Research (`docs/design/realistic-city-research.md`): Helsinki's own CC BY data, not Google. Built: each building's era (from its completion year) and facade material pick a style kit (colours, roof, windows, turrets, balconies); the register fields, the 2025 orthophoto and a CityGML fetch script are saved for R2 (real roofs) and R3 (real colours); a Git LFS slot for the reality mesh. Details: `docs/milestones/M108.md`.
+
+### M110 — Real city R3 (roofs): roof colours from the aerial photo (S–M)
+Each building's roof is sampled in the saved 2025 orthophoto, reduced to one of seven classes (dark, slate, grey, pale, terracotta, sand, copper) and drawn in pastel versions of it. Details: `docs/milestones/M110.md`.
 
 ### After M63 (backlog)
  Tablecloth yank, prank button, hide and BOO and the rest of the slate (`docs/design/mischief-mechanics.md`), then convert the stall-chain levels to the new toys.
