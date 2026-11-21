@@ -44,6 +44,11 @@ export interface ObjectiveDef {
   markers?: Marker[];
   /** Past-tense caption for the recap after the chain ('The inspector slipped'). Falls back to the text. */
   recap?: string;
+  /**
+   * A row of a collection to-do (M107): "???" until the gull comes near its place (then a half title), the full wish once it is right there,
+   * ticked with the item and its owner when it is delivered.
+   */
+  row?: { reveal: { x: number; z: number; r: number; text: string }; item: string; owner: string };
 }
 
 export interface QuestDef {
@@ -71,6 +76,10 @@ export interface QuestDef {
   /** Shown while the quest is idle and unlocked. */
   startMarkers?: Marker[];
   objectives: ObjectiveDef[];
+  /** A collection to-do (M107): its objectives are rows found on the spot, done in any order; the line is the goal under the title. */
+  collect?: { goal: string; /** Where the things go: always on the map while the to-do is open. */ marker?: Marker };
+  /** Shown while locked, instead of "Finish the other quests first." */
+  lockedText?: string;
   /** A hidden to-do half-reveals itself when the gull comes near this spot ("??? …Granny's sweet tooth"), M103. */
   reveal?: { x: number; z: number; r: number; text: string };
 }

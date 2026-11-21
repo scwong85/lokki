@@ -14,6 +14,10 @@ export interface GangDef {
   /** The statue the gang sits on. */
   x: number;
   z: number;
+  /** Height of what they sit on (a roof picnic, M107; default the ground). */
+  y?: number;
+  /** How far round the spot they sit (default 3.2 m). */
+  ring?: number;
 }
 
 export interface Dropped {

@@ -182,6 +182,8 @@ export class NpcManager implements NpcHooks {
   private backToPost(n: Npc, dt: number): void {
     const sp = this.spawns.get(n.id);
     if (!sp?.post || n.mode !== 'idle' || n.goal || n.following || n.tugged || n.buyT > 0) return; // (not while off buying a treat: that pulled them back to their spot every step)
+    if (this.unposted.has(n.id)) return;
+    if (this.flourish.has(n.id)) return; // mid-flourish: the cloth is in the air, he catches it at the end (or does not)
     const dx = sp.x - n.x, dz = sp.z - n.z;
     const d = Math.hypot(dx, dz);
     if (d > 0.25) {
@@ -477,18 +479,54 @@ export class NpcManager implements NpcHooks {
     return ev;
   }
 
+  /** People sent somewhere for good (a reaction's `send.stay`): they no longer go back to their post. */
+  private unposted = new Set<number>();
+  /** Items tossed up in a flourish, by the person who tossed them. */
+  private flourish = new Map<number, number>();
+
+  /** The flourish is over: catch the item if it came back down within reach (and no gull has it). Returns true if caught. */
+  private catchFlourish(n: Npc): boolean {
+    const id = this.flourish.get(n.id);
+    if (id === undefined) return false;
+    this.flourish.delete(n.id);
+    const prop = this.props.byId(id);
+    if (!prop || prop.broken || prop.carried || prop.heldBy !== null || n.holding !== null) return false;
+    if (Math.hypot(prop.cur.p.x - n.x, prop.cur.p.z - n.z) > tuning.npc.flourishCatch.value) return false;
+    this.props.attach(prop, n.id);
+    n.holding = prop.id;
+    n.holdType = prop.type;
+    this.props.setHoldTarget(prop, handPos(n));
+    return true;
+  }
+
   /** A ritual (M102): the countdown over the head, then a few seconds with their eyes elsewhere. Busy, frightened or chasing people skip it. */
   private ritualStep(n: Npc): NpcEvent[] {
     const r = n.ritual!;
-    const calmNow = n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat';
+    // a flourish (M107) cannot be helped: he does it even with a gull looking (that is the joke), unless he is frightened or chasing
+    const calmNow = n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat' || (!!r.toss && (n.mode === 'notice' || n.mode === 'shield'));
     const st = ritualState(this.clock, r);
     n.ritualLabel = calmNow ? ritualLabel(st, r) : undefined;
     if (!calmNow || st.phase !== 'hold') {
-      if (st.phase !== 'hold') n.ritualOn = false;
+      if (st.phase !== 'hold') {
+        n.ritualOn = false;
+        const id = this.flourish.get(n.id);
+        if (id !== undefined && !this.catchFlourish(n) && this.props.byId(id)?.carried) return [{ type: 'flourishLost', npc: n }]; // a gull caught it first
+      }
       return [];
     }
     const fresh = !n.ritualOn; // the first step of this ritual
     n.ritualOn = true;
+    if (fresh && r.toss && n.holding !== null) {
+      // the flourish (M107): up it goes, and for a moment it is nobody's
+      const prop = this.props.byId(n.holding);
+      if (prop) {
+        this.props.release(prop, { x: 0, y: r.toss, z: 0 });
+        prop.heldBy = null;
+        this.flourish.set(n.id, prop.id);
+        n.holding = null;
+        n.holdType = null;
+      }
+    }
     n.obliviousT = Math.max(n.obliviousT, r.hold - st.t); // eyes shut, or on the watch: they see nothing
     if (r.lookAt) {
       // ...or they turn to something (the Mayor to his crowd)
@@ -1026,10 +1064,21 @@ export class NpcManager implements NpcHooks {
   }
 
   /** Send everyone with this role off to places (the ruined date storms off in opposite directions). */
-  sendRole(role: string, goals: { x: number; z: number; name: string }[]): void {
+  sendRole(role: string, goals: { x: number; z: number; name: string }[], stay = false): void {
     let i = 0;
     for (const n of this.npcs) {
       if (n.role !== role) continue;
+      if (stay) {
+        // they stay where they were sent (the finale crowd), instead of going back to their post; whatever they were doing
+        // (a fright, chasing the thief) they go now, with eyes only for where they are going
+        this.unposted.add(n.id);
+        if (n.mode !== 'panic' && n.mode !== 'slip') {
+          n.mode = 'walk';
+          n.t = 0;
+          n.targetX = n.targetZ = null;
+        }
+        n.obliviousT = Math.max(n.obliviousT, 30);
+      }
       const g = goals[i++ % goals.length];
       n.goal = { ...g };
       n.homeX = g.x; // sent somewhere, they stay around there (a fire drill crowd does not drift home)
@@ -1071,6 +1120,8 @@ export class NpcManager implements NpcHooks {
     this.spawns.clear();
     this.items.clear();
     this.eating.clear();
+    this.flourish.clear();
+    this.unposted.clear();
     this.victimOf.clear();
     this.droppedBy.clear();
     this.handTargetCache.clear();
@@ -1130,6 +1181,8 @@ export class NpcManager implements NpcHooks {
       }
     }
     this.eating.clear();
+    this.flourish.clear();
+    this.unposted.clear();
     this.victimOf.clear();
     this.droppedBy.clear();
     this.pending.length = 0;

@@ -7,7 +7,7 @@ export type Shape =
   | { kind: 'cyl'; hh: number; r: number }
   | { kind: 'capsule'; hh: number; r: number };
 
-export type PropType = 'icecream' | 'fish' | 'bun' | 'cap' | 'tophat' | 'bottle' | 'bin' | 'crate' | 'chair' | 'candy' | 'salmiakki' | 'map' | 'toy' | 'flowers' | 'sign' | 'soup' | 'herring' | 'owl' | 'balloon' | 'ring' | 'battery' | 'cheese' | 'glasses' | 'scarf' | 'baton' | 'berries' | 'ball' | 'sausage' | 'sunscreen' | 'boombox' | 'pie' | 'scissors';
+export type PropType = 'icecream' | 'fish' | 'bun' | 'cap' | 'tophat' | 'bottle' | 'bin' | 'crate' | 'chair' | 'candy' | 'salmiakki' | 'map' | 'toy' | 'flowers' | 'sign' | 'soup' | 'herring' | 'owl' | 'balloon' | 'ring' | 'battery' | 'cheese' | 'glasses' | 'scarf' | 'baton' | 'berries' | 'ball' | 'sausage' | 'sunscreen' | 'boombox' | 'pie' | 'scissors' | 'tablecloth' | 'loaf' | 'thermos' | 'boot' | 'vendace';
 
 export interface PropDef {
   name: string;
@@ -55,6 +55,12 @@ export const PROPS: Record<PropType, PropDef> = {
   ring: { name: 'wedding ring box', tags: ['shiny', 'throwable'], mass: 0.05, shape: { kind: 'box', hx: 0.06, hy: 0.04, hz: 0.06 }, radius: 0.25 },
   battery: { name: 'drone battery', tags: ['shiny', 'throwable'], mass: 0.4, shape: { kind: 'box', hx: 0.12, hy: 0.06, hz: 0.18 }, radius: 0.35 },
   cheese: { name: 'leip\u00e4juusto', tags: ['edible', 'throwable'], mass: 0.6, shape: { kind: 'ball', r: 0.26 }, radius: 0.4 },
+  // the gull picnic (M107)
+  tablecloth: { name: 'chequered tablecloth', grab: 'ground', tags: ['throwable'], mass: 0.3, shape: { kind: 'box', hx: 0.32, hy: 0.04, hz: 0.24 }, radius: 0.4 },
+  loaf: { name: 'rye loaf', tags: ['edible', 'throwable'], mass: 0.4, shape: { kind: 'box', hx: 0.2, hy: 0.09, hz: 0.12 }, radius: 0.32 },
+  thermos: { name: 'captain\'s thermos', tags: ['throwable', 'shiny'], mass: 0.5, shape: { kind: 'capsule', hh: 0.12, r: 0.08 }, radius: 0.3 },
+  boot: { name: 'old boot', tags: ['throwable'], mass: 0.6, shape: { kind: 'box', hx: 0.12, hy: 0.14, hz: 0.2 }, radius: 0.35 },
+  vendace: { name: 'cone of fried vendace', grab: 'ground', tags: ['edible', 'throwable'], mass: 0.2, shape: { kind: 'capsule', hh: 0.1, r: 0.1 }, radius: 0.32 },
   chair: { name: 'chair', tags: ['heavy', 'noisy', 'stackable'], mass: 4, shape: { kind: 'box', hx: 0.25, hy: 0.45, hz: 0.25 }, radius: 0.55 },
 };
 

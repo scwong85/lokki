@@ -14,12 +14,13 @@ describe('level definitions', () => {
     for (const l of LEVELS) {
       const s = levelSetup(l, QUESTS, TRIGGERS, TOURIST_SPAWNS);
       expect(new Set(s.quests.map((q) => q.id)).size).toBe(s.quests.length);
-      expect(s.main.length + s.secret.size).toBe(s.quests.length);
+      expect(s.main.length + s.secret.size + s.side.size).toBe(s.quests.length);
       for (const id of s.secret) expect(s.quests.some((q) => q.id === id)).toBe(true);
       if (!l.sandbox) {
         expect(l.parTime).toBeGreaterThan(0);
         expect(s.main.length).toBeGreaterThanOrEqual(1);
-        expect(s.main.length + s.secret.size).toBeLessThanOrEqual(4); // about 5 minutes
+        // about 5 minutes, except the ten-minute stages built round a collection (M107)
+        if (!s.quests.some((q) => q.collect)) expect(s.main.length + s.secret.size).toBeLessThanOrEqual(4);
       }
     }
     expect(levelById('nope')).toBe(SANDBOX);

@@ -67,13 +67,14 @@ describe('arcs and stages', () => {
   });
 });
 
-describe('stage 1.2 Fish Market', () => {
-  it('has three chain objectives and the co-op ones; poop, toss and honk are unlocked, tug is not', () => {
+describe('stage 1.2 The Gull Picnic', () => {
+  it('a collection, the raid and the gong clear it; the old chains are side orders; poop, toss and honk are unlocked, tug is not', () => {
     const solo = setup('a1s2');
     const duo = setup('a1s2', true);
-    expect(solo.main).toEqual(['freak', 'bottleService', 'honkchain']);
-    expect(duo.main).toEqual(['freak', 'bottleService', 'honkchain', 'duoSplat', 'relay']);
-    expect(solo.quests.every((q) => q.chain)).toBe(true);
+    expect(solo.main).toEqual(['picnic', 'raid', 'picnicGong']);
+    expect([...solo.side]).toEqual(['freak', 'honkchain', 'bottleService']);
+    expect([...solo.secret]).toEqual(['grannyScarf', 'oldBoot']);
+    expect(duo.main).toEqual(['picnic', 'raid', 'picnicGong', 'passVendace', 'twoSeats']);
     expect(isUnlocked('honk', { arc: 1, stage: 2 })).toBe(true);
     expect(isUnlocked('tug', { arc: 1, stage: 2 })).toBe(false);
     expect(introducedAt({ arc: 1, stage: 2 }).map((m) => m.id).sort()).toEqual(['honk', 'poop', 'toss']);
@@ -81,8 +82,18 @@ describe('stage 1.2 Fish Market', () => {
   it('is opened by stage 1.1', () => {
     expect(LEVELS.find((l) => l.id === 'a1s2')!.requires).toBe('a1s1');
   });
-  it('every chain has at least two steps', () => {
-    for (const q of setup('a1s2').quests) expect(q.objectives.length).toBeGreaterThanOrEqual(2);
+  it('every side order is a chain of at least two steps', () => {
+    const s = setup('a1s2');
+    for (const q of s.quests.filter((x) => s.side.has(x.id))) {
+      expect(q.chain).toBe(true);
+      expect(q.objectives.length).toBeGreaterThanOrEqual(2);
+    }
+  });
+  it('the old Fish Market stays playable in the Playground with the same mechanics', () => {
+    const old = LEVELS.find((l) => l.id === 'fish-market')!;
+    expect(old.arc).toBeUndefined();
+    expect(old.gate).toEqual({ arc: 1, stage: 2 });
+    expect(setup('fish-market').main).toEqual(['freak', 'bottleService', 'honkchain']);
   });
 });
 

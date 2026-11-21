@@ -42,7 +42,7 @@ export interface LevelDef {
   /** A cathedral bell that rings now and then: everyone within hearing looks up at the tower. */
   bells?: { x: number; z: number; first: number; every: number; duration: number };
   /** Things the gull can peck with E (a jukebox, a button): each starts an effect and fires `pecked:<id>`. */
-  switches?: { id: string; x: number; z: number; label: string; effect: 'dance' | 'soak' | 'alarm' | 'yank' | 'summon' | 'domino' | 'disguise'; cooldown?: number; target?: { x: number; z: number }; /** yank: the table's goods that fly off; summon: the role that comes running. */ goods?: { type: PropType; tag: string; count: number }; role?: string; /** domino: how many tiles stand between the switch and its target. */ tiles?: number }[];
+  switches?: { id: string; x: number; z: number; label: string; effect: 'dance' | 'soak' | 'alarm' | 'yank' | 'summon' | 'domino' | 'disguise'; cooldown?: number; /** Only a hit sets it off (a thrown thing or a splat), never a peck: a door bell out of reach (needs toss, not peck). */ hitOnly?: boolean; /** Needs no mechanic: anyone can peck it (the picnic gong). */ free?: boolean; /** Height it stands at (a bell on a roof). */ y?: number; target?: { x: number; z: number }; /** yank: the table's goods that fly off; summon: the role that comes running. */ goods?: { type: PropType; tag: string; count: number }; role?: string; /** domino: how many tiles stand between the switch and its target. */ tiles?: number }[];
   /** Tagged things that end up in a zone (blown there with the wings) count one by one as `<event>:<n>`. */
   sweep?: { tag: string; zone: { minX: number; maxX: number; minZ: number; maxZ: number }; event: string };
   /** Bushes to hide in: crouch still inside one and people further than arm's length cannot see you; honk (T) for a BOO. */
@@ -68,13 +68,17 @@ export interface LevelDef {
   extraQuests?: QuestDef[];
   /** Hidden to-dos that exist only when two players are on the level (online co-op): they need both gulls. */
   coopQuests?: QuestDef[];
+  /** Side orders (M107): visible to-dos that count for the second star, not for clearing. */
+  side?: string[];
   /** To-dos shown as "???" until they are discovered (started or won). They count for the second star, not for clearing. */
   secret?: string[];
   /** Ids of existing world triggers (from `TRIGGERS`) this level needs. */
   triggers: string[];
   extraTriggers?: TriggerDef[];
   /** Scenery that makes a puzzle readable: a buffet table (solid top, so things rest on it), a picnic blanket. */
-  decor?: { kind: 'table' | 'blanket' | 'kiosk' | 'ribbon' | 'muster'; x: number; z: number; rot?: number }[];
+  decor?: { kind: import('../../render/decor').DecorKind; x: number; z: number; rot?: number; /** Height it stands at (a blanket on a roof). */ y?: number }[];
+  /** A picnic on a roof (M107): guest gulls land around this spot as rows are delivered, and the Pigeon Gang raids it once `raidAt` rows are there. */
+  picnic?: { x: number; z: number; y: number; raidAt: number; guests: number };
   /** Food lying on the ground (these prop types, untagged) draws free people who are not busy: they walk over and eat it (M91). */
   crumbs?: PropType[];
   /** Which of the shared tourists take part: their `role`s ('any' = every tourist without a special role), or 'all'. */
@@ -87,6 +91,8 @@ export interface LevelDef {
   strollers?: number;
   /** Things that happen on a schedule: a ferry comes in (a crowd steps off), a shower, a gust of wind. */
   timetable?: ('ferry' | 'rain' | 'gust')[];
+  /** Seconds between ferries here, instead of the usual (a ferry row should not wait two and a half minutes). */
+  ferryGap?: number;
   /** Props placed just for this level (on top of the city's own). */
   extraProps?: PropSpawn[];
   /** The level that must be cleared first (shown locked until then). */

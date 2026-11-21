@@ -16,6 +16,8 @@ export interface LevelSetup {
   secret: Set<string>;
   /** The to-dos that clear the level. */
   main: string[];
+  /** Side orders: visible, needed for the second star only (M107). */
+  side: Set<string>;
 }
 
 export function levelSetup(def: LevelDef, allQuests: readonly QuestDef[], allTriggers: readonly TriggerDef[], allTourists: readonly NpcSpawn[], coop = false): LevelSetup {
@@ -31,7 +33,8 @@ export function levelSetup(def: LevelDef, allQuests: readonly QuestDef[], allTri
   const triggers = [...pick(def.triggers, allTriggers, 'trigger'), ...(def.extraTriggers ?? [])];
   const tourists = [...(def.tourists === 'all' ? allTourists : allTourists.filter((t) => (def.tourists as string[]).includes(t.role ?? 'any'))), ...(def.extraTourists ?? [])];
   const secret = new Set([...(def.secret ?? []), ...twists.map((q) => q.id)]);
-  return { quests, triggers, tourists, props: def.extraProps ?? [], defense: def.defense, secret, main: quests.map((q) => q.id).filter((id) => !secret.has(id)) };
+  const side = new Set(def.side ?? []);
+  return { quests, triggers, tourists, props: def.extraProps ?? [], defense: def.defense, secret, side, main: quests.map((q) => q.id).filter((id) => !secret.has(id) && !side.has(id)) };
 }
 
 export interface LevelProgress {
@@ -44,7 +47,7 @@ export function levelProgress(def: LevelDef, setup: LevelSetup, quests: readonly
   if (def.sandbox) return { cleared: false, allDone: false };
   const won = (id: string) => quests.find((q) => q.id === id)?.status === 'won';
   const cleared = setup.main.length > 0 && setup.main.every(won);
-  return { cleared, allDone: cleared && [...setup.secret].every(won) };
+  return { cleared, allDone: cleared && [...setup.secret, ...(setup.side ?? [])].every(won) };
 }
 
 export type Stars = [boolean, boolean, boolean];

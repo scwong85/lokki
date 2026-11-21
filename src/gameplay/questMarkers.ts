@@ -15,6 +15,7 @@ export function activeMarkers(defs: readonly QuestDef[], quests: readonly QuestS
       else if (first.markers && first.event && d.startOn?.includes(first.event)) out.push(...first.markers);
     }
     if (q.status !== 'active') continue;
+    if (d.collect?.marker) out.push(d.collect.marker); // where the collection goes (the picnic blanket)
     // every open objective that can be worked on now (parallel objectives of the finale all show; a chain shows its next step)
     q.objectives.forEach((o, i) => {
       if (o.done) return;

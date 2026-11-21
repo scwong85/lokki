@@ -5,7 +5,7 @@ test('a chain reaction is recognised from real game events', async ({ page }) =>
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript(() => localStorage.setItem('lokki-options-v1', JSON.stringify({ graphics: 'low', tutorialDone: true })));
-  await page.goto('/?level=a1s2&gate=1.5&play');
+  await page.goto('/?level=fish-market&gate=1.5&play');
   await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 120_000 });
   type Lk = { quests: { onEvent(e: string): unknown }; runLog: { tally(): Record<string, number> } };
   await page.evaluate(() => {

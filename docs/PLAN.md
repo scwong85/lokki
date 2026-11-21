@@ -237,6 +237,8 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [ ] M61 Stage 1.2 Fish Market (built on `m61-fish-market`)
 - [ ] M62 Stages 1.3 Strings Attached and 1.4 Mood Swings, team tug and duet (built on `m62-strings-moods`)
 - [ ] M63 Stage 1.5 The Warden: Act 1 complete (built on `m63-the-warden`)
+- [ ] M106 Plan: ten-minute stages, 20 stages in 4 acts, 1.2 written out (`docs/design/stages-10min.md`; built on `m106-stage-plan`)
+- [ ] M107 Stage 1.2 The Gull Picnic: the first ten-minute collection stage, **decision gate 4** (built on `m107-gull-picnic`, awaiting playtest)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -482,6 +484,12 @@ Heat, tug, hiding and buttons; moods, the lure, slip and the jukebox; team tug a
 
 ### M63 — Stage 1.5 The Warden (S)
 Rush Hour, Strike!, Nemesis; the end of Act 1. Details: `docs/milestones/M63.md`.
+
+### M106 — Plan: ten-minute stages (S)
+What we have, the 13 stage formats, the 20 stages, and 1.2 The Gull Picnic written out in full. Docs only. Details: `docs/design/stages-10min.md`.
+
+### M107 — Stage 1.2 The Gull Picnic (M–L) — **Decision gate 4**
+The first ten-minute stage: a collection of six rows found on the spot, each with its own owner and trick; guest gulls; the pigeon raid; the dinner gong; side orders and secrets. Engine: collection to-dos, side orders, the flourish, hit-only switches, reactions that spawn things and send people for good, the ferry as a quest event. Details: `docs/milestones/M107.md`.
 
 ### After M63 (backlog)
  Tablecloth yank, prank button, hide and BOO and the rest of the slate (`docs/design/mischief-mechanics.md`), then convert the stall-chain levels to the new toys.

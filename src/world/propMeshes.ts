@@ -199,6 +199,35 @@ function buildParts(type: PropType, g: THREE.Group): void {
       for (const [x, z, c] of [[0, 0, 0xff6fa8], [-0.07, 0.03, 0xffd23f], [0.07, 0.03, 0xff9ec7], [0, -0.07, 0xc9a7f0]] as [number, number, number][]) g.add(mesh(new THREE.SphereGeometry(0.07, 6, 5), c, x, 0.1, z));
       break;
     }
+    case 'tablecloth': {
+      // a folded red-and-white cloth: stripes of squares
+      for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) g.add(mesh(new THREE.BoxGeometry(0.16, 0.08, 0.16), (i + j) % 2 ? 0xd9402f : 0xfff7ea, -0.24 + i * 0.16, 0, -0.16 + j * 0.16));
+      break;
+    }
+    case 'loaf':
+      g.add(mesh(new THREE.BoxGeometry(0.4, 0.16, 0.24), 0x6b4226));
+      g.add(mesh(new THREE.BoxGeometry(0.36, 0.04, 0.2), 0x8a5a33, 0, 0.09, 0));
+      for (const x of [-0.1, 0, 0.1]) g.add(mesh(new THREE.BoxGeometry(0.03, 0.05, 0.18), 0xc9a36b, x, 0.1, 0)); // the scored top
+      break;
+    case 'thermos':
+      g.add(mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.3, 10), 0x2f6b4f));
+      g.add(mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.08, 10), 0xd9d9d9, 0, 0.17, 0)); // the cup lid
+      g.add(mesh(new THREE.BoxGeometry(0.17, 0.04, 0.17), 0xd9d9d9, 0, -0.1, 0));
+      break;
+    case 'boot':
+      g.add(mesh(new THREE.BoxGeometry(0.2, 0.3, 0.16), 0x3d4a3a, 0, 0.02, 0.1));
+      g.add(mesh(new THREE.BoxGeometry(0.22, 0.12, 0.38), 0x3d4a3a, 0, -0.1, -0.02));
+      g.add(mesh(new THREE.BoxGeometry(0.21, 0.03, 0.4), 0x22281f, 0, -0.16, -0.02));
+      g.add(mesh(new THREE.SphereGeometry(0.05, 6, 4), 0x9fd8b0, 0.06, 0.18, 0.12)); // a bit of seaweed
+      break;
+    case 'vendace': {
+      const cone = mesh(new THREE.ConeGeometry(0.13, 0.32, 8), 0xfff1d6, 0, -0.04, 0);
+      cone.rotation.x = Math.PI;
+      g.add(cone);
+      for (const [x, z] of [[-0.04, 0], [0.04, 0.02], [0, -0.04]]) g.add(mesh(new THREE.BoxGeometry(0.04, 0.16, 0.03), 0xd9a066, x, 0.14, z)); // little fried fish
+      g.add(mesh(new THREE.SphereGeometry(0.04, 6, 4), 0xfff36b, 0.06, 0.13, -0.03)); // a lemon wedge
+      break;
+    }
     case 'chair':
       g.add(mesh(new THREE.BoxGeometry(0.5, 0.06, 0.5), 0xc9b8e8, 0, 0, 0));
       g.add(mesh(new THREE.BoxGeometry(0.5, 0.45, 0.05), 0xc9b8e8, 0, 0.25, 0.22));
