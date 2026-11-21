@@ -25,3 +25,8 @@ git add data/raw/mesh && git commit -m "Reality mesh snapshot (Kauppatori box)"
 ```
 
 Check your GitHub LFS storage and bandwidth quota first. If it is too big, keep the mesh outside git and commit only what we derive from it (per-building colours, a few kB).
+
+## What is here now (2026-11-21)
+One tile, `Tile-52-37-1-1` (OBJ + MTL + 2 textures, 376 MB in Git LFS), covering about 148 m × 148 m at E 25497080–25497228, N 6672497–6672645. In game metres that is x −422…−274, z 35…183: the south-west part of the map, 12 buildings, **not** the Market Square. Heights run 5.6–41.8 m (vertical datum not yet confirmed).
+
+Every clone or LFS pull of this repo downloads these 376 MB. GitHub's free LFS plan allows 1 GB of storage and 1 GB of bandwidth a month, so the full box (about 81 tiles, roughly 30 GB) cannot live in LFS. For the rest of the area, keep the tiles outside git and commit only what we derive from them (per-building wall colours, a few kB), as planned above.
