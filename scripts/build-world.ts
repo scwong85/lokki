@@ -10,6 +10,8 @@ import {
   pointInRings, type Bounds, type Pt, type Ring,
 } from './lib/geo.ts';
 import { FETCH_MARGIN, MAP_HALF, ORIGIN_LONLAT } from './lib/config.ts';
+import { eraCode, eraOf, facadeCode, facadeOf, yearOf } from '../src/world/buildingStyle.ts';
+import { existsSync } from 'node:fs';
 
 interface Feature {
   properties: Record<string, unknown>;
@@ -42,6 +44,8 @@ function localRings(poly: number[][][], tol: number): Ring[] {
 
 // ---- buildings ----
 const PASTELS = 4; // cream, peach, mint, lilac (palette indices resolved at runtime)
+// the register's facade material and completion year (M108, data/raw/register.json from `npm run data:fetch-real`): era and facade codes
+const register: Record<string, { facade?: string; built?: string }> = existsSync('data/raw/register.json') ? JSON.parse(readFileSync('data/raw/register.json', 'utf8')).buildings : {};
 const buildings = [];
 for (const f of readLayer('buildings')) {
   for (const poly of polygons(f)) {
@@ -50,10 +54,15 @@ for (const f of readLayer('buildings')) {
     if (!inMap(ringCentroid(rings[0]))) continue;
     if (Math.abs(signedArea(rings[0])) < 8) continue; // sheds and kiosks
     const p = f.properties;
+    const reg = register[String(p.id)];
+    const e = reg ? eraCode(eraOf(yearOf(reg.built))) : 0;
+    const fc = reg ? facadeCode(facadeOf(reg.facade)) : 0;
     buildings.push({
       id: p.id as number,
       h: heightFromFloors(p.floors as number | null),
       c: hashId(p.id as number) % PASTELS,
+      ...(e ? { e } : {}),
+      ...(fc ? { f: fc } : {}),
       rings: rings.map(flat),
     });
   }

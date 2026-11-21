@@ -11,7 +11,8 @@ import { createTargetMeshes } from './targetMeshes';
 import type { Target } from '../gameplay/targets';
 import type { PropSpawn } from '../gameplay/props';
 import cityJson from '../../data/generated/kauppatori.json';
-import { GROUND_ROWS, awningColour, balconies, groundRuns, turretCorner, bays, hash, pitchedRoof, rectInfo, roofRise, storeys, wantsPitched, windowPlan, type V3 } from './facade';
+import { GROUND_ROWS, awningColour, balconies, groundRuns, turretCorner, bays, hash, pitchedFits, pitchedRoof, rectInfo, roofRise, storeys, wantsPitched, windowPlan, type V3 } from './facade';
+import { ERAS, FACADES_BY_CODE, styleKit } from './buildingStyle';
 import { ATLAS_ROWS, GROUND_ROW_COUNT, windowAtlas, windowGlow, windowGlowAtlas } from '../render/facadeTextures';
 import { tuning } from '../core/tuning';
 import { planDressing } from './dressingPlan';
@@ -22,7 +23,7 @@ import { asphaltTexture, grassTexture, pavingTexture } from '../render/groundTex
 
 interface CityData {
   half: number;
-  buildings: { id: number; h: number; c: number; rings: number[][]; style?: string }[];
+  buildings: { id: number; h: number; c: number; rings: number[][]; style?: string; /** Era and facade material from the register (M108), 0 or missing = unknown. */ e?: number; f?: number }[];
   land: { rings: number[][] }[];
   streets: { rings: number[][] }[];
   parks: { rings: number[][] }[];
@@ -297,16 +298,18 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
   }
   const district = districtOf(mx / (b.rings[0].length / 2), mz / (b.rings[0].length / 2));
   const pal = paletteAt(mx / (b.rings[0].length / 2), mz / (b.rings[0].length / 2));
-  const wallHex = style ? STYLE_WALLS[style] ?? 0xfdfaf2 : b.c === 4 ? 0xfdfaf2 : pal.walls[hash(b.id) % pal.walls.length];
+  // the real building's era and facade material pick its style kit (M108); without register data, the district rules
+  const kit = !style && tuning.render.realStyle.value > 0 && (b.e || b.f) ? styleKit(ERAS[b.e ?? 0] ?? 'unknown', FACADES_BY_CODE[b.f ?? 0] ?? 'unknown') : null;
+  const wallHex = style ? STYLE_WALLS[style] ?? 0xfdfaf2 : kit?.walls ? kit.walls[hash(b.id) % kit.walls.length] : b.c === 4 ? 0xfdfaf2 : pal.walls[hash(b.id) % pal.walls.length];
   const wall = new THREE.Color(wallHex);
   const foot = wall.clone().multiplyScalar(1 - tuning.render.ao.value);
   const trim = wall.clone().lerp(new THREE.Color(0xffffff), 0.45);
   const h = b.h;
   const st = storeys(h);
   const r = b.rings.length === 1 ? rectInfo(b.rings[0]) : null;
-  const pitched = !style && wantsPitched(r, b.id, h);
+  const pitched = !style && (kit?.pitched === 'no' ? false : kit?.pitched === 'yes' ? pitchedFits(r, h) : wantsPitched(r, b.id, h));
   // a low mansard instead of a flat lid on big irregular blocks (7 in 10), courtyards included; a visual skirt plus a landing slab on top
-  const mansard = !style && !pitched && h >= 8 && hash(b.id, 7) % 10 < 7 ? planMansard(b.rings) : null;
+  const mansard = !style && !pitched && (kit ? kit.mansard : true) && h >= 8 && hash(b.id, 7) % 10 < 7 ? planMansard(b.rings) : null;
   const prisms: PrismDef[] = [{ rings: b.rings, y0: 0, y1: h, kind: 'building', wall: wallHex, roof: wallHex }];
 
   // each building gets its own window rhythm: bay width, a main style, accent floors and a few blank walls
@@ -317,7 +320,7 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
     const l0 = Math.hypot(b.rings[0][j0 * 2] - b.rings[0][i0 * 2], b.rings[0][j0 * 2 + 1] - b.rings[0][i0 * 2 + 1]);
     if (l0 > longestLen) [longest, longestLen] = [i0, l0];
   });
-  const plan = windowPlan(b.id, st.upperFloors, longest);
+  const plan = windowPlan(b.id, st.upperFloors, longest, kit?.window ?? -1);
   b.rings.forEach((ring, ri) => {
     const n = ring.length / 2;
     const sign = (ringArea(ring) > 0 ? 1 : -1) * (ri === 0 ? 1 : -1);
@@ -364,8 +367,8 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
           const fh = (h - st.ground) / st.upperFloors;
           for (let f = 0; f < st.upperFloors; f++) wallBand(upper, x1, z1, x2, z2, st.ground + f * fh, st.ground + (f + 1) * fh, sign > 0, wall, nb, plan.floors[f]);
           wallPhysics(upper, x1, z1, x2, z2, st.ground, h, sign > 0);
-          if (ri === 0 && district !== 'city' && district !== 'market') {
-            for (const bal of balconies(len, st.upperFloors, b.id, i)) {
+          if (ri === 0 && (kit ? kit.balconies > 0 : district !== 'city' && district !== 'market')) {
+            for (const bal of balconies(len, st.upperFloors, b.id, i, kit ? Math.min(90, Math.round(45 * kit.balconies)) : 45)) {
               const px = x1 + (x2 - x1) * bal.t, pz = z1 + (z2 - z1) * bal.t;
               const y0 = st.ground + bal.floor * fh;
               const slab = trim.clone();
@@ -453,7 +456,8 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
   }
 
   // a corner turret on tall blocks in the Empire and Jugend districts: a round drum with a stepped cone roof (solid, a perch at the tip)
-  if (!style && (district === 'jugend' || district === 'senate' || district === 'esplanadi')) {
+  const turretHere = kit && kit.turret >= 0 ? hash(b.id, 462) % 100 < kit.turret * 100 : district === 'jugend' || district === 'senate' || district === 'esplanadi';
+  if (!style && turretHere) {
     const k = turretCorner(b.rings[0], b.id, h);
     if (k >= 0) {
       const r0 = b.rings[0], n0 = r0.length / 2;
@@ -472,7 +476,8 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
         extrude(upper, pr);
         prisms.push(pr);
       };
-      const roofCol = pal.pitched[hash(b.id, 470) % pal.pitched.length];
+      const roofSet = kit?.roofs ?? pal.pitched;
+      const roofCol = roofSet[hash(b.id, 470) % roofSet.length];
       layer(1.75, h - 4.5, h + 2.0, trim.getHex());
       layer(2.05, h + 2.0, h + 2.6, roofCol);
       layer(1.4, h + 2.6, h + 3.6, roofCol);
@@ -499,7 +504,8 @@ function building(upper: Buf, ground: Buf, b: CityData['buildings'][number]): Pr
   if (pitched && r) {
     const rise = roofRise(r.short);
     const hip = r.long / r.short < 1.3;
-    const roofHex = style ? STYLE_ROOFS[style] ?? pal.pitched[0] : pal.pitched[hash(b.id, 3) % pal.pitched.length];
+    const roofSet = kit?.roofs ?? pal.pitched;
+    const roofHex = style ? STYLE_ROOFS[style] ?? pal.pitched[0] : roofSet[hash(b.id, 3) % roofSet.length];
     const roofC = new THREE.Color(roofHex);
     const roof = pitchedRoof(r, h, rise, hip);
     for (const [p, q, t] of roof.slopes) upper.tri(p, q, t, roofC);

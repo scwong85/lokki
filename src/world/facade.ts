@@ -43,9 +43,9 @@ export interface WindowPlan {
  * How one building's windows look: its own bay width and a main style, with some floors in an accent style (often the
  * top one, as on old Helsinki blocks) and a few blank walls (never the longest one). Seeded by building id. Pure.
  */
-export function windowPlan(id: number, floors: number, longestWall: number): WindowPlan {
+export function windowPlan(id: number, floors: number, longestWall: number, mainStyle = -1): WindowPlan {
   const bayW = 3.4 + (hash(id, 21) % 8) * 0.55; // 3.4 .. 7.25 m
-  const main = hash(id, 22) % 5; // 0..4: the plain "banded" style (5) is only used as an accent
+  const main = mainStyle >= 0 ? mainStyle : hash(id, 22) % 5; // 0..4: the plain "banded" style (5) is only used as an accent (or by a real modern block, M108)
   const accent = (main + 1 + (hash(id, 23) % 4)) % WINDOW_STYLES;
   const topAccent = hash(id, 24) % 100 < 38;
   const midAccent = hash(id, 25) % 100 < 18;
@@ -102,9 +102,13 @@ export interface Roof {
 
 /** Should this building get a pitched roof? (simple, not too big; seeded so the city mixes both kinds). */
 export function wantsPitched(r: RectInfo | null, id: number, h: number): boolean {
-  if (!r) return false;
-  if (r.short > 22 || r.long * r.short > 1100 || h > 30) return false;
+  if (!pitchedFits(r, h)) return false;
   return hash(id, 7) % 10 < 7;
+}
+
+/** Can this footprint carry a pitched roof at all (a simple rectangle, not too big)? */
+export function pitchedFits(r: RectInfo | null, h: number): r is RectInfo {
+  return !!r && r.short <= 22 && r.long * r.short <= 1100 && h <= 30;
 }
 
 /**
@@ -197,9 +201,9 @@ export interface Balcony {
 }
 
 /** Small balconies on a long wall of a tall building: one or two bays, on one or two floors. Pure. */
-export function balconies(len: number, upperFloors: number, id: number, wall: number): Balcony[] {
+export function balconies(len: number, upperFloors: number, id: number, wall: number, chance = 45): Balcony[] {
   if (len < 10 || upperFloors < 3) return [];
-  if (hash(id, 380 + wall) % 100 >= 45) return [];
+  if (hash(id, 380 + wall) % 100 >= chance) return [];
   const floor = 1 + (hash(id, 400 + wall) % Math.min(2, upperFloors - 2));
   const n = len >= 18 ? 2 : 1;
   const out: Balcony[] = [];

@@ -456,6 +456,7 @@ export const tuning = {
     musicDownDelay: p(12, 0, 60, 1), // seconds the heat must stay lower before the music calms down
   },
   render: {
+    realStyle: p(1, 0, 1, 1), // 1: buildings take their style from their real era and facade material (M108); 0: the old district rules
     fogNear: p(150, 0, 400, 1),
     fogFar: p(700, 100, 1500, 1),
     nightLight: p(0.38, 0.1, 1, 0.02), // how bright the lights are at dusk (the night market)

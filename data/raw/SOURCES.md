@@ -21,8 +21,21 @@ Changes made to the WFS responses (nothing else): properties not needed were dro
 ## Deviations from PLAN §4.6 (decided during M3)
 
 - The planned `kartta.hel.fi/3d/citydb-wfs/wfs` endpoint returns 404, and `3d.hel.ninja/data/citygml/` only offers a Kalasatama tile, not Kauppatori. Building heights therefore come from **registry floor counts** (floors × 3.2 m + 0.8 m) instead of CityGML LoD1 heights.
-- OpenStreetMap / Overpass was unreachable from the build sandbox, and the City's own layers cover roads, parks and coastline, so **OSM is not used** (no ODbL data in the repo).
+- OpenStreetMap / Overpass was unreachable from the build sandbox, and the City's own layers cover roads, parks and coastline, so **OSM is not used** (no ODbL data in the repo). Confirmed in M108: no OSM for now, the option stays open.
 - Hand-placed landmarks (`data/landmarks.json`) are original stylised props: no third-party data.
+
+## Real-city snapshot (added in M108)
+
+Fetched on **2026-11-21** by `scripts/fetch-real.ts` (`npm run data:fetch-real`), same 1.2 km box. All City of Helsinki open data, **CC BY 4.0**, © City of Helsinki. Plan: `docs/design/realistic-city-research.md`.
+
+| File | Source | Used for |
+|---|---|---|
+| `register.json` | WFS layer `avoindata:Rakennukset_alue_rekisteritiedot` (the buildings layer above), properties only: `c_julkisivu` (facade material), `c_valmpvm` (completion date), `c_rakeaine` (frame material), `c_kayttark` (use), `c_lammtapa` (heating), keyed by building `id` | era and facade material per building → style kit (`src/world/buildingStyle.ts`) |
+| `ortho/r{row}c{col}.jpg` + `ortho/ortho.json` | WMS `https://kartta.hel.fi/ws/geoserver/avoindata/wms`, layer `avoindata:Ortoilmakuva_2025_5cm` (2025 orthophoto), resampled to 0.3 m/pixel, 2 × 2 tiles of 2000 px, JPEG | kept for roof colours (layer 3) and a future photo mode; not used by the game yet (about 1.9 MB) |
+| `citygml/` (when fetched) | City 3D WFS `https://kartta.hel.fi/3d/citydb-wfs/wfs`, `bldg:Building` (CityGML 2.0, LoD2) | real roof shapes (layer 2). On 2026-11-21 the service answered every GetFeature with "overloaded, retry later"; `npm run data:fetch-real -- citygml` retries and keeps the pages it gets. Alternative: the map-sheet CityGML download at `https://kartta.hel.fi/3d/` |
+| `mesh/` (manual) | Reality mesh, textured OBJ, from `https://kartta.hel.fi/3d/` | see `mesh/README.md`; stored with Git LFS |
+
+Facade codes (Finnish building register): 1 concrete, 2 brick, 3 metal sheet, 4 stone, 5 wood, 6 glass, 7 other (rendered plaster around the market). Our box: 163 other, 104 brick, 21 stone, 19 concrete, 9 metal, 6 glass, 5 wood, 194 without a code.
 
 ## Music (added in M9)
 
