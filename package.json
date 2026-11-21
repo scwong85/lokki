@@ -17,7 +17,8 @@
     "data:fetch": "node scripts/fetch-data.ts",
     "data:build": "node scripts/build-world.ts",
     "dev:lan": "vite --host",
-    "preview:lan": "vite preview --host"
+    "preview:lan": "vite preview --host",
+    "data:fetch-real": "node scripts/fetch-real.ts"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",

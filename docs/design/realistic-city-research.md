@@ -1,6 +1,6 @@
 # A more realistic Helsinki: what real-world data can rebuild
 
-Status: **research** (docs only). Question: now that we use open map data, can we generate buildings and their exteriors that match the real Kauppatori, for example from Google Earth or street-level photos?
+Status: **R1 built in M108** (`docs/milestones/M108.md`); the data snapshot for R2 to R4 is saved or scripted. Decisions (2026-11-21): **keep the pastel look for now, keep a photorealistic mode possible later** (so the source data goes into the repo); **the user downloads the reality mesh**; **no OpenStreetMap for now**, option kept open. Question: now that we use open map data, can we generate buildings and their exteriors that match the real Kauppatori, for example from Google Earth or street-level photos?
 
 ## Short answer
 

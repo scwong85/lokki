@@ -95,7 +95,7 @@ Sound effects are synthesised at runtime with WebAudio. Music is public-domain /
 
 ## Data credits
 
-- **Buildings, streets, parks, coastline:** City of Helsinki open data (Helsingin kaupunki), licence [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), © City of Helsinki. Layers and processing are recorded in [`data/raw/SOURCES.md`](data/raw/SOURCES.md).
+- **Buildings, streets, parks, coastline:** City of Helsinki open data (Helsingin kaupunki), licence [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), © City of Helsinki. Layers and processing are recorded in [`data/raw/SOURCES.md`](data/raw/SOURCES.md). Buildings take their style from the City's building register (facade material, year of completion); the repo also keeps the City's 2025 orthophoto of the area (same licence).
 - **Sound effects:** synthesised at runtime, no sample files.
 - **Music** (public domain / CC0 recordings from Wikimedia Commons; details in [`data/raw/SOURCES.md`](data/raw/SOURCES.md)): Mendelssohn, *The Hebrides* Overture (Musopen Symphony Orchestra); Satie, *Gymnopédie* no. 1 (Robin Alciatore); Joplin, "Maple Leaf Rag" (US Air Force Band Strolling Strings); Offenbach, "Galop infernal" (Gnissah).
 - **People:** "Animated Human" by [Quaternius](https://quaternius.com) (CC0), recoloured in code.
