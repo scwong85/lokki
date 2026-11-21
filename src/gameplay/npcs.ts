@@ -481,6 +481,65 @@ export class NpcManager implements NpcHooks {
 
   /** People sent somewhere for good (a reaction's `send.stay`): they no longer go back to their post. */
   private unposted = new Set<number>();
+  /**
+   * The Market Guard's whistle (M111): a guard who is not busy, not looking at a noise, and who can see a gull carrying one of the props he
+   * guards (within `tuning.guard.whistleRange`, in his cone and line of sight) blows his whistle. The effects (the item goes back, the gull is
+   * shoved) are the game's; this only says who whistled at whom, once per cooldown.
+   */
+  private guardStep(dt: number, gulls: readonly GullInfo[]): NpcEvent[] {
+    const ev: NpcEvent[] = [];
+    for (const n of this.npcs) {
+      if (!n.confiscates) continue;
+      n.whistleCd = Math.max(0, n.whistleCd - dt);
+      if (n.whistleCd > 0 || n.obliviousT > 0 || n.distractT > 0) continue;
+      if (!(n.mode === 'idle' || n.mode === 'walk' || n.mode === 'notice' || n.mode === 'shield' || n.mode === 'recover')) continue;
+      const scale = tuning.guard.whistleRange.value / tuning.npc.sightRange.value;
+      for (let i = 0; i < gulls.length; i++) {
+        const g = gulls[i];
+        if (!g.carrying || !n.confiscates.includes(g.carrying) || !canSee(n, g, this.world, scale)) continue;
+        n.whistleCd = tuning.guard.cooldown.value;
+        ev.push({ type: 'whistle', npc: n, gull: i, tag: g.carrying });
+        break;
+      }
+    }
+    return ev;
+  }
+
+  /** A prop the Guard took back from a gull goes home: into its owner's hand if it was theirs (and they have a free hand), else to where it started. */
+  returnLoot(prop: Prop): void {
+    const owner = this.npcs.find((n) => this.items.get(n.id) === prop && n.holding === null);
+    this.props.reset(prop);
+    if (!owner) return;
+    this.props.attach(prop, owner.id);
+    owner.holding = prop.id;
+    owner.holdType = prop.type;
+    this.props.setHoldTarget(prop, handPos(owner));
+  }
+
+  /** People who arrive after the level has started (a reaction's `cast`): the Guard begins his rounds, a crowd steps off. Removed again on reset. */
+  private late = new Set<number>();
+  spawnLate(list: readonly NpcSpawn[]): Npc[] {
+    return list.map((sp) => {
+      const n = this.spawn(sp);
+      this.late.add(n.id);
+      return n;
+    });
+  }
+
+  private removeNpc(n: Npc): void {
+    const model = this.models.get(n.id);
+    if (model) this.parent.remove(model.root);
+    const ring = this.rings.get(n.id);
+    if (ring) this.parent.remove(ring);
+    const prop = this.items.get(n.id);
+    if (prop) this.props.destroy(prop);
+    this.models.delete(n.id);
+    this.rings.delete(n.id);
+    this.spawns.delete(n.id);
+    this.items.delete(n.id);
+    this.npcs.splice(this.npcs.indexOf(n), 1);
+  }
+
   /** Items tossed up in a flourish, by the person who tossed them. */
   private flourish = new Map<number, number>();
 
@@ -500,11 +559,20 @@ export class NpcManager implements NpcHooks {
   }
 
   /** A ritual (M102): the countdown over the head, then a few seconds with their eyes elsewhere. Busy, frightened or chasing people skip it. */
-  private ritualStep(n: Npc): NpcEvent[] {
+  private ritualStep(n: Npc, dt: number): NpcEvent[] {
     const r = n.ritual!;
+    // a ritual that waits for customers (M111): its clock only runs while enough other people stand near, and it never starts without them
+    let clock = this.clock;
+    if (r.needs) {
+      const sp = this.spawns.get(n.id);
+      const ax = sp?.x ?? n.homeX, az = sp?.z ?? n.homeZ;
+      const here = this.npcs.filter((o) => o !== n && o.role !== n.role && Math.hypot(o.x - ax, o.z - az) <= r.needs!.r).length;
+      if (here >= r.needs.count || ritualState(n.ritualT, r).phase !== 'idle') n.ritualT += dt;
+      clock = n.ritualT;
+    }
     // a flourish (M107) cannot be helped: he does it even with a gull looking (that is the joke), unless he is frightened or chasing
     const calmNow = n.mode === 'idle' || n.mode === 'walk' || n.mode === 'eat' || (!!r.toss && (n.mode === 'notice' || n.mode === 'shield'));
-    const st = ritualState(this.clock, r);
+    const st = ritualState(clock, r);
     n.ritualLabel = calmNow ? ritualLabel(st, r) : undefined;
     if (!calmNow || st.phase !== 'hold') {
       if (st.phase !== 'hold') {
@@ -704,7 +772,7 @@ export class NpcManager implements NpcHooks {
     for (const n of this.npcs) {
       if (n.role === 'selfie' || n.role === 'blogger') ev.push(...this.selfieStep(n, gulls)); // the blogger photographs her dish on the same rhythm
       if (n.role === 'cleaner') this.cleanStep(n, dt);
-      if (n.ritual) ev.push(...this.ritualStep(n));
+      if (n.ritual) ev.push(...this.ritualStep(n, dt));
       const near = gulls.length === 1 ? gulls[0] : watchedGull(n, gulls);
       const stepped = stepNpc(n, near, this.noises, dt, ctx);
       for (const e of stepped) if (e.type === 'bought') this.serve(e.npc, e.station, e.propType);
@@ -740,6 +808,7 @@ export class NpcManager implements NpcHooks {
       }
     }
     this.spread(ev, dt);
+    ev.push(...this.guardStep(dt, gulls)); // after the brains: a guard who has just heard a noise is looking at it, not at you
     this.knockStep(dt);
     this.noises.length = 0;
     return ev;
@@ -1119,6 +1188,7 @@ export class NpcManager implements NpcHooks {
     this.rings.clear();
     this.spawns.clear();
     this.items.clear();
+    this.late.clear();
     this.eating.clear();
     this.flourish.clear();
     this.unposted.clear();
@@ -1166,6 +1236,8 @@ export class NpcManager implements NpcHooks {
 
   reset(): void {
     this.rng = createRng(this.seed);
+    for (const n of [...this.npcs]) if (this.late.has(n.id)) this.removeNpc(n); // the people who arrived later go again
+    this.late.clear();
     for (const n of this.npcs) {
       const sp = this.spawns.get(n.id)!;
       const fresh = newNpc(n.id, sp);

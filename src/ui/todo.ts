@@ -2,7 +2,7 @@ import type { QuestState } from '../gameplay/quest';
 import { QUESTS, type QuestDef } from '../data/quests';
 import { tuning } from '../core/tuning';
 import { HintLadder, stepKey } from '../gameplay/hintLadder';
-import { RowScout, rowCount } from '../gameplay/collection';
+import { RowScout, courseCount, courseDone, courseOf, courseOpen, rowCount } from '../gameplay/collection';
 
 /**
  * Paper-note to-do list. Compact: active quests show their objectives (with a tip under the first open one),
@@ -70,23 +70,35 @@ export class Todo {
   /** A collection to-do: the goal, then one row per item, found on the spot (M107). */
   private collect(q: QuestState, def: QuestDef): string {
     const n = rowCount(def, q);
-    const rows = q.objectives
-      .map((o, i) => {
-        const od = def.objectives[i];
-        if (!od.row) return '';
-        if (o.done) return `<li class="done"><span>&#9745;</span> ${od.row.item} <i class="owner">(${od.row.owner})</i></li>`;
-        const key = stepKey(q.id, o.id);
-        const sight = this.scout.sight(key);
-        if (sight === 'hidden') return `<li class="later"><span>&#9744;</span> ???</li>`;
-        if (sight === 'seen') return `<li class="later"><span>&#9744;</span> ??? …${od.row.reveal.text}</li>`;
-        const focus = this.scout.focus === key;
-        const rung = od.nudge ? this.ladder.rung(key) : 3;
-        const label = od.nudge && rung < 3 ? od.outcome ?? o.text : o.text;
-        const lines = focus ? (od.nudge ? [rung >= 1 ? od.nudge : '', rung >= 3 ? od.hint ?? '' : ''] : [od.hint ?? '']).filter(Boolean) : [];
-        const ask = focus && od.nudge && rung < 3 ? ` <button type="button" class="askhint" title="Give me a hint (J)">?</button>` : '';
-        return `<li class="${focus ? 'focus' : ''}"><span>&#9744;</span> ${label}${ask}${lines.map((l) => `<div class="hint">${l}</div>`).join('')}</li>`;
-      })
-      .join('');
+    const courses = def.collect!.courses;
+    const row = (o: QuestState['objectives'][number], i: number): string => {
+      const od = def.objectives[i];
+      if (!od.row) return '';
+      if (o.done) return `<li class="done"><span>&#9745;</span> ${od.row.item} <i class="owner">(${od.row.owner})</i></li>`;
+      const key = stepKey(q.id, o.id);
+      const sight = this.scout.sight(key);
+      if (sight === 'hidden') return `<li class="later"><span>&#9744;</span> ???</li>`;
+      if (sight === 'seen') return `<li class="later"><span>&#9744;</span> ??? …${od.row.reveal.text}</li>`;
+      const focus = this.scout.focus === key;
+      const rung = od.nudge ? this.ladder.rung(key) : 3;
+      const label = od.nudge && rung < 3 ? od.outcome ?? o.text : o.text;
+      const lines = focus ? (od.nudge ? [rung >= 1 ? od.nudge : '', rung >= 3 ? od.hint ?? '' : ''] : [od.hint ?? '']).filter(Boolean) : [];
+      const ask = focus && od.nudge && rung < 3 ? ` <button type="button" class="askhint" title="Give me a hint (J)">?</button>` : '';
+      return `<li class="${focus ? 'focus' : ''}"><span>&#9744;</span> ${label}${ask}${lines.map((l) => `<div class="hint">${l}</div>`).join('')}</li>`;
+    };
+    // with courses (M111): a heading for each open or finished course, and a locked one as a single line saying what opens it
+    let rows = '';
+    if (courses?.length) {
+      for (let c = 1; c <= courseCount(def); c++) {
+        const name = courses[c - 1]?.name ?? `Course ${c}`;
+        if (!courseOpen(def, q, c)) {
+          rows += `<li class="later course"><span>&#128274;</span> ${name}${courses[c - 1]?.unlock ? ` <i>${courses[c - 1].unlock}</i>` : ''}</li>`;
+          continue;
+        }
+        rows += `<li class="coursehead${courseDone(def, q, c) ? ' served' : ''}">${name}${courseDone(def, q, c) ? ' &#10003;' : ''}</li>`;
+        rows += q.objectives.map((o, i) => (def.objectives[i].row && courseOf(def.objectives[i]) === c ? row(o, i) : '')).join('');
+      }
+    } else rows = q.objectives.map(row).join('');
     const full = q.status === 'won';
     return `<div class="q active collect"><div class="qt">${q.title} <b class="cnt">${n.done} / ${n.total}</b>${full ? ' <b class="ok">all there!</b>' : ''}</div>${full ? '' : `<div class="teaser">${def.collect!.goal}</div>`}<ul>${rows}</ul></div>`;
   }

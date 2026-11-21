@@ -42,7 +42,7 @@ import { LEVELS, levelById } from './data/levels';
 import type { LevelDef } from './data/levels/types';
 import { reactionPlays, reactionsFor } from './data/reactions';
 import { PlaytestLog, RATING_KEYS, recapOf } from './core/playtest';
-import { introducedAt, isUnlocked, parseGate, switchMech, type Gate, type MechId } from './gameplay/mechanics';
+import { hitOnlyReachable, introducedAt, isUnlocked, parseGate, switchHitAllowed, switchMech, type Gate, type MechId } from './gameplay/mechanics';
 import { levelProgress, levelSetup, levelStars, levelUnlocked, mergeRecord, starCount } from './gameplay/level';
 import { TOURIST_SPAWNS } from './data/npcs';
 import type { NpcEvent } from './gameplay/npc';
@@ -63,6 +63,7 @@ import { HavocHud } from './ui/havocHud';
 import { Tram } from './gameplay/tram';
 import { PigeonGang } from './gameplay/pigeons';
 import { PicnicGuests } from './world/picnicGuests';
+import { RowTimes } from './gameplay/rowTimes';
 import { PICNIC_COMMENTS } from './data/levels/picnic';
 import { Sunbathers } from './gameplay/sunbathers';
 import { Dog } from './gameplay/dogs';
@@ -378,7 +379,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { scene, gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get gate() { return gate; }, applyGates, get hidden() { return hiddenNow(gull.state); }, get playtest() { return playtest; }, strikePose: (k: string) => strikePose(players[0], k), photoPoses, get switches() { return level.switches ?? []; }, peckNow: () => { const sw = switchNear(gull.state); if (sw) peck(sw, players[0]); return !!sw; }, get tugProgress() { return interaction.tugProgress(0); }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get picnicGuests() { return guests; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { scene, gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get gate() { return gate; }, applyGates, get hidden() { return hiddenNow(gull.state); }, get playtest() { return playtest; }, strikePose: (k: string) => strikePose(players[0], k), photoPoses, get switches() { return level.switches ?? []; }, peckNow: () => { const sw = switchNear(gull.state); if (sw) peck(sw, players[0]); return !!sw; }, get tugProgress() { return interaction.tugProgress(0); }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get rowTimes() { return rowTimes; }, get picnicGuests() { return guests; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -591,6 +592,8 @@ const beats: { at: number; run: () => void }[] = [];
 function beatsStep(): void {
   for (let i = beats.length - 1; i >= 0; i--) if (simTime >= beats[i].at) beats.splice(i, 1)[0].run();
 }
+/** When each collection row was delivered, for the results card (M111). */
+const rowTimes = new RowTimes();
 const reactionsDone = new Set<string>();
 /** How many times each quest event has happened in this level (for reactions that escalate). */
 const eventCounts = new Map<string, number>();
@@ -613,6 +616,10 @@ function runReactions(event: string): void {
     }
     if (r.say) hud.toast(r.say, 2.2);
     if (r.sound) audio.play(r.sound);
+    if (r.cast && npcs) {
+      npcs.spawnLate(r.cast);
+      for (const sp of r.cast) fx('dust', { x: sp.x, y: 0.4, z: sp.z }, 0.6);
+    }
     if (r.spawn) {
       interaction.props.spawn({ type: r.spawn.type, x: r.spawn.x, y: restY(r.spawn.type), z: r.spawn.z, tag: r.spawn.tag });
       fx('stars', { x: r.spawn.x, y: 0.8, z: r.spawn.z }, 0.6);
@@ -1076,11 +1083,12 @@ function switchNear(s: { x: number; z: number }): NonNullable<LevelDef['switches
   return null;
 }
 /** A splat or a thrown thing that lands on a switch sets it off, as a peck would (ring the bell from the sky, M101). */
-function hitSwitch(x: number, z: number): void {
+function hitSwitch(x: number, z: number, by: 'thrown' | 'splat' = 'thrown'): void {
   if (isGuest()) return;
   for (const sw of level.switches ?? []) {
+    if (!switchHitAllowed(sw.hitOnly, by)) continue; // a bell under an awning: a splat lands on the awning (M111)
     // a hit-only switch (a door bell, a gong on a roof) needs something to throw or drop, not the peck
-    if (!(sw.free || (sw.hitOnly ? mech('toss') || mech('poop') : mech(switchMech(sw.effect)))) || (switchCd.get(sw.id) ?? 0) > 0 || Math.hypot(sw.x - x, sw.z - z) > tuning.watch.hitRange.value) continue;
+    if (!(sw.free || (sw.hitOnly ? hitOnlyReachable(sw.hitOnly, mech) : mech(switchMech(sw.effect)))) || (switchCd.get(sw.id) ?? 0) > 0 || Math.hypot(sw.x - x, sw.z - z) > tuning.watch.hitRange.value) continue;
     peck(sw, players[0]);
     notes(quests.onEvent(`hit:${sw.id}`));
     return;
@@ -1198,6 +1206,33 @@ function askHint(): void {
 }
 todo.onAsk = askHint;
 /** Caught red-handed (M96): a watcher who has chased the gull down takes the loot back to where it was, and the gull is thrown back, dazed. */
+/**
+ * The Market Guard blows his whistle (M111): everybody looks, the item he saw goes home (into its owner's hand, or where it started), and the
+ * gull is shoved away and dazed. Only an item still in the beak counts: once it lies on the picnic it is safe.
+ */
+function guardWhistle(e: Extract<NpcEvent, { type: 'whistle' }>): void {
+  const pl = players[e.gull];
+  if (!pl || !npcs || isGuest()) return;
+  const loot = interaction.beak(e.gull).carried;
+  if (!loot || loot.tag !== e.tag) return;
+  const s = pl.gull.state;
+  const back = interaction.dropCarried(s, e.gull);
+  if (back) {
+    npcs.returnLoot(back);
+    back.lost = false;
+  }
+  const dx = s.x - e.npc.x, dz = s.z - e.npc.z, d = Math.hypot(dx, dz) || 1;
+  s.vx = (dx / d) * tuning.guard.shove.value;
+  s.vz = (dz / d) * tuning.guard.shove.value;
+  s.stunT = Math.max(s.stunT, tuning.guard.stun.value);
+  cam.shake(0.4);
+  audio.play('whistle');
+  hud.flash('#ffb347');
+  hud.toast(`${e.npc.name ?? 'The Guard'} blows the whistle! The ${loot.def.name} goes back.`, 2.4);
+  emoteAtNpc(e.npc, 'alert');
+  for (const o of npcs.near(e.npc.x, e.npc.z, 16)) if (o !== e.npc) emoteAtNpc(o, 'alert'); // everyone looks
+  notes(quests.onEvent(`whistle:${e.npc.role}`));
+}
 function watchersCatch(): void {
   if (!npcs || isGuest()) return;
   const loot = interaction.carried;
@@ -1919,6 +1954,8 @@ function restartLevel(mode: 'normal' | 'speedrun'): void {
   chain.reset();
   nudge.poke();
   todo.ladder.reset();
+  todo.scout.reset();
+  rowTimes.reset();
   timetable = level.timetable?.length ? new Timetable(level.timetable, 17, level.ferryGap) : null;
   rain.on = false;
   puddleT = 0;
@@ -1972,6 +2009,7 @@ function loadLevel(id: string): void {
   todo.secret = setup.secret;
   todo.side = setup.side;
   todo.scout.reset();
+  rowTimes.reset();
   title.hide();
   levelSelect.hide();
   levelComplete.hide();
@@ -2069,6 +2107,9 @@ function checkLevelDone(): void {
     const found = [...setup.secret].filter((id) => quests.quests.find((q) => q.id === id)?.status === 'won').length;
     notes.push(found === setup.secret.size ? `Secret to-dos: all ${found} found.` : `Secret to-dos: ${found} of ${setup.secret.size} found. ${setup.secret.size - found} still hidden in this level.`);
   }
+  // where the minutes went (M111): the time each row of a collection was delivered, and how long after the one before
+  const collection = setup.quests.find((q) => q.collect);
+  notes.push(...rowTimes.lines(collection?.collect?.courses?.map((c) => c.name) ?? []));
   if (level.endingNote) notes.push(level.endingNote);
   if (level.reward) {
     const sk = skills.unlock(level.reward);
@@ -2301,7 +2342,11 @@ function notes(list: QuestNote[]): void {
       if (n.quest === 'finale') interaction.restock((pr) => pr.type === 'chair' || pr.tag === 'stallBun'); // knocked-over chairs and a taken pastry come back for the finale
       if (def.startHeat && defense) onDefense(defense.ensureHeat(def.startHeat));
     } else if (n.type === 'objective') {
-      if (def.collect && def.objectives.find((o) => o.id === n.objective)?.row) picnicRow();
+      const rowDef = def.collect ? def.objectives.find((o) => o.id === n.objective) : undefined;
+      if (rowDef?.row) {
+        picnicRow();
+        rowTimes.record(def.id, rowDef.id, `${rowDef.row.item} (${rowDef.row.owner})`, rowDef.row.course ?? 1, stats.summary().seconds);
+      }
       const text = q.objectives.find((o) => o.id === n.objective)!.text;
       hud.toast(`✓ ${text}`, 1.6);
       const victim = def.objectives.find((o) => o.id === n.objective)?.victim;
@@ -2314,6 +2359,14 @@ function notes(list: QuestNote[]): void {
         npcs?.sendRole('dater', [{ x: 36, z: -9, name: 'stormoff' }, { x: -37, z: -9, name: 'stormoff' }]);
         hud.toast('The date is ruined! They storm off...', 2);
       }
+    } else if (n.type === 'course') {
+      // a course of a collection is served (M111): a cheer, and the world moves on (the ferry crowd, the Guard starts his rounds)
+      const cname = def.collect?.courses?.[n.course - 1]?.name ?? `Course ${n.course}`;
+      rowTimes.course(n.course, stats.summary().seconds);
+      hud.toast(`${cname} served!`, 2.6);
+      audio.play('chime');
+      fx('confetti', { x: gull.state.x, y: gull.state.y + 1.2, z: gull.state.z }, 0.8);
+      notes(quests.onEvent(`courseServed:${n.course}`));
     } else if (n.type === 'won') {
       audio.play('win');
       if (n.quest === 'picnicGong' && guests) {
@@ -2440,6 +2493,8 @@ function onNpcEvents(evs: NpcEvent[]): void {
         punchlinePhoto(who.role, `${who.name ?? 'Somebody'}: "WHERE IS IT?"`);
         notes(quests.onEvent(`discovered:${who.role}`));
       } });
+    } else if (e.type === 'whistle') {
+      guardWhistle(e);
     } else if (e.type === 'caught') {
       emoteAtNpc(e.npc, 'anger');
       audio.play('gasp');
@@ -2623,7 +2678,7 @@ function onGags(gags: GagEvent[]): void {
         noise(g.x, g.z, 0.4);
         if (!isGuest()) {
           npcs?.addHazard(g.x, g.z); // a wet patch: whoever walks through it slips
-          hitSwitch(g.x, g.z);
+          hitSwitch(g.x, g.z, 'splat');
           for (const z of level.splatZones ?? []) if (g.x >= z.zone.minX && g.x <= z.zone.maxX && g.z >= z.zone.minZ && g.z <= z.zone.maxZ) notes(quests.onEvent(z.event));
         }
         break;
@@ -3000,7 +3055,7 @@ startLoop({
       if (!levelCleared) todo.ladder.tick(dt, ladderSteps(setup.quests, quests.quests, todo.scout.focus));
       if (!isGuest()) timetableStep(dt);
       if (!isGuest() && !levelCleared && !level.sandbox && !havoc && nudge.update(dt, tuning.nudge.after.value, tuning.nudge.every.value)) hud.toast(nudgeText(), 4);
-      onNpcEvents(npcs.update(dt, players.map((p) => ({ x: p.gull.state.x, y: p.gull.state.y, z: p.gull.state.z, diving: p.gull.state.mode === 'dive', taunt: p.gull.taunting, hidden: hiddenNow(p.gull.state), disguise: disguiseT > 0 }))));
+      onNpcEvents(npcs.update(dt, players.map((p) => ({ x: p.gull.state.x, y: p.gull.state.y, z: p.gull.state.z, diving: p.gull.state.mode === 'dive', taunt: p.gull.taunting, hidden: hiddenNow(p.gull.state), disguise: disguiseT > 0, carrying: interaction.beak(players.indexOf(p)).carried?.tag ?? null }))));
       const stolen = players.some((p) => interaction.beak(p.id).carried?.stolen === true);
       notes(quests.tick({ dt, carryingStolen: stolen, nearestNpc: Math.min(...players.map((p) => npcs.nearestDistance(p.gull.state))) }));
       if (defense) {

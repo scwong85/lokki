@@ -91,3 +91,10 @@ export function switchMech(effect: string): MechId {
       return 'peck';
   }
 }
+
+/** What sets a hit-only switch off (M111): `true` any hit (a splat, or something thrown or dropped onto it), `'thrown'` only something thrown or dropped (a bell under an awning). */
+export type HitOnly = boolean | 'thrown' | undefined;
+export const switchHitAllowed = (hitOnly: HitOnly, by: 'thrown' | 'splat'): boolean => !(by === 'splat' && hitOnly === 'thrown');
+
+/** Which mechanics a hit-only switch needs to be reachable at all: toss for the thrown-only one, toss or poop for the other. */
+export const hitOnlyReachable = (hitOnly: HitOnly, has: (id: MechId) => boolean): boolean => (hitOnly === 'thrown' ? has('toss') : has('toss') || has('poop'));

@@ -48,7 +48,7 @@ export interface ObjectiveDef {
    * A row of a collection to-do (M107): "???" until the gull comes near its place (then a half title), the full wish once it is right there,
    * ticked with the item and its owner when it is delivered.
    */
-  row?: { reveal: { x: number; z: number; r: number; text: string }; item: string; owner: string };
+  row?: { reveal: { x: number; z: number; r: number; text: string }; item: string; owner: string; /** The course it belongs to (1-based, default 1): a course opens when every row of the courses before it is done (M111). */ course?: number };
 }
 
 export interface QuestDef {
@@ -77,7 +77,7 @@ export interface QuestDef {
   startMarkers?: Marker[];
   objectives: ObjectiveDef[];
   /** A collection to-do (M107): its objectives are rows found on the spot, done in any order; the line is the goal under the title. */
-  collect?: { goal: string; /** Where the things go: always on the map while the to-do is open. */ marker?: Marker };
+  collect?: { goal: string; /** Where the things go: always on the map while the to-do is open. */ marker?: Marker; /** Names of the courses (index 0 = course 1) and what opens each one after the first, for the note (M111). */ courses?: { name: string; unlock: string }[] };
   /** Shown while locked, instead of "Finish the other quests first." */
   lockedText?: string;
   /** A hidden to-do half-reveals itself when the gull comes near this spot ("??? …Granny's sweet tooth"), M103. */

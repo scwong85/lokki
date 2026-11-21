@@ -74,6 +74,10 @@ export interface NpcSpawn {
   watch?: string;
   /** A visible routine with a countdown (M102): during it they see nothing. */
   ritual?: Ritual;
+  /** The Market Guard (M111): blows his whistle at a gull he sees carrying a prop with one of these quest tags; the item goes back. */
+  confiscates?: string[];
+  /** Walks over to look when he hears a noise, then goes back to his rounds (the Market Guard). */
+  investigates?: boolean;
 }
 
 export interface Npc {
@@ -143,6 +147,13 @@ export interface Npc {
   ritualLabel: string | undefined;
   /** In the middle of a ritual now (to fire one event as it starts). */
   ritualOn: boolean;
+  /** The ritual's own clock, for a ritual that waits for customers (`Ritual.needs`): it only runs while they are there (M111). */
+  ritualT: number;
+  /** Seconds until the Market Guard can whistle again. */
+  whistleCd: number;
+  /** The Market Guard (M111): quest tags of props he takes back from a gull he sees carrying them; and whether he walks over to a noise. */
+  confiscates: string[] | null;
+  investigates: boolean;
   /** Who they last caught red-handed with their item (so they react once per culprit). */
   sawHolder: number | null;
   /** Name tag text (the person's name over their head). */
@@ -196,6 +207,8 @@ export interface GullInfo {
   hidden?: boolean;
   /** Wearing a hat that fools everyone: nobody sees a gull (the captain's cap). */
   disguise?: boolean;
+  /** The quest tag of the prop it carries in its beak, if any (the Market Guard watches for it, M111). */
+  carrying?: string | null;
 }
 
 export interface Noise {
@@ -205,7 +218,7 @@ export interface Noise {
   loud: number;
 }
 
-export type NpcEvent = { type: 'reclaimed'; npc: Npc; propType: PropType } | { type: 'cheer'; npc: Npc } | { type: 'arrived'; npc: Npc; goal: string } | { type: 'yuck'; npc: Npc } | { type: 'tookItem'; npc: Npc; propType: PropType } | { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc } | { type: 'selfieClick'; npc: Npc; inFrame: boolean; framed: number; /** Which gulls (by index) are in the picture. */ who: number[] } | { type: 'signSplat'; npc: Npc; splats: number } | { type: 'cleanerRobbed'; npc: Npc } | { type: 'snatchUnseen'; npc: Npc } | { type: 'review'; npc: Npc } | { type: 'soaked'; npc: Npc } | { type: 'scared'; npc: Npc; carried: boolean } | { type: 'mood'; npc: Npc; mood: Mood } | { type: 'atStation'; npc: Npc; station: string } | { type: 'bought'; npc: Npc; station: string; propType: PropType } | { type: 'slipped'; npc: Npc } | { type: 'startled'; npc: Npc; dropped: boolean } | { type: 'spread'; count: number } | { type: 'slam' } | { type: 'boo'; npc: Npc } | { type: 'knockdown'; count: number } | { type: 'dancing'; count: number } | { type: 'crumb'; npc: Npc; count: number } | { type: 'crumbCall'; npc: Npc } | { type: 'caught'; npc: Npc } | { type: 'discovered'; npc: Npc } | { type: 'danced'; npc: Npc } | { type: 'ritual'; npc: Npc } | { type: 'flourishLost'; npc: Npc } | { type: 'sawWith'; npc: Npc; other: Npc };
+export type NpcEvent = { type: 'reclaimed'; npc: Npc; propType: PropType } | { type: 'cheer'; npc: Npc } | { type: 'arrived'; npc: Npc; goal: string } | { type: 'yuck'; npc: Npc } | { type: 'tookItem'; npc: Npc; propType: PropType } | { type: 'noticed'; npc: Npc } | { type: 'shield'; npc: Npc } | { type: 'panic'; npc: Npc } | { type: 'chase'; npc: Npc } | { type: 'distracted'; npc: Npc } | { type: 'selfieClick'; npc: Npc; inFrame: boolean; framed: number; /** Which gulls (by index) are in the picture. */ who: number[] } | { type: 'signSplat'; npc: Npc; splats: number } | { type: 'cleanerRobbed'; npc: Npc } | { type: 'snatchUnseen'; npc: Npc } | { type: 'review'; npc: Npc } | { type: 'soaked'; npc: Npc } | { type: 'scared'; npc: Npc; carried: boolean } | { type: 'mood'; npc: Npc; mood: Mood } | { type: 'atStation'; npc: Npc; station: string } | { type: 'bought'; npc: Npc; station: string; propType: PropType } | { type: 'slipped'; npc: Npc } | { type: 'startled'; npc: Npc; dropped: boolean } | { type: 'spread'; count: number } | { type: 'slam' } | { type: 'boo'; npc: Npc } | { type: 'knockdown'; count: number } | { type: 'dancing'; count: number } | { type: 'crumb'; npc: Npc; count: number } | { type: 'crumbCall'; npc: Npc } | { type: 'caught'; npc: Npc } | { type: 'discovered'; npc: Npc } | { type: 'danced'; npc: Npc } | { type: 'ritual'; npc: Npc } | { type: 'flourishLost'; npc: Npc } | { type: 'whistle'; npc: Npc; gull: number; tag: string } | { type: 'sawWith'; npc: Npc; other: Npc };
 
 export interface NpcCtx {
   world: World;
@@ -227,7 +240,7 @@ export function newNpc(id: number, sp: NpcSpawn): Npc {
     id, x: sp.x, z: sp.z, heading: h, mode: 'idle', t: 0, homeX: sp.x, homeZ: sp.z, selfie: 'idle', selfieCount: 0, cleanT: 0, cleanSplats: 0, signX: sp.signAt?.x ?? sp.x, signZ: sp.signAt?.z ?? sp.z, targetX: null, targetZ: null,
     holding: null, shieldFrom: h, handAngle: h - Math.PI / 2, distractT: 0, noiseX: 0, noiseZ: 0, lostSightT: 0, noticeCd: 0,
     walkPhase: 0, moving: false, speed: 0, seesGull: false, suspicion: 0, wary: 0, nextT: 2,
-    wants: sp.wants ?? [], holdType: null, goal: null, goalD: Infinity, stuckT: 0, goalRef: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false, wanderR: sp.wander ?? 10, roam: sp.roam ?? 0, watch: sp.watch ?? null, watchCd: 0, missT: 0, discovered: false, ritual: sp.ritual ?? null, ritualLabel: undefined, ritualOn: false, sawHolder: null, name: sp.name ?? null, routine: sp.routine ?? null, routineI: 0, stop: null, stance: 'none',
+    wants: sp.wants ?? [], holdType: null, goal: null, goalD: Infinity, stuckT: 0, goalRef: null, role: sp.role ?? 'tourist', stationary: sp.stationary ?? false, wanderR: sp.wander ?? 10, roam: sp.roam ?? 0, watch: sp.watch ?? null, watchCd: 0, missT: 0, discovered: false, ritual: sp.ritual ?? null, ritualLabel: undefined, ritualOn: false, ritualT: 0, whistleCd: 0, confiscates: sp.confiscates ?? null, investigates: sp.investigates ?? false, sawHolder: null, name: sp.name ?? null, routine: sp.routine ?? null, routineI: 0, stop: null, stance: 'none',
     mood: 'calm', moodT: 0, craves: sp.craves ?? null, station: null, buyT: 0,
     follows: sp.follows ?? false, followT: 0, followGap: 2.5, following: false, patrol: sp.patrol ?? null, relentless: sp.relentless ?? false, patrolI: 0, slipT: 0, slideX: 0, slideZ: 0, startleT: 0, tugged: false, infectedT: 0, danceT: 0, obliviousT: 0, hadComfort: false, y: sp.y ?? 0,
   };
@@ -544,6 +557,17 @@ export function stepNpc(n: Npc, g: GullInfo, noises: readonly Noise[], dt: numbe
       n.distractT = t.distractTime.value;
       ev.push({ type: 'distracted', npc: n });
       if (n.mode === 'notice') enter(n, 'idle');
+      // the Market Guard walks over to look (M111): to a few metres short of the noise, then back to his rounds
+      if (n.investigates && !n.goal && !n.following && n.buyT === 0 && (n.mode === 'idle' || n.mode === 'walk' || n.mode === 'recover')) {
+        const dx = s.x - n.x, dz = s.z - n.z, d = Math.hypot(dx, dz);
+        if (d > 5) {
+          const k = (d - tuning.guard.noiseStop.value) / d;
+          n.goal = { x: n.x + dx * k, z: n.z + dz * k, name: 'noise' };
+          n.targetX = n.targetZ = null;
+          n.mode = 'walk';
+          n.t = 0;
+        }
+      }
     }
   }
 

@@ -29,6 +29,8 @@ export interface Reaction {
   nth?: number;
   /** Plays every time the event happens. */
   repeat?: boolean;
+  /** People who arrive when this reaction plays (the ferry crowd, the Guard starts his rounds): spawned once (M111). */
+  cast?: import('../gameplay/npc').NpcSpawn[];
   /** Something turns up (the fisherman reels in a boot): a prop placed here. */
   spawn?: { type: import('./props').PropType; x: number; z: number; tag?: string };
 }
