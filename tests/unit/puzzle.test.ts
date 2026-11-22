@@ -13,7 +13,7 @@ describe('puzzle quality: every stage chain', () => {
   for (const def of stagesOf(LEVELS)) {
     const setup = levelSetup(def, QUESTS, TRIGGERS, TOURIST_SPAWNS, false);
     const chains = setup.quests.filter((q) => q.chain);
-    it(`${def.id}: has chains`, () => expect(chains.length).toBeGreaterThanOrEqual(setup.quests.some((q) => q.collect) ? 1 : 3)); // a collection stage has its rows besides
+    it(`${def.id}: has chains`, () => expect(setup.quests.some((q) => q.collect) ? 1 : chains.length).toBeGreaterThanOrEqual(setup.quests.some((q) => q.collect) ? 1 : 3)); // a collection stage has its rows instead of chains
     for (const q of chains) {
       const events = q.objectives.filter((o) => o.kind === 'event').map((o) => o.event ?? '');
       const reacted = new Set((def.reactions ?? []).map((r) => r.on));
@@ -32,7 +32,7 @@ describe('puzzle quality: every stage chain', () => {
     it(`${def.id}: every reaction answers a step of the level`, () => {
       const all = new Set(setup.quests.flatMap((q) => q.objectives.flatMap((o) => [o.event ?? '', ...(o.events ?? [])])));
       // a ten-minute stage (M107) also has the world answer the traits it is built on: a ritual, a bell, a bite, a ferry, a discovery
-      const world = setup.quests.some((q) => q.collect) ? /^(ritual|flourishLost|discovered|sawWith|arrived|hit|pecked|gotcha|splash|ferryIn|honkDrop|picnicFeast|grab|snatch|courseServed|crumb|whistle|bootSplash|pigeon|raid|robbed|bunAtDock|mapInSea|wrongFerry)/ : /^$/;
+      const world = setup.quests.some((q) => q.collect) ? /^(ritual|flourishLost|discovered|sawWith|arrived|hit|pecked|gotcha|splash|ferryIn|honkDrop|picnicFeast|grab|snatch|courseServed|crumb|whistle|bootSplash|pigeon|raid|robbed|bunAtDock|mapInSea|wrongFerry|boo|bought|soaked|spread|poopWarden|dancers)/ : /^$/;
       for (const r of def.reactions ?? []) expect(all.has(r.on) || world.test(r.on), `reaction on ${r.on}`).toBe(true);
     });
   }

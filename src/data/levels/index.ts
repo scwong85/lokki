@@ -9,6 +9,9 @@ import { GULL_PICNIC } from './picnic';
 import { GULL_PICNIC_V2 } from './picnic2';
 import { PICNIC_LAB } from './picnicLab';
 import { FIRST_LIGHT_V2 } from './firstLight2';
+import { MARKET_DAY_HEIST } from './heist';
+import { ONE_BAD_AFTERNOON } from './badAfternoon';
+import { THE_WARDEN_DAY } from './wardenDay';
 import { GRAND_OPENING, FIRE_DRILL } from './puzzles2';
 import { LEAF_BLOWER, DOMINO_RALLY, CAPTAIN_GULL, HUSH_PUPPY, BLOCK_PARTY, SHOO, BREADCRUMBS } from './mischief2';
 import { WET_FLOOR, PIED_PIPER, HONK, SPLASH_LANDING, TUG_OF_WAR, RUSH_HOUR, STRIKE, JUKEBOX_HERO, RED_BUTTON, PEEKABOO, TABLECLOTH, SERVICE_BELL } from './mischief';
@@ -72,7 +75,14 @@ export const GULL_PICNIC_V1: LevelDef = { ...GULL_PICNIC, id: 'gull-picnic-v1', 
 /** The first First Light (M13 to M60): kept in the Playground with stage 1.1's mechanics; stage 1.1 is now `FIRST_LIGHT_V2`. */
 export const FIRST_LIGHT_V1: LevelDef = { ...FIRST_LIGHT, id: 'first-light-v1', name: 'First Light (the first version)', series: 'Short stages (old)', arc: undefined, stage: undefined, requires: undefined, reward: undefined, gate: { arc: 1, stage: 1 } };
 
-export const LEVELS: LevelDef[] = [FIRST_LIGHT_V2, GULL_PICNIC_V2, STRINGS_ATTACHED, MOOD_SWINGS, THE_WARDEN_STAGE, STEPS_STAGE, SAY_PIGEON_STAGE, DING_DONG_STAGE, TURF_WAR_STAGE, KEY_STAGE, SNACK_ATTACK, BOMBS_AWAY, NOSY_PARKERS, BUTTERFINGERS, CITY_STRIKES, OWL_BE_BACK, THE_WARDEN, HARBOUR_DAY, CAW_OF_THE_WILD, INVISIBLE_MAZE, HEAVY_LIFTING, GULLS_ELEVEN, COO_COO, THERMAL_EXPRESS, VAPPU_EVE, HERRING_MARKET, WEDDING_BELLS, FROZEN_HARBOUR, THE_RIVAL, NIGHT_MARKET, THE_DRONE, GRAND_FINALE, CHEESE_RUN, SAY_PIGEON, DING_DONG, TRAM_SURFING, TURF_WAR, NEW_LOOK, CONCERT_NIGHT, CHRISTMAS_MARKET, LIBRARY_RULE, KEY_TO_THE_CITY, DONT_BLOCK_MY_SUN, GOOD_BOY, SPLASH_ZONE, MAP_AND_CONE, WET_FLOOR, PIED_PIPER, HONK, SPLASH_LANDING, TUG_OF_WAR, RUSH_HOUR, STRIKE, JUKEBOX_HERO, RED_BUTTON, PEEKABOO, TABLECLOTH, SERVICE_BELL, LEAF_BLOWER, DOMINO_RALLY, CAPTAIN_GULL, HUSH_PUPPY, BLOCK_PARTY, SHOO, BREADCRUMBS, BUFFET, GRAND_OPENING, FIRE_DRILL, FISH_MARKET, GULL_PICNIC_V1, FIRST_LIGHT_V1, PICNIC_LAB, SANDBOX, HAVOC_HOUR];
+/** The first Strings Attached (M62): kept in the Playground with stage 1.3's mechanics; stage 1.3 is now the Market Day Heist. */
+export const STRINGS_ATTACHED_V1: LevelDef = { ...STRINGS_ATTACHED, id: 'strings-attached-v1', name: 'Strings Attached (the first version)', series: 'Short stages (old)', arc: undefined, stage: undefined, requires: undefined, reward: undefined, gate: { arc: 1, stage: 3 } };
+
+/** The first Mood Swings and The Warden (M62, M63): kept in the Playground with their stages' mechanics. */
+export const MOOD_SWINGS_V1: LevelDef = { ...MOOD_SWINGS, id: 'mood-swings-v1', name: 'Mood Swings (the first version)', series: 'Short stages (old)', arc: undefined, stage: undefined, requires: undefined, reward: undefined, gate: { arc: 1, stage: 4 } };
+export const THE_WARDEN_V1: LevelDef = { ...THE_WARDEN_STAGE, id: 'the-warden-v1', name: 'The Warden, stage (the first version)', series: 'Short stages (old)', arc: undefined, stage: undefined, requires: undefined, reward: undefined, gate: { arc: 1, stage: 5 } };
+
+export const LEVELS: LevelDef[] = [FIRST_LIGHT_V2, GULL_PICNIC_V2, MARKET_DAY_HEIST, ONE_BAD_AFTERNOON, THE_WARDEN_DAY, STEPS_STAGE, SAY_PIGEON_STAGE, DING_DONG_STAGE, TURF_WAR_STAGE, KEY_STAGE, SNACK_ATTACK, BOMBS_AWAY, NOSY_PARKERS, BUTTERFINGERS, CITY_STRIKES, OWL_BE_BACK, THE_WARDEN, HARBOUR_DAY, CAW_OF_THE_WILD, INVISIBLE_MAZE, HEAVY_LIFTING, GULLS_ELEVEN, COO_COO, THERMAL_EXPRESS, VAPPU_EVE, HERRING_MARKET, WEDDING_BELLS, FROZEN_HARBOUR, THE_RIVAL, NIGHT_MARKET, THE_DRONE, GRAND_FINALE, CHEESE_RUN, SAY_PIGEON, DING_DONG, TRAM_SURFING, TURF_WAR, NEW_LOOK, CONCERT_NIGHT, CHRISTMAS_MARKET, LIBRARY_RULE, KEY_TO_THE_CITY, DONT_BLOCK_MY_SUN, GOOD_BOY, SPLASH_ZONE, MAP_AND_CONE, WET_FLOOR, PIED_PIPER, HONK, SPLASH_LANDING, TUG_OF_WAR, RUSH_HOUR, STRIKE, JUKEBOX_HERO, RED_BUTTON, PEEKABOO, TABLECLOTH, SERVICE_BELL, LEAF_BLOWER, DOMINO_RALLY, CAPTAIN_GULL, HUSH_PUPPY, BLOCK_PARTY, SHOO, BREADCRUMBS, BUFFET, GRAND_OPENING, FIRE_DRILL, FISH_MARKET, GULL_PICNIC_V1, FIRST_LIGHT_V1, STRINGS_ATTACHED_V1, MOOD_SWINGS_V1, THE_WARDEN_V1, PICNIC_LAB, SANDBOX, HAVOC_HOUR];
 applyVictims(LEVELS);
 
 

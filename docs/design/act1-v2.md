@@ -1,6 +1,6 @@
 # Act 1, version two: all five stages on the picnic formula
 
-Status: **plan; 1.2 is built (M112), 1.1 is M114, 1.3 to 1.5 follow as M115 to M117, one milestone each.** Formula: `docs/design/picnic-v2.md` section 2 (spread out, 2 to 3 step chains, courses, something in the way, time per row on the results card). The old stages move to the Playground (M113 made the level list short).
+Status: **built: 1.2 (M112), 1.1 (M114), 1.3 to 1.5 (M115 to M117, `docs/milestones/M115.md`); awaiting playtest.** The 1.3 to 1.5 sections below are the plan; what was built differs a little (M115.md has the rows). Formula: `docs/design/picnic-v2.md` section 2 (spread out, 2 to 3 step chains, courses, something in the way, time per row on the results card). The old stages move to the Playground (M113 made the level list short).
 
 ## The formula, in one table
 | Lever | Rule |

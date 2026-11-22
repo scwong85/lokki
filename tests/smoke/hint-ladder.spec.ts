@@ -6,7 +6,7 @@ test('hint ladder: outcome first, J climbs, the full hint arrives last; the Opti
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript(() => localStorage.setItem('lokki-options-v1', JSON.stringify({ graphics: 'low', tutorialDone: true })));
-  await page.goto('/?level=a1s4&gate=1.5&play');
+  await page.goto('/?level=mood-swings-v1&gate=1.5&play');
   await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 120_000 });
   const note = () => page.locator('#todo').innerText();
   // rung 0: the wish, no method
@@ -30,7 +30,7 @@ test('hint ladder: outcome first, J climbs, the full hint arrives last; the Opti
 test('hint ladder: "all at once" shows the old note straight away', async ({ page }) => {
   test.setTimeout(240_000);
   await page.addInitScript(() => localStorage.setItem('lokki-options-v1', JSON.stringify({ graphics: 'low', tutorialDone: true, hints: 'full' })));
-  await page.goto('/?level=a1s4&gate=1.5&play');
+  await page.goto('/?level=mood-swings-v1&gate=1.5&play');
   await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 120_000 });
   await expect.poll(() => page.locator('#todo').innerText()).toMatch(/Snatch the map from the tourist/);
   await expect.poll(() => page.locator('#todo').innerText()).toMatch(/east end of the quay/);

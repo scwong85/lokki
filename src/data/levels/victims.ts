@@ -11,9 +11,12 @@ export const STAGE_VICTIMS: Record<string, Record<string, string | Record<string
   a1s2: { freak: 'cleaner', bottleService: 'tourist', honkchain: 'tourist' }, // the side orders (the picnic rows carry their own)
   'gull-picnic-v1': { freak: 'cleaner', bottleService: 'tourist', honkchain: 'tourist' },
   'fish-market': { freak: 'cleaner', bottleService: 'tourist', honkchain: 'tourist' },
-  a1s3: { tugchain: { soup: 'soupman', balloon: 'balloonman', bun: 'bunman' }, spray: 'rich', booschain: 'peeker', buttonchain: 'queuer' },
-  a1s4: { mapcone: 'mapper', wetfloor: 'inspector', jukechain: 'partygoer' },
-  a1s5: { rushchain: 'queuer', strikechain: 'bowler' },
+  a1s3: {}, // the heist rows carry their own
+  'strings-attached-v1': { tugchain: { soup: 'soupman', balloon: 'balloonman', bun: 'bunman' }, spray: 'rich', booschain: 'peeker', buttonchain: 'queuer' },
+  a1s4: {},
+  a1s5: {},
+  'mood-swings-v1': { mapcone: 'mapper', wetfloor: 'inspector', jukechain: 'partygoer' },
+  'the-warden-v1': { rushchain: 'queuer', strikechain: 'bowler' },
   a2s1: { peel: 'walker', hotdog: 'hotdog' },
   a2s2: { photos: 'selfie', caps: 'graduate', shutterbug: 'selfie' },
   a2s3: { bell: 'picnic', lunch: 'driver', bellsplat: 'granny' },
