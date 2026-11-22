@@ -287,6 +287,8 @@ export function snatchState(n: Npc, beak: { x: number; y: number; z: number }): 
   const h = handPos(n);
   const d = Math.hypot(beak.x - h.x, beak.y - h.y, beak.z - h.z);
   if (d > tuning.npc.snatchReach.value * 2.5) return 'far';
+  // a vendor absorbed in scrubbing his sign leans over it: the plate is open from any side
+  if (n.role === 'cleaner' && n.cleanT > 0) return d > tuning.npc.snatchReach.value * 1.5 ? 'far' : 'ok';
   for (let i = 0; i <= 6; i++) {
     const f = i / 7;
     const x = beak.x + (h.x - beak.x) * f, y = beak.y + (h.y - beak.y) * f, z = beak.z + (h.z - beak.z) * f;

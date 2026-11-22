@@ -133,6 +133,19 @@ describe('the raid (M112)', () => {
   });
 });
 
+describe('the Clean Freak side order (M112 fix)', () => {
+  it('the fish counts whether snatched, or picked up after a honk made him drop it, in either order', () => {
+    const log = new QuestLog(setup.quests);
+    log.onEvent('grab:fish');
+    log.onEvent('signSplat');
+    expect(log.quests.find((q) => q.id === 'freak')!.status).toBe('won');
+    const log2 = new QuestLog(setup.quests);
+    log2.onEvent('signSplat');
+    log2.onEvent('snatch:fish');
+    expect(log2.quests.find((q) => q.id === 'freak')!.status).toBe('won');
+  });
+});
+
 describe('taking a delivered row back (M112)', () => {
   it('QuestLog.undo un-ticks a done step and opens a won quest again; the trigger can fire again', () => {
     const log = new QuestLog(setup.quests);
