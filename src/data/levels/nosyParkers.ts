@@ -38,6 +38,7 @@ export const NOSY_PARKERS: LevelDef = {
           text: 'Snatch her ice cream while she looks',
           kind: 'event',
           event: 'snatch:icecream',
+          events: ['grab:watchCone'], // a honk makes her drop it: picking it up counts too
           after: 'distract',
           hint: 'The red ring turns green when her ice cream is open. Go in from the side her hand is on, or dive from straight above.',
           markers: [{ x: WATCHER.x, z: WATCHER.z, r: 2.5, label: 'Watchful tourist' }],
@@ -70,7 +71,7 @@ export const NOSY_PARKERS: LevelDef = {
   triggers: [],
   tourists: [],
   extraTourists: [
-    { x: WATCHER.x, z: WATCHER.z, heading: 0, ice: true, stationary: true, color: 0xff8fa3 },
+    { x: WATCHER.x, z: WATCHER.z, heading: 0, ice: true, holdTag: 'watchCone', stationary: true, color: 0xff8fa3 },
     { x: -14, z: -22, heading: 0.6, ice: true, color: 0x7fd1ae },
     { x: 26, z: -20, heading: -1.2, ice: true, color: 0xffc971 },
     { x: -2, z: -26, heading: 2.4, ice: true, color: 0x9ec9f0 },

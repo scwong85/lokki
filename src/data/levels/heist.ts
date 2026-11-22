@@ -31,7 +31,8 @@ const BAL_S = { dx: BALLOON.x - 20, dz: BALLOON.z + 15 };
 const PEEKERS = shSpawns(PEEKABOO.extraTourists, PEEK_S);
 const HIDE = shHides(PEEKABOO.hides, PEEK_S)[0];
 const QUEUE = shSpawns(RED_BUTTON.extraTourists, BTN_S);
-const BUTTONS = shSwitches(RED_BUTTON.switches, BTN_S);
+// the two buttons stand 10 m either side of the queue (the old level had them 22 m away)
+const BUTTONS = shSwitches(RED_BUTTON.switches, BTN_S).map((b) => ({ ...b, x: b.id === 'alarm' ? 26 : 46, z: -88 }));
 const QUEUE_AT = at(36, -82);
 
 export const HEIST_QUEST: QuestDef = {
@@ -40,16 +41,17 @@ export const HEIST_QUEST: QuestDef = {
   teaser: 'Lift the market\'s best lunch, past the vendors, the lines and the heat.',
   timed: false,
   collect: {
-    goal: 'Market day, and the city is on guard: vendors with spray bottles, scare lines over the stalls. Lift six things for the flock\'s lunch on the roof. Every one belongs to somebody, and every one needs a different trick.',
+    goal: 'Market day, and the city is on guard: vendors with spray bottles, scare lines over the stalls. Lift six things for the flock\'s lunch on the roof. Every one belongs to somebody, and every one needs a different trick. Look: far west, far east, the vendor\'s corner (close to the roof), the north-west and the north-east.',
     marker: { x: PICNIC.x, z: PICNIC.z, r: 3.5, y: PICNIC.y, label: 'The loot' },
+    // one row of a course opens the next, so a row you cannot solve never locks the rest of the stage (M118)
     courses: [
       { name: 'Casing the joint', unlock: '' },
-      { name: 'The inside job', unlock: 'opens when the joint is cased' },
-      { name: 'The getaway', unlock: 'opens when the inside job is done' },
+      { name: 'The inside job', unlock: 'opens when one thing of the first course is lifted', need: 1 },
+      { name: 'The getaway', unlock: 'opens when one thing of the second course is lifted', need: 1 },
     ],
   },
   objectives: [
-    row('soup', 'A bowl of soup', 'the Soup Man', SOUP, 'something warm', 1, 'tugSoup', {
+    row('soup', 'A bowl of soup', 'the Soup Man', SOUP, 'something warm', 2, 'tugSoup', {
       victim: 'soupman',
       text: 'Take the Soup Man\'s bowl',
       outcome: 'Take the Soup Man\'s bowl.',
@@ -76,7 +78,7 @@ export const HEIST_QUEST: QuestDef = {
       markers: [{ ...BUN_MAN, r: 3, label: 'Bun Man' }],
       recap: 'You took the bun from under the vendor\'s nose',
     }),
-    row('lunch', 'A fried fish', 'the Rich Man', RICH, 'something fried', 2, 'richLunch', {
+    row('lunch', 'A fried fish', 'the Rich Man', RICH, 'something fried', 3, 'richLunch', {
       victim: 'rich',
       text: 'Get the Rich Man\'s lunch',
       outcome: 'Get the Rich Man\'s lunch.',
@@ -85,7 +87,7 @@ export const HEIST_QUEST: QuestDef = {
       markers: [{ ...RICH, r: 3, label: 'Rich Man' }],
       recap: 'You let the vendor soak him and took his lunch',
     }),
-    row('balloon', 'Something to float', 'the Balloon Man', BALLOON, 'something light', 3, 'tugBalloon', {
+    row('balloon', 'Something to float', 'the Balloon Man', BALLOON, 'something light', 1, 'tugBalloon', {
       victim: 'balloonman',
       text: 'Take the Balloon Man\'s balloon',
       outcome: 'Take the Balloon Man\'s balloon.',
@@ -105,6 +107,8 @@ export const HEIST_QUEST: QuestDef = {
     }),
   ],
 };
+
+HEIST_QUEST.objectives.forEach((o) => { if (o.row) o.row.reveal.r = 16; }); // the half title shows from further away
 
 export const HEIST_GONG = gongQuest('The loot is on the roof', 'Six things on the blanket first.', 'Ring the gong. Lunch is served.');
 

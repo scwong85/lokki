@@ -105,3 +105,28 @@ describe('the held things carry the tags the rows ask for', () => {
     expect(LEVELS.find((l) => l.id === 'a1s5')!.extraQuests!.find((q) => q.id === 'nemesis')!.requires).toEqual(['picnic']);
   });
 });
+
+describe('one row opens the next course (M118)', () => {
+  it('in the heist, one row of a course opens the following one, and the course is "served" at that moment', () => {
+    const setup = levelSetup(MARKET_DAY_HEIST, QUESTS, TRIGGERS, TOURIST_SPAWNS, false);
+    const log = new QuestLog(setup.quests);
+    const q = () => log.quests.find((x) => x.id === 'picnic')!;
+    log.onEvent('picnic:bun'); // course 2: closed
+    expect(q().objectives.filter((o) => o.done)).toHaveLength(0);
+    const notes = log.onEvent('picnic:boo');
+    expect(notes).toContainEqual({ type: 'course', quest: 'picnic', course: 1 });
+    expect(log.onEvent('picnic:bun')).toContainEqual({ type: 'objective', quest: 'picnic', objective: 'bun' });
+    expect(log.onEvent('picnic:lunch')).toContainEqual({ type: 'objective', quest: 'picnic', objective: 'lunch' });
+    // the stage is still won only when every row is done
+    expect(q().status).toBe('active');
+    for (const e of ['picnic:balloon', 'picnic:soup', 'picnic:queue']) log.onEvent(e);
+    expect(q().status).toBe('won');
+  });
+  it('a course without "need" still wants every row (1.1 to 1.2, 1.4, 1.5)', () => {
+    const setup = levelSetup(ONE_BAD_AFTERNOON, QUESTS, TRIGGERS, TOURIST_SPAWNS, false);
+    const log = new QuestLog(setup.quests);
+    log.onEvent('picnic:mapper');
+    log.onEvent('picnic:dancer'); // course 2: still closed, only half of course 1 is done
+    expect(log.quests.find((x) => x.id === 'picnic')!.objectives.find((o) => o.id === 'dancer')!.done).toBe(false);
+  });
+});
