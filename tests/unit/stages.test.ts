@@ -6,7 +6,7 @@ import { QUESTS } from '../../src/data/quests';
 import { TRIGGERS } from '../../src/data/triggers';
 import { TOURIST_SPAWNS } from '../../src/data/npcs';
 import { introducedAt, isUnlocked } from '../../src/gameplay/mechanics';
-import { orderLevels, levelGroup } from '../../src/ui/menus';
+import { orderLevels, levelGroup, levelsOf, inPlayground, titleLevelRows } from '../../src/ui/menus';
 
 const setup = (id: string, coop = false) => levelSetup(LEVELS.find((l) => l.id === id)!, QUESTS, TRIGGERS, TOURIST_SPAWNS, coop);
 
@@ -64,6 +64,28 @@ describe('arcs and stages', () => {
     expect(rows.map((r) => r.id)).toEqual(['a1s1', 'a1s2', 'x']);
     expect(levelGroup(rows[0])).toContain('Act 1');
     expect(levelGroup(rows[2])).toContain('Playground');
+  });
+});
+
+describe('the level list keeps the old levels behind one button', () => {
+  const all = [
+    { id: 'old', name: 'Old', blurb: '', stars: 1, current: false, district: 'kauppatori' },
+    { id: 'a1s1', name: 'First', blurb: '', stars: 0, current: false, arc: 1, stage: 1 },
+    { id: 'free', name: 'Free', blurb: '', stars: 0, current: false, sandbox: true },
+  ];
+  it('main: the stages and free play; playground: the rest', () => {
+    expect(levelsOf(all, 'main').map((l) => l.id)).toEqual(['a1s1', 'free']);
+    expect(levelsOf(all, 'playground').map((l) => l.id)).toEqual(['old']);
+    expect(inPlayground(all[0])).toBe(true);
+  });
+  it('the main list has one Playground button with the cleared count, and the playground has a way back', () => {
+    const main = titleLevelRows(all);
+    expect(main).not.toContain('data-level="old"');
+    expect(main).toContain('data-playground="playground"');
+    expect(main).toContain('1/1');
+    const pg = titleLevelRows(all, 'playground');
+    expect(pg).toContain('data-level="old"');
+    expect(pg).toContain('data-playground="main"');
   });
 });
 
