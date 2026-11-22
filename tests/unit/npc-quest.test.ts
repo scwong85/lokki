@@ -90,6 +90,17 @@ describe('tourist brain', () => {
     expect(snatchable(n, front)).toBe(false);
     expect(snatchable(n, back)).toBe(true);
   });
+  it('a vendor scrubbing his sign leaves the plate open from the gull side too', () => {
+    const n = tourist();
+    run(n, ahead, 3);
+    const front = { x: 0, y: 1.2, z: -0.7 };
+    expect(snatchable(n, front)).toBe(false);
+    n.role = 'cleaner';
+    n.cleanT = 4;
+    expect(snatchable(n, { x: 0, y: 1.2, z: handPos(n).z - 0.8 })).toBe(true);
+    n.cleanT = 0;
+    expect(snatchable(n, front)).toBe(false);
+  });
   it('a noise turns the body away and the hand stays: the other side opens up (distraction)', () => {
     const n = tourist();
     run(n, ahead, 3);
