@@ -6,7 +6,7 @@ test('map sabotage: drop it in the sea and the chasing tourist heads for the wro
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript(() => localStorage.setItem('lokki-options-v1', JSON.stringify({ graphics: 'low', tutorialDone: true })));
-  await page.goto('/?level=a1s1&play');
+  await page.goto('/?level=first-light-v1&play');
   await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 90_000 });
   type Lk = { gull: { state: Record<string, unknown> }; npcs: { npcs: { x: number; z: number; mood: string; mode: string; holdType: string | null; goal: { name: string } | null }[]; snatchCandidates: (b: unknown) => unknown[] }; interaction: { updateGull: (...a: unknown[]) => { type: string }[] }; quests: { onEvent: (e: string) => unknown; quests: { id: string; status: string }[] } };
   const lk = (): Lk => (window as unknown as { __lokki: Lk }).__lokki;

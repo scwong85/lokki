@@ -6,7 +6,8 @@ import type { LevelDef } from './types';
  * by step. The Warden and the pigeons are not people of the crowd, so their steps have no victim here.
  */
 export const STAGE_VICTIMS: Record<string, Record<string, string | Record<string, string>>> = {
-  a1s1: { breakfast: 'selfie', map: 'tourist', neighbours: { mess: 'dockhand', lunch: 'dockhand' } },
+  a1s1: { map: 'tourist' }, // the breakfast rows carry their own
+  'first-light-v1': { breakfast: 'selfie', map: 'tourist', neighbours: { mess: 'dockhand', lunch: 'dockhand' } },
   a1s2: { freak: 'cleaner', bottleService: 'tourist', honkchain: 'tourist' }, // the side orders (the picnic rows carry their own)
   'gull-picnic-v1': { freak: 'cleaner', bottleService: 'tourist', honkchain: 'tourist' },
   'fish-market': { freak: 'cleaner', bottleService: 'tourist', honkchain: 'tourist' },

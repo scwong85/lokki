@@ -44,7 +44,8 @@ test('a level loads from data, is cleared with stars and a skill, the record is 
   // the title screen's level select shows the stars and offers free play
   await page.goto('/?level=snack-attack&title');
   await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 60_000 });
-  await expect(page.locator('[data-level=snack-attack]')).toContainText('★★');
+  await expect(page.locator('[data-level=snack-attack]')).toContainText('★★'); // the current level is in the Playground: the list opens there
+  await page.locator('[data-playground=main]').click();
   await expect(page.locator('[data-level=sandbox]')).toContainText('free play');
   expect(errors).toEqual([]);
 });

@@ -42,11 +42,12 @@ describe('arcs and stages', () => {
   it('solo play skips the co-op objectives; two gulls must finish them too', () => {
     const solo = setup('a1s1');
     const duo = setup('a1s1', true);
-    expect(solo.main).toEqual(['breakfast', 'map', 'neighbours']);
-    expect(duo.main).toEqual(['breakfast', 'map', 'neighbours', 'handoverCoop', 'twoBirds']);
+    expect(solo.main).toEqual(['picnic', 'picnicGong']);
+    expect([...solo.side]).toEqual(['map']);
+    expect(duo.main).toEqual(['picnic', 'picnicGong', 'handoverCoop', 'twoBirds']);
     const won = (ids: string[]) => ids.map((id) => ({ id, status: 'won' }));
     const def = LEVELS.find((l) => l.id === 'a1s1')!;
-    expect(levelProgress(def, duo, won(['breakfast', 'map', 'neighbours'])).cleared).toBe(false);
+    expect(levelProgress(def, duo, won(['picnic', 'picnicGong'])).cleared).toBe(false);
     expect(levelProgress(def, duo, won(duo.main)).cleared).toBe(true);
     expect(levelProgress(def, solo, won(solo.main)).cleared).toBe(true);
   });

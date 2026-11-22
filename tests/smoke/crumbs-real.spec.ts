@@ -6,7 +6,7 @@ test('breadcrumbs: a bun the gull picks up and puts down is eaten by a bystander
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript(() => localStorage.setItem('lokki-options-v1', JSON.stringify({ graphics: 'low', tutorialDone: true })));
-  await page.goto('/?level=a1s1&play');
+  await page.goto('/?level=first-light-v1&play');
   await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 120_000 });
   type Lk = {
     loadLevel(id: string): void;
