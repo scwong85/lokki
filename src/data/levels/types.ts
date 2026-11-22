@@ -78,7 +78,27 @@ export interface LevelDef {
   /** Scenery that makes a puzzle readable: a buffet table (solid top, so things rest on it), a picnic blanket. */
   decor?: { kind: import('../../render/decor').DecorKind; x: number; z: number; rot?: number; /** Height it stands at (a blanket on a roof). */ y?: number }[];
   /** A picnic on a roof (M107): guest gulls land around this spot as rows are delivered, and the Pigeon Gang raids it once `raidAt` rows are there. */
-  picnic?: { x: number; z: number; y: number; raidAt: number; guests: number };
+  picnic?: {
+    x: number;
+    z: number;
+    y: number;
+    /** The raid starts when this many rows are delivered (v1). Without it the raid comes with the pigeon race (v2). */
+    raidAt?: number;
+    guests: number;
+    /** Where the pigeons drop an item they carry off the picnic if the raid is ignored (M112). */
+    takeTo?: { x: number; z: number };
+  };
+  /** The pigeons by a kiosk race a gull for something that has been dropped, then chase it to the picnic (M112, docs/design/picnic-v2.md). */
+  pigeonRace?: {
+    /** A person of this role drops the cone when this quest event fires (`honkDrop:diner`). */
+    on: string;
+    /** The quest tag of the cone. */
+    tag: string;
+    /** The role who holds it (he buys another after the pigeons eat it). */
+    owner: string;
+    home: { x: number; z: number };
+    birds: number;
+  };
   /** Food lying on the ground (these prop types, untagged) draws free people who are not busy: they walk over and eat it (M91). */
   crumbs?: PropType[];
   /** Which of the shared tourists take part: their `role`s ('any' = every tourist without a special role), or 'all'. */

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 /** Scenery that makes a puzzle readable at a glance: a buffet table, a picnic blanket with a basket. Plain meshes (and a solid top for the table). */
-export type DecorKind = 'table' | 'blanket' | 'kiosk' | 'ribbon' | 'muster' | 'hall' | 'stall' | 'float';
+export type DecorKind = 'table' | 'blanket' | 'kiosk' | 'ribbon' | 'muster' | 'hall' | 'stall' | 'float' | 'awning';
 export interface DecorDef {
   kind: DecorKind;
   x: number;
@@ -93,6 +93,19 @@ export function buildDecor(d: DecorDef): THREE.Group {
       const fruit = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.08, 0.44), m(Math.abs(x) > 1.3 ? 0xe5484d : 0x6fae6a));
       fruit.position.set(x, TABLE_TOP.y + 0.26, 0);
       g.add(crate, fruit);
+    }
+  } else if (d.kind === 'awning') {
+    // a striped awning on two poles (the Baker's door: a splat lands on it, a thrown thing goes under it; M111/M112)
+    const cloth = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.08, 2.2), [m(0xf4efe6), m(0xf4efe6), new THREE.MeshLambertMaterial({ map: checker('#e8786a', '#fff7ea', 8) }), m(0xf4efe6), m(0xf4efe6), m(0xf4efe6)]);
+    cloth.position.set(0, 2.9, 0);
+    cloth.rotation.x = -0.22;
+    const fringe = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.22, 0.05), m(0xe8786a));
+    fringe.position.set(0, 2.55, 1.15);
+    g.add(cloth, fringe);
+    for (const x of [-1.6, 1.6]) {
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.8, 6), m(0xffffff));
+      pole.position.set(x, 1.4, 1.05);
+      g.add(pole);
     }
   } else if (d.kind === 'float') {
     // a fishing float on the water and a line back to the quay

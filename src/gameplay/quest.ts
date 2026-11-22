@@ -170,6 +170,18 @@ export class QuestLog {
     }
   }
 
+  /** Take a done step back (the pigeons carried the item off the picnic, M112). A won quest is open again. */
+  undo(questId: string, objectiveId: string): boolean {
+    const q = this.quests.find((x) => x.id === questId);
+    const o = q?.objectives.find((x) => x.id === objectiveId);
+    if (!q || !o || !o.done) return false;
+    o.done = false;
+    o.count = 0;
+    o.progress = 0;
+    if (q.status === 'won') q.status = 'active';
+    return true;
+  }
+
   /** Called for every quest event before it is handled (the world's reactions hang here). */
   hook: ((type: QuestEventType) => void) | null = null;
 

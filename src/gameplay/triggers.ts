@@ -126,6 +126,11 @@ export class TriggerSystem {
     return out;
   }
 
+  /** Let a trigger that has fired fire again (an item taken off the picnic and put back, M112). */
+  unfire(id: string): void {
+    this.fired.delete(id);
+  }
+
   reset(): void {
     this.fired.clear();
     this.index.clear();

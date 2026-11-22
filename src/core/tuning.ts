@@ -584,6 +584,14 @@ export const tuning = {
     zoneHalf: p(3.2, 1, 6, 0.1), // m: half the size of the blanket zone on the roof (things dropped inside count)
     raidRing: p(2.2, 1, 5, 0.1), // m: how close round the blanket the raiding pigeons sit
     raidRange: p(9, 3, 20, 0.5), // m: a honk this near the picnic scatters the raid
+    raidTakeAfter: p(60, 10, 180, 5), // s: a raid ignored this long flies off with the last item delivered (M112)
+  },
+  // the pigeon race for the Diner's cone (M112)
+  pigeonRace: {
+    raceSeconds: p(4, 1.5, 10, 0.5), // s the flock takes to reach a dropped cone: pick it up before that
+    chaseSeconds: p(40, 10, 120, 5), // s the flock chases a gull before giving up
+    eatenSeconds: p(2.5, 0.5, 8, 0.5), // s they linger on the crumbs
+    chaseFollow: p(2.2, 0.5, 6, 0.1), // how fast the chasing flock closes on the gull
   },
 };
 

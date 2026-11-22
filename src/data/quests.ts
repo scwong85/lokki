@@ -48,7 +48,7 @@ export interface ObjectiveDef {
    * A row of a collection to-do (M107): "???" until the gull comes near its place (then a half title), the full wish once it is right there,
    * ticked with the item and its owner when it is delivered.
    */
-  row?: { reveal: { x: number; z: number; r: number; text: string }; item: string; owner: string; /** The course it belongs to (1-based, default 1): a course opens when every row of the courses before it is done (M111). */ course?: number };
+  row?: { reveal: { x: number; z: number; r: number; text: string }; item: string; owner: string; /** The quest tag of the item delivered (so a raid can find the last one, M112). */ tag?: string; /** The course it belongs to (1-based, default 1): a course opens when every row of the courses before it is done (M111). */ course?: number };
 }
 
 export interface QuestDef {

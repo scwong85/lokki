@@ -21,9 +21,13 @@ const setup = levelSetup(GULL_PICNIC, QUESTS, TRIGGERS, TOURIST_SPAWNS);
 const rows = PICNIC_QUEST.objectives.filter((o) => o.row);
 
 describe('1.2 The Gull Picnic: the data', () => {
-  it('is stage 1.2 in the campaign', () => {
-    expect(LEVELS[1]).toBe(GULL_PICNIC);
-    expect(GULL_PICNIC.id).toBe('a1s2');
+  it('is the first version of stage 1.2: kept in the Playground since M112 (the campaign\'s stage 1.2 is the second version)', () => {
+    expect(GULL_PICNIC.id).toBe('a1s2'); // (the object is a stage; the Playground copy gets its own id)
+    const v1 = LEVELS.find((l) => l.id === 'gull-picnic-v1')!;
+    expect(v1.arc).toBeUndefined();
+    expect(v1.gate).toEqual({ arc: 1, stage: 2 });
+    expect(LEVELS.filter((l) => l.id === 'a1s2')).toHaveLength(1);
+    expect(LEVELS.find((l) => l.id === 'a1s2')).not.toBe(GULL_PICNIC);
   });
 
   it('has six rows, each with an owner who is in the cast, a place, a wish and a ladder', () => {
