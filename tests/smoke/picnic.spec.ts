@@ -28,7 +28,7 @@ test('1.2 The Gull Picnic: rows found on the spot, six tricks, the raid, the gon
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript(() => localStorage.setItem('lokki-options-v1', JSON.stringify({ graphics: 'low', tutorialDone: true, hints: 'full' })));
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/?level=a1s2&play');
+  await page.goto('/?level=gull-picnic-v1&play');
   await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 120_000 });
   const l = L(page);
   const status = (q: string) => l((x, a) => x.quests.quests.find((m) => m.id === a)!.status, q as never);

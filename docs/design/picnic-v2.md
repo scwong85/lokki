@@ -1,6 +1,6 @@
 # The Gull Picnic, version two (plan for review)
 
-Status: **plan.** The engine half is built in M111 (`docs/milestones/M111.md`); the content (M112) is not. Written after the M107 playtest. Read it, change what you want, and I build it.
+Status: **plan.** The engine is M111 (`docs/milestones/M111.md`) and the content is M112 (`docs/milestones/M112.md`); it is built, awaiting the playtest. Written after the M107 playtest. Read it, change what you want, and I build it.
 
 ## 1. What the playtest said
 

@@ -64,6 +64,7 @@ import { Tram } from './gameplay/tram';
 import { PigeonGang } from './gameplay/pigeons';
 import { PicnicGuests } from './world/picnicGuests';
 import { RowTimes } from './gameplay/rowTimes';
+import { PigeonRace, Raid, type ConeView } from './gameplay/pigeonRace';
 import { PICNIC_COMMENTS } from './data/levels/picnic';
 import { Sunbathers } from './gameplay/sunbathers';
 import { Dog } from './gameplay/dogs';
@@ -379,7 +380,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { scene, gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get gate() { return gate; }, applyGates, get hidden() { return hiddenNow(gull.state); }, get playtest() { return playtest; }, strikePose: (k: string) => strikePose(players[0], k), photoPoses, get switches() { return level.switches ?? []; }, peckNow: () => { const sw = switchNear(gull.state); if (sw) peck(sw, players[0]); return !!sw; }, get tugProgress() { return interaction.tugProgress(0); }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get rowTimes() { return rowTimes; }, get picnicGuests() { return guests; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { scene, gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get gate() { return gate; }, applyGates, get hidden() { return hiddenNow(gull.state); }, get playtest() { return playtest; }, strikePose: (k: string) => strikePose(players[0], k), photoPoses, get switches() { return level.switches ?? []; }, peckNow: () => { const sw = switchNear(gull.state); if (sw) peck(sw, players[0]); return !!sw; }, get tugProgress() { return interaction.tugProgress(0); }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get rowTimes() { return rowTimes; }, tuning, get race() { return race; }, get raid() { return raid; }, get picnicGuests() { return guests; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -616,6 +617,7 @@ function runReactions(event: string): void {
     }
     if (r.say) hud.toast(r.say, 2.2);
     if (r.sound) audio.play(r.sound);
+    if (r.noise && npcs) npcs.addNoise(r.noise.x, r.noise.z, r.noise.loud ?? 1);
     if (r.cast && npcs) {
       npcs.spawnLate(r.cast);
       for (const sp of r.cast) fx('dust', { x: sp.x, y: 0.4, z: sp.z }, 0.6);
@@ -1298,9 +1300,22 @@ function boomboxStep(): void {
 /** The gull picnic (M107): guest gulls that land as rows are delivered, and the Pigeon Gang's raid halfway. */
 let guests: PicnicGuests | null = null;
 let picnicRows = 0;
+/** The pigeons by a kiosk race a gull for a dropped cone and chase it to the picnic (M112); the raid on the roof, and what the pigeons carry off. */
+let race: PigeonRace | null = null;
+let raid: Raid | null = null;
+let flockView: PigeonView | null = null;
+/** The flock's stand-in for a gang: PigeonView reads its mode and where it sits (the race moves it). */
+const flockGang = { mode: 'guarding', def: { x: 0, z: 0, y: 0, ring: 2.2 } } as unknown as PigeonGang;
+/** Quest tags of the items delivered to the picnic, in order (the raid takes the last one). */
+const delivered: string[] = [];
 function setupPicnic(): void {
   if (guests) scene.remove(guests.group);
+  if (flockView) scene.remove(flockView.group);
   guests = null;
+  race = null;
+  raid = null;
+  flockView = null;
+  delivered.length = 0;
   picnicRows = 0;
   commented.clear();
   seatsDone = false;
@@ -1308,15 +1323,94 @@ function setupPicnic(): void {
   if (!p) return;
   guests = new PicnicGuests(p, p.guests);
   scene.add(guests.group);
+  raid = new Raid(tuning.picnic.raidTakeAfter.value);
+  const pr = level.pigeonRace;
+  if (pr) {
+    const t = tuning.pigeonRace;
+    race = new PigeonRace({ home: pr.home, arrive: { x: p.x, z: p.z, r: tuning.picnic.zoneHalf.value + 1.5, minY: p.y - 1.5 }, raceSeconds: t.raceSeconds.value, chaseSeconds: t.chaseSeconds.value, eatenSeconds: t.eatenSeconds.value, chaseFollow: t.chaseFollow.value });
+    Object.assign(flockGang.def, { x: pr.home.x, z: pr.home.z, y: 0.4 });
+    flockView = new PigeonView(flockGang, pr.birds);
+    scene.add(flockView.group);
+  }
+}
+/** The cone as the race sees it. */
+function coneView(tag: string): { view: ConeView | null; carrier: number } {
+  const cone = interaction.props.props.find((q) => q.tag === tag && !q.broken);
+  if (!cone) return { view: null, carrier: -1 };
+  const carrier = players.findIndex((_, i) => interaction.beak(i).carried === cone);
+  const at = { x: cone.cur.p.x, y: cone.cur.p.y, z: cone.cur.p.z };
+  if (carrier >= 0) return { view: { state: 'carried', ...at }, carrier };
+  return { view: { state: cone.heldBy !== null ? 'held' : 'free', ...at }, carrier: -1 };
+}
+/** Each step: the pigeon race, the flock, the raid clock. */
+function pigeonRaceStep(dt: number): void {
+  const p = level.picnic;
+  if (!p || isGuest()) return;
+  const pr = level.pigeonRace;
+  if (raid) raid.takeAfter = tuning.picnic.raidTakeAfter.value; // live, so the tuning panel changes it at once
+  if (race && pr) {
+    const t = tuning.pigeonRace;
+    Object.assign(race.cfg, { raceSeconds: t.raceSeconds.value, chaseSeconds: t.chaseSeconds.value, eatenSeconds: t.eatenSeconds.value, chaseFollow: t.chaseFollow.value });
+    const { view, carrier } = coneView(pr.tag);
+    const gs = players[carrier >= 0 ? carrier : 0]?.gull.state;
+    for (const e of race.update(dt, { cone: view, gull: gs ? { x: gs.x, y: gs.y, z: gs.z } : null })) {
+      if (e === 'raceStart') {
+        hud.toast('The pigeons spot the cone!', 1.8);
+        audio.play('gasp');
+        notes(quests.onEvent('pigeonRace'));
+      } else if (e === 'coneEaten') {
+        if (view) fx('feathers', { x: view.x, y: 0.6, z: view.z }, 1.4);
+        hud.toast('The pigeons gobble the cone. He buys another.', 2.2);
+        npcs?.restockHeld(pr.owner, (q) => interaction.restock((x) => x === q));
+        notes(quests.onEvent('pigeonsAteCone'));
+      } else if (e === 'chaseStart') {
+        hud.toast('Pigeons on your tail! Get it to the picnic.', 2.2);
+        notes(quests.onEvent('pigeonChase'));
+      } else if (e === 'arrived') {
+        startRaid();
+        raid?.start();
+        notes(quests.onEvent('pigeonsArrive'));
+      } else if (e === 'gaveUp') hud.toast('The pigeons lose interest.', 1.6);
+    }
+    flockGang.def.x = race.x;
+    flockGang.def.z = race.z;
+    flockGang.def.y = race.y;
+    flockView?.update(dt);
+  }
+  if (raid?.active && gang && gang.mode !== 'guarding') raid.settle(); // a honk or a bun settled them
+  if (raid?.update(dt)) raidTakes();
+}
+/** The pigeons fly off with the last item delivered and drop it a long way off: one trip to fetch it back (M112). */
+function raidTakes(): void {
+  const p = level.picnic;
+  const pq = setup.quests.find((d) => d.collect);
+  if (!p?.takeTo || !pq?.collect) return;
+  const tag = delivered[delivered.length - 1];
+  const rowDef = pq.objectives.find((o) => o.row?.tag === tag);
+  const prop = tag ? interaction.props.props.find((q) => q.tag === tag && !q.broken && !q.carried && q.heldBy === null) : undefined;
+  if (!rowDef || !prop) return;
+  const half = tuning.picnic.zoneHalf.value;
+  if (Math.abs(prop.cur.p.x - p.x) > half || Math.abs(prop.cur.p.z - p.z) > half || prop.cur.p.y < p.y - 0.4) return; // it is not on the blanket any more
+  fx('feathers', { x: prop.cur.p.x, y: prop.cur.p.y + 0.4, z: prop.cur.p.z }, 1.6);
+  prop.body.setTranslation({ x: p.takeTo.x, y: 0.7, z: p.takeTo.z }, true);
+  prop.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+  quests.undo(pq.id, rowDef.id);
+  triggers.unfire(`served:${rowDef.id}`);
+  delivered.pop();
+  picnicRows = Math.max(0, picnicRows - 1);
+  hud.toast(`The pigeons carry off the ${prop.def.name}! It is lying over there.`, 2.8);
+  audio.play('gasp');
+  notes(quests.onEvent('raidTook'));
 }
 /** A row was delivered: a guest flies in; at the halfway mark the pigeons notice. */
-function picnicRow(): void {
+function picnicRow(tag?: string): void {
   const p = level.picnic;
   if (!p || !guests) return;
   picnicRows++;
+  if (tag) delivered.push(tag);
   guests.arrive();
   audio.play('chime');
-  if (picnicRows === p.raidAt) startRaid();
+  if (p.raidAt !== undefined && picnicRows === p.raidAt) startRaid();
 }
 /** The Pigeon Gang flies up and sits round the picnic, mobbing any gull that comes near: a honk (or a bun) settles it. */
 function startRaid(): void {
@@ -2344,7 +2438,7 @@ function notes(list: QuestNote[]): void {
     } else if (n.type === 'objective') {
       const rowDef = def.collect ? def.objectives.find((o) => o.id === n.objective) : undefined;
       if (rowDef?.row) {
-        picnicRow();
+        picnicRow(rowDef.row.tag);
         rowTimes.record(def.id, rowDef.id, `${rowDef.row.item} (${rowDef.row.owner})`, rowDef.row.course ?? 1, stats.summary().seconds);
       }
       const text = q.objectives.find((o) => o.id === n.objective)!.text;
@@ -2442,6 +2536,10 @@ function onNpcEvents(evs: NpcEvent[]): void {
         hud.toast('They jump and drop it!', 1.6);
         notes(quests.onEvent(`honkDrop:${e.npc.role}`));
         notes(quests.onEvent('honkDrop'));
+        if (race && level.pigeonRace?.on === `honkDrop:${e.npc.role}`) {
+          const c = coneView(level.pigeonRace.tag).view;
+          if (c) race.start(c);
+        }
         polaroids.request('HONK!');
       }
       notes(quests.onEvent(`honked:${e.npc.role}`));
@@ -3162,6 +3260,7 @@ startLoop({
     if (!isGuest()) stepKalleGame(dt);
     if (!isGuest()) stepSenate(dt);
     picnicStep();
+    pigeonRaceStep(dt);
     if (!isGuest()) stepEsplanadi(dt);
     ambientStep(dt);
     if (!isGuest()) coopStep(dt);

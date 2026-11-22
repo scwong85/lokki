@@ -8,6 +8,7 @@ import type { LevelDef } from './types';
 export const STAGE_VICTIMS: Record<string, Record<string, string | Record<string, string>>> = {
   a1s1: { breakfast: 'selfie', map: 'tourist', neighbours: { mess: 'dockhand', lunch: 'dockhand' } },
   a1s2: { freak: 'cleaner', bottleService: 'tourist', honkchain: 'tourist' }, // the side orders (the picnic rows carry their own)
+  'gull-picnic-v1': { freak: 'cleaner', bottleService: 'tourist', honkchain: 'tourist' },
   'fish-market': { freak: 'cleaner', bottleService: 'tourist', honkchain: 'tourist' },
   a1s3: { tugchain: { soup: 'soupman', balloon: 'balloonman', bun: 'bunman' }, spray: 'rich', booschain: 'peeker', buttonchain: 'queuer' },
   a1s4: { mapcone: 'mapper', wetfloor: 'inspector', jukechain: 'partygoer' },

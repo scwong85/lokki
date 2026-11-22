@@ -242,7 +242,8 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [ ] M108 Real city R1: buildings styled by their real era and facade material; real-city data snapshot (register, orthophoto, CityGML script, mesh slot) (built on `m108-real-city-research`, merged)
 - [ ] M109 Plan: The Gull Picnic version two, after the playtest said 5 minutes (`docs/design/picnic-v2.md`; built on `m109-picnic-v2-plan`)
 - [ ] M110 Real city R3 (roofs): roof colours sampled from the aerial photo (built on `m110-roof-colours`, merged)
-- [ ] M111 Picnic engine: courses, waiting ritual, thrown-only bell, the Market Guard, time per row (built on `m111-picnic-engine`)
+- [ ] M111 Picnic engine: courses, waiting ritual, thrown-only bell, the Market Guard, time per row (built on `m111-picnic-engine`, merged)
+- [ ] M112 Stage 1.2 The Gull Picnic, version two: spread out, chained rows, three courses, the Guard, the pigeon race, the raid take-back (built on `m112-picnic-content`)
 
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
@@ -500,6 +501,9 @@ The M107 playtest said about 5 minutes, not 10. The redesign: owners 55–110 m 
 
 ### M111 — Picnic engine (M)
 Courses (rows open in order, a "course served" beat), a ritual that waits for customers, a bell only a thrown thing rings, the Market Guard (whistles at loot he sees you carry, walks to a noise, arrives late), and time per row on the results card; a Playground lab level that tries them. Details: `docs/milestones/M111.md`. Plan: `docs/design/picnic-v2.md`. Next: M112 content.
+
+### M112 — Stage 1.2 The Gull Picnic, version two (M)
+The campaign's stage 1.2 rebuilt after the 5-minute playtest: owners 55–113 m from the roof, every row a chain, three courses of two, the Market Guard, a pigeon race for the Diner's cone, a raid that carries off the last item if ignored, side orders, secrets and co-op. The first version stays in the Playground. Details: `docs/milestones/M112.md`. Plan: `docs/design/picnic-v2.md`.
 
 ### M108 — Real city R1: style from the register (S–M)
 Research (`docs/design/realistic-city-research.md`): Helsinki's own CC BY data, not Google. Built: each building's era (from its completion year) and facade material pick a style kit (colours, roof, windows, turrets, balconies); the register fields, the 2025 orthophoto and a CityGML fetch script are saved for R2 (real roofs) and R3 (real colours); a Git LFS slot for the reality mesh. Details: `docs/milestones/M108.md`.
