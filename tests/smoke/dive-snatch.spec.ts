@@ -6,7 +6,7 @@ test('a fast dive at a held map snatches it (no knock-down)', async ({ page }) =
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript(() => localStorage.setItem('lokki-options-v1', JSON.stringify({ graphics: 'low', tutorialDone: true })));
-  await page.goto('/?level=a1s1&gate=1.5&play'); // slam is unlocked by the gate
+  await page.goto('/?level=first-light-v1&gate=1.5&play'); // slam is unlocked by the gate
   await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 120_000 });
   type Lk = { gull: { state: Record<string, unknown> }; npcs: { npcs: { role: string; x: number; z: number; handAngle: number; mode: string; holding: number | null }[] }; interaction: { carried: { type: string } | null } };
   // a queue person holds an ice cream: dive at the hand at speed

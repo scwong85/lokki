@@ -16,7 +16,7 @@ test('stage 1.1: gated to flying and snatching, three objectives, the bun chain 
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript(() => localStorage.setItem('lokki-options-v1', JSON.stringify({ graphics: 'low', tutorialDone: true })));
-  await page.goto('/?level=a1s1&play');
+  await page.goto('/?level=first-light-v1&play');
   await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 90_000 });
   const l = L(page);
   expect(await l((x) => x.gate)).toEqual({ arc: 1, stage: 1 });
@@ -37,7 +37,7 @@ test('stage 1.1: gated to flying and snatching, three objectives, the bun chain 
   expect(errors).toEqual([]);
 });
 
-test('the level list puts the campaign first and the Playground after', async ({ page }) => {
+test('the level list puts the campaign first and the Playground behind a button', async ({ page }) => {
   test.setTimeout(200_000);
   await page.addInitScript(() => localStorage.setItem('lokki-options-v1', JSON.stringify({ graphics: 'low', tutorialDone: true })));
   await page.goto('/?level=a1s1&play');
@@ -47,6 +47,8 @@ test('the level list puts the campaign first and the Playground after', async ({
   await expect(page.locator('#levelselect .ls-district').first()).toBeVisible({ timeout: 20_000 });
   const heads = await page.locator('#levelselect .ls-district').allTextContents();
   expect(heads[0]).toContain('Act 1');
-  expect(heads.some((h) => h.includes('Playground'))).toBe(true);
   expect(heads.some((h) => h.includes('Free play'))).toBe(true);
+  expect(heads.some((h) => h.includes('Playground'))).toBe(false); // the old levels are one button, not headings
+  await page.locator('#levelselect [data-view=playground]').click();
+  expect((await page.locator('#levelselect .ls-district').allTextContents()).some((h) => h.includes('Playground'))).toBe(true);
 });

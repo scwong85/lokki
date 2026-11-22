@@ -23,7 +23,7 @@ test('stage 1.3: tug, hiding and the buttons work; heat and lines are up', async
   test.setTimeout(300_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  const l = await open(page, 'a1s3');
+  const l = await open(page, 'strings-attached-v1');
   expect(await l((x) => x.gate)).toEqual({ arc: 1, stage: 3 });
   expect(await l((x) => x.interaction.gates)).toEqual({ poop: true, toss: true, tug: true });
   expect(await l((x) => x.quests.quests.map((q) => q.id))).toEqual(['tugchain', 'spray', 'booschain', 'buttonchain']);
@@ -38,7 +38,7 @@ test('stage 1.4: taunt, slip and the jukebox work; contagion is still locked', a
   test.setTimeout(300_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  const l = await open(page, 'a1s4');
+  const l = await open(page, 'mood-swings-v1');
   expect(await l((x) => x.gate)).toEqual({ arc: 1, stage: 4 });
   expect(await l((x) => x.npcs.gates)).toEqual({ contagion: false, slam: false, slip: true });
   expect(await l((x) => x.quests.quests.map((q) => q.id))).toEqual(['mapcone', 'wetfloor', 'jukechain']);
@@ -51,7 +51,7 @@ test('stage 1.5: everything of act 1 is unlocked, the Warden is deployed, a frig
   test.setTimeout(300_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  const l = await open(page, 'a1s5');
+  const l = await open(page, 'the-warden-v1');
   expect(await l((x) => x.gate)).toEqual({ arc: 1, stage: 5 });
   expect(await l((x) => x.npcs.gates)).toEqual({ contagion: true, slam: true, slip: true });
   expect(await l((x) => x.quests.quests.map((q) => q.id))).toEqual(['rushchain', 'strikechain', 'nemesis']);

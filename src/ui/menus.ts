@@ -145,6 +145,12 @@ export function orderLevels<T extends TitleLevel>(all: readonly T[]): T[] {
   return [...staged, ...rest.filter((l) => l.series), ...rest.filter((l) => !l.series)];
 }
 
+/** The Playground: the older levels, the toys and the trials. They live behind one button so the main list stays short. */
+export const inPlayground = (l: TitleLevel): boolean => l.arc === undefined && !l.sandbox;
+
+/** The list a screen shows: the campaign and free play, or (opened from the Playground button) the older levels. */
+export const levelsOf = <T extends TitleLevel>(all: readonly T[], view: 'main' | 'playground'): T[] => orderLevels(all).filter((l) => inPlayground(l) === (view === 'playground'));
+
 /** The heading a level is listed under. */
 export function levelGroup(l: TitleLevel): string {
   if (l.arc !== undefined) return arcInfo(l.arc)?.name ?? `Act ${l.arc}`;
@@ -155,10 +161,11 @@ export function levelGroup(l: TitleLevel): string {
 const DISTRICT_NAMES: Record<string, string> = { kauppatori: 'Kauppatori · the Market Square', senaatintori: 'Senate Square', esplanadi: 'Esplanadi' };
 
 /** The level buttons of the title screen, with a heading where the district changes. */
-export function titleLevelRows(all: TitleLevel[]): string {
+export function titleLevelRows(all: TitleLevel[], view: 'main' | 'playground' = 'main'): string {
   let last = '';
-  const levels = orderLevels(all);
-  return levels
+  const levels = levelsOf(all, view);
+  const extra = view === 'main' ? playgroundButton(all) : '<button class="pg-back" data-playground="main">\u25C2 Back to the stages</button>';
+  return (view === 'playground' ? extra : '') + levels
     .map((l) => {
       const group = levelGroup(l);
       const head = group !== last ? `<h4>${group}</h4>` : '';
@@ -166,7 +173,15 @@ export function titleLevelRows(all: TitleLevel[]): string {
       const stars = l.locked ? l.unlockHint ?? '' : l.sandbox ? 'free play' : '★'.repeat(l.stars) + '☆'.repeat(3 - l.stars);
       return `${head}<button data-level="${l.id}" class="${l.current ? 'on' : ''}${l.locked ? ' locked' : ''}" title="${l.locked ? l.unlockHint ?? 'Locked' : l.blurb}"><span class="lv-name">${l.locked ? '🔒 ' : ''}${l.name}</span><span class="lv-stars">${stars}</span></button>`;
     })
-    .join('');
+    .join('') + (view === 'main' ? extra : '');
+}
+
+/** The one button that opens the Playground: how many levels it holds, how many are cleared. */
+export function playgroundButton(all: readonly TitleLevel[]): string {
+  const pg = all.filter(inPlayground);
+  if (!pg.length) return '';
+  const done = pg.filter((l) => l.stars > 0).length;
+  return `<h4>More</h4><button class="pg-open" data-playground="playground"><span class="lv-name">Playground: the older levels</span><span class="lv-stars">${done}/${pg.length}</span></button>`;
 }
 
 /** Title screen: shown once the city has loaded; the game waits behind it. */
@@ -187,7 +202,7 @@ export class TitleScreen {
         <h1>Lokki</h1>
         <p class="tag">A seagull. Helsinki's Market Square. Zero regrets.</p>
         <button class="big" data-act="play">Play${info.levels?.find((l) => l.current) ? `: ${info.levels.find((l) => l.current)!.name}` : ''}</button>
-        ${info.levels ? `<div class="title-levels">${titleLevelRows(info.levels)}</div>` : ''}
+        ${info.levels ? '<div class="title-levels"></div>' : ''}
         <div class="title-row"><button data-act="options">Options</button><button data-act="coop">Play with a friend</button><button data-act="credits">Credits</button></div>
         <p class="title-keys"><b>WASD</b> move · <b>Space</b> jump (hold: fly) · <b>Shift</b> dive · <b>E</b> grab · <b>F</b> poop · <b>Tab</b> lock on · <b>Mouse</b> look (click to capture)</p>
         ${info.best ? `<p class="title-best">Best clear ${info.best} · skills ${info.skills}/${info.total}</p>` : info.skills ? `<p class="title-best">Skills ${info.skills}/${info.total}</p>` : ''}
@@ -198,14 +213,24 @@ export class TitleScreen {
     on('options', () => hooks.onOptions());
     on('credits', () => hooks.onCredits());
     on('coop', () => hooks.onCoop?.());
-    this.el.querySelectorAll<HTMLElement>('[data-level]').forEach((b) =>
-      b.addEventListener('click', () => {
-        const lv = info.levels?.find((l) => l.id === b.dataset.level);
-        if (lv?.locked) return;
-        if (lv?.current) hooks.onPlay();
-        else hooks.onPickLevel?.(b.dataset.level!);
-      }),
-    );
+    const list = this.el.querySelector<HTMLElement>('.title-levels');
+    const draw = (view: 'main' | 'playground') => {
+      if (!list || !info.levels) return;
+      list.innerHTML = titleLevelRows(info.levels, view);
+      list.scrollTop = 0;
+    };
+    // one handler for the whole list, so a redraw (main list <-> Playground) needs no rewiring
+    list?.addEventListener('click', (e) => {
+      const t = (e.target as HTMLElement).closest<HTMLElement>('button');
+      if (!t) return;
+      if (t.dataset.playground) return draw(t.dataset.playground as 'main' | 'playground');
+      const lv = info.levels?.find((l) => l.id === t.dataset.level);
+      if (!lv || lv.locked) return;
+      if (lv.current) hooks.onPlay();
+      else hooks.onPickLevel?.(lv.id);
+    });
+    const here = info.levels?.find((l) => l.current);
+    draw(here && inPlayground(here) ? 'playground' : 'main');
     root.appendChild(this.el);
   }
 

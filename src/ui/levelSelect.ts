@@ -1,4 +1,4 @@
-import { levelGroup, orderLevels, type TitleLevel } from './menus';
+import { inPlayground, levelGroup, levelsOf, type TitleLevel } from './menus';
 
 /**
  * In-game level select (L, or Options > Levels, or the phone menu): every level with its stars and best time. Unlocked
@@ -17,6 +17,11 @@ export class LevelSelect {
         this.hide();
         return;
       }
+      const pg = t.closest<HTMLElement>('[data-view]');
+      if (pg && this.last) {
+        this.render(this.last, pg.dataset.view as 'main' | 'playground');
+        return;
+      }
       const b = t.closest<HTMLElement>('[data-pick]');
       if (b && !b.classList.contains('locked')) {
         this.hide();
@@ -30,8 +35,17 @@ export class LevelSelect {
     return !this.el.hidden;
   }
 
+  private last: (TitleLevel & { best?: string })[] | null = null;
+
   show(all: (TitleLevel & { best?: string })[]): void {
-    const levels = orderLevels(all);
+    const here = all.find((l) => l.current);
+    this.render(all, here && inPlayground(here) ? 'playground' : 'main');
+    this.el.hidden = false;
+  }
+
+  private render(all: (TitleLevel & { best?: string })[], view: 'main' | 'playground'): void {
+    this.last = all;
+    const levels = levelsOf(all, view);
     let lastGroup = '';
     const rows = levels
       .map((l) => {
@@ -44,8 +58,12 @@ export class LevelSelect {
         return `${head}<button data-pick="${l.id}" class="${l.locked ? 'locked' : ''}${l.current ? ' on' : ''}"><span class="ls-name">${l.locked ? '\u{1F512} ' : ''}${l.name}${tag}</span><span class="ls-blurb">${l.blurb}</span><span class="ls-stars">${status}${best}</span></button>`;
       })
       .join('');
-    this.el.innerHTML = `<div class="ls-card"><h2>Levels</h2><p class="ls-hint">Pick an unlocked level to play it again from the start.</p><div class="ls-list">${rows}</div><button class="ls-close" data-close>Close</button><p class="ls-keys"><b>L</b> or <b>Esc</b> closes this</p></div>`;
-    this.el.hidden = false;
+    const pg = all.filter(inPlayground);
+    const done = pg.filter((l) => l.stars > 0).length;
+    const door = view === 'main'
+      ? pg.length ? `<button class="ls-pg" data-view="playground"><span class="ls-name">Playground: the older levels</span><span class="ls-stars">${done}/${pg.length} cleared</span></button>` : ''
+      : '<button class="ls-pg" data-view="main"><span class="ls-name">\u25C2 Back to the stages</span></button>';
+    this.el.innerHTML = `<div class="ls-card"><h2>${view === 'main' ? 'Levels' : 'Playground'}</h2><p class="ls-hint">Pick an unlocked level to play it again from the start.</p><div class="ls-list">${view === 'playground' ? door : ''}${rows}${view === 'main' ? door : ''}</div><button class="ls-close" data-close>Close</button><p class="ls-keys"><b>L</b> or <b>Esc</b> closes this</p></div>`;
   }
 
   /** "3/10 cleared" for the district this level opens. */

@@ -5,8 +5,8 @@ import { LEVELS } from '../../src/data/levels';
 const chainLevels = LEVELS.filter((l) => l.arc === undefined && [...(l.extraQuests ?? [])].some((q) => q.chain && q.objectives.some((o) => o.id === 'lure' && o.event?.startsWith('atStation'))));
 
 describe('chain levels', () => {
-  it('there are six: Map and Cone and the five rebuilt fetch levels', () => {
-    expect(chainLevels.map((l) => l.id).sort()).toEqual(['frozen-harbour', 'herring-market', 'map-and-cone', 'new-look', 'vappu-eve', 'wedding-bells'].sort());
+  it('there are seven: Map and Cone, the five rebuilt fetch levels and the first Mood Swings', () => {
+    expect(chainLevels.map((l) => l.id).sort()).toEqual(['frozen-harbour', 'herring-market', 'map-and-cone', 'mood-swings-v1', 'new-look', 'vappu-eve', 'wedding-bells'].sort());
   });
   for (const l of chainLevels) {
     it(`${l.id}: the chain's person craves what the stall sells, and the goods are on the counter`, () => {

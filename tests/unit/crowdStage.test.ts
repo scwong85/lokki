@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { LEVELS } from '../../src/data/levels';
 
 describe('stage 1.4 crowd', () => {
-  const l = LEVELS.find((x) => x.id === 'a1s4')!;
+  const l = LEVELS.find((x) => x.id === 'mood-swings-v1')!;
   it('the jukebox step asks for a crowd of five, and the people are free to walk over', () => {
     const q = l.extraQuests!.find((x) => x.id === 'jukechain')!;
     const dance = q.objectives.find((o) => o.id === 'dance')!;

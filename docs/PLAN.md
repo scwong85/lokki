@@ -245,6 +245,10 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [ ] M111 Picnic engine: courses, waiting ritual, thrown-only bell, the Market Guard, time per row (built on `m111-picnic-engine`, merged)
 - [ ] M112 Stage 1.2 The Gull Picnic, version two: spread out, chained rows, three courses, the Guard, the pigeon race, the raid take-back (built on `m112-picnic-content`)
 
+- [ ] M115 to M117 Act 1 on the new formula: 1.3 Market Day Heist, 1.4 One Bad Afternoon, 1.5 The Warden, old chains moved across the map (built on `m115-act1-v2`)
+- [ ] M114 Stage 1.1 First Light, version two: Breakfast on the Roof, four rows in two courses (built on `m114-first-light-v2`)
+- [ ] M113 The level list: the Playground (old levels) behind one button (built on `m113-level-list`)
+
 ### M0 — Foundations (S)
 **Goal:** a running skeleton you can build on.
 - Vite + TypeScript project, ESLint, Vitest with one passing test, MIT `LICENSE`, `README.md` (including data-credits placeholder), `CLAUDE.md` importing `docs/PLAN.md`, this plan committed as `docs/PLAN.md`, `docs/milestones/M0.md`.

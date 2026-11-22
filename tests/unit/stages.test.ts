@@ -6,7 +6,7 @@ import { QUESTS } from '../../src/data/quests';
 import { TRIGGERS } from '../../src/data/triggers';
 import { TOURIST_SPAWNS } from '../../src/data/npcs';
 import { introducedAt, isUnlocked } from '../../src/gameplay/mechanics';
-import { orderLevels, levelGroup } from '../../src/ui/menus';
+import { orderLevels, levelGroup, levelsOf, inPlayground, titleLevelRows } from '../../src/ui/menus';
 
 const setup = (id: string, coop = false) => levelSetup(LEVELS.find((l) => l.id === id)!, QUESTS, TRIGGERS, TOURIST_SPAWNS, coop);
 
@@ -42,11 +42,12 @@ describe('arcs and stages', () => {
   it('solo play skips the co-op objectives; two gulls must finish them too', () => {
     const solo = setup('a1s1');
     const duo = setup('a1s1', true);
-    expect(solo.main).toEqual(['breakfast', 'map', 'neighbours']);
-    expect(duo.main).toEqual(['breakfast', 'map', 'neighbours', 'handoverCoop', 'twoBirds']);
+    expect(solo.main).toEqual(['picnic', 'picnicGong']);
+    expect([...solo.side]).toEqual(['map']);
+    expect(duo.main).toEqual(['picnic', 'picnicGong', 'handoverCoop', 'twoBirds']);
     const won = (ids: string[]) => ids.map((id) => ({ id, status: 'won' }));
     const def = LEVELS.find((l) => l.id === 'a1s1')!;
-    expect(levelProgress(def, duo, won(['breakfast', 'map', 'neighbours'])).cleared).toBe(false);
+    expect(levelProgress(def, duo, won(['picnic', 'picnicGong'])).cleared).toBe(false);
     expect(levelProgress(def, duo, won(duo.main)).cleared).toBe(true);
     expect(levelProgress(def, solo, won(solo.main)).cleared).toBe(true);
   });
@@ -64,6 +65,28 @@ describe('arcs and stages', () => {
     expect(rows.map((r) => r.id)).toEqual(['a1s1', 'a1s2', 'x']);
     expect(levelGroup(rows[0])).toContain('Act 1');
     expect(levelGroup(rows[2])).toContain('Playground');
+  });
+});
+
+describe('the level list keeps the old levels behind one button', () => {
+  const all = [
+    { id: 'old', name: 'Old', blurb: '', stars: 1, current: false, district: 'kauppatori' },
+    { id: 'a1s1', name: 'First', blurb: '', stars: 0, current: false, arc: 1, stage: 1 },
+    { id: 'free', name: 'Free', blurb: '', stars: 0, current: false, sandbox: true },
+  ];
+  it('main: the stages and free play; playground: the rest', () => {
+    expect(levelsOf(all, 'main').map((l) => l.id)).toEqual(['a1s1', 'free']);
+    expect(levelsOf(all, 'playground').map((l) => l.id)).toEqual(['old']);
+    expect(inPlayground(all[0])).toBe(true);
+  });
+  it('the main list has one Playground button with the cleared count, and the playground has a way back', () => {
+    const main = titleLevelRows(all);
+    expect(main).not.toContain('data-level="old"');
+    expect(main).toContain('data-playground="playground"');
+    expect(main).toContain('1/1');
+    const pg = titleLevelRows(all, 'playground');
+    expect(pg).toContain('data-level="old"');
+    expect(pg).toContain('data-playground="main"');
   });
 });
 
@@ -97,36 +120,33 @@ describe('stage 1.2 The Gull Picnic', () => {
   });
 });
 
-describe('stages 1.3 and 1.4', () => {
-  it('1.3 Strings Attached: three chains, a hidden bonus, heat and lines, tug and hiding unlocked', () => {
+describe('stages 1.3 to 1.5, version two (M115 to M117)', () => {
+  it('1.3 Market Day Heist: six rows in three courses, the city on guard, tug and hiding unlocked', () => {
     const solo = setup('a1s3');
     const duo = setup('a1s3', true);
-    expect(solo.main).toEqual(['tugchain', 'spray', 'booschain']);
-    expect(solo.secret.has('buttonchain')).toBe(true);
-    expect(duo.main).toEqual(['tugchain', 'spray', 'booschain', 'teamTug', 'duoSpray']);
+    expect(solo.main).toEqual(['picnic', 'picnicGong']);
+    expect(solo.secret.has('wanted')).toBe(true);
+    expect(duo.main).toEqual(['picnic', 'picnicGong', 'teamTug', 'duoSpray']);
     expect(solo.defense).toBe(true);
     const g = { arc: 1, stage: 3 };
     expect(['tug', 'hide', 'peck'].every((m) => isUnlocked(m as never, g))).toBe(true);
     expect(isUnlocked('taunt', g)).toBe(false);
     expect(LEVELS.find((l) => l.id === 'a1s3')!.requires).toBe('a1s2');
   });
-  it('1.4 Mood Swings: three chains; taunt, slip and the jukebox unlocked, contagion not yet', () => {
+  it('1.4 One Bad Afternoon: four rows in two courses; taunt, slip and the jukebox unlocked, contagion not yet', () => {
     const duo = setup('a1s4', true);
-    expect(duo.main).toEqual(['mapcone', 'wetfloor', 'jukechain', 'decoyThief', 'duet']);
+    expect(duo.main).toEqual(['picnic', 'picnicGong', 'decoyThief', 'duet']);
     const g = { arc: 1, stage: 4 };
     expect(['taunt', 'slip', 'jukebox'].every((m) => isUnlocked(m as never, g))).toBe(true);
     expect(isUnlocked('contagion', g)).toBe(false);
     expect(LEVELS.find((l) => l.id === 'a1s4')!.requires).toBe('a1s3');
   });
-  it('every stage chain has at least two steps', () => {
-    for (const id of ['a1s3', 'a1s4']) for (const q of setup(id).quests) expect(q.objectives.length).toBeGreaterThanOrEqual(2);
-  });
 });
 
-describe('stage 1.5 The Warden (arc finale)', () => {
-  it('three chains, the Warden deployed, co-op pincer and volley; everything of act 1 is unlocked', () => {
+describe('stage 1.5 The Warden (arc finale), version two', () => {
+  it('three rows in two courses, then the boss; the Warden deployed, co-op pincer and volley; everything of act 1 is unlocked', () => {
     const duo = setup('a1s5', true);
-    expect(duo.main).toEqual(['rushchain', 'strikechain', 'nemesis', 'pincer', 'volley']);
+    expect(duo.main).toEqual(['picnic', 'nemesis', 'pincer', 'volley']);
     expect(duo.defense).toBe(true);
     const def = LEVELS.find((l) => l.id === 'a1s5')!;
     expect(def.deploy).toEqual(['warden']);
@@ -135,10 +155,9 @@ describe('stage 1.5 The Warden (arc finale)', () => {
     for (const m of ['poop', 'toss', 'honk', 'tug', 'hide', 'peck', 'taunt', 'slip', 'jukebox', 'cloth', 'domino', 'contagion', 'slam']) expect(isUnlocked(m as never, g)).toBe(true);
     expect(isUnlocked('gust', g)).toBe(false);
   });
-  it('the Strike line stands away from the Warden bench and the queue', () => {
-    const t = setup('a1s5').tourists.filter((x) => x.role === 'bowler');
-    expect(t.length).toBe(6);
-    expect(Math.min(...t.map((x) => x.x))).toBeGreaterThan(10);
+  it('the boss waits for the rows', () => {
+    const q = setup('a1s5').quests.find((x) => x.id === 'nemesis')!;
+    expect(q.requires).toEqual(['picnic']);
   });
   it('all five stages of act 1 are in order at the front of the list', () => {
     expect(LEVELS.slice(0, 5).map((l) => l.id)).toEqual(['a1s1', 'a1s2', 'a1s3', 'a1s4', 'a1s5']);

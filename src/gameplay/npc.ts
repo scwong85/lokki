@@ -21,6 +21,8 @@ export interface Station {
   sells: PropType;
   /** Where its goods stand (offset in z from the station spot, and the counter height), so an empty stall can restock. */
   goods?: { dz: number; y?: number };
+  /** What a customer buys here becomes this quest tag (so a ten-minute stage can ask for the cone somebody was lured into buying, not any cone off the counter). */
+  tagBought?: string;
 }
 
 export type NpcMode = 'idle' | 'walk' | 'eat' | 'notice' | 'shield' | 'panic' | 'chase' | 'recover' | 'yuck' | 'cheer' | 'slip' | 'startle' | 'dance';

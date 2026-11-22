@@ -6,7 +6,7 @@ test('stage 1.4: peck the jukebox, five people end up dancing, a dancer holds a 
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript(() => localStorage.setItem('lokki-options-v1', JSON.stringify({ graphics: 'low', tutorialDone: true })));
-  await page.goto('/?level=a1s4&gate=1.5&play');
+  await page.goto('/?level=mood-swings-v1&gate=1.5&play');
   await page.waitForFunction(() => (window as unknown as { __lokkiReady?: boolean }).__lokkiReady === true, null, { timeout: 120_000 });
   type Lk = {
     gull: { state: Record<string, unknown> };

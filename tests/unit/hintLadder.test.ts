@@ -63,7 +63,7 @@ describe('ladder steps in the levels', () => {
   const all = LEVELS.flatMap((l) => (l.extraQuests ?? []).flatMap((q) => q.objectives.map((o) => ({ level: l.id, q: q.id, o }))));
   const ladder = all.filter((x) => x.o.nudge);
   it('the trial chains are on the ladder (Map and Cone, Wet Floor, Jukebox Hero in stage 1.4)', () => {
-    const stage = LEVELS.find((l) => l.id === 'a1s4')!;
+    const stage = LEVELS.find((l) => l.id === 'mood-swings-v1')!;
     for (const id of ['mapcone', 'wetfloor', 'jukechain']) {
       const steps = stage.extraQuests!.find((q) => q.id === id)!.objectives.filter((o) => o.kind === 'event');
       expect(steps.every((o) => o.nudge && o.outcome), id).toBe(true);

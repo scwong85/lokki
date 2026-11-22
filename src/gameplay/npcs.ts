@@ -140,6 +140,7 @@ export class NpcManager implements NpcHooks {
       const old = this.props.byId(n.holding);
       if (old) this.props.drop(old, { x: 0, y: 0, z: 0 });
     }
+    if (st?.tagBought) item.tag = st.tagBought;
     this.props.attach(item, n.id);
     n.holding = item.id;
     n.holdType = type;
