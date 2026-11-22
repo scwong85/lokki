@@ -133,6 +133,20 @@ describe('the raid (M112)', () => {
   });
 });
 
+describe('the Bottle Service side order (M118 fix)', () => {
+  it('after a honk makes her drop the cone, picking it up finishes the step; so does a snatch', () => {
+    const log = new QuestLog(setup.quests);
+    log.onEvent('distract');
+    log.onEvent('grab:watchCone');
+    expect(log.quests.find((q) => q.id === 'bottleService')!.status).toBe('won');
+    const log2 = new QuestLog(setup.quests);
+    log2.onEvent('distract');
+    log2.onEvent('snatch:icecream');
+    expect(log2.quests.find((q) => q.id === 'bottleService')!.status).toBe('won');
+    expect(setup.tourists.some((t) => t.holdTag === 'watchCone')).toBe(true);
+  });
+});
+
 describe('the Clean Freak side order (M112 fix)', () => {
   it('the fish counts whether snatched, or picked up after a honk made him drop it, in either order', () => {
     const log = new QuestLog(setup.quests);

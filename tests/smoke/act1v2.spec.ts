@@ -55,33 +55,33 @@ test('1.3 Market Day Heist: six rows in three courses, the city on guard, the bu
   await expect.poll(note, { timeout: 30_000 }).toContain('Market Day Heist 0 / 6');
   const text = await note();
   expect(text.toLowerCase()).toContain('casing the joint');
-  expect(text).toContain('opens when the joint is cased');
-  expect(text).toContain('opens when the inside job is done');
+  expect(text).toContain('opens when one thing of the first course is lifted');
+  expect(text).toContain('opens when one thing of the second course is lifted');
   expect(await l((x) => (x.defense?.vendors.length ?? 0) > 0)).toBe(true); // the city is on guard
   // a row of a closed course does not count
   await toRoof('tugBun', 1, 1);
   await page.waitForTimeout(1500);
   expect(await row('bun')).toBe(false);
+
   // the buttons are where they were moved to: a gull beside each can peck
-  await gullTo({ x: 14, y: 0.5, z: -89 });
+  await gullTo({ x: 26, y: 0.5, z: -87.5 });
   await page.waitForTimeout(600);
   expect(await l((x) => x.peckNow())).toBe(true);
-  await gullTo({ x: 58, y: 0.5, z: -89 });
+  await gullTo({ x: 46, y: 0.5, z: -87.5 });
   await page.waitForTimeout(600);
   expect(await l((x) => x.peckNow())).toBe(true);
 
-  // course 1
-  await toRoof('tugSoup', -1, 1);
-  await expect.poll(() => row('soup'), { timeout: 60_000 }).toBe(true);
+  // course 1: one row opens the second course (the bun that was waiting there counts at once)
   await toRoof('booCone', 1, 1);
   await expect.poll(() => row('boo'), { timeout: 60_000 }).toBe(true);
-  // course 2 opens (the bun that was waiting there counts at once)
   await expect.poll(() => row('bun'), { timeout: 60_000 }).toBe(true);
+  // the third course is still closed (nothing of the second was lifted but the bun: that is one, so it opens)
   await toRoof('richLunch', -1, -1);
   await expect.poll(() => row('lunch'), { timeout: 60_000 }).toBe(true);
-  // course 3
   await toRoof('tugBalloon', 1, -1);
   await expect.poll(() => row('balloon'), { timeout: 60_000 }).toBe(true);
+  await toRoof('tugSoup', -1, 1);
+  await expect.poll(() => row('soup'), { timeout: 60_000 }).toBe(true);
   await toRoof('btnCone', 0, 1.5);
   await expect.poll(() => row('queue'), { timeout: 60_000 }).toBe(true);
   expect(await guests()).toBe(6);

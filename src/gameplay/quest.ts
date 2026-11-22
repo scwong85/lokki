@@ -1,6 +1,6 @@
 import { tuning } from '../core/tuning';
 import type { QuestDef, QuestEventType } from '../data/quests';
-import { courseDone, courseOf, rowLocked } from './collection';
+import { courseOf, courseRows, courseTarget, rowLocked } from './collection';
 
 export type QuestStatus = 'locked' | 'idle' | 'active' | 'won' | 'lost';
 
@@ -205,7 +205,8 @@ export class QuestLog {
         if (o.count >= (od.count ?? 1)) {
           o.done = true;
           notes.push({ type: 'objective', quest: q.id, objective: o.id });
-          if (od.row && courseDone(d, q, courseOf(od))) notes.push({ type: 'course', quest: q.id, course: courseOf(od) });
+          // the course is served the moment enough of its rows are done (all of them, unless the next course asks for fewer)
+          if (od.row && courseRows(d, courseOf(od)).filter((k) => q.objectives[k]?.done).length === courseTarget(d, courseOf(od))) notes.push({ type: 'course', quest: q.id, course: courseOf(od) });
         }
       });
       this.finishCheck(q, notes);

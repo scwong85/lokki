@@ -83,9 +83,20 @@ export function courseDone(def: QuestDef, q: QuestState, course: number): boolea
   return courseRows(def, course).every((i) => q.objectives[i]?.done);
 }
 
-/** A course is open when every course before it is done (M111). Rows outside a collection are always open. */
+/** How many rows of this course must be done for the next course to open (M118): every row, unless the next course says `need`. */
+export function courseTarget(def: QuestDef, course: number): number {
+  return def.collect?.courses?.[course]?.need ?? courseRows(def, course).length;
+}
+
+/** Has this course been served enough to open the next one? */
+export function courseReached(def: QuestDef, q: QuestState, course: number): boolean {
+  const done = courseRows(def, course).filter((i) => q.objectives[i]?.done).length;
+  return done >= courseTarget(def, course);
+}
+
+/** A course is open when every course before it is served enough (M111, M118: `need` lets a stage open the next course after fewer rows, so one hard row cannot lock the rest). Rows outside a collection are always open. */
 export function courseOpen(def: QuestDef, q: QuestState, course: number): boolean {
-  for (let c = 1; c < course; c++) if (!courseDone(def, q, c)) return false;
+  for (let c = 1; c < course; c++) if (!courseReached(def, q, c)) return false;
   return true;
 }
 
