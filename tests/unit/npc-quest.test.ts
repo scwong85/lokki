@@ -90,6 +90,17 @@ describe('tourist brain', () => {
     expect(snatchable(n, front)).toBe(false);
     expect(snatchable(n, back)).toBe(true);
   });
+  it('a diving beak reaches further and only the core of the body blocks it (M119)', () => {
+    const n = tourist();
+    const h = handPos(n);
+    const far = { x: h.x, y: h.y + 1.7, z: h.z }; // 1.7 m above the hand: out of reach on foot
+    expect(snatchable(n, far)).toBe(false);
+    expect(snatchable(n, far, true)).toBe(true);
+    run(n, ahead, 3); // shielding: the gull side is blocked on foot
+    const front = { x: 0, y: 1.2, z: -0.7 };
+    expect(snatchable(n, front)).toBe(false);
+    expect(snatchState(n, { x: 0, y: 1.2, z: -2.6 }, true)).not.toBe('ok'); // far beyond the reach of any beak
+  });
   it('a vendor scrubbing his sign leaves the plate open from the gull side too', () => {
     const n = tourist();
     run(n, ahead, 3);

@@ -108,7 +108,7 @@ const cast: NpcSpawn[] = [
   person({ ...CAPTAIN, heading: Math.PI, role: 'captain', name: 'Captain', stationary: true, post: true, watch: 'thermos', color: 0x2a5ea8, hat: 'cap', hatColor: 0xffffff }),
   person({ ...SLEEPER, heading: -Math.PI / 2, role: 'sleeper', name: 'Sleeper', stationary: true, post: true, holds: 'cap', holdTag: 'sunHat', ritual: { every: 30, hold: 7, icon: '💤', phase: 10 }, color: 0xf2c06b }),
   // the map tourist of the side order, and two ice-cream tourists near the roof (for two gulls to snatch at once)
-  person({ ...MAPPER, heading: 2.2, holds: 'map', color: 0xf7a1c4 }),
+  person({ ...MAPPER, heading: 2.2, holds: 'map', look: 'm', color: 0xf7a1c4 }),
   person({ x: -30, z: -28, heading: 0.6, ice: true, color: 0x7fd1ae }),
   person({ x: -23, z: -30, heading: -1.2, ice: true, color: 0xffc971 }),
 ];

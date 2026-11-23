@@ -1,3 +1,4 @@
+import { lookFor } from '../gameplay/look';
 import * as THREE from 'three';
 import { createRng, type Rng } from '../core/rng';
 import { tuning } from '../core/tuning';
@@ -80,7 +81,7 @@ export class StreetLife {
     for (let i = 0; i < cyclists; i++) spawn('bike', 1000 + i);
     for (const w of this.walkers) {
       if (w.kind === 'walk') {
-        const m = new NpcModel(this.rng.pick(COATS), w.id + 500);
+        const m = new NpcModel(this.rng.pick(COATS), w.id + 500, { look: lookFor({ role: 'stroller' }, w.id + 500) });
         this.people.set(w.id, m);
         this.group.add(m.root);
       } else {

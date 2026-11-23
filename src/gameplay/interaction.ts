@@ -14,7 +14,7 @@ import { Debris } from '../render/debris';
 
 /** What the NPC system offers the interaction layer. */
 export interface NpcHooks {
-  snatchCandidates(beak: { x: number; y: number; z: number }): GrabCandidate[];
+  snatchCandidates(beak: { x: number; y: number; z: number }, diving?: boolean): GrabCandidate[];
   blockedHint(beak: { x: number; y: number; z: number }): string | null;
   onSnatched(propId: number): void;
   /** Something a person dropped is picked up off the ground by the gull. */
@@ -175,7 +175,7 @@ export class Interaction {
     const it = tuning.interaction;
     const beak = this.beakPos(s);
     // from the air a gull snatches what people hold; on the ground that takes a tug (see updateGull)
-    const cands = [...this.props.candidates(), ...(s.mode !== 'ground' ? this.npcs?.snatchCandidates(beak) ?? [] : [])];
+    const cands = [...this.props.candidates(), ...(s.mode !== 'ground' ? this.npcs?.snatchCandidates(beak, s.mode === 'dive') ?? [] : [])];
     const pick = pickGrabTarget(beak, s.heading, cands, it.grabRange.value, it.grabConeDeg.value, it.carryMax.value * mods.carryMax, it.closeRange.value, { x: s.x, y: s.y, z: s.z });
     if (!pick) return null;
     const prop = this.props.byId(pick.id);
@@ -270,7 +270,7 @@ export class Interaction {
         }
       } else if (!b.carried && s.mode === 'dive') {
         // diving at a held ice cream snatches it without pressing anything
-        const hit = this.npcs?.snatchCandidates(this.beakPos(s))[0];
+        const hit = this.npcs?.snatchCandidates(this.beakPos(s), true)[0];
         if (hit) this.takeInBeak(this.props.byId(hit.id)!, ev, b);
       } else if (inp.toss && b.carried && this.gates.toss) {
         const p = b.carried;

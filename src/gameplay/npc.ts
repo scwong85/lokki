@@ -39,6 +39,8 @@ export interface NpcSpawn {
   wants?: PropType[];
   /** Jacket colour. */
   color: number;
+  /** Looks like a woman or a man (else from the role, or a seeded mix for the crowd: `look.ts`). */
+  look?: 'f' | 'm';
   /** Who this is for quests ('dater', 'child'). */
   role?: string;
   /** Stays where it is (a couple waiting at the clock) unless sent somewhere. */
@@ -284,19 +286,22 @@ export function handPos(n: Npc): { x: number; y: number; z: number } {
 export type SnatchState = 'none' | 'far' | 'blocked' | 'ok';
 
 /** Why can / can't this beak take the ice cream: nothing in hand, too far, body in the way, or fine. */
-export function snatchState(n: Npc, beak: { x: number; y: number; z: number }): SnatchState {
+export function snatchState(n: Npc, beak: { x: number; y: number; z: number }, diving = false): SnatchState {
   if (n.holding === null) return 'none';
   const h = handPos(n);
   const d = Math.hypot(beak.x - h.x, beak.y - h.y, beak.z - h.z);
-  if (d > tuning.npc.snatchReach.value * 2.5) return 'far';
+  // a diving gull reaches further, and only the core of the body is in its way (M119: dive snatches missed by a hair)
+  const reach = diving ? Math.max(tuning.npc.diveSnatchReach.value, tuning.npc.snatchReach.value) : tuning.npc.snatchReach.value;
+  const bodyR = BODY_RADIUS * (diving ? tuning.npc.diveBodyBlock.value : 1);
+  if (d > reach * 2.5) return 'far';
   // a vendor absorbed in scrubbing his sign leans over it: the plate is open from any side
-  if (n.role === 'cleaner' && n.cleanT > 0) return d > tuning.npc.snatchReach.value * 1.5 ? 'far' : 'ok';
+  if (n.role === 'cleaner' && n.cleanT > 0) return d > reach * 1.5 ? 'far' : 'ok';
   for (let i = 0; i <= 6; i++) {
     const f = i / 7;
     const x = beak.x + (h.x - beak.x) * f, y = beak.y + (h.y - beak.y) * f, z = beak.z + (h.z - beak.z) * f;
-    if (y - n.y < BODY_HEIGHT && Math.hypot(x - n.x, z - n.z) < BODY_RADIUS) return 'blocked';
+    if (y - n.y < BODY_HEIGHT && Math.hypot(x - n.x, z - n.z) < bodyR) return 'blocked';
   }
-  return d > tuning.npc.snatchReach.value ? 'far' : 'ok';
+  return d > reach ? 'far' : 'ok';
 }
 
 /** Is the ice cream protected right now? (paying attention to the gull) or available (unaware / distracted). */
@@ -307,8 +312,8 @@ export function guardState(n: Npc): 'none' | 'guarded' | 'open' {
 }
 
 /** Can a beak at `beak` reach this tourist's ice cream? Blocked when the body is in the way (shielding). */
-export function snatchable(n: Npc, beak: { x: number; y: number; z: number }): boolean {
-  return snatchState(n, beak) === 'ok';
+export function snatchable(n: Npc, beak: { x: number; y: number; z: number }, diving = false): boolean {
+  return snatchState(n, beak, diving) === 'ok';
 }
 
 /** Change mood (and say so once). */
