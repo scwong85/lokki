@@ -32,6 +32,7 @@ import { Interaction, type GagEvent } from './gameplay/interaction';
 import { Reticle } from './render/reticle';
 import { bestAimTarget, diveHits, updateTargets, type Target } from './gameplay/targets';
 import { DiveMarker } from './render/diveMarker';
+import { LandRing } from './render/landRing';
 import { DebugPanel } from './ui/debugPanel';
 import { Hud } from './ui/hud';
 import { AudioManager } from './core/audio';
@@ -193,6 +194,7 @@ if (greybox) {
   scene.add(city.group);
   world = city.world;
   ({ targets, start, targetMeshes, propSpawns, walkable, isLand, water } = city);
+  world.isLand = isLand;
   keepClearSpots = city.keepClear;
   phys.addStaticMesh(city.physicsMesh.vertices, city.physicsMesh.indices);
 }
@@ -337,8 +339,11 @@ const pings = new PingFx(scene);
 const poopReticle = new Reticle();
 scene.add(poopReticle.mesh);
 const marker = new DiveMarker();
+const landRing = new LandRing();
+let landTips = 0;
 const lockMarker = new LockMarker();
 scene.add(lockMarker.group);
+scene.add(landRing.group);
 /** The locked target (Tab): dives and droppings home in on it. */
 let lockId: string | null = null;
 let lockNow: LockCandidate | null = null;
@@ -3519,6 +3524,13 @@ startLoop({
       marker.update(null, null, false, false);
     }
     targets.forEach((t, i) => targetMeshes[i].scale.setScalar(t === aimTarget ? 1.5 : 1));
+    // "land here" ring (M122): the spot a gull in the air could land on; hold S (the stick back, LT) to fly onto it
+    const ringSpot = s.mode === 'air' && !s.jump && s.stunT === 0 && !outro.active ? s.landing?.spot ?? s.landSpot : null;
+    landRing.update(ringSpot, !!s.landing, simTime);
+    if (ringSpot && !s.landing && landTips < 2 && !levelCleared && !menuOpen()) {
+      landTips++;
+      hud.toast(document.body.classList.contains('touch') ? 'Pull the stick back to land on the ring' : 'Hold S to land on the ring', 3.2);
+    }
     // poop aim reticle + context prompt
     const poopReady = 1 - Math.min(1, interaction.poopCd / (tuning.poop.cooldown.value * mods.poopCooldown));
     const aimPoop = s.mode !== 'ground' && s.stunT === 0 && interaction.poopCd <= 0;

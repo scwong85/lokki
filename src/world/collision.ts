@@ -84,6 +84,8 @@ export class World {
   readonly movers: Box[] = [];
   /** A level's furniture (a buffet table, a jukebox): set per level, not in the grid, always tested like the movers. */
   readonly furniture: Box[] = [];
+  /** Tells ground from water (set by the city): "land here" never picks the sea (M122). */
+  isLand: ((x: number, z: number) => boolean) | null = null;
   private grid = new Map<number, Item[]>();
   private readonly cell: number;
   private stamp = 0;

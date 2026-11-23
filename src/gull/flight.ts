@@ -3,6 +3,7 @@ import { mods, staminaMax } from '../core/skillMods';
 import type { World } from '../world/collision';
 import { windAt } from './wind';
 import { bestAimTarget, type Target } from '../gameplay/targets';
+import { edgeAhead, findLandSpot, landingStep, planLanding, type LandPlan, type LandSpot } from './landing';
 
 export const GULL_RADIUS = 0.5;
 
@@ -41,6 +42,13 @@ export interface FlightState {
   heightAbove: number;
   /** Sitting on (or just above) the sea: set by the caller each step. Swimming is slower and landings are splashes. */
   overWater: boolean;
+  /** "Land here" (M122): the spot ahead that holding S would land on, the arc being flown, the scan clock. */
+  landSpot: LandSpot | null;
+  landing: LandPlan | null;
+  landScanT: number;
+  /** Seconds after a landing that walking stops at an edge, and how long the stick has pushed against one. */
+  guardT: number;
+  edgePush: number;
 }
 
 export interface FlightInput {
@@ -72,7 +80,7 @@ export function newFlightState(x = 0, z = 0): FlightState {
   return {
     x, y: GULL_RADIUS, z, vx: 0, vy: 0, vz: 0, heading: 0, turnRate: 0, mode: 'ground',
     stamina: staminaMax(), stunT: 0, flapCd: 0, hopCd: 0, jump: false, flapPrev: false, flapHold: 0, diveT: 0, diveCd: 0, diveAngle: 0.7,
-    flapAnim: 99, perched: false, heightAbove: 0, overWater: false,
+    flapAnim: 99, perched: false, heightAbove: 0, overWater: false, landSpot: null, landing: null, landScanT: 0, guardT: 0, edgePush: 0,
   };
 }
 
@@ -168,6 +176,7 @@ export function stepFlight(
   s.hopCd = Math.max(0, s.hopCd - dt);
   s.diveCd = Math.max(0, s.diveCd - dt);
   s.flapAnim += dt;
+  s.guardT = Math.max(0, s.guardT - dt);
   const stunned = s.stunT > 0;
   s.stunT = Math.max(0, s.stunT - dt);
   const ctl: FlightInput = stunned ? { ax: 0, ay: 0, flap: false, dive: false, aimPitch: inp.aimPitch, carryMass: inp.carryMass } : inp;
@@ -212,6 +221,16 @@ export function stepFlight(
       const maxTurn = w.turnRate.value * dt;
       s.heading += clamp(diff, -maxTurn, maxTurn);
     }
+    // the ledge guard (M122): just after a landing, and always on a perch top, walking stops at an edge unless the stick pushes against it for a moment
+    if ((s.guardT > 0 || s.perched) && sp2 > 0.05 && !s.overWater) {
+      if (edgeAhead(world, s, s.vx / sp2, s.vz / sp2, l.ledgeReach.value)) {
+        if (len > 0) s.edgePush += dt;
+        if (len === 0 || s.edgePush < l.ledgePush.value) {
+          s.vx = 0;
+          s.vz = 0;
+        }
+      } else s.edgePush = 0;
+    } else s.edgePush = 0;
     s.vy -= f.gravity.value * dt; // keeps us pressed to the surface
     s.stamina += (s.perched ? f.perchRegen.value : f.groundRegen.value) * dt;
     if (pressed && s.hopCd <= 0) {
@@ -261,6 +280,17 @@ export function stepFlight(
     // gliding: W/A/D steer; diving: always aim along the camera, A/D bend the line
     const { wx, wz, len } = worldDir(ctl.ax, diving ? 1 : Math.max(ctl.ay, 0), camYaw);
     const flare = ctl.ay < 0;
+    // ---- "Land here" (M122): look for a spot ahead; holding S commits to a braking arc onto it ----
+    if (!diving) {
+      s.landScanT -= dt;
+      if (s.landScanT <= 0 && !s.landing) {
+        s.landScanT = l.scanEvery.value;
+        s.landSpot = !stunned && !s.jump && s.heightAbove > 1 ? findLandSpot(world, s, world.isLand) : null;
+      }
+      if (!s.landing && flare && s.landSpot && !stunned && !ctl.flap && !ctl.dive && !s.jump) s.landing = planLanding(world, s, s.landSpot);
+    }
+    if (s.landing && (stunned || ctl.flap || ctl.dive || !flare || diving || s.jump)) s.landing = null; // flap, a dive (still a crash) or letting go of S ends it
+    if (diving) s.landSpot = null;
     if (len > 0) {
       const diff = angleDiff(Math.atan2(-wx, -wz), s.heading);
       const slow = 1 + f.airTurnSlow.value * clamp(1 - Math.hypot(s.vx, s.vz) / Math.max(1, f.glideSpeed.value), 0, 1); // flying slowly turns tighter
@@ -358,6 +388,17 @@ export function stepFlight(
         ev.push({ type: 'diveStart' });
       }
     }
+    if (s.landing && s.mode === 'air') {
+      // fly the arc: heading, speed and climb come from the plan (the wind is cancelled so that arriving means stopping)
+      const st = landingStep(s.landing, s, dt);
+      if (st.stuck) s.landing = null; // something is in the way: the arc ends, the gull glides on
+      const wind = windAt(time);
+      s.heading = st.heading;
+      s.vx = -Math.sin(s.heading) * st.speed - wind.x * tuning.wind.airEffect.value;
+      s.vz = -Math.cos(s.heading) * st.speed - wind.z * tuning.wind.airEffect.value;
+      s.vy = st.vy;
+      s.stamina += f.glideRegen.value * dt;
+    }
     s.perched = false;
   }
   s.stamina = clamp(s.stamina, 0, staminaMax());
@@ -382,6 +423,8 @@ export function stepFlight(
   s.z = pos.z;
   let grounded = false;
   let perch = false;
+  let hardLand = false;
+  const landedPlan = s.landing !== null;
   for (const c of contacts) {
     const vn = s.vx * c.nx + s.vy * c.ny + s.vz * c.nz;
     if (vn >= 0) {
@@ -404,7 +447,10 @@ export function stepFlight(
       } else if (!wasGrounded) {
         const quality = wasJump ? 'soft' : impact < l.softSpeed.value ? 'soft' : impact < l.hardSpeed.value ? 'rough' : 'hard';
         if (quality === 'rough') s.stunT = l.stunSoft.value;
-        if (quality === 'hard') s.stunT = wasDive ? l.diveStun.value : l.stunHard.value;
+        if (quality === 'hard') {
+          hardLand = true;
+          s.stunT = wasDive ? l.diveStun.value : l.stunHard.value;
+        }
         if (wasDive) s.diveCd = d.cooldown.value;
         ev.push({ type: 'land', impact, quality, perch });
       }
@@ -414,6 +460,16 @@ export function stepFlight(
       s.mode = 'air';
       ev.push({ type: 'bonk', impact });
     }
+  }
+  if (grounded && !wasGrounded && !s.overWater) {
+    // stick the landing (M122): a planned landing, or a glide onto a perch top, stops dead; a dive still crashes and skids
+    if (landedPlan || (perch && !wasDive && !hardLand)) {
+      s.vx = 0;
+      s.vz = 0;
+    }
+    s.guardT = l.ledgeGuard.value;
+    s.landing = null;
+    s.landSpot = null;
   }
   if (grounded) {
     s.mode = 'ground';

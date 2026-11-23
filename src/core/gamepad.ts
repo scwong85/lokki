@@ -38,7 +38,7 @@ const KEY_ACTIONS: Record<string, string> = {
 
 /** The controller buttons and what they do, built from the real mapping so the help can never drift from it. */
 export function padHelp(): { button: string; action: string }[] {
-  const rows = [{ button: 'Left stick', action: 'Move and steer' }, { button: 'Right stick', action: 'Look' }, { button: 'LT (hold)', action: 'Brake and flare for landings' }];
+  const rows = [{ button: 'Left stick', action: 'Move and steer' }, { button: 'Right stick', action: 'Look' }, { button: 'LT (hold)', action: 'Brake and land: hold it with a ring ahead to glide onto it' }];
   for (const [b, code] of [...HOLD, ...TAP]) rows.push({ button: BUTTON_NAMES[b], action: KEY_ACTIONS[code] ?? code });
   return rows;
 }
