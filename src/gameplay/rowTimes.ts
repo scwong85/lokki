@@ -38,18 +38,21 @@ export class RowTimes {
     this.last = 0;
   }
 
-  /** Lines for the results card: the rows in the order they were done, with the time at and since; courses as headings when named. */
+  /**
+   * Lines for the results card: rows grouped under their course heading (each course once, even when rows of two courses were done in turn),
+   * with the time at and since. A row done in the same second as the one before it (its item was already on the roof when its course opened)
+   * says so, so a "+0:00" is not mistaken for a free row.
+   */
   lines(courseNames: readonly string[] = []): string[] {
     if (!this.splits.length) return [];
     const out = ['Time per row (in the order you did them):'];
-    let course = 0;
-    for (const s of this.splits) {
-      if (courseNames.length && s.course !== course) {
-        course = s.course;
-        const at = this.served.get(course);
-        out.push(`${courseNames[course - 1] ?? `Course ${course}`}${at !== undefined ? ` (served at ${fmtClock(at)})` : ''}`);
+    const courses = [...new Set(this.splits.map((x) => x.course))].sort((a, b) => a - b);
+    for (const c of courses) {
+      if (courseNames.length) {
+        const at = this.served.get(c);
+        out.push(`${courseNames[c - 1] ?? `Course ${c}`}${at !== undefined ? ` (served at ${fmtClock(at)})` : ''}`);
       }
-      out.push(`${s.label}: ${fmtClock(s.at)}, +${fmtClock(s.since)}`);
+      for (const s of this.splits.filter((x) => x.course === c)) out.push(`${s.label}: ${fmtClock(s.at)}, +${fmtClock(s.since)}${s.since < 1 ? ' (its item was ready)' : ''}`);
     }
     return out;
   }

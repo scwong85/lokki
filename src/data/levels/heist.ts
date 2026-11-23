@@ -193,6 +193,6 @@ export const MARKET_DAY_HEIST = stage(1, 3, {
   defense: true,
   deploy: ['vendors', 'lines'],
   startHeat: 22,
-  parTime: 600,
+  parTime: 360,
   reward: 'hawkeye',
 });

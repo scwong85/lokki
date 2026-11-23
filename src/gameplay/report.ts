@@ -29,7 +29,7 @@ export function playtestReport(r: ReportInput): string {
   if (r.longestStuck && r.longestStuck.seconds >= 20) lines.push(`Longest without finding or serving a row: ${fmtClock(r.longestStuck.seconds)} (around x ${Math.round(r.longestStuck.x)}, z ${Math.round(r.longestStuck.z)})`);
   lines.push(
     `Dives that missed a held item: ${n(t, 'nearMiss') + n(t, 'nearMiss:body')} (body in the way ${n(t, 'nearMiss:body')}) · snatches ${n(t, 'snatch')}`,
-    `Setbacks: Guard took it back ${n(t, 'setback:whistle')} · sprayed ${n(t, 'setback:spray')} · flew back with P ${n(t, 'flyBack')}`,
+    `Setbacks: ${[n(t, 'setback:whistle') && `Guard took it back ${n(t, 'setback:whistle')}`, n(t, 'setback:spray') && `sprayed ${n(t, 'setback:spray')}`, n(t, 'flyBack') && `flew back with P ${n(t, 'flyBack')}`].filter(Boolean).join(' · ') || 'none'}`,
     `Help used: compass ${n(t, 'compass')} · hints asked ${n(t, 'hintAsked')} · flyovers skipped ${n(t, 'flyoverSkipped')}`,
     `Options: relaxed play ${r.options.easy ? 'on' : 'off'} · hints ${r.options.hints} · ${r.options.device}`,
   );

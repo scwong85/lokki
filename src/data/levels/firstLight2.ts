@@ -185,6 +185,6 @@ export const FIRST_LIGHT_V2 = stage(1, 1, {
   strollers: 6,
   start: { x: -2, z: -26 },
   defense: false,
-  parTime: 540,
+  parTime: 420,
   reward: 'flight',
 });

@@ -80,6 +80,7 @@ describe('the playtest report (M121)', () => {
     expect(text).toContain('Longest without finding or serving a row: 3:10 (around x -96, z -62)');
     expect(text).toContain('Dives that missed a held item: 5 (body in the way 2) · snatches 4');
     expect(text).toContain('Guard took it back 1');
+    expect(playtestReport({ level: 'x', name: 'x', date: 'd', seconds: 1, cleared: true, rows: null, rowLines: [], tally: {}, longestStuck: null, options: { easy: false, hints: 'ladder', device: 'keyboard and mouse' } })).toContain('Setbacks: none');
     expect(text).toContain('compass 2');
   });
 });
