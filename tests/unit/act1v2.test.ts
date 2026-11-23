@@ -106,6 +106,19 @@ describe('the held things carry the tags the rows ask for', () => {
   });
 });
 
+describe('the ice cream kiosk of stage 1.4 (M124)', () => {
+  it('stands behind the station spot, on land, with the cones on its counter', () => {
+    const kiosk = ONE_BAD_AFTERNOON.decor!.find((d) => d.kind === 'kiosk')!;
+    const st = ONE_BAD_AFTERNOON.stations![0];
+    expect(kiosk).toBeTruthy();
+    expect(land(kiosk.x, kiosk.z)).toBe(true);
+    expect(Math.hypot(kiosk.x - st.x, kiosk.z - (st.z + (st.goods?.dz ?? 0)))).toBeLessThan(0.1);
+    const cones = (ONE_BAD_AFTERNOON.extraProps ?? []).filter((p) => p.type === 'icecream' && Math.abs(p.z - kiosk.z) < 0.1);
+    expect(cones.length).toBe(2);
+    for (const c of cones) expect(Math.abs(c.x - kiosk.x)).toBeLessThan(1.6); // on the counter (it is 3.2 m wide)
+  });
+});
+
 describe('one row opens the next course (M118)', () => {
   it('in the heist, one row of a course opens the following one, and the course is "served" at that moment', () => {
     const setup = levelSetup(MARKET_DAY_HEIST, QUESTS, TRIGGERS, TOURIST_SPAWNS, false);

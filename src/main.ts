@@ -1016,6 +1016,7 @@ function setupSwitches(): void {
     if (d.kind === 'ribbon') decorRibbons.push(view);
     if (d.kind === 'table' || d.kind === 'stall') decorBoxes.push(phys.addStaticBox(d.x, TABLE_TOP.y, d.z, TABLE_TOP.hx, TABLE_TOP.hy, TABLE_TOP.hz)); // (tables are not rotated in the levels that use them)
     if (d.kind === 'hall') decorBoxes.push(phys.addStaticBox(d.x, HALL.h / 2, d.z, HALL.hx, HALL.h / 2, HALL.hz)); // things put down on the roof stay there
+    if (d.kind === 'kiosk') decorBoxes.push(phys.addStaticBox(d.x, 0.54, d.z, 1.6, 0.54, 0.6)); // the goods on a kiosk counter stay on it
   }
   dominoes = [];
   swept.clear();

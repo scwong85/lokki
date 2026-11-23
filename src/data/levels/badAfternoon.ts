@@ -122,7 +122,8 @@ export const ONE_BAD_AFTERNOON = stage(1, 4, {
   triggers: [],
   extraTriggers: [served('mapper', 'icecream', 'moodCone'), served('inspector', 'bun', 'inspLunch'), served('dancer', 'icecream', 'danceCone'), served('waiter', 'bun', 'bellBun')],
   splatZones: shSplat(WET_FLOOR.splatZones, INSP_S),
-  decor: homeDecor,
+  // the ice cream kiosk the angry tourist is led to: its counter stands 3 m behind the station spot, where the goods lie (the stalls of the old level came with the city)
+  decor: [...homeDecor, { kind: 'kiosk' as const, x: STALL[0].x, z: STALL[0].z + (STALL[0].goods?.dz ?? 0) }],
   stations: STALL,
   switches: [...shSwitches(JUKEBOX_HERO.switches, JUKE_S), ...shSwitches(SERVICE_BELL.switches, BELL_S), gongSwitch('tea gong')],
   reactions: [
