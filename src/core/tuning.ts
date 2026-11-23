@@ -59,8 +59,8 @@ export const tuning = {
     pullOutRate: p(30, 5, 100, 1), // how fast falling speed bleeds off after a dive
     pullUpRatio: p(0.25, 0, 1, 0.05), // share of dive speed turned into a swoop up on release
     hitForgiveness: p(1.2, 0, 3, 0.1), // extra target radius for dive hits
-    assistStrength: p(0.6, 0, 1, 0.05), // 0 = no aim assist
-    assistConeDeg: p(20, 0, 45, 1), // targets inside this cone around the dive line get assist
+    assistStrength: p(0.8, 0, 1, 0.05), // 0 = no aim assist (M119: 0.6 -> 0.8)
+    assistConeDeg: p(28, 0, 45, 1), // (M119: 20 -> 28) // targets inside this cone around the dive line get assist
     assistRange: p(70, 10, 150, 1),
   },
   landing: {
@@ -259,6 +259,8 @@ export const tuning = {
     hearRange: p(24, 5, 60, 1),
     distractTime: p(2.5, 0.5, 8, 0.1),
     snatchReach: p(1.2, 0.5, 3, 0.1),
+    diveSnatchReach: p(2.0, 0.5, 4, 0.1), // a diving beak takes it from further (M119: dive snatches were missing by a hair)
+    diveBodyBlock: p(0.55, 0, 1, 0.05), // how much of the body still blocks a diving beak (1 = all of it, as on foot)
     panicTime: p(1.8, 0.3, 6, 0.1),
     chaseTime: p(4, 1, 12, 0.5),
     recoverTime: p(3, 0.5, 10, 0.5),

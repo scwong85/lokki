@@ -1,3 +1,4 @@
+import { lookFor, OLD_ROLES } from './look';
 import { watchedGull } from './coopPlay';
 import * as THREE from 'three';
 import type { NpcSnap } from '../net/snapshot';
@@ -69,7 +70,7 @@ export class NpcManager implements NpcHooks {
   spawn(sp: NpcSpawn): Npc {
     const n = newNpc(this.nextId++, sp);
     this.spawns.set(n.id, sp);
-    const model = new NpcModel(sp.color, n.id, { hat: sp.hat, hatColor: sp.hatColor, name: sp.name });
+    const model = new NpcModel(sp.color, n.id, { hat: sp.hat, hatColor: sp.hatColor, name: sp.name, look: lookFor(sp, n.id), old: !!sp.role && OLD_ROLES.has(sp.role) });
     model.root.scale.setScalar(sp.scale ?? 1);
     this.parent.add(model.root);
     this.models.set(n.id, model);
@@ -258,7 +259,7 @@ export class NpcManager implements NpcHooks {
       if (n.holding !== null && s.diveAngle > (t.maxAngleDeg.value * Math.PI) / 180) {
         const h = handPos(n);
         const beak = { x: s.x - Math.sin(s.heading) * 0.85, y: s.y + 0.05, z: s.z - Math.cos(s.heading) * 0.85 };
-        if (Math.hypot(beak.x - h.x, beak.y - h.y, beak.z - h.z) <= tuning.npc.snatchReach.value * 2) continue;
+        if (Math.hypot(beak.x - h.x, beak.y - h.y, beak.z - h.z) <= Math.max(tuning.npc.snatchReach.value * 2, tuning.npc.diveSnatchReach.value * 1.25)) continue;
       }
       this.knock(n, dir, 0);
       hit = true;
@@ -969,10 +970,10 @@ export class NpcManager implements NpcHooks {
   }
 
   // ---- NpcHooks (used by Interaction) ----
-  snatchCandidates(beak: { x: number; y: number; z: number }): GrabCandidate[] {
+  snatchCandidates(beak: { x: number; y: number; z: number }, diving = false): GrabCandidate[] {
     const out: GrabCandidate[] = [];
     for (const n of this.npcs) {
-      if (n.holding === null || !snatchable(n, beak)) continue;
+      if (n.holding === null || !snatchable(n, beak, diving)) continue;
       const prop = this.props.byId(n.holding);
       if (!prop || prop.def.grab === 'ground') continue; // only a tug takes this one
       const h = handPos(n);

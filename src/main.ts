@@ -216,7 +216,7 @@ const stepNoises: Noise[] = [];
 if (npcs) {
   let nTourist = 0;
   interaction.npcs = {
-    snatchCandidates: (b) => npcs.snatchCandidates(b),
+    snatchCandidates: (b, d) => npcs.snatchCandidates(b, d),
     onSnatched: (id) => npcs.onSnatched(id),
     onGroundPickup: (id) => npcs.onGroundPickup(id),
     tugCandidates: (b) => npcs.tugCandidates(b),

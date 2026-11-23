@@ -37,6 +37,10 @@ export interface NpcModelOptions {
   hatColor?: number;
   /** Trouser colour (else seeded). */
   pants?: number;
+  /** 'f': long hair (or a bun) and a skirt, so women read as women (M119). */
+  look?: 'f' | 'm';
+  /** An older person: grey hair, worn in a bun. */
+  old?: boolean;
 }
 
 const mat = (c: number) => new THREE.MeshLambertMaterial({ color: c, flatShading: true });
@@ -58,6 +62,9 @@ export class NpcModel {
     foreR: THREE.Bone;
     headTop: THREE.Bone;
     hat: THREE.Object3D | null;
+    hair: THREE.Object3D | null;
+    skirt: THREE.Object3D | null;
+    hips: THREE.Bone;
     lastTime: number;
   } | null = null;
   private body = new THREE.Group();
@@ -110,7 +117,15 @@ export class NpcModel {
       hat = this.hatMesh({ ...opts, hat: hatKind });
       this.root.add(hat);
     }
-    this.skinned = { mixer, actions, current: 'idle', armL: bones.LeftArm, foreL: bones.LeftForeArm, armR: bones.RightArm, foreR: bones.RightForeArm, headTop: bones.HeadTop_End, hat, lastTime: -1 };
+    const outfit = outfitFor(seed, color, opts.pants);
+    let hair: THREE.Object3D | null = null;
+    let skirt: THREE.Object3D | null = null;
+    if (opts.look === 'f') {
+      hair = hairMesh(opts.old ? 0xdcdcdc : outfit.hair, !!opts.old, !!hatKind);
+      skirt = skirtMesh(outfit.pants);
+      this.root.add(hair, skirt);
+    }
+    this.skinned = { mixer, actions, current: 'idle', armL: bones.LeftArm, foreL: bones.LeftForeArm, armR: bones.RightArm, foreR: bones.RightForeArm, headTop: bones.HeadTop_End, hat, hair, skirt, hips: bones.Hips, lastTime: -1 };
   }
 
   private hatMesh(opts: NpcModelOptions): THREE.Object3D {
@@ -165,6 +180,13 @@ export class NpcModel {
     hat.position.y = 2.0;
     const upper = new THREE.Group();
     upper.add(torso, head, hat);
+    if (opts.look === 'f') {
+      const hair = hairMesh(opts.old ? 0xdcdcdc : 0x6b4a2b, !!opts.old, true);
+      hair.position.y = 2.04;
+      const skirt = skirtMesh(0x6d7a99);
+      skirt.position.y = 0.95;
+      upper.add(hair, skirt);
+    }
     this.body.add(mergeColored(upper));
 
     for (const [arm, side] of [[this.armL, -1], [this.armR, 1]] as [THREE.Group, number][]) {
@@ -357,11 +379,50 @@ export class NpcModel {
       const dir = new THREE.Vector3(n.hand.x, n.hand.y, n.hand.z).sub(shoulder);
       if (dir.lengthSq() > 1e-6) aimBone(k.armR, k.foreR, dir.normalize(), 1);
     } else if (armRaise > 0.01) aimBone(k.armR, k.foreR, up, Math.min(1, armRaise));
-    if (k.hat) {
-      const p = k.headTop.getWorldPosition(new THREE.Vector3());
-      k.hat.position.copy(this.root.worldToLocal(p));
+    if (k.hat || k.hair) {
+      const p = this.root.worldToLocal(k.headTop.getWorldPosition(new THREE.Vector3()));
+      k.hat?.position.copy(p);
+      k.hair?.position.copy(p);
     }
+    if (k.skirt && k.hips) k.skirt.position.copy(this.root.worldToLocal(k.hips.getWorldPosition(new THREE.Vector3())));
   }
+}
+
+/**
+ * Long hair (or an older person's bun), placed at the top of the head: a cap over the crown and hair falling down the back (the model faces
+ * -Z). Under a hat only what shows below the brim.
+ */
+export function hairMesh(colour: number, old: boolean, hatted: boolean): THREE.Object3D {
+  const g = new THREE.Group();
+  const m = mat(colour);
+  if (!hatted) {
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 7, 0, Math.PI * 2, 0, Math.PI * 0.55), m);
+    cap.scale.set(1.08, 0.9, 1.12);
+    cap.position.set(0, -0.11, 0.015);
+    g.add(cap);
+  }
+  if (old) {
+    const bun = new THREE.Mesh(new THREE.SphereGeometry(0.085, 8, 6), m);
+    bun.position.set(0, -0.07, 0.16);
+    g.add(bun);
+  } else {
+    const fall = new THREE.Mesh(new THREE.BoxGeometry(0.29, 0.34, 0.09), m);
+    fall.position.set(0, -0.3, 0.1);
+    const ends = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.12, 0.08, 8), m);
+    ends.scale.z = 0.5;
+    ends.position.set(0, -0.48, 0.1);
+    g.add(fall, ends);
+  }
+  return mergeColored(g);
+}
+
+/** A flared skirt from the hips to the knees, in the trouser colour. */
+export function skirtMesh(colour: number): THREE.Object3D {
+  const s = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.3, 0.5, 10), mat(colour));
+  s.position.y = -0.2;
+  const g = new THREE.Group();
+  g.add(s);
+  return mergeColored(g);
 }
 
 const _q = new THREE.Quaternion();

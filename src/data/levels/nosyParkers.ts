@@ -71,7 +71,7 @@ export const NOSY_PARKERS: LevelDef = {
   triggers: [],
   tourists: [],
   extraTourists: [
-    { x: WATCHER.x, z: WATCHER.z, heading: 0, ice: true, holdTag: 'watchCone', stationary: true, color: 0xff8fa3 },
+    { x: WATCHER.x, z: WATCHER.z, heading: 0, ice: true, holdTag: 'watchCone', look: 'f', stationary: true, color: 0xff8fa3 },
     { x: -14, z: -22, heading: 0.6, ice: true, color: 0x7fd1ae },
     { x: 26, z: -20, heading: -1.2, ice: true, color: 0xffc971 },
     { x: -2, z: -26, heading: 2.4, ice: true, color: 0x9ec9f0 },
