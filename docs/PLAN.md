@@ -245,7 +245,8 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [ ] M111 Picnic engine: courses, waiting ritual, thrown-only bell, the Market Guard, time per row (built on `m111-picnic-engine`, merged)
 - [ ] M112 Stage 1.2 The Gull Picnic, version two: spread out, chained rows, three courses, the Guard, the pigeon race, the raid take-back (built on `m112-picnic-content`)
 
-- [ ] M119 Easier dive snatch (reach 2 m, less body in the way, stronger aim assist); women get long hair or a bun and a skirt (built on `m119-snatch-people`)
+- [ ] M120 Playability: row compass, near-miss feedback, waits line, course next line, relaxed play, fly back (P); the first level's ferry fixed (built on `m120-playability`)
+- [ ] M119 Easier dive snatch (reach 2 m, less body in the way, stronger aim assist); women get long hair or a bun and a skirt (built on `m119-snatch-people`, merged)
 - [ ] M118 Playtest fixes: Bottle Service, courses that open early, a softer 1.3 (built on `m118-playtest-fixes`, merged)
 - [ ] M115 to M117 Act 1 on the new formula: 1.3 Market Day Heist, 1.4 One Bad Afternoon, 1.5 The Warden, old chains moved across the map (built on `m115-act1-v2`)
 - [ ] M114 Stage 1.1 First Light, version two: Breakfast on the Roof, four rows in two courses (built on `m114-first-light-v2`)

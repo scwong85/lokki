@@ -1,3 +1,4 @@
+import { heatScale } from '../core/assist';
 import { tuning } from '../core/tuning';
 
 export type HeatReason = 'noticed' | 'snatch' | 'poopNpc' | 'break' | 'tipped' | 'clatter';
@@ -50,7 +51,7 @@ export class Heat {
 
   add(reason: HeatReason): TierChange | null {
     this.unseenT = 0;
-    return this.set(this.value + this.gain(reason));
+    return this.set(this.value + this.gain(reason) * heatScale());
   }
 
   /** Make sure the city is at least this worked up (a quest starting). */

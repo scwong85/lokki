@@ -49,7 +49,7 @@ export const BREAKFAST_QUEST: QuestDef = {
     marker: { x: PICNIC.x, z: PICNIC.z, r: 3.5, y: PICNIC.y, label: 'Breakfast' },
     courses: [
       { name: 'Early birds', unlock: '' },
-      { name: 'Second helping', unlock: 'opens when the early birds are served' },
+      { name: 'Second helping', unlock: 'opens when the early birds are served', where: 'the ferry berth by the roof, and a bench far to the north-east.' },
     ],
   },
   objectives: [

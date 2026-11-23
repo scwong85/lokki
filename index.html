@@ -202,7 +202,7 @@
       body.outro::before, body.outro::after { content: ''; position: fixed; left: 0; right: 0; height: 11vh; background: #000; z-index: 45; pointer-events: none; animation: outro-bar .6s ease-out both; }
       body.outro::before { top: 0; } body.outro::after { bottom: 0; --from: 100%; }
       @keyframes outro-bar { from { transform: translateY(var(--from, -100%)); } to { transform: none; } }
-      body.outro #todo, body.outro #tip, body.outro #hud, body.outro #waypoints, body.outro #heat, body.outro #minitimer, body.outro #announce, body.outro .toast { display: none !important; }
+      body.outro #todo, body.outro #tip, body.outro #hud, body.outro #waypoints, body.outro #heat, body.outro #minitimer, body.outro #waits, body.outro #announce, body.outro .toast { display: none !important; }
       /* software-rendered test browsers cannot afford the animations: they get the end state instead */
       body.no-anim .lc-photo, body.no-anim .lc-stamp, body.no-anim.outro::before, body.no-anim.outro::after { animation: none !important; }
       body.no-anim .lc-stamp { opacity: .85; } body.no-anim #polaroid-pop { display: none !important; }
@@ -253,6 +253,8 @@
       body.hud-minimal #heat { width: 160px; padding: 3px 8px; }
       body.hud-off #todo, body.hud-off #heat, body.hud-off #announce, body.hud-off #tip, body.hud-off #waypoints { display: none !important; }
       #minitimer { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); padding: 3px 12px; border-radius: 12px; background: rgba(255,255,255,.8); color: #3a3a4a; font: 700 15px system-ui, sans-serif; pointer-events: none; z-index: 20; }
+      #waits { position: fixed; top: 40px; left: 50%; transform: translateX(-50%); padding: 3px 12px; border-radius: 12px; background: rgba(255,248,225,.85); color: #4a4033; font: 600 13px system-ui, sans-serif; pointer-events: none; z-index: 20; white-space: nowrap; }
+      #waits[hidden] { display: none; }
       #minitimer[hidden] { display: none; } #minitimer.low { color: #d6453d; }
       .hudbtn { font: inherit; padding: 4px 14px; border: 0; border-radius: 8px; background: #fff3c4; color: #3a3a4a; cursor: pointer; }
       #touch .t-hud { left: calc(10px + env(safe-area-inset-left)); top: 60px; width: 44px; height: 30px; border-radius: 15px; font-size: 11px; }

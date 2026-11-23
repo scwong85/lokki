@@ -88,6 +88,14 @@ export class CityDefense {
   private clock = 0;
   private lunchOn = false;
 
+  /** Seconds until the Warden's next lunch break (0 while he is at lunch); null without one (M120: waits are shown). */
+  lunchIn(): number | null {
+    const l = this.lunch;
+    if (!l || !this.warden) return null;
+    if (this.lunchOn) return 0;
+    return nextWindow(this.clock, l.from, l.to - l.from, l.repeat);
+  }
+
   /** A reaction wakes the Warden's anger: he sets off after the gull (alert, then hunt). */
   alertWarden(): void {
     const w = this.warden;
@@ -632,4 +640,12 @@ export class CityDefense {
     this.scareCd = 0;
     this.rng = createRng(this.seed);
   }
+}
+
+/** Seconds from `clock` until a window that opens at `from` (lasting `len`, again every `repeat`) next opens; 0 inside one; null once it is over for good. */
+export function nextWindow(clock: number, from: number, len: number, repeat?: number): number | null {
+  if (clock < from) return from - clock;
+  if (!repeat) return clock < from + len ? 0 : null;
+  const into = (clock - from) % repeat;
+  return into < len ? 0 : repeat - into;
 }

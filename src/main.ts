@@ -84,6 +84,13 @@ import { activeMarkers } from './gameplay/questMarkers';
 import type { Marker } from './data/quests';
 import { MarkerPool } from './render/markers';
 import { ladderSteps } from './gameplay/hintLadder';
+import { RowCompass } from './gameplay/collection';
+const compass = new RowCompass();
+import { DiveReview } from './gameplay/diveReview';
+const diveReview = new DiveReview();
+/** After a setback, P flies the gull back to the row (M120). */
+let backOffer: { x: number; z: number; until: number } | null = null;
+import { waitLine } from './gameplay/waits';
 import { buildDecor, setRibbonCut, TABLE_TOP, HALL } from './render/decor';
 import { poisFor } from './data/pois';
 import { strollerCount, strollerSpawns } from './gameplay/crowd';
@@ -380,7 +387,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { scene, gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get gate() { return gate; }, applyGates, get hidden() { return hiddenNow(gull.state); }, get playtest() { return playtest; }, strikePose: (k: string) => strikePose(players[0], k), photoPoses, get switches() { return level.switches ?? []; }, peckNow: () => { const sw = switchNear(gull.state); if (sw) peck(sw, players[0]); return !!sw; }, get tugProgress() { return interaction.tugProgress(0); }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get rowTimes() { return rowTimes; }, tuning, get race() { return race; }, get raid() { return raid; }, get picnicGuests() { return guests; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { scene, gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get gate() { return gate; }, applyGates, get hidden() { return hiddenNow(gull.state); }, get playtest() { return playtest; }, strikePose: (k: string) => strikePose(players[0], k), photoPoses, get switches() { return level.switches ?? []; }, peckNow: () => { const sw = switchNear(gull.state); if (sw) peck(sw, players[0]); return !!sw; }, get tugProgress() { return interaction.tugProgress(0); }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get rowTimes() { return rowTimes; }, tuning, get race() { return race; }, get raid() { return raid; }, get picnicGuests() { return guests; }, get timetable() { return timetable; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -552,6 +559,11 @@ const optionsPanel = new OptionsPanel(document.body, options, (o) => {
 // automated browser tests skip the title screen and the tips (add ?title to see them)
 const interactive = !navigator.webdriver || new URLSearchParams(location.search).has('title');
 const tutorial = new Tutorial(interactive && !options.tutorialDone);
+/** The waits line (M120): the ferry and the Warden's lunch, counting down. */
+const waitsEl = document.createElement('div');
+waitsEl.id = 'waits';
+waitsEl.hidden = true;
+document.body.appendChild(waitsEl);
 const miniTimer = document.createElement('div');
 miniTimer.id = 'minitimer';
 miniTimer.hidden = true;
@@ -1234,6 +1246,28 @@ function guardWhistle(e: Extract<NpcEvent, { type: 'whistle' }>): void {
   emoteAtNpc(e.npc, 'alert');
   for (const o of npcs.near(e.npc.x, e.npc.z, 16)) if (o !== e.npc) emoteAtNpc(o, 'alert'); // everyone looks
   notes(quests.onEvent(`whistle:${e.npc.role}`));
+  if (e.gull === 0) offerBack(loot.tag);
+}
+
+/** After a setback (the Guard took it back, a spray), P flies the gull back to the row it was working on (M120). */
+function offerBack(tag?: string): void {
+  let row: { x: number; z: number; owner: string } | null = null;
+  for (const d of setup.quests) {
+    if (!d.collect) continue;
+    for (const od of d.objectives) {
+      if (!od.row) continue;
+      if ((tag && od.row.tag === tag) || (!tag && todo.scout.focus === `${d.id}:${od.id}`)) row = { x: od.row.reveal.x, z: od.row.reveal.z, owner: od.row.owner };
+    }
+  }
+  if (!row || Math.hypot(row.x - gull.state.x, row.z - gull.state.z) < 25) return; // already close: nothing to save
+  backOffer = { x: row.x, z: row.z, until: simTime + tuning.hints.backOfferSeconds.value };
+  hud.toast(`Press P to fly back to ${row.owner}.`, 3.5);
+}
+function takeBack(): void {
+  if (!backOffer || simTime > backOffer.until) return;
+  Object.assign(gull.state, { x: backOffer.x, y: Math.max(12, gull.state.y), z: backOffer.z + 8, vx: 0, vy: 0, vz: 0, mode: 'air', stunT: 0 });
+  backOffer = null;
+  audio.play('pop');
 }
 function watchersCatch(): void {
   if (!npcs || isGuest()) return;
@@ -2048,6 +2082,9 @@ function restartLevel(mode: 'normal' | 'speedrun'): void {
   chain.reset();
   nudge.poke();
   todo.ladder.reset();
+  compass.reset();
+  diveReview.reset();
+  backOffer = null;
   todo.scout.reset();
   rowTimes.reset();
   timetable = level.timetable?.length ? new Timetable(level.timetable, 17, level.ferryGap) : null;
@@ -2345,6 +2382,7 @@ function onDefense(evs: DefenseEvent[]): void {
           hud.toast('Slipped through!', 0.8);
           break;
         }
+        if (e.hit.kind === 'spray' && e.gull === 0) offerBack();
         if (e.hit.kind === 'spray' && interaction.tugProgress(e.gull) !== null) {
           interaction.interruptTug(e.gull); // sprayed in the middle of a tug: you lose it
           hud.toast('Sprayed mid-tug! They keep it.', 1.6);
@@ -2457,7 +2495,8 @@ function notes(list: QuestNote[]): void {
       // a course of a collection is served (M111): a cheer, and the world moves on (the ferry crowd, the Guard starts his rounds)
       const cname = def.collect?.courses?.[n.course - 1]?.name ?? `Course ${n.course}`;
       rowTimes.course(n.course, stats.summary().seconds);
-      hud.toast(`${cname} served!`, 2.6);
+      const nextC = def.collect?.courses?.[n.course];
+      hud.toast(nextC?.where ? `${cname} served! Next, ${nextC.name}: ${nextC.where}` : `${cname} served!`, nextC?.where ? 4.5 : 2.6);
       audio.play('chime');
       fx('confetti', { x: gull.state.x, y: gull.state.y + 1.2, z: gull.state.z }, 0.8);
       notes(quests.onEvent(`courseServed:${n.course}`));
@@ -2886,6 +2925,7 @@ function onGags(gags: GagEvent[]): void {
   }
 }
 
+timetable = level.timetable?.length ? new Timetable(level.timetable, 17, level.ferryGap) : null; // M120: the first level of a session had no ferries until a restart
 applyLevelRules(); // the first level's own rules (heat, lunch, current)
 
 startLoop({
@@ -3002,6 +3042,7 @@ startLoop({
       if (isGuest()) net!.tap('KeyV'); // the host makes the noise
       else mimic(gull, cam.yaw);
     }
+    if (!blocked && input.wasPressed('KeyP') && !isGuest()) takeBack();
     if (!blocked && input.wasPressed('KeyG') && skills.has('flock') && abilities.use('flock')) {
       if (isGuest()) net!.tap('KeyG');
       else flockCall(gull, cam.yaw);
@@ -3295,6 +3336,26 @@ startLoop({
     // quest spots, plus a marker on any item that was knocked out of the beak (so it can never be lost)
     const markers: Marker[] = greybox ? [] : activeMarkers(setup.quests, quests.quests, false, rungOf);
     const labelled = hudF.waypoints === 'all' ? markers : hudF.waypoints === 'active' ? activeMarkers(setup.quests, quests.quests, true, rungOf) : [];
+    // the row compass (M120): stuck for a while with rows still unfound, a marker points at the nearest one
+    const lost = greybox || levelCleared ? null : compass.update(frameDt, tuning.hints.compassAfter.value, setup.quests, quests.quests, todo.scout, gull.state);
+    // the waits line (M120): only for the waits a stage's to-dos depend on
+    {
+      const ferry = timetable && (level.reactions ?? []).some((r) => r.on === 'ferryIn') ? timetable.nextIn('ferry') : null;
+      const line = levelCleared ? '' : waitLine({ ferry, lunch: defense?.lunchIn() ?? null });
+      waitsEl.hidden = !line;
+      if (line && waitsEl.textContent !== line) waitsEl.textContent = line;
+    }
+    // near-miss feedback (M120): a dive at a held item that came away empty says why
+    {
+      const st = gull.state;
+      const miss = diveReview.step(st.mode === 'dive', !!interaction.carried, npcs && st.mode === 'dive' ? npcs.nearestHand(interaction.beakPos(st)) : null, tuning.npc.diveSnatchReach.value, tuning.npc.nearMissRange.value);
+      if (miss && !levelCleared) hud.toast(miss, 2.6);
+    }
+    if (lost) {
+      const m: Marker = { x: lost.x, z: lost.z, r: 6, label: '??? Something here' };
+      markers.push(m);
+      if (hudF.waypoints === 'active') labelled.push(m);
+    }
     // a small timer on its own when the to-do note is hidden
     const timed = hudF.miniTimer ? quests.quests.find((q) => q.status === 'active' && q.timed) : undefined;
     miniTimer.hidden = !timed;

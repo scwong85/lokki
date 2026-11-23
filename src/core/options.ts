@@ -1,4 +1,5 @@
 import { tuning } from './tuning';
+import { assist } from './assist';
 import { COMFORT, comfort, type CamFollow, type Comfort } from './comfort';
 import type { StorageLike } from './save';
 import { HINT_MODES, type HintMode } from '../gameplay/hintLadder';
@@ -37,6 +38,8 @@ export interface Options {
   invertY: boolean;
   smoothSteer: boolean;
   camFollow: CamFollow;
+  /** Relaxed play: people see less far, snatches reach further, the city heats up more slowly (M120). */
+  easy: boolean;
 }
 
 export const defaultOptions = (): Options => ({
@@ -60,6 +63,7 @@ export const defaultOptions = (): Options => ({
   invertY: false,
   smoothSteer: true,
   camFollow: 'gentle',
+  easy: false,
 });
 
 const RANGES = {
@@ -92,6 +96,7 @@ export function sanitizeOptions(raw: unknown, base: Options = defaultOptions()):
   o.invertY = r.invertY === true;
   o.smoothSteer = r.smoothSteer !== false;
   o.camFollow = r.camFollow === 'off' || r.camFollow === 'strong' ? r.camFollow : 'gentle';
+  o.easy = r.easy === true;
   o.hud = HUD_MODES.includes(r.hud as HudMode) ? (r.hud as HudMode) : 'full';
   return o;
 }
@@ -110,6 +115,7 @@ export function applyOptions(o: Options): void {
   comfort.invertY = o.invertY;
   comfort.smoothSteer = o.smoothSteer;
   comfort.follow = o.camFollow;
+  assist.easy = o.easy;
 }
 
 export class OptionsStore {
