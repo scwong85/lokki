@@ -135,7 +135,7 @@ test('1.2 The Gull Picnic, version two: three courses, chained rows, the Guard, 
     if (n) n.holding = null;
     (x.interaction.props as unknown as { drop(p: unknown, v: V3): void }).drop(pie, { x: 0, y: 0, z: 0 });
     (pie as unknown as { byGull: boolean }).byGull = true;
-    pie.body.setTranslation({ x: BLANKET.x + 1, y: BLANKET.y + 0.6, z: BLANKET.z - 1 }, true);
+    pie.body.setTranslation({ x: -14 + 1, y: 4.8 + 0.6, z: -17 - 1 }, true); // (the roof blanket)
     pie.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
     return 0;
   });
