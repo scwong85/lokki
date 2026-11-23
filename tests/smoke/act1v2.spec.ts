@@ -14,6 +14,7 @@ type Lk = {
   npcs: { npcs: Npc[]; onSnatched(id: number): void; stations: { x: number; z: number }[] };
   picnicGuests: { count: number } | null;
   peckNow(): boolean;
+  honkNow(): void;
 };
 const L = (page: Page) => <T, A = undefined>(fn: (l: Lk, a: A) => T, arg?: A) =>
   page.evaluate(([src, a]) => new Function('l', 'a', `return (${src})(l, a)`)((window as unknown as { __lokki: Lk }).__lokki, a), [fn.toString(), arg] as [string, unknown]) as Promise<Awaited<T>>;
@@ -50,7 +51,7 @@ test('1.3 Market Day Heist: six rows in three courses, the city on guard, the bu
   test.setTimeout(900_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  const { l, status, row, toRoof, gullTo, note, guests } = await open(page, 'a1s3');
+  const { l, status, row, toRoof, gullTo, npc, note, guests } = await open(page, 'a1s3');
   expect(await l((x) => x.gate)).toEqual({ arc: 1, stage: 3 });
   await expect.poll(note, { timeout: 30_000 }).toContain('Market Day Heist 0 / 7');
   const text = await note();

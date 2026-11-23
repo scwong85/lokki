@@ -131,9 +131,9 @@ test('1.2 The Gull Picnic, version two: three courses, chained rows, the Guard, 
   // the Pie Man: a splat from above makes him forget his pie (the held item is taken as a snatch would)
   await l((x) => {
     const pie = x.interaction.props.props.find((q) => q.tag === 'dessertPie')!;
-    const n = x.npcs.npcs.find((m) => m.holding === pie.id) as unknown as { holding: number | null } | undefined;
+    const n = (x.npcs.npcs as unknown as { holding: number | null }[]).find((m) => m.holding === pie.id);
     if (n) n.holding = null;
-    x.interaction.props.drop(pie as never, { x: 0, y: 0, z: 0 });
+    (x.interaction.props as unknown as { drop(p: unknown, v: V3): void }).drop(pie, { x: 0, y: 0, z: 0 });
     (pie as unknown as { byGull: boolean }).byGull = true;
     pie.body.setTranslation({ x: BLANKET.x + 1, y: BLANKET.y + 0.6, z: BLANKET.z - 1 }, true);
     pie.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
