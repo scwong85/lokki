@@ -207,6 +207,11 @@ export const tuning = {
     backOfferSeconds: p(8, 2, 30, 1), // after a setback, how long P flies the gull back to the row (M120)
     compassAfter: p(60, 10, 300, 5), // seconds without finding or serving a row before a marker points at the nearest row not found yet (M120)
   },
+  flyover: {
+    perSpot: p(2.5, 0, 6, 0.1), // seconds the camera shows each place of a course that just opened (0 = no flyover) (M121)
+    height: p(22, 8, 60, 1),
+    back: p(20, 6, 60, 1),
+  },
   assist: {
     reach: p(1.4, 1, 3, 0.05), // relaxed play: snatch reach multiplier
     sight: p(0.7, 0.3, 1, 0.05), // relaxed play: how far people see, multiplier

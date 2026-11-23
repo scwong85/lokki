@@ -116,10 +116,13 @@ export const courseCount = (def: QuestDef): number => def.objectives.reduce((m, 
 export class RowCompass {
   private idle = 0;
   private sig = '';
+  /** The longest stretch without progress so far, and where the gull was at its end (the playtest report, M121). */
+  longest: { seconds: number; x: number; z: number } | null = null;
 
   reset(): void {
     this.idle = 0;
     this.sig = '';
+    this.longest = null;
   }
 
   /** `after`: seconds without progress before it points. Returns the spot to point at, or null. */
@@ -145,6 +148,7 @@ export class RowCompass {
       this.idle = 0;
     }
     this.idle += dt;
+    if (!this.longest || this.idle > this.longest.seconds) this.longest = { seconds: this.idle, x: gull.x, z: gull.z };
     if (!best || this.idle < after) return null;
     const b = best as { x: number; z: number };
     return { x: b.x, z: b.z };
