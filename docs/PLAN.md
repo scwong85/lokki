@@ -246,7 +246,6 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [ ] M112 Stage 1.2 The Gull Picnic, version two: spread out, chained rows, three courses, the Guard, the pigeon race, the raid take-back (built on `m112-picnic-content`)
 
 - [ ] M122 Land here: hold S to glide onto any spot, stick the landing, ledge guard (built on `m122-landing`)
-- [ ] M122 Land here: hold S to glide onto any spot, stick the landing, ledge guard (built on `m122-landing`)
 - [ ] M121 Resume a stage, the course flyover, the playtest report (built on `m121-resume-flyover-report`, merged)
 - [ ] M120 Playability: row compass, near-miss feedback, waits line, course next line, relaxed play, fly back (P); the first level's ferry fixed (built on `m120-playability`, merged)
 - [ ] M119 Easier dive snatch (reach 2 m, less body in the way, stronger aim assist); women get long hair or a bun and a skirt (built on `m119-snatch-people`, merged)
