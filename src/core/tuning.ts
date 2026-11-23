@@ -77,6 +77,27 @@ export const tuning = {
     assistHeight: p(2.5, 0, 8, 0.1), // flare sink applies within this height
     bonkSpeed: p(9, 2, 30, 0.5), // wall/ceiling impact that stuns
     bonkStun: p(0.6, 0, 3, 0.05),
+    // "Land here" (M122, docs/design/landing.md): hold S with a landing spot ahead and the gull flies a braking arc onto it
+    spotRange: p(22, 8, 50, 1), // how far ahead a landing spot can be (m)
+    spotConeDeg: p(35, 5, 80, 1), // how far off the heading it can be
+    spotMinDrop: p(0.8, 0.2, 3, 0.1), // the gull must be at least this high above the spot's top
+    spotMaxSlope: p(0.75, 0.2, 1.5, 0.05), // height above the spot / distance: steeper than this is not reachable yet
+    spotFlat: p(1.2, 0.2, 3, 0.1), // a spot needs flat top this far round it (perch tops are exempt: they may be tiny)
+    scanEvery: p(0.15, 0.05, 0.5, 0.01), // seconds between looking for a spot
+    approachSpeed: p(11, 4, 20, 0.5), // top speed of the approach
+    approachBrake: p(4.5, 1, 15, 0.1), // m/s²: it slows so that it arrives with no speed
+    approachMinSpeed: p(1.4, 0.3, 4, 0.1),
+    approachSink: p(8, 2, 14, 0.5), // fastest controlled descent (m/s)
+    approachClimb: p(4, 1, 10, 0.5), // fastest climb at the end of the dip
+    approachTurn: p(3.2, 1, 8, 0.1), // rad/s
+    dipDepth: p(1.4, 0, 4, 0.1), // how far under the spot's top the arc dips before gliding up to it (hawk style); 0 = straight glide
+    dipDist: p(7, 3, 14, 0.5), // where the dip is, in metres before the spot
+    dipEnd: p(2.5, 1, 6, 0.1), // the glide up is over this far before the spot (clear of a pillar's or roof's edge), then it settles
+    arrive: p(0.4, 0.1, 1, 0.05), // within this of the spot it settles
+    ledgeGuard: p(0.8, 0, 3, 0.1), // seconds after any landing that walking stops at an edge (perch tops always)
+    ledgePush: p(0.3, 0.05, 1, 0.05), // push outward this long to step off
+    ledgeDrop: p(0.6, 0.2, 2, 0.1), // a drop this deep counts as an edge
+    ledgeReach: p(0.3, 0.1, 1, 0.05), // how far ahead of its middle the gull looks for the edge
   },
   wind: {
     strength: p(3, 0, 15, 0.1),
