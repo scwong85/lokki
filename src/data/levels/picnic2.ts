@@ -68,8 +68,8 @@ export const PICNIC_V2_QUEST: QuestDef = {
     marker: { x: PICNIC.x, z: PICNIC.z, r: 3.5, y: PICNIC.y, label: 'The picnic' },
     courses: [
       { name: 'Starters', unlock: '' },
-      { name: 'Main course', unlock: 'opens when the starters are served' },
-      { name: 'Dessert', unlock: 'opens when the main course is served' },
+      { name: 'Main course', unlock: 'opens when the starters are served', where: 'the east quay, and the Guard\'s table south of the roof.' },
+      { name: 'Dessert', unlock: 'opens when the main course is served', where: 'a stall far to the east, and a kiosk to the north-west.' },
     ],
   },
   objectives: [

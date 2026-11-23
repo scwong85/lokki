@@ -81,9 +81,28 @@ import { distanceGain } from './core/spatial';
 import { TapHold } from './gameplay/tapHold';
 import { comfort, followYawStep, FOLLOW_RATE, LookSmoother, smoothAxis, vignetteAmount } from './core/comfort';
 import { activeMarkers } from './gameplay/questMarkers';
-import type { Marker } from './data/quests';
+import type { Marker, QuestDef } from './data/quests';
 import { MarkerPool } from './render/markers';
 import { ladderSteps } from './gameplay/hintLadder';
+import { RowCompass } from './gameplay/collection';
+const compass = new RowCompass();
+import { DiveReview } from './gameplay/diveReview';
+const diveReview = new DiveReview();
+/** After a setback, P flies the gull back to the row (M120). */
+let backOffer: { x: number; z: number; until: number } | null = null;
+let compassShown = false;
+import { waitLine } from './gameplay/waits';
+import { playtestReport } from './gameplay/report';
+import { rowCount } from './gameplay/collection';
+import { ResumeStore, applyResume, captureResume, resumeSummary, type ResumeData } from './gameplay/resume';
+const resumeStore = new ResumeStore((() => { try { return localStorage; } catch { return null; } })());
+/** Courses served in this run (the resume data, M121). */
+const coursesServed: number[] = [];
+import { Flyover } from './gameplay/flyover';
+import { courseRows } from './gameplay/collection';
+const flyover = new Flyover();
+/** Where the gull hangs while the flyover shows the way. */
+let flyoverHold: { x: number; y: number; z: number; mode: string; heading: number } | null = null;
 import { buildDecor, setRibbonCut, TABLE_TOP, HALL } from './render/decor';
 import { poisFor } from './data/pois';
 import { strollerCount, strollerSpawns } from './gameplay/crowd';
@@ -380,7 +399,7 @@ document.addEventListener('visibilitychange', () => {
     input.releaseVirtual();
   }
 });
-(window as unknown as { __lokki: unknown }).__lokki = { scene, gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get gate() { return gate; }, applyGates, get hidden() { return hiddenNow(gull.state); }, get playtest() { return playtest; }, strikePose: (k: string) => strikePose(players[0], k), photoPoses, get switches() { return level.switches ?? []; }, peckNow: () => { const sw = switchNear(gull.state); if (sw) peck(sw, players[0]); return !!sw; }, get tugProgress() { return interaction.tugProgress(0); }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get rowTimes() { return rowTimes; }, tuning, get race() { return race; }, get raid() { return raid; }, get picnicGuests() { return guests; }, get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
+(window as unknown as { __lokki: unknown }).__lokki = { scene, gull, cam, world, interaction, npcs, quests, get defense() { return defense; }, get kalle() { return kalleView?.kalle ?? null; }, noise, heat, triggers, stats, notes, skills, abilities, runTimer, flock, music, musicDirector, store, players, PeerLink, startSession, get net() { return net; }, get level() { return level.id; }, get quiet() { return { clock: quietClock, left: quietLeft }; }, get sunbathers() { return sunbathers; }, get dogs() { return dogs.map((d) => d.dog); }, get sprinklers() { return sprinklers; }, get render() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; }, get sky() { return sky; }, get polaroids() { return polaroids; }, get gate() { return gate; }, applyGates, get hidden() { return hiddenNow(gull.state); }, get playtest() { return playtest; }, strikePose: (k: string) => strikePose(players[0], k), photoPoses, get switches() { return level.switches ?? []; }, peckNow: () => { const sw = switchNear(gull.state); if (sw) peck(sw, players[0]); return !!sw; }, get tugProgress() { return interaction.tugProgress(0); }, get audio() { return audio; }, honkNow: () => honk(players[0]), cannonballAt: (x: number, z: number, impact: number) => cannonball(x, z, impact), ringBell, get outro() { return outro; }, finishLevelNow: () => checkLevelDone(), skies: SKIES, get havoc() { return havoc; }, get runLog() { return runLog; }, get emotes() { return emotes; }, get puffs() { return puffs; }, get passes() { return passes; }, get tangle() { return tangle; }, get tram() { return tram; }, get gang() { return gang; }, get rowTimes() { return rowTimes; }, tuning, get race() { return race; }, get raid() { return raid; }, get picnicGuests() { return guests; }, get timetable() { return timetable; }, get flyover() { return flyover; }, copyReport: () => buildReport(), get bell() { return { clock: bellClock, left: bellLeft }; }, loadLevel, snapshot: () => captureSnapshot(), saveData: () => save, restartLevel };
 const debug = new DebugPanel(document.body);
 debug.addButton('Reset saved progress', () => {
   store.clear();
@@ -548,10 +567,15 @@ const optionsPanel = new OptionsPanel(document.body, options, (o) => {
   hudF = applyHud(o.hud);
   touchControls?.setHand(o.touchHand);
   optStore.save(o);
-}, () => levelSelect.show(levelRows()), () => lobby.show(), () => skillsPanel.toggle(skills, save), () => controlsPanel.show(), () => touchControls?.arrange(true));
+}, () => levelSelect.show(levelRows()), () => lobby.show(), () => skillsPanel.toggle(skills, save), () => controlsPanel.show(), () => touchControls?.arrange(true), () => copyReport());
 // automated browser tests skip the title screen and the tips (add ?title to see them)
 const interactive = !navigator.webdriver || new URLSearchParams(location.search).has('title');
 const tutorial = new Tutorial(interactive && !options.tutorialDone);
+/** The waits line (M120): the ferry and the Warden's lunch, counting down. */
+const waitsEl = document.createElement('div');
+waitsEl.id = 'waits';
+waitsEl.hidden = true;
+document.body.appendChild(waitsEl);
 const miniTimer = document.createElement('div');
 miniTimer.id = 'minitimer';
 miniTimer.hidden = true;
@@ -700,7 +724,7 @@ const title = new TitleScreen(
 );
 if (interactive && !new URLSearchParams(location.search).has('play')) title.show();
 input.captureTab = () => !menuOpen();
-const menuOpen = (): boolean => title.visible || (lobby.visible && !net) || levelSelect.visible || optionsPanel.visible || controlsPanel.visible || skillsPanel.visible || credits.visible || !!touchControls?.menuOpen;
+const menuOpen = (): boolean => !resumeCard.hidden || title.visible || (lobby.visible && !net) || levelSelect.visible || optionsPanel.visible || controlsPanel.visible || skillsPanel.visible || credits.visible || !!touchControls?.menuOpen;
 const audio = new AudioManager();
 audio.muted = save.muted;
 for (const ev of ['pointerdown', 'touchend', 'keydown'] as const) addEventListener(ev, () => { audio.unlock(); music.start(); });
@@ -1204,6 +1228,7 @@ function askHint(): void {
     return;
   }
   const r = todo.ladder.ask(cur);
+  runLog.add(simTime, 'hintAsked');
   hud.toast(r >= 3 ? 'Here is how.' : r === 2 ? 'Look for the marker on the map.' : 'A hint appeared on the note.', 1.4);
 }
 todo.onAsk = askHint;
@@ -1234,6 +1259,114 @@ function guardWhistle(e: Extract<NpcEvent, { type: 'whistle' }>): void {
   emoteAtNpc(e.npc, 'alert');
   for (const o of npcs.near(e.npc.x, e.npc.z, 16)) if (o !== e.npc) emoteAtNpc(o, 'alert'); // everyone looks
   notes(quests.onEvent(`whistle:${e.npc.role}`));
+  if (e.gull === 0) offerBack(loot.tag);
+  runLog.add(simTime, 'setback:whistle', e.gull);
+}
+
+/** The playtest report (M121): copied to the clipboard from Options or the results card, to paste back to the developer. */
+function buildReport(): string {
+  const col = setup.quests.find((q) => q.collect);
+  const st = col ? quests.quests.find((q) => q.id === col.id) : undefined;
+  return playtestReport({
+    level: level.id,
+    name: level.name,
+    date: new Date().toISOString().slice(0, 10),
+    seconds: stats.summary().seconds,
+    cleared: levelCleared,
+    rows: col && st ? rowCount(col, st) : null,
+    rowLines: rowTimes.lines(col?.collect?.courses?.map((c) => c.name) ?? []),
+    tally: runLog.tally(),
+    longestStuck: col ? compass.longest : null,
+    options: { easy: options.easy, hints: options.hints, device: document.body.classList.contains('touch') ? 'touch' : 'keyboard and mouse' },
+  });
+}
+function copyReport(): void {
+  const text = buildReport();
+  const done = () => hud.toast('Playtest report copied: paste it into the chat.', 2.4);
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done, () => prompt('Copy the playtest report:', text));
+  else prompt('Copy the playtest report:', text);
+}
+
+/** Resume (M121): save the run of a collection stage after every row and course; offer it back when the stage is loaded again. */
+function saveResume(): void {
+  if (levelCleared || isGuest() || !setup.quests.some((q) => q.collect)) return;
+  resumeStore.save(captureResume(level.id, quests.quests, delivered, coursesServed));
+}
+const resumeCard = document.createElement('div');
+resumeCard.id = 'resume';
+resumeCard.className = 'menu-card';
+resumeCard.hidden = true;
+document.body.appendChild(resumeCard);
+function offerResume(): void {
+  resumeCard.hidden = true;
+  const automated = navigator.webdriver && !new URLSearchParams(location.search).has('resume');
+  const d = automated || isGuest() || players.length > 1 ? null : resumeStore.load(level.id);
+  if (!d) return;
+  resumeCard.innerHTML = `<h3>Continue ${level.name}?</h3><p>You left off with ${resumeSummary(d)}.</p><div class="title-row"><button class="big" data-r="go">Continue</button><button data-r="new">Start over</button></div>`;
+  resumeCard.hidden = false;
+  resumeCard.querySelector('[data-r=go]')!.addEventListener('click', () => {
+    resumeCard.hidden = true;
+    applyResumeData(d);
+  });
+  resumeCard.querySelector('[data-r=new]')!.addEventListener('click', () => {
+    resumeCard.hidden = true;
+    resumeStore.clear();
+  });
+}
+function applyResumeData(d: ResumeData): void {
+  applyResume(quests.quests, d);
+  const p = level.picnic;
+  d.rows.forEach((tag, i) => {
+    const prop = interaction.props.props.find((q) => q.tag === tag && !q.broken);
+    if (!prop || !p) return;
+    const owner = npcs?.npcs.find((m) => m.holding === prop.id);
+    if (owner) owner.holding = null;
+    interaction.props.drop(prop, { x: 0, y: 0, z: 0 });
+    prop.byGull = true;
+    const a = (i / Math.max(1, d.rows.length)) * Math.PI * 2;
+    prop.body.setTranslation({ x: p.x + Math.cos(a) * 1.4, y: p.y + 0.6, z: p.z + Math.sin(a) * 1.4 }, true);
+    prop.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    picnicRow(tag);
+  });
+  for (const c of d.courses) {
+    if (!coursesServed.includes(c)) coursesServed.push(c);
+    notes(quests.onEvent(`courseServed:${c}`)); // the world catches up: the ferry crowd, the Guard
+  }
+  hud.toast(`Welcome back: ${resumeSummary(d)}.`, 2.4);
+  saveResume();
+}
+
+/** Show the places of a course that just opened (M121); any key skips. Not in browser tests (?flyover turns it on) or for an online guest. */
+function startFlyover(def: QuestDef, course: number): void {
+  const t = tuning.flyover;
+  if (t.perSpot.value <= 0 || isGuest() || (navigator.webdriver && !new URLSearchParams(location.search).has('flyover'))) return;
+  const spots = courseRows(def, course).map((i) => def.objectives[i].row!.reveal);
+  if (!spots.length) return;
+  flyover.start(spots, t.perSpot.value, t.height.value, t.back.value);
+  const s = gull.state;
+  flyoverHold = { x: s.x, y: s.y, z: s.z, mode: s.mode, heading: s.heading };
+}
+
+/** After a setback (the Guard took it back, a spray), P flies the gull back to the row it was working on (M120). */
+function offerBack(tag?: string): void {
+  let row: { x: number; z: number; owner: string } | null = null;
+  for (const d of setup.quests) {
+    if (!d.collect) continue;
+    for (const od of d.objectives) {
+      if (!od.row) continue;
+      if ((tag && od.row.tag === tag) || (!tag && todo.scout.focus === `${d.id}:${od.id}`)) row = { x: od.row.reveal.x, z: od.row.reveal.z, owner: od.row.owner };
+    }
+  }
+  if (!row || Math.hypot(row.x - gull.state.x, row.z - gull.state.z) < 25) return; // already close: nothing to save
+  backOffer = { x: row.x, z: row.z, until: simTime + tuning.hints.backOfferSeconds.value };
+  hud.toast(`Press P to fly back to ${row.owner}.`, 3.5);
+}
+function takeBack(): void {
+  if (!backOffer || simTime > backOffer.until) return;
+  Object.assign(gull.state, { x: backOffer.x, y: Math.max(12, gull.state.y), z: backOffer.z + 8, vx: 0, vy: 0, vz: 0, mode: 'air', stunT: 0 });
+  backOffer = null;
+  runLog.add(simTime, 'flyBack');
+  audio.play('pop');
 }
 function watchersCatch(): void {
   if (!npcs || isGuest()) return;
@@ -2048,6 +2181,12 @@ function restartLevel(mode: 'normal' | 'speedrun'): void {
   chain.reset();
   nudge.poke();
   todo.ladder.reset();
+  compass.reset();
+  diveReview.reset();
+  backOffer = null;
+  coursesServed.length = 0;
+  flyover.skip();
+  flyoverHold = null;
   todo.scout.reset();
   rowTimes.reset();
   timetable = level.timetable?.length ? new Timetable(level.timetable, 17, level.ferryGap) : null;
@@ -2112,6 +2251,7 @@ function loadLevel(id: string): void {
   q.set('play', '');
   history.replaceState(null, '', `?${q.toString()}`);
   restartLevel('normal'); // gull, stats, timers, music; saves the new level
+  offerResume();
   if (isHost()) levelRev++;
   startPlaying();
 }
@@ -2190,6 +2330,7 @@ function checkLevelDone(): void {
     return;
   }
   levelCleared = true;
+  resumeStore.clear();
   save = { ...save, levels: { ...save.levels, [level.id]: mergeRecord(before, stars, seconds) } };
   if (isHost()) net!.sendEvent({ k: 'clear', level: level.id, stars, seconds }); // the guest keeps its own record too
   const n = stars.filter(Boolean).length;
@@ -2226,7 +2367,7 @@ function checkLevelDone(): void {
     levelComplete.show(summary, rows, notes, {
       heading: `${level.name.replace(/^\d+\.\s*/, '')} cleared!`,
       next: nextLevel ? { id: nextLevel.id, name: nextLevel.name } : undefined,
-      go: (target) => (target === 'menu' ? (levelComplete.hide(), levelSelect.show(levelRows())) : goToLevel(target)),
+      go: (target) => (target === 'report' ? copyReport() : target === 'menu' ? (levelComplete.hide(), levelSelect.show(levelRows())) : goToLevel(target)),
     });
   });
 }
@@ -2345,6 +2486,8 @@ function onDefense(evs: DefenseEvent[]): void {
           hud.toast('Slipped through!', 0.8);
           break;
         }
+        if (e.hit.kind === 'spray') runLog.add(simTime, 'setback:spray', e.gull);
+        if (e.hit.kind === 'spray' && e.gull === 0) offerBack();
         if (e.hit.kind === 'spray' && interaction.tugProgress(e.gull) !== null) {
           interaction.interruptTug(e.gull); // sprayed in the middle of a tug: you lose it
           hud.toast('Sprayed mid-tug! They keep it.', 1.6);
@@ -2439,6 +2582,7 @@ function notes(list: QuestNote[]): void {
       const rowDef = def.collect ? def.objectives.find((o) => o.id === n.objective) : undefined;
       if (rowDef?.row) {
         picnicRow(rowDef.row.tag);
+        saveResume();
         rowTimes.record(def.id, rowDef.id, `${rowDef.row.item} (${rowDef.row.owner})`, rowDef.row.course ?? 1, stats.summary().seconds);
       }
       const text = q.objectives.find((o) => o.id === n.objective)!.text;
@@ -2457,10 +2601,14 @@ function notes(list: QuestNote[]): void {
       // a course of a collection is served (M111): a cheer, and the world moves on (the ferry crowd, the Guard starts his rounds)
       const cname = def.collect?.courses?.[n.course - 1]?.name ?? `Course ${n.course}`;
       rowTimes.course(n.course, stats.summary().seconds);
-      hud.toast(`${cname} served!`, 2.6);
+      const nextC = def.collect?.courses?.[n.course];
+      hud.toast(nextC?.where ? `${cname} served! Next, ${nextC.name}: ${nextC.where}` : `${cname} served!`, nextC?.where ? 4.5 : 2.6);
       audio.play('chime');
       fx('confetti', { x: gull.state.x, y: gull.state.y + 1.2, z: gull.state.z }, 0.8);
+      if (!coursesServed.includes(n.course)) coursesServed.push(n.course);
+      startFlyover(def, n.course + 1);
       notes(quests.onEvent(`courseServed:${n.course}`));
+      saveResume();
     } else if (n.type === 'won') {
       audio.play('win');
       if (n.quest === 'picnicGong' && guests) {
@@ -2886,7 +3034,9 @@ function onGags(gags: GagEvent[]): void {
   }
 }
 
+timetable = level.timetable?.length ? new Timetable(level.timetable, 17, level.ferryGap) : null; // M120: the first level of a session had no ferries until a restart
 applyLevelRules(); // the first level's own rules (heat, lunch, current)
+offerResume();
 
 startLoop({
   update(dt) {
@@ -2933,6 +3083,7 @@ startLoop({
     if (input.wasPressed('KeyR')) {
       if (isGuest()) hud.toast('The host restarts the level.', 1.4);
       else {
+        resumeStore.clear(); // starting over: the saved run goes
         restartLevel('normal');
         if (isHost()) levelRev++;
       }
@@ -3002,6 +3153,7 @@ startLoop({
       if (isGuest()) net!.tap('KeyV'); // the host makes the noise
       else mimic(gull, cam.yaw);
     }
+    if (!blocked && input.wasPressed('KeyP') && !isGuest()) takeBack();
     if (!blocked && input.wasPressed('KeyG') && skills.has('flock') && abilities.use('flock')) {
       if (isGuest()) net!.tap('KeyG');
       else flockCall(gull, cam.yaw);
@@ -3017,8 +3169,17 @@ startLoop({
     // speedrun clock: starts on the first move
     if (runTimer.mode === 'speedrun' && !runTimer.running && !runTimer.finished && (input.axes().x !== 0 || input.axes().y !== 0 || input.isDown('Space'))) runTimer.begin();
     runTimer.tick(dt);
-    const scripted = outro.active;
-    if (scripted && ['Space', 'Enter', 'Escape', 'KeyE', 'KeyF', 'KeyQ'].some((k) => input.wasPressed(k))) {
+    if (flyover.active) {
+      if (['Space', 'Enter', 'Escape', 'KeyE', 'KeyF', 'KeyQ', 'ShiftLeft'].some((k) => input.wasPressed(k))) {
+        flyover.skip();
+        runLog.add(simTime, 'flyoverSkipped');
+      }
+      flyover.update(dt);
+      if (flyoverHold) Object.assign(gull.state, { ...flyoverHold, vx: 0, vy: 0, vz: 0 }); // the gull waits where it was
+      if (!flyover.active) flyoverHold = null;
+    }
+    const scripted = outro.active || flyover.active;
+    if (outro.active && ['Space', 'Enter', 'Escape', 'KeyE', 'KeyF', 'KeyQ'].some((k) => input.wasPressed(k))) {
       outro.skip();
       endOutro();
     }
@@ -3295,6 +3456,33 @@ startLoop({
     // quest spots, plus a marker on any item that was knocked out of the beak (so it can never be lost)
     const markers: Marker[] = greybox ? [] : activeMarkers(setup.quests, quests.quests, false, rungOf);
     const labelled = hudF.waypoints === 'all' ? markers : hudF.waypoints === 'active' ? activeMarkers(setup.quests, quests.quests, true, rungOf) : [];
+    // the row compass (M120): stuck for a while with rows still unfound, a marker points at the nearest one
+    const lost = greybox || levelCleared ? null : compass.update(frameDt, tuning.hints.compassAfter.value, setup.quests, quests.quests, todo.scout, gull.state);
+    // the waits line (M120): only for the waits a stage's to-dos depend on
+    {
+      const ferry = timetable && (level.reactions ?? []).some((r) => r.on === 'ferryIn') ? timetable.nextIn('ferry') : null;
+      const line = levelCleared ? '' : waitLine({ ferry, lunch: defense?.lunchIn() ?? null });
+      waitsEl.hidden = !line;
+      if (line && waitsEl.textContent !== line) waitsEl.textContent = line;
+    }
+    // near-miss feedback (M120): a dive at a held item that came away empty says why
+    {
+      const st = gull.state;
+      const miss = diveReview.step(st.mode === 'dive', !!interaction.carried, npcs && st.mode === 'dive' ? npcs.nearestHand(interaction.beakPos(st)) : null, tuning.npc.diveSnatchReach.value, tuning.npc.nearMissRange.value);
+      if (miss && !levelCleared) {
+        hud.toast(miss, 2.6);
+        runLog.add(simTime, miss.includes('body') ? 'nearMiss:body' : 'nearMiss');
+      }
+    }
+    const flyShot = flyover.shot();
+    if (flyShot) markers.push({ x: flyShot.spot.x, z: flyShot.spot.z, r: 5, label: '???' });
+    if (lost && !compassShown) runLog.add(simTime, 'compass');
+    compassShown = !!lost;
+    if (lost) {
+      const m: Marker = { x: lost.x, z: lost.z, r: 6, label: '??? Something here' };
+      markers.push(m);
+      if (hudF.waypoints === 'active') labelled.push(m);
+    }
     // a small timer on its own when the to-do note is hidden
     const timed = hudF.miniTimer ? quests.quests.find((q) => q.status === 'active' && q.timed) : undefined;
     miniTimer.hidden = !timed;
@@ -3340,7 +3528,10 @@ startLoop({
     poopReticle.update(poopHit, blocked);
     touchControls?.update(interaction.grabPrompt(s), !!interaction.carried, { V: skills.has('mimic'), G: skills.has('flock'), B: skills.has('disguise') }, (code) => abilities.fraction(code === 'KeyV' ? 'mimic' : code === 'KeyG' ? 'flock' : 'disguise'), players.length > 1 || setup.quests.some((q) => q.chain), { poop: !mech('poop'), toss: !mech('toss'), taunt: !mech('taunt') });
     hud.setInteraction(blocked ? 'Umbrella blocks it! Distract the Warden with a noise first (drop or throw a bottle)' : (!interaction.carried && switchNear(s) ? `E: ${({ yank: 'yank', summon: 'ring', domino: 'push', disguise: 'wear' } as Record<string, string>)[switchNear(s)!.effect] ?? 'peck'} the ${switchNear(s)!.label}` : '') || interaction.grabPrompt(s), poopReady);
-    if (outro.active && outro.plan) {
+    const fly = flyover.shot();
+    if (fly) {
+      cam.cinematic(fly.pos, fly.look, 1 - Math.exp(-3 * frameDt));
+    } else if (outro.active && outro.plan) {
       outroClock += frameDt;
       const t = tuning.outro;
       const c = outroCamera(gull.position, outro.plan.dir, outroClock, { distance: t.camDistance.value, height: t.camHeight.value, sway: t.camSway.value }, outro.plan.y);

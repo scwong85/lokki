@@ -36,6 +36,12 @@ export class Timetable {
     return (this.until.get(k) ?? 0) > this.clock;
   }
 
+  /** Seconds until this one next starts (0 while it is going on); null if the level has none. */
+  nextIn(k: TimetableKind): number | null {
+    if (!this.next.has(k)) return null;
+    return this.active(k) ? 0 : Math.max(0, this.next.get(k)! - this.clock);
+  }
+
   update(dt: number): TimetableEvent[] {
     this.clock += dt;
     const out: TimetableEvent[] = [];

@@ -46,8 +46,8 @@ export const HEIST_QUEST: QuestDef = {
     // one row of a course opens the next, so a row you cannot solve never locks the rest of the stage (M118)
     courses: [
       { name: 'Casing the joint', unlock: '' },
-      { name: 'The inside job', unlock: 'opens when one thing of the first course is lifted', need: 1 },
-      { name: 'The getaway', unlock: 'opens when one thing of the second course is lifted', need: 1 },
+      { name: 'The inside job', unlock: 'opens when one thing of the first course is lifted', need: 1, where: 'far west, and the vendor\'s corner right by the roof.' },
+      { name: 'The getaway', unlock: 'opens when one thing of the second course is lifted', need: 1, where: 'the vendor\'s corner again, and a queue far to the north-east.' },
     ],
   },
   objectives: [

@@ -108,3 +108,49 @@ export function rowLocked(def: QuestDef, q: QuestState, i: number): boolean {
 
 /** The highest course number a collection has. */
 export const courseCount = (def: QuestDef): number => def.objectives.reduce((m, od) => (od.row ? Math.max(m, courseOf(od)) : m), 1);
+
+/**
+ * The row compass (M120): after a long stretch with no progress (no row found, none served), point at the nearest open row the gull has not
+ * found yet, so a stage with rows spread over the whole square never leaves the player lost. Found rows get their marker from the hint ladder.
+ */
+export class RowCompass {
+  private idle = 0;
+  private sig = '';
+  /** The longest stretch without progress so far, and where the gull was at its end (the playtest report, M121). */
+  longest: { seconds: number; x: number; z: number } | null = null;
+
+  reset(): void {
+    this.idle = 0;
+    this.sig = '';
+    this.longest = null;
+  }
+
+  /** `after`: seconds without progress before it points. Returns the spot to point at, or null. */
+  update(dt: number, after: number, defs: readonly QuestDef[], quests: readonly QuestState[], scout: RowScout, gull: { x: number; z: number }): { x: number; z: number } | null {
+    let best: { x: number; z: number; d: number } | null = null;
+    let sig = '';
+    for (const d of defs) {
+      if (!d.collect) continue;
+      const q = quests.find((x) => x.id === d.id);
+      if (!q || q.status !== 'active') continue;
+      d.objectives.forEach((od, i) => {
+        if (!od.row) return;
+        const key = `${d.id}:${od.id}`;
+        const found = scout.sight(key) === 'known';
+        sig += q.objectives[i].done ? 'd' : found ? 'k' : '-';
+        if (q.objectives[i].done || found || rowLocked(d, q, i)) return;
+        const dist = Math.hypot(od.row.reveal.x - gull.x, od.row.reveal.z - gull.z);
+        if (!best || dist < best.d) best = { x: od.row.reveal.x, z: od.row.reveal.z, d: dist };
+      });
+    }
+    if (sig !== this.sig) {
+      this.sig = sig;
+      this.idle = 0;
+    }
+    this.idle += dt;
+    if (!this.longest || this.idle > this.longest.seconds) this.longest = { seconds: this.idle, x: gull.x, z: gull.z };
+    if (!best || this.idle < after) return null;
+    const b = best as { x: number; z: number };
+    return { x: b.x, z: b.z };
+  }
+}

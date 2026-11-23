@@ -35,7 +35,7 @@ export const WARDEN_QUEST: QuestDef = {
     marker: { x: PICNIC.x, z: PICNIC.z, r: 3.5, y: PICNIC.y, label: 'The spoils' },
     courses: [
       { name: 'Morning rounds', unlock: '' },
-      { name: 'Lunch break', unlock: 'opens when the morning rounds are ruined' },
+      { name: 'Lunch break', unlock: 'opens when the morning rounds are ruined', where: 'a table set for lunch, to the north.' },
     ],
   },
   objectives: [

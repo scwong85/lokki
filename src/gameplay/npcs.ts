@@ -952,6 +952,20 @@ export class NpcManager implements NpcHooks {
     return bumped;
   }
 
+  /** The closest held item a diving beak could take (M120 near-miss feedback): distance to the hand and whether the body blocks it. */
+  nearestHand(beak: { x: number; y: number; z: number }): { d: number; blocked: boolean } | null {
+    let best: { d: number; blocked: boolean } | null = null;
+    for (const n of this.npcs) {
+      if (n.holding === null) continue;
+      const prop = this.props.byId(n.holding);
+      if (!prop || prop.def.grab === 'ground') continue;
+      const h = handPos(n);
+      const d = Math.hypot(beak.x - h.x, beak.y - h.y, beak.z - h.z);
+      if (!best || d < best.d) best = { d, blocked: snatchState(n, beak, true) === 'blocked' };
+    }
+    return best;
+  }
+
   /** Prompt when the beak is close to an ice cream it cannot take: explains why. */
   blockedHint(beak: { x: number; y: number; z: number }): string | null {
     for (const n of this.npcs) {

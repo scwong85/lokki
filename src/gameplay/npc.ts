@@ -1,3 +1,4 @@
+import { reachScale, sightScale } from '../core/assist';
 import type { Ritual } from './ritual';
 import { lingerSeconds, standingSpot, type Poi, type Stance } from './routine';
 import { tuning } from '../core/tuning';
@@ -256,7 +257,7 @@ export function canSee(n: { x: number; z: number; y?: number; heading: number; m
   const dx = g.x - n.x, dz = g.z - n.z;
   const d2 = Math.hypot(dx, dz);
   const dy = g.y - 1.6 - (n.y ?? 0);
-  const range = t.sightRange.value * rangeScale * (n.mode === 'eat' ? t.eatSightFactor.value : 1) * (g.diving ? 1.3 : 1);
+  const range = t.sightRange.value * rangeScale * sightScale() * (n.mode === 'eat' ? t.eatSightFactor.value : 1) * (g.diving ? 1.3 : 1);
   if (g.disguise) return false;
   if (Math.hypot(d2, dy) > range) return false;
   if (g.hidden && d2 > 1.2) return false;
@@ -291,7 +292,7 @@ export function snatchState(n: Npc, beak: { x: number; y: number; z: number }, d
   const h = handPos(n);
   const d = Math.hypot(beak.x - h.x, beak.y - h.y, beak.z - h.z);
   // a diving gull reaches further, and only the core of the body is in its way (M119: dive snatches missed by a hair)
-  const reach = diving ? Math.max(tuning.npc.diveSnatchReach.value, tuning.npc.snatchReach.value) : tuning.npc.snatchReach.value;
+  const reach = (diving ? Math.max(tuning.npc.diveSnatchReach.value, tuning.npc.snatchReach.value) : tuning.npc.snatchReach.value) * reachScale();
   const bodyR = BODY_RADIUS * (diving ? tuning.npc.diveBodyBlock.value : 1);
   if (d > reach * 2.5) return 'far';
   // a vendor absorbed in scrubbing his sign leans over it: the plate is open from any side

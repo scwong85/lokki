@@ -41,7 +41,7 @@ export const BAD_AFTERNOON_QUEST: QuestDef = {
     marker: { x: PICNIC.x, z: PICNIC.z, r: 3.5, y: PICNIC.y, label: 'Tea' },
     courses: [
       { name: 'Sour grapes', unlock: '' },
-      { name: 'Good vibrations', unlock: 'opens when the sour grapes are served' },
+      { name: 'Good vibrations', unlock: 'opens when the sour grapes are served', where: 'a jukebox to the north-east, and a waiter to the north.' },
     ],
   },
   objectives: [

@@ -66,7 +66,7 @@ export class LevelComplete {
           ${row('Highest heat', Math.round(s.peakHeat))}
         </table>
         ${notes.map((n) => `<p class="lc-note">${n}</p>`).join('')}
-        ${nav ? `<div class="lc-next">${nav.next ? `<button class="big" data-go="${nav.next.id}">Next: ${nav.next.name} &rarr;</button>` : '<p class="lc-note">More levels are on the way!</p>'}<button data-go="menu">Level list</button></div>` : ''}
+        ${nav ? `<div class="lc-next">${nav.next ? `<button class="big" data-go="${nav.next.id}">Next: ${nav.next.name} &rarr;</button>` : '<p class="lc-note">More levels are on the way!</p>'}<button data-go="menu">Level list</button><button data-go="report" title="Copy a report of this run to paste back to the developer">Copy playtest report</button></div>` : ''}
         <p class="lc-keys">${nav?.next ? '<b>Enter</b>: next level &nbsp;·&nbsp; ' : ''}<b>Enter</b>: keep playing &nbsp;·&nbsp; <b>R</b>: play again · <b>X</b>: extra objectives · <b>Z</b>: speedrun</p>
         <p class="lc-tap">Tap to keep playing · ☰ for restart, extra objectives and speedrun</p>
       </div>`;

@@ -204,6 +204,18 @@ export const tuning = {
     nudgeAfter: p(25, 5, 120, 1), // seconds without progress before a step adds a cryptic line
     cueAfter: p(55, 10, 240, 1), // ... then its marker on the map
     hintAfter: p(90, 15, 360, 1), // ... then the full hint
+    backOfferSeconds: p(8, 2, 30, 1), // after a setback, how long P flies the gull back to the row (M120)
+    compassAfter: p(60, 10, 300, 5), // seconds without finding or serving a row before a marker points at the nearest row not found yet (M120)
+  },
+  flyover: {
+    perSpot: p(2.5, 0, 6, 0.1), // seconds the camera shows each place of a course that just opened (0 = no flyover) (M121)
+    height: p(22, 8, 60, 1),
+    back: p(20, 6, 60, 1),
+  },
+  assist: {
+    reach: p(1.4, 1, 3, 0.05), // relaxed play: snatch reach multiplier
+    sight: p(0.7, 0.3, 1, 0.05), // relaxed play: how far people see, multiplier
+    heat: p(0.6, 0.1, 1, 0.05), // relaxed play: heat gain multiplier
   },
   timetable: {
     ferryFirst: p(50, 10, 300, 5), // seconds until the first ferry comes in
@@ -260,6 +272,7 @@ export const tuning = {
     distractTime: p(2.5, 0.5, 8, 0.1),
     snatchReach: p(1.2, 0.5, 3, 0.1),
     diveSnatchReach: p(2.0, 0.5, 4, 0.1), // a diving beak takes it from further (M119: dive snatches were missing by a hair)
+    nearMissRange: p(4, 1, 8, 0.5), // a dive whose beak came this close to a held item, and missed, says why (M120)
     diveBodyBlock: p(0.55, 0, 1, 0.05), // how much of the body still blocks a diving beak (1 = all of it, as on foot)
     panicTime: p(1.8, 0.3, 6, 0.1),
     chaseTime: p(4, 1, 12, 0.5),
