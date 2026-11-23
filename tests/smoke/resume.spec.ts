@@ -24,7 +24,7 @@ test('resume (M121): rows and a served course survive a reload; the flyover show
   // the report
   const report = await ev<string>(page, 'return l.copyReport();');
   expect(report).toContain('1.1 First Light (a1s1)');
-  expect(report).toContain('rows 2/4');
+  expect(report).toContain('rows 2/5');
   expect(report).toContain('flyovers skipped 1');
   // reload: the offer, then Continue
   await page.reload();

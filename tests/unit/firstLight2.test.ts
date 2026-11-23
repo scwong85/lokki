@@ -10,7 +10,7 @@ import { courseCount, courseRows } from '../../src/gameplay/collection';
 import { pointInRings } from '../../src/world/collision';
 import { HALL } from '../../src/render/decor';
 import { introducedAt } from '../../src/gameplay/mechanics';
-import { BREAKFAST_QUEST, FIRST_LIGHT_V2, MESS_ZONE, DOCKHAND, BENCH, SELFIE, SLEEPER } from '../../src/data/levels/firstLight2';
+import { BREAKFAST_QUEST, FIRST_LIGHT_V2, MESS_ZONE, DOCKHAND, BENCH, SELFIE, SLEEPER, LOST_A, LOST_B, LOST } from '../../src/data/levels/firstLight2';
 import { HALL_AT } from '../../src/data/levels/picnic';
 
 const land = (x: number, z: number) => (cityJson as unknown as { land: { rings: number[][] }[] }).land.some((l) => pointInRings(l.rings, x, z));
@@ -27,11 +27,11 @@ describe('stage 1.1 First Light: Breakfast on the Roof (M114)', () => {
     expect(old.gate).toEqual({ arc: 1, stage: 1 });
   });
 
-  it('four rows in two courses of two, then the gong; the map is a side order; two gulls also pass the cone and pair up', () => {
-    expect(BREAKFAST_QUEST.objectives.map((o) => o.id)).toEqual(['cone', 'lunch', 'thermos', 'hat']);
+  it('five rows in two courses (2 and 3), then the gong; the map is a side order; two gulls also pass the cone and pair up', () => {
+    expect(BREAKFAST_QUEST.objectives.map((o) => o.id)).toEqual(['cone', 'lunch', 'thermos', 'hat', 'souvenir']);
     expect(courseCount(BREAKFAST_QUEST)).toBe(2);
     expect(courseRows(BREAKFAST_QUEST, 1).map((i) => BREAKFAST_QUEST.objectives[i].id)).toEqual(['cone', 'lunch']);
-    expect(courseRows(BREAKFAST_QUEST, 2).map((i) => BREAKFAST_QUEST.objectives[i].id)).toEqual(['thermos', 'hat']);
+    expect(courseRows(BREAKFAST_QUEST, 2).map((i) => BREAKFAST_QUEST.objectives[i].id)).toEqual(['thermos', 'hat', 'souvenir']);
     expect(setup.main).toEqual(['picnic', 'picnicGong']);
     expect([...setup.side]).toEqual(['map']);
     const duo = levelSetup(FIRST_LIGHT_V2, QUESTS, TRIGGERS, TOURIST_SPAWNS, true);
@@ -56,7 +56,7 @@ describe('stage 1.1 First Light: Breakfast on the Roof (M114)', () => {
       expect(land(p.x, p.z), `${p.type} at ${p.x},${p.z}`).toBe(true);
       expect(inHall(p.x, p.z), `${p.type} inside the hall`).toBe(false);
     }
-    for (const p of [DOCKHAND, BENCH, SELFIE, SLEEPER]) expect(land(p.x, p.z)).toBe(true);
+    for (const p of [DOCKHAND, BENCH, SELFIE, SLEEPER, LOST_A, LOST_B, LOST]) expect(land(p.x, p.z)).toBe(true);
     expect(land((MESS_ZONE.minX + MESS_ZONE.maxX) / 2, (MESS_ZONE.minZ + MESS_ZONE.maxZ) / 2)).toBe(true);
     expect(MESS_ZONE.maxX).toBeLessThan(DOCKHAND.x); // west of him: he faces it
   });
@@ -65,11 +65,13 @@ describe('stage 1.1 First Light: Breakfast on the Roof (M114)', () => {
     const log = new QuestLog(setup.quests);
     log.onEvent('picnic:hat');
     log.onEvent('picnic:thermos');
+    log.onEvent('picnic:souvenir');
     expect(log.quests.find((q) => q.id === 'picnic')!.objectives.filter((o) => o.done)).toHaveLength(0); // course 2 is closed
     log.onEvent('picnic:lunch');
     log.onEvent('picnic:cone');
     log.onEvent('picnic:hat');
     log.onEvent('picnic:thermos');
+    log.onEvent('picnic:souvenir');
     expect(log.quests.find((q) => q.id === 'picnic')!.status).toBe('won');
     expect(log.quests.find((q) => q.id === 'picnicGong')!.status).toBe('active');
   });

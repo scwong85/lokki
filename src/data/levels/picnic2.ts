@@ -45,6 +45,7 @@ export const KIOSK = at(-60, -64);
 export const DINER = at(-66, -60);
 export const FLOCK_HOME = at(-63, -66);
 export const GRANNY = at(-46, -26);
+export const PIE_MAN = at(42, -86);
 export const CLOCK_BUNS = [at(-30, -12), at(-28, -12.5), at(-32, -11.5)];
 export const TAKE_TO = at(-44, -40); // where the raid drops the item it carries off, about 38 m from the roof
 export const FERRY_BERTH = at(0, -8.5);
@@ -69,7 +70,7 @@ export const PICNIC_V2_QUEST: QuestDef = {
     courses: [
       { name: 'Starters', unlock: '' },
       { name: 'Main course', unlock: 'opens when the starters are served', where: 'the east quay, and the Guard\'s table south of the roof.' },
-      { name: 'Dessert', unlock: 'opens when the main course is served', where: 'a stall far to the east, and a kiosk to the north-west.' },
+      { name: 'Dessert', unlock: 'opens when the main course is served', where: 'a stall far to the east, a kiosk to the north-west, and a man with a pie far to the north.' },
     ],
   },
   objectives: [
@@ -127,8 +128,20 @@ export const PICNIC_V2_QUEST: QuestDef = {
       markers: [{ x: DINER.x, z: DINER.z + 2.5, r: 2, label: 'Behind him' }],
       recap: 'You honked, beat the pigeons to the cone and brought it home with a flock behind you',
     }),
+    row('pie', 'A slice of something', 'the Pie Man', PIE_MAN, 'something to finish with', 3, 'dessertPie', {
+      victim: 'pieman',
+      text: 'Take the Pie Man\'s pie',
+      outcome: 'Take the Pie Man\'s pie.',
+      nudge: 'He watches the sky with his pie tight to his chest. A fright makes anyone forget the pie.',
+      hint: 'He faces you and shields his pie, and a plain dive bounces off his body. Poop on him from above (F): he jumps and runs, and for a few seconds the pie is open. Take it (E) and carry it home: the Guard blows his whistle at it, as at the rest.',
+      markers: [{ ...PIE_MAN, r: 3, label: 'The Pie Man' }],
+      recap: 'You splatted him, the pie was open for a moment, and you flew it home past the Guard',
+    }),
   ],
 };
+
+/** The gong of this stage: seven things on the blanket (the shared one says six). */
+const GONG_V2: QuestDef = { ...GONG_QUEST, lockedText: 'Seven things on the blanket, and no pigeons on it, first.', objectives: GONG_QUEST.objectives.map((o) => ({ ...o, outcome: 'Ring the dinner gong. Table for seven.' })) };
 
 /** Secret: Granny dozes off on her bench (a ritual); her good scarf goes on the picnic. */
 export const SCARF_SECRET: QuestDef = {
@@ -178,6 +191,7 @@ const cast: NpcSpawn[] = [
   person({ x: BERRY_STALL.x + 4.4, z: BERRY_STALL.z, heading: -Math.PI / 2, role: 'berryE', name: 'Berry Seller', stationary: true, post: true, watch: 'punnet', color: 0x6fae6a, hat: 'sun', hatColor: 0xffd36e }),
   person({ x: KIOSK.x, z: KIOSK.z - 1.3, heading: Math.PI, role: 'cook', name: 'Cook', stationary: true, color: 0xffffff, hat: 'chef', hatColor: 0xffffff }),
   person({ ...DINER, heading: 0, role: 'diner', name: 'Nervous Diner', stationary: true, post: true, holds: 'vendace', holdTag: 'dinerCone', color: 0xc7b5e0 }),
+  person({ ...PIE_MAN, heading: 0, role: 'pieman', name: 'Pie Man', stationary: true, post: true, holds: 'pie', holdTag: 'dessertPie', look: 'm', color: 0xd9a05b, hat: 'chef', hatColor: 0xffffff }),
   person({ x: KIOSK.x - 0.5, z: KIOSK.z + 3, heading: 0, role: 'queuer', stationary: true, color: 0xffd36e }),
   person({ x: KIOSK.x + 0.6, z: KIOSK.z + 4.6, heading: 0, role: 'queuer', stationary: true, color: 0xb8e0c8 }),
   // secrets
@@ -189,7 +203,7 @@ const cast: NpcSpawn[] = [
 ];
 
 /** The Market Guard of this stage: arrives from the east end of his rounds when the starters are served, and guards every item on the menu. */
-export const GUARD: NpcSpawn = { ...MARKET_GUARD, x: 36, z: -10, patrol: GUARD_ROUNDS, confiscates: ['waiterCloth', 'rye', 'catch', 'thermos', 'punnet', 'dinerCone'] };
+export const GUARD: NpcSpawn = { ...MARKET_GUARD, x: 36, z: -10, patrol: GUARD_ROUNDS, confiscates: ['waiterCloth', 'rye', 'catch', 'thermos', 'punnet', 'dinerCone', 'dessertPie'] };
 
 /** The crowd that steps off the ferry when the starters are served, and the lunch rush when the main course is. */
 const FERRY_CROWD: NpcSpawn[] = Array.from({ length: 6 }, (_, i) => ({ x: FERRY_BERTH.x - 3 + i * 1.3, z: FERRY_BERTH.z, heading: 0, role: 'passenger', wander: 30, color: [0xf7a1c4, 0x9ec9f0, 0xffd36e, 0xb8e0c8, 0xc7b5e0, 0xf2a35e][i] }));
@@ -223,13 +237,13 @@ const served = (id: string, propType: PropSpawn['type'], tag: string) => ({ id: 
 
 export const GULL_PICNIC_V2 = stage(1, 2, {
   name: '1.2 The Gull Picnic',
-  blurb: 'Six things, six owners, three courses, one picnic on the roof. Poop, toss and honk.',
+  blurb: 'Seven things, seven owners, three courses, one picnic on the roof. Poop, toss and honk.',
   intro: { title: 'The Gull Picnic', text: 'Morning. Throw the flock a picnic on the market hall roof, in three courses. Everything on the menu belongs to somebody in the square: find out who has what (the note fills in as you go). New: poop (F), toss (Q), honk (tap T). Watch out for the Market Guard.' },
   quests: [],
-  extraQuests: [PICNIC_V2_QUEST, RAID_QUEST, GONG_QUEST, SIDE_FREAK, SIDE_HONK, SIDE_BOTTLE, SCARF_SECRET, BOOT_SECRET],
+  extraQuests: [PICNIC_V2_QUEST, RAID_QUEST, GONG_V2, SIDE_FREAK, SIDE_HONK, SIDE_BOTTLE, SCARF_SECRET, BOOT_SECRET],
   side: [SIDE_FREAK.id, SIDE_HONK.id, SIDE_BOTTLE.id],
   secret: [SCARF_SECRET.id, BOOT_SECRET.id],
-  picnic: { ...PICNIC, guests: 6, takeTo: TAKE_TO },
+  picnic: { ...PICNIC, guests: 7, takeTo: TAKE_TO },
   pigeonRace: { on: 'honkDrop:diner', tag: 'dinerCone', owner: 'diner', home: FLOCK_HOME, birds: 6 },
   triggers: [],
   extraTriggers: [
@@ -239,6 +253,7 @@ export const GULL_PICNIC_V2 = stage(1, 2, {
     served('thermos', 'thermos', 'thermos'),
     served('berries', 'berries', 'punnet'),
     served('vendace', 'vendace', 'dinerCone'),
+    served('pie', 'pie', 'dessertPie'),
     served('scarf', 'scarf', 'grannyScarf'),
     served('boot', 'boot', 'oldBoot'),
     // the boot the Fisherman pulls up, dropped back in the water by his float: a monster
@@ -295,6 +310,7 @@ export const GULL_PICNIC_V2 = stage(1, 2, {
     { on: 'pigeonsAteCone', say: 'The Cook pats the Diner on the shoulder and hands him another cone.', witness: { role: 'diner', r: 6, emote: 'facepalm' } },
     { on: 'pigeonsArrive', say: 'The pigeons land on the picnic. Uninvited guests!' },
     { on: 'raidTook', say: 'Somebody on the roof: "Caw." (the pigeons did not like being ignored)', witness: { x: PICNIC.x, z: PICNIC.z, r: 14, emote: 'laugh' } },
+    { on: 'picnic:pie', say: 'The Pie Man, far below, pats his pockets and looks at his empty hands: "...I had a pie. I HAD a pie."', witness: { role: 'pieman', r: 10, emote: 'facepalm' } },
     { on: 'picnic:vendace', say: 'The Cook pats the Nervous Diner on the shoulder. Up on the roof, a gull eats his lunch.', witness: { role: 'diner', r: 6, emote: 'facepalm' } },
     { on: 'raidShooed', say: 'The pigeons flap off, then come back to sit politely at the edge. Guests after all.' },
     { on: 'pigeonsFriends', say: 'The Pigeon Gang take the bun and sit politely at the edge. Guests after all.' },
@@ -304,7 +320,7 @@ export const GULL_PICNIC_V2 = stage(1, 2, {
     { on: 'picnic:boot', say: 'The guests take turns drinking from the boot. Very refined.', witness: { role: 'fisher', r: 10, emote: 'laugh' } },
     // the finale: every victim, wherever they are, looks up and shouts at once
     { on: 'picnicFeast', say: 'Dinner is served! The guests tuck in, and all over the square everybody who lost something looks up at once.', sound: 'horn' },
-    ...['waiter', 'baker', 'fisher', 'marketguard', 'berryW', 'berryE', 'diner'].map((role) => ({ on: 'picnicFeast', witness: { role, r: 8, emote: 'anger' as const } })),
+    ...['waiter', 'baker', 'fisher', 'marketguard', 'berryW', 'berryE', 'diner', 'pieman'].map((role) => ({ on: 'picnicFeast', witness: { role, r: 8, emote: 'anger' as const } })),
     { on: 'picnicFeast', say: 'Far away, everybody at once: "MY CLOTH!" "MY LOAF!" "MY HERRING!" "MY COFFEE!" "MY BERRIES!" "MY... why is it always me." Up on the roof: "Caw."' },
     // watchers who catch you
     { on: 'gotcha:baker', say: 'The Baker: "Shoo! Not my rye!"', sound: 'bonk' },
@@ -326,6 +342,6 @@ export const GULL_PICNIC_V2 = stage(1, 2, {
   strollers: 6,
   start: { x: -2, z: -26 },
   defense: false,
-  parTime: 540,
+  parTime: 600,
   reward: 'fatbird',
 });

@@ -4,13 +4,14 @@ import type { QuestDef } from '../quests';
 import type { NpcSpawn } from '../../gameplay/npc';
 import type { PropSpawn } from '../../gameplay/props';
 import { RUSH_HOUR, STRIKE, TABLECLOTH } from './mischief';
+import { DOMINO_RALLY } from './mischief2';
 import { THE_WARDEN_STAGE } from './arc1';
 import { at, crowd, homeDecor, gongSwitch, PICNIC, row, served } from './rowKit';
-import { shSpawns, shSwitches } from './relocate';
+import { sh, shSpawns, shSwitches } from './relocate';
 
 /**
  * Act 1, stage 5, version two: The Warden (M117; plan: docs/design/act1-v2.md), the end of the act. Boss day: the Warden walks his rounds
- * with his umbrella up (heat), and the flock sets out to ruin his day in three places, then waits for his lunch and settles it.
+ * with his umbrella up (heat), and the flock sets out to ruin his day in four places, then waits for his lunch and settles it.
  *
  *   Morning rounds  the Queue's cone      (poop the first in line; the panic spreads person to person)     north-east, 96 m
  *                   the Bowlers' cone     (a fast dive bowls the line over like skittles)                  far west, 100 m
@@ -20,22 +21,24 @@ import { shSpawns, shSwitches } from './relocate';
 const RUSH_S = { dx: 60, dz: -45 }; // the queue (-9..0,-11) -> (51..60,-56)
 const STRIKE_S = { dx: -80, dz: -55 }; // the bowlers (-26..-20,-14) -> (-106..-100,-69)
 const CLOTH_S = { dx: 0, dz: -62 }; // the diners' table (-6,-17) -> (-6,-79)
+const DOM_S = { dx: -52, dz: -62 }; // the domino rally: first tile (-14,-20) -> (-66,-82), the queue (-4.4..-0.5,-20) -> (-56.4..-52.5,-82)
 
 const QUEUE_AT = at(55, -56);
 const BOWLERS_AT = at(-103, -69);
 const CLOTH_AT = at(-6, -79);
+const DOM_AT = at(-54.5, -82);
 
 export const WARDEN_QUEST: QuestDef = {
   id: 'picnic',
   title: 'The Warden\'s Day',
-  teaser: 'Ruin the Warden\'s rounds three ways, then settle it at lunch.',
+  teaser: 'Ruin the Warden\'s rounds four ways, then settle it at lunch.',
   timed: false,
   collect: {
-    goal: 'Dusk, and the Warden is on his rounds, umbrella up. Make a mess he cannot stop in three corners of the square, and take the spoils to the roof. Then wait for his lunch.',
+    goal: 'Dusk, and the Warden is on his rounds, umbrella up. Make a mess he cannot stop in four corners of the square, and take the spoils to the roof. Then wait for his lunch.',
     marker: { x: PICNIC.x, z: PICNIC.z, r: 3.5, y: PICNIC.y, label: 'The spoils' },
     courses: [
       { name: 'Morning rounds', unlock: '' },
-      { name: 'Lunch break', unlock: 'opens when the morning rounds are ruined', where: 'a table set for lunch, to the north.' },
+      { name: 'Lunch break', unlock: 'opens when the morning rounds are ruined', where: 'a table set for lunch to the north, and a row of domino tiles to the north-west.' },
     ],
   },
   objectives: [
@@ -66,18 +69,28 @@ export const WARDEN_QUEST: QuestDef = {
       markers: [{ ...CLOTH_AT, r: 4, label: 'Tablecloth' }],
       recap: 'You yanked the tablecloth and took a bun',
     }),
+    row('domino', 'A cone off the floor', 'the Domino Queue', DOM_AT, 'something knocked down', 2, 'domCone', {
+      victim: 'queuer',
+      text: 'Take a cone from the Domino Queue',
+      outcome: 'Take a cone from the Domino Queue.',
+      nudge: 'One push, and a whole row goes over, if it is laid right.',
+      hint: 'A row of pink tiles runs from a first tile to the back of a queue, a long way from the roof. Land by the first tile and peck it (E): the tiles fall one after another into the queue, the queue falls over like skittles and drops its cones. Grab one and carry it home.',
+      markers: [{ ...sh(at(-14, -20), DOM_S), r: 3, label: 'First tile' }, { ...DOM_AT, r: 5, label: 'The queue' }],
+      recap: 'You pushed the first tile and the whole queue went down',
+    }),
   ],
 };
 
 const nemesis = (THE_WARDEN_STAGE.extraQuests ?? []).find((q) => q.id === 'nemesis') as QuestDef;
 /** The boss waits until the Warden's day is ruined. */
-export const WARDEN_BOSS: QuestDef = { ...nemesis, requires: ['picnic'], lockedText: 'Ruin his rounds in three places first.' };
+export const WARDEN_BOSS: QuestDef = { ...nemesis, requires: ['picnic'], lockedText: 'Ruin his rounds in four places first.' };
 
 const person = (sp: NpcSpawn): NpcSpawn => sp;
 const cast: NpcSpawn[] = [
   ...shSpawns(RUSH_HOUR.extraTourists, RUSH_S),
   ...shSpawns(STRIKE.extraTourists, STRIKE_S).map((t, i) => ({ ...t, x: -106 + i * 1.2 + 0, heading: Math.PI })),
   ...shSpawns(TABLECLOTH.extraTourists, CLOTH_S),
+  ...shSpawns(DOMINO_RALLY.extraTourists, DOM_S),
   person({ x: -70, z: -58, heading: 0.6, ice: true, color: 0x9ec9f0 }),
   person({ x: 30, z: -36, heading: -1.2, ice: true, color: 0xffd36e }),
 ];
@@ -101,19 +114,21 @@ const things: PropSpawn[] = [
 
 export const THE_WARDEN_DAY = stage(1, 5, {
   name: '1.5 The Warden',
-  blurb: 'Boss day: ruin the Warden\'s rounds three ways, then catch him at lunch.',
-  intro: { title: 'The Warden', text: 'Dusk. The Warden is on his rounds, umbrella up, and he sees everything he faces. Make a mess he cannot stop in three corners of the square, and take the spoils to the roof. Then wait for his lunch. New: panic that spreads, dives that bowl people over, the tablecloth yank.' },
+  blurb: 'Boss day: ruin the Warden\'s rounds four ways, then catch him at lunch.',
+  intro: { title: 'The Warden', text: 'Dusk. The Warden is on his rounds, umbrella up, and he sees everything he faces. Make a mess he cannot stop in four corners of the square, and take the spoils to the roof. Then wait for his lunch. New: panic that spreads, dives that bowl people over, the tablecloth yank.' },
   quests: [],
   extraQuests: [WARDEN_QUEST, WARDEN_BOSS],
   picnic: { ...PICNIC, guests: 4 },
   triggers: [],
-  extraTriggers: [served('rush', 'icecream', 'rushCone'), served('strike', 'icecream', 'strikeCone'), served('cloth', 'bun', 'clothBun')],
+  extraTriggers: [served('rush', 'icecream', 'rushCone'), served('strike', 'icecream', 'strikeCone'), served('cloth', 'bun', 'clothBun'), served('domino', 'icecream', 'domCone')],
   decor: homeDecor,
-  switches: [...shSwitches(TABLECLOTH.switches, CLOTH_S), gongSwitch('victory gong')],
+  switches: [...shSwitches(TABLECLOTH.switches, CLOTH_S), ...shSwitches(DOMINO_RALLY.switches, DOM_S), gongSwitch('victory gong')],
   reactions: [
     { on: 'spread:5', say: 'PANIC!', witness: { role: 'queuer', r: 14, emote: 'laugh' } },
     { on: 'grab:rushCone', say: 'The queue stops panicking, and notices one cone is missing.', witness: { role: 'queuer', r: 4, emote: 'laugh' } },
     { on: 'grab:strikeCone', say: 'Bowled over, and robbed.', witness: { role: 'bowler', r: 4, emote: 'facepalm' } },
+    { on: 'knockdown:3', say: 'DOMINO! The whole queue goes over.', witness: { role: 'queuer', r: 12, emote: 'alert' } },
+    { on: 'grab:domCone', say: 'Flat on the floor, and robbed.', witness: { role: 'queuer', r: 5, emote: 'facepalm' } },
     { on: 'courseServed:1', say: 'The morning rounds are ruined! The ferry horn sounds and a crowd comes ashore: the Warden has more to watch.', sound: 'horn', cast: FERRY_CROWD },
     { on: 'grab:wardenSandwich', hunt: true, say: 'The Warden: "My sandwich!"', sound: 'whistle', witness: { x: -20, z: -10, r: 14, emote: 'laugh' } },
     { on: 'poopWarden', say: 'The Warden, umbrella down, covered in gull: the whole square cheers.', witness: { x: -20, z: -10, r: 18, emote: 'laugh' } },
@@ -127,6 +142,6 @@ export const THE_WARDEN_DAY = stage(1, 5, {
   defense: true,
   deploy: ['warden'],
   wardenLunch: { at: 18, duration: 40, x: -20, z: -10, repeat: 100 },
-  parTime: 660,
+  parTime: 720,
   reward: 'quickpoop',
 });

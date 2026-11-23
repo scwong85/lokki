@@ -22,9 +22,9 @@ const inHall = (x: number, z: number) => Math.abs(x - HALL_AT.x) < HALL.hx + 1 &
 /** Rows in a vendor's corner (fixed in the city) or by the roof (the boss) are not spread out: they are the stake. */
 const fixed: Record<string, string[]> = { a1s3: ['bun', 'lunch'], a1s4: [], a1s5: [] };
 const stages = [
-  { id: 'a1s3', def: MARKET_DAY_HEIST, rows: 6, courses: [2, 2, 2] },
-  { id: 'a1s4', def: ONE_BAD_AFTERNOON, rows: 4, courses: [2, 2] },
-  { id: 'a1s5', def: THE_WARDEN_DAY, rows: 3, courses: [2, 1] },
+  { id: 'a1s3', def: MARKET_DAY_HEIST, rows: 7, courses: [2, 2, 3] },
+  { id: 'a1s4', def: ONE_BAD_AFTERNOON, rows: 5, courses: [2, 3] },
+  { id: 'a1s5', def: THE_WARDEN_DAY, rows: 4, courses: [2, 2] },
 ];
 
 describe('relocating an older level\'s cluster', () => {
@@ -132,7 +132,7 @@ describe('one row opens the next course (M118)', () => {
     expect(log.onEvent('picnic:lunch')).toContainEqual({ type: 'objective', quest: 'picnic', objective: 'lunch' });
     // the stage is still won only when every row is done
     expect(q().status).toBe('active');
-    for (const e of ['picnic:balloon', 'picnic:soup', 'picnic:queue']) log.onEvent(e);
+    for (const e of ['picnic:balloon', 'picnic:soup', 'picnic:queue', 'picnic:sausage']) log.onEvent(e);
     expect(q().status).toBe('won');
   });
   it('a course without "need" still wants every row (1.1 to 1.2, 1.4, 1.5)', () => {
