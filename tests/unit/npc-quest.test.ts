@@ -101,6 +101,16 @@ describe('tourist brain', () => {
     expect(snatchable(n, front)).toBe(false);
     expect(snatchState(n, { x: 0, y: 1.2, z: -2.6 }, true)).not.toBe('ok'); // far beyond the reach of any beak
   });
+  it('a splat makes a guarded holder panic, and in a panic the pie is open to a dive (the Pie Man, 1.2)', () => {
+    const n = tourist();
+    n.holding = 9;
+    run(n, ahead, 3); // he sees the gull and shields the pie
+    expect(guardState(n)).toBe('guarded');
+    startle(n, 'pooped');
+    expect(n.mode).toBe('panic');
+    expect(guardState(n)).toBe('open');
+    expect(n.holding).toBe(9); // still in his hand: it is the dive that takes it
+  });
   it('a vendor scrubbing his sign leaves the plate open from the gull side too', () => {
     const n = tourist();
     run(n, ahead, 3);

@@ -22,9 +22,9 @@ const inHall = (x: number, z: number) => Math.abs(x - HALL_AT.x) < HALL.hx + 1 &
 /** Rows in a vendor's corner (fixed in the city) or by the roof (the boss) are not spread out: they are the stake. */
 const fixed: Record<string, string[]> = { a1s3: ['bun', 'lunch'], a1s4: [], a1s5: [] };
 const stages = [
-  { id: 'a1s3', def: MARKET_DAY_HEIST, rows: 6, courses: [2, 2, 2] },
-  { id: 'a1s4', def: ONE_BAD_AFTERNOON, rows: 4, courses: [2, 2] },
-  { id: 'a1s5', def: THE_WARDEN_DAY, rows: 3, courses: [2, 1] },
+  { id: 'a1s3', def: MARKET_DAY_HEIST, rows: 7, courses: [2, 2, 3] },
+  { id: 'a1s4', def: ONE_BAD_AFTERNOON, rows: 5, courses: [2, 3] },
+  { id: 'a1s5', def: THE_WARDEN_DAY, rows: 4, courses: [2, 2] },
 ];
 
 describe('relocating an older level\'s cluster', () => {
@@ -106,6 +106,19 @@ describe('the held things carry the tags the rows ask for', () => {
   });
 });
 
+describe('the ice cream kiosk of stage 1.4 (M124)', () => {
+  it('stands behind the station spot, on land, with the cones on its counter', () => {
+    const kiosk = ONE_BAD_AFTERNOON.decor!.find((d) => d.kind === 'kiosk')!;
+    const st = ONE_BAD_AFTERNOON.stations![0];
+    expect(kiosk).toBeTruthy();
+    expect(land(kiosk.x, kiosk.z)).toBe(true);
+    expect(Math.hypot(kiosk.x - st.x, kiosk.z - (st.z + (st.goods?.dz ?? 0)))).toBeLessThan(0.1);
+    const cones = (ONE_BAD_AFTERNOON.extraProps ?? []).filter((p) => p.type === 'icecream' && Math.abs(p.z - kiosk.z) < 0.1);
+    expect(cones.length).toBe(2);
+    for (const c of cones) expect(Math.abs(c.x - kiosk.x)).toBeLessThan(1.6); // on the counter (it is 3.2 m wide)
+  });
+});
+
 describe('one row opens the next course (M118)', () => {
   it('in the heist, one row of a course opens the following one, and the course is "served" at that moment', () => {
     const setup = levelSetup(MARKET_DAY_HEIST, QUESTS, TRIGGERS, TOURIST_SPAWNS, false);
@@ -119,7 +132,7 @@ describe('one row opens the next course (M118)', () => {
     expect(log.onEvent('picnic:lunch')).toContainEqual({ type: 'objective', quest: 'picnic', objective: 'lunch' });
     // the stage is still won only when every row is done
     expect(q().status).toBe('active');
-    for (const e of ['picnic:balloon', 'picnic:soup', 'picnic:queue']) log.onEvent(e);
+    for (const e of ['picnic:balloon', 'picnic:soup', 'picnic:queue', 'picnic:sausage']) log.onEvent(e);
     expect(q().status).toBe('won');
   });
   it('a course without "need" still wants every row (1.1 to 1.2, 1.4, 1.5)', () => {

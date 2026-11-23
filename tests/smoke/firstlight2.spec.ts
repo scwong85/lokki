@@ -55,7 +55,7 @@ test('1.1 First Light, Breakfast on the Roof: four rows in two courses, the dock
 
   expect(await l((x) => x.gate)).toEqual({ arc: 1, stage: 1 });
   expect(await l((x) => x.quests.quests.map((q) => q.id))).toEqual(['picnic', 'picnicGong', 'map']);
-  await expect.poll(note, { timeout: 30_000 }).toContain('Breakfast on the Roof 0 / 4');
+  await expect.poll(note, { timeout: 30_000 }).toContain('Breakfast on the Roof 0 / 5');
   const text = await note();
   expect(text.toLowerCase()).toContain('early birds');
   expect(text).toContain('opens when the early birds are served');
@@ -88,8 +88,13 @@ test('1.1 First Light, Breakfast on the Roof: four rows in two courses, the dock
   await expect.poll(() => row('thermos'), { timeout: 60_000 }).toBe(true);
   await take('sunHat', { x: ROOF.x + (-1), y: ROOF.y + 0.6, z: ROOF.z + (-1) });
   await expect.poll(() => row('hat'), { timeout: 60_000 }).toBe(true);
-  expect(await l((x) => x.picnicGuests?.count)).toBe(4);
-  await expect.poll(note, { timeout: 20_000 }).toContain('4 / 4');
+  // the Lost Tourist paces his beat far to the north: a moving target, with the map in his hand
+  const lost0 = await npc('lost');
+  await expect.poll(() => npc('lost').then((n) => Math.hypot(n.x - lost0.x, n.z - lost0.z)), { timeout: 60_000, intervals: [500] }).toBeGreaterThan(3);
+  await take('lostMap', { x: ROOF.x + 1, y: ROOF.y + 0.6, z: ROOF.z + 1 });
+  await expect.poll(() => row('souvenir'), { timeout: 60_000 }).toBe(true);
+  expect(await l((x) => x.picnicGuests?.count)).toBe(5);
+  await expect.poll(note, { timeout: 20_000 }).toContain('5 / 5');
 
   // the gong
   await expect.poll(() => status('picnicGong'), { timeout: 20_000 }).toBe('active');

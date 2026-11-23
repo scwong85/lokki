@@ -264,6 +264,13 @@ describe('time per row (M111)', () => {
       'Coffee (the Market Guard): 5:05, +2:58',
     ]);
     expect(t.lines()).toHaveLength(4); // without course names: no headings
+    // rows done out of order are grouped under their course, once; a row done in the same second as the one before says its item was ready
+    const u = new RowTimes();
+    u.record('q', 'a', 'A', 1, 60);
+    u.record('q', 'b', 'B', 2, 100);
+    u.record('q', 'c', 'C', 1, 100);
+    u.course(1, 100);
+    expect(u.lines(['One', 'Two'])).toEqual(['Time per row (in the order you did them):', 'One (served at 1:40)', 'A: 1:00, +1:00', 'C: 1:40, +0:00 (its item was ready)', 'Two', 'B: 1:40, +0:40']);
     t.reset();
     expect(t.lines()).toEqual([]);
     expect(fmtClock(65.9)).toBe('1:05');

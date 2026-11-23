@@ -50,7 +50,7 @@ test('1.2 The Gull Picnic, version two: three courses, chained rows, the Guard, 
   await l((x) => { x.tuning.picnic.raidTakeAfter.value = 6; x.tuning.pigeonRace.raceSeconds.value = 10; return 0; });
 
   // the note: six rows hidden, three courses, the later two locked and saying what opens them
-  await expect.poll(note, { timeout: 30_000 }).toContain('The Gull Picnic 0 / 6');
+  await expect.poll(note, { timeout: 30_000 }).toContain('The Gull Picnic 0 / 7');
   const text = await note();
   expect(text.toLowerCase()).toContain('starters');
   expect(text).toContain('opens when the starters are served');
@@ -128,6 +128,19 @@ test('1.2 The Gull Picnic, version two: three courses, chained rows, the Guard, 
   await onRoof('punnet', 0, -1);
   await expect.poll(() => row('berries'), { timeout: 60_000 }).toBe(true);
 
+  // the Pie Man: a splat from above makes him forget his pie (the held item is taken as a snatch would)
+  await l((x) => {
+    const pie = x.interaction.props.props.find((q) => q.tag === 'dessertPie')!;
+    const n = (x.npcs.npcs as unknown as { holding: number | null }[]).find((m) => m.holding === pie.id);
+    if (n) n.holding = null;
+    (x.interaction.props as unknown as { drop(p: unknown, v: V3): void }).drop(pie, { x: 0, y: 0, z: 0 });
+    (pie as unknown as { byGull: boolean }).byGull = true;
+    pie.body.setTranslation({ x: -14 + 1, y: 4.8 + 0.6, z: -17 - 1 }, true); // (the roof blanket)
+    pie.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    return 0;
+  });
+  await expect.poll(() => row('pie'), { timeout: 60_000 }).toBe(true);
+
   // the Diner: a honk from behind drops the cone, the pigeons race for it, and we take it in time
   await gullTo({ x: -66, y: 0.5, z: -57.5 }, 'ground', 0);
   await page.waitForTimeout(1500);
@@ -161,7 +174,7 @@ test('1.2 The Gull Picnic, version two: three courses, chained rows, the Guard, 
   await onRoof('dinerCone', 0, 1.5);
   await expect.poll(() => row('vendace'), { timeout: 60_000 }).toBe(true);
   await expect.poll(() => status('picnic'), { timeout: 30_000 }).toBe('won');
-  expect(await l((x) => x.picnicGuests?.count)).toBeGreaterThanOrEqual(6);
+  expect(await l((x) => x.picnicGuests?.count)).toBeGreaterThanOrEqual(7);
 
   // see off the raid with a honk; ring the gong; the stage clears and the card says where the minutes went
   await gullTo({ x: BLANKET.x + 2, y: BLANKET.y + 0.6, z: BLANKET.z + 2 });

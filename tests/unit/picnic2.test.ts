@@ -163,13 +163,13 @@ describe('the Clean Freak side order (M112 fix)', () => {
 describe('taking a delivered row back (M112)', () => {
   it('QuestLog.undo un-ticks a done step and opens a won quest again; the trigger can fire again', () => {
     const log = new QuestLog(setup.quests);
-    for (const id of ['cloth', 'loaf', 'herring', 'thermos', 'berries', 'vendace']) log.onEvent(`picnic:${id}`);
+    for (const id of ['cloth', 'loaf', 'herring', 'thermos', 'berries', 'vendace', 'pie']) log.onEvent(`picnic:${id}`);
     expect(log.quests.find((q) => q.id === 'picnic')!.status).toBe('won');
     expect(log.undo('picnic', 'vendace')).toBe(true);
     const q = log.quests.find((x) => x.id === 'picnic')!;
     expect(q.status).toBe('active');
     expect(q.objectives.find((o) => o.id === 'vendace')!.done).toBe(false);
-    expect(q.objectives.filter((o) => o.done)).toHaveLength(5);
+    expect(q.objectives.filter((o) => o.done)).toHaveLength(6);
     expect(log.undo('picnic', 'vendace')).toBe(false); // nothing to undo now
     expect(log.undo('nope', 'x')).toBe(false);
     log.onEvent('picnic:vendace'); // delivered again
@@ -193,17 +193,17 @@ describe('stage 1.2, version two: the data (M112)', () => {
     expect(LEVELS.find((l) => l.id === 'gull-picnic-v1')?.arc).toBeUndefined();
   });
 
-  it('six rows in three courses of two, each with an owner, a tag, a wish and a ladder', () => {
-    expect(rows).toHaveLength(6);
+  it('seven rows in three courses (2, 2 and 3), each with an owner, a tag, a wish and a ladder', () => {
+    expect(rows).toHaveLength(7);
     expect(courseCount(PICNIC_V2_QUEST)).toBe(3);
-    for (const c of [1, 2, 3]) expect(courseRows(PICNIC_V2_QUEST, c)).toHaveLength(2);
-    expect(rows.map((o) => o.row!.course)).toEqual([1, 1, 2, 2, 3, 3]);
+    for (const [c, n] of [[1, 2], [2, 2], [3, 3]]) expect(courseRows(PICNIC_V2_QUEST, c)).toHaveLength(n);
+    expect(rows.map((o) => o.row!.course)).toEqual([1, 1, 2, 2, 3, 3, 3]);
     for (const o of rows) {
       expect(o.row!.tag, o.id).toBeTruthy();
       expect(o.nudge && o.hint && o.outcome, o.id).toBeTruthy();
       expect(o.markers?.length, o.id).toBeGreaterThan(0);
     }
-    expect(new Set(rows.map((o) => o.row!.tag)).size).toBe(6);
+    expect(new Set(rows.map((o) => o.row!.tag)).size).toBe(7);
     expect(PICNIC_V2_QUEST.collect!.courses!.map((c) => c.name)).toEqual(['Starters', 'Main course', 'Dessert']);
   });
 

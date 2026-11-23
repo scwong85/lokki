@@ -8,7 +8,7 @@ import { BLANKET, GONG_QUEST, HALL_AT, PICNIC, CAPTAIN, THERMOS } from './picnic
 
 /**
  * Act 1, stage 1, version two: First Light, "Breakfast on the Roof" (M114; plan: docs/design/act1-v2.md). The same idea as the picnic, lighter and
- * with only the first verbs (fly, dive-snatch, carry, drop, land, walk, escape): four rows in two courses, owners 55 to 110 m from the market hall roof.
+ * with only the first verbs (fly, dive-snatch, carry, drop, land, walk, escape): five rows in two courses, owners 55 to 110 m from the market hall roof.
  *
  *   Early birds     the Selfie Tourist's ice cream (wait for her 3-2-1, dive on the 1, outrun her)     east quay
  *                   the Dockhand's sandwich        (a bun from the far bench, dropped on his spotless quay)   west quay
@@ -28,6 +28,10 @@ export const MESS_ZONE = { minX: DOCKHAND.x - 9, maxX: DOCKHAND.x - 3, minZ: DOC
 export const BENCH = at(-96, -56);
 export const SLEEPER = at(84, -66);
 export const MAPPER = at(36, -24);
+/** The Lost Tourist paces this beat, far to the north with a map he cannot read (a moving target: the new fifth row). */
+export const LOST_A = at(-8, -86);
+export const LOST_B = at(28, -86);
+export const LOST = at(10, -86);
 const GANGWAY = at(0, -6.6);
 export const GONG = { x: PICNIC.x + 4.4, z: PICNIC.z - 2.4 };
 
@@ -42,14 +46,14 @@ const row = (id: string, item: string, owner: string, place: { x: number; z: num
 export const BREAKFAST_QUEST: QuestDef = {
   id: 'picnic',
   title: 'Breakfast on the Roof',
-  teaser: 'Fetch breakfast for the flock, from four people across the square.',
+  teaser: 'Fetch breakfast for the flock, from five people across the square.',
   timed: false,
   collect: {
     goal: 'Dawn: the flock is hungry. Bring breakfast to the market hall roof. Everything on the menu belongs to somebody, somewhere in the square.',
     marker: { x: PICNIC.x, z: PICNIC.z, r: 3.5, y: PICNIC.y, label: 'Breakfast' },
     courses: [
       { name: 'Early birds', unlock: '' },
-      { name: 'Second helping', unlock: 'opens when the early birds are served', where: 'the ferry berth by the roof, and a bench far to the north-east.' },
+      { name: 'Second helping', unlock: 'opens when the early birds are served', where: 'the ferry berth by the roof, a bench far to the north-east, and a lost tourist pacing far to the north.' },
     ],
   },
   objectives: [
@@ -89,14 +93,23 @@ export const BREAKFAST_QUEST: QuestDef = {
       markers: [{ ...SLEEPER, r: 3, label: 'The Sleeper' }],
       recap: 'You waited for the snore and took his hat',
     }),
+    row('souvenir', 'A map', 'the Lost Tourist', LOST, 'something to find the way', 2, 'lostMap', {
+      victim: 'lost',
+      text: 'Take the Lost Tourist\'s map',
+      outcome: 'Take the Lost Tourist\'s map.',
+      nudge: 'He is lost, and he never stands still.',
+      hint: 'He paces up and down far to the north with his map held out. Dive at it as he comes (aim a little ahead of him), then keep the map and stay far from everyone: he chases you. Carry it home.',
+      markers: [{ ...LOST, r: 12, label: 'The Lost Tourist' }],
+      recap: 'You dived at a moving target, outran the owner and brought the map home',
+    }),
   ],
 };
 
-/** The breakfast gong: ring it when the four things are on the blanket (no pigeons yet: they come in 1.2). */
+/** The breakfast gong: ring it when the five things are on the blanket (no pigeons yet: they come in 1.2). */
 export const BREAKFAST_GONG: QuestDef = {
   ...GONG_QUEST,
   title: 'Breakfast is served',
-  lockedText: 'Four things on the blanket first.',
+  lockedText: 'Five things on the blanket first.',
   requires: ['picnic'],
   objectives: GONG_QUEST.objectives.map((o) => ({ ...o, outcome: 'Ring the breakfast gong.', markers: [{ ...GONG, r: 1.6, y: PICNIC.y, label: 'Gong' }] })),
 };
@@ -107,6 +120,7 @@ const cast: NpcSpawn[] = [
   person({ ...DOCKHAND, heading: Math.PI / 2, holds: 'bun', holdTag: 'dockLunch', role: 'dockhand', stationary: true, hat: 'cap', hatColor: 0x2a5ea8, color: 0x5b8fd6 }),
   person({ ...CAPTAIN, heading: Math.PI, role: 'captain', name: 'Captain', stationary: true, post: true, watch: 'thermos', color: 0x2a5ea8, hat: 'cap', hatColor: 0xffffff }),
   person({ ...SLEEPER, heading: -Math.PI / 2, role: 'sleeper', name: 'Sleeper', stationary: true, post: true, holds: 'cap', holdTag: 'sunHat', ritual: { every: 30, hold: 7, icon: '💤', phase: 10 }, color: 0xf2c06b }),
+  person({ ...LOST_A, heading: -Math.PI / 2, holds: 'map', holdTag: 'lostMap', role: 'lost', name: 'Lost Tourist', patrol: [LOST_B, LOST_A], look: 'm', color: 0xe9b44c }),
   // the map tourist of the side order, and two ice-cream tourists near the roof (for two gulls to snatch at once)
   person({ ...MAPPER, heading: 2.2, holds: 'map', look: 'm', color: 0xf7a1c4 }),
   person({ x: -30, z: -28, heading: 0.6, ice: true, color: 0x7fd1ae }),
@@ -138,18 +152,19 @@ const MAP_SIDE: QuestDef = card(
 export const FIRST_LIGHT_V2 = stage(1, 1, {
   timetable: ['ferry'],
   name: '1.1 First Light',
-  blurb: 'Dawn: four people across the square have breakfast for the flock. Fly, dive, carry.',
-  intro: { title: 'First Light', text: 'Dawn on the Market Square, and the flock is hungry. Bring breakfast to the market hall roof: four things, four owners, spread across the square (the note fills in as you go). Fly with Space, dive with Shift, grab with E.' },
+  blurb: 'Dawn: five people across the square have breakfast for the flock. Fly, dive, carry.',
+  intro: { title: 'First Light', text: 'Dawn on the Market Square, and the flock is hungry. Bring breakfast to the market hall roof: five things, five owners, spread across the square (the note fills in as you go). Fly with Space, dive with Shift, grab with E.' },
   quests: [],
   triggers: ['mapInSea'],
   extraQuests: [BREAKFAST_QUEST, BREAKFAST_GONG, MAP_SIDE],
   side: [MAP_SIDE.id],
-  picnic: { ...PICNIC, guests: 4 },
+  picnic: { ...PICNIC, guests: 5 },
   extraTriggers: [
     served('cone', 'icecream', 'selfieCone'),
     served('lunch', 'bun', 'dockLunch'),
     served('thermos', 'thermos', 'thermos'),
     served('hat', 'cap', 'sunHat'),
+    served('souvenir', 'map', 'lostMap'),
     { id: 'bunAtDock', kind: 'propInZone', event: 'bunAtDock', propType: 'bun', tag: 'benchBun', zone: MESS_ZONE, always: true },
   ],
   decor: [
@@ -169,8 +184,10 @@ export const FIRST_LIGHT_V2 = stage(1, 1, {
     { on: 'picnic:thermos', say: 'The Captain, to nobody: "Who drinks a captain\'s coffee?"', witness: { role: 'captain', r: 6, emote: 'facepalm' } },
     { on: 'ritual:sleeper', nth: 1, say: 'The Sleeper nods off on his bench, his sun hat tipped over his eyes.' },
     { on: 'picnic:hat', say: 'The Sleeper wakes: "...where is my hat? Is that it? On the ROOF?"', witness: { role: 'sleeper', r: 10, emote: 'point' } },
+    { on: 'robbed', witness: { role: 'lost', r: 14, emote: 'anger' } },
+    { on: 'picnic:souvenir', say: 'The Lost Tourist, still pacing, turns his hands over: "...where did the map go? And where am I?"', witness: { role: 'lost', r: 12, emote: 'question' } },
     { on: 'picnicFeast', say: 'Breakfast is served! The flock tucks in, and all over the square everybody who lost something looks up at once.', sound: 'horn' },
-    ...['selfie', 'dockhand', 'captain', 'sleeper'].map((role) => ({ on: 'picnicFeast', witness: { role, r: 8, emote: 'anger' as const } })),
+    ...['selfie', 'dockhand', 'captain', 'sleeper', 'lost'].map((role) => ({ on: 'picnicFeast', witness: { role, r: 8, emote: 'anger' as const } })),
     { on: 'mapInSea', witness: { x: 0, z: -6, r: 14, emote: 'point' }, say: 'The wind took it. Or was it a gull?' },
     { on: 'wrongFerry', sound: 'horn', witness: { x: 0, z: -6, r: 16, emote: 'laugh' } },
     { on: 'gotcha:selfie', say: 'The Selfie Tourist: "Not my cone!"', sound: 'bonk' },
@@ -185,6 +202,6 @@ export const FIRST_LIGHT_V2 = stage(1, 1, {
   strollers: 6,
   start: { x: -2, z: -26 },
   defense: false,
-  parTime: 540,
+  parTime: 480,
   reward: 'flight',
 });

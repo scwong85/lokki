@@ -14,6 +14,7 @@ type Lk = {
   npcs: { npcs: Npc[]; onSnatched(id: number): void; stations: { x: number; z: number }[] };
   picnicGuests: { count: number } | null;
   peckNow(): boolean;
+  honkNow(): void;
 };
 const L = (page: Page) => <T, A = undefined>(fn: (l: Lk, a: A) => T, arg?: A) =>
   page.evaluate(([src, a]) => new Function('l', 'a', `return (${src})(l, a)`)((window as unknown as { __lokki: Lk }).__lokki, a), [fn.toString(), arg] as [string, unknown]) as Promise<Awaited<T>>;
@@ -50,9 +51,9 @@ test('1.3 Market Day Heist: six rows in three courses, the city on guard, the bu
   test.setTimeout(900_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  const { l, status, row, toRoof, gullTo, note, guests } = await open(page, 'a1s3');
+  const { l, status, row, toRoof, gullTo, npc, note, guests } = await open(page, 'a1s3');
   expect(await l((x) => x.gate)).toEqual({ arc: 1, stage: 3 });
-  await expect.poll(note, { timeout: 30_000 }).toContain('Market Day Heist 0 / 6');
+  await expect.poll(note, { timeout: 30_000 }).toContain('Market Day Heist 0 / 7');
   const text = await note();
   expect(text.toLowerCase()).toContain('casing the joint');
   expect(text).toContain('opens when one thing of the first course is lifted');
@@ -84,8 +85,16 @@ test('1.3 Market Day Heist: six rows in three courses, the city on guard, the bu
   await expect.poll(() => row('soup'), { timeout: 60_000 }).toBe(true);
   await toRoof('btnCone', 0, 1.5);
   await expect.poll(() => row('queue'), { timeout: 60_000 }).toBe(true);
-  expect(await guests()).toBe(6);
-  await expect.poll(note, { timeout: 20_000 }).toContain('6 / 6');
+  // the Watchman: the fire alarm on its post brings him over to look; his sausage lies by his post
+  const w0 = await npc('watchman');
+  await gullTo({ x: -47, y: 0.5, z: -63 });
+  await page.waitForTimeout(600);
+  expect(await l((x) => x.peckNow())).toBe(true);
+  await expect.poll(() => npc('watchman').then((n) => Math.hypot(n.x - w0.x, n.z - w0.z)), { timeout: 120_000, intervals: [500] }).toBeGreaterThan(3);
+  await toRoof('watchSausage', 0, -1.5);
+  await expect.poll(() => row('sausage'), { timeout: 60_000 }).toBe(true);
+  expect(await guests()).toBe(7);
+  await expect.poll(note, { timeout: 20_000 }).toContain('7 / 7');
   await expect.poll(() => status('picnicGong'), { timeout: 20_000 }).toBe('active');
   await gullTo({ x: ROOF.x + 4.4, y: ROOF.y + 0.6, z: ROOF.z - 1.2 });
   await page.waitForTimeout(500);
@@ -100,7 +109,7 @@ test('1.4 One Bad Afternoon: the lure and the stall, the jukebox, the bell, four
   page.on('pageerror', (e) => errors.push(e.message));
   const { l, status, row, toRoof, gullTo, npc, note, guests } = await open(page, 'a1s4');
   expect(await l((x) => x.gate)).toEqual({ arc: 1, stage: 4 });
-  await expect.poll(note, { timeout: 30_000 }).toContain('One Bad Afternoon 0 / 4');
+  await expect.poll(note, { timeout: 30_000 }).toContain('One Bad Afternoon 0 / 5');
   expect((await note()).toLowerCase()).toContain('sour grapes');
 
   // the Lost Tourist: robbed he is angry; at the stall (moved far away) he buys a cone, and that cone is the row's
@@ -131,7 +140,14 @@ test('1.4 One Bad Afternoon: the lure and the stall, the jukebox, the bell, four
   await expect.poll(() => row('dancer'), { timeout: 60_000 }).toBe(true);
   await toRoof('bellBun', 1, -1);
   await expect.poll(() => row('waiter'), { timeout: 60_000 }).toBe(true);
-  expect(await guests()).toBe(4);
+  // the bush far to the north-west: hide in it, honk BOO, and the peekers drop their cones
+  await gullTo({ x: -66, y: 0.6, z: -86 });
+  await page.waitForTimeout(1500);
+  await l((x) => { x.honkNow(); return 0; });
+  await expect.poll(() => l((x) => x.npcs.npcs.filter((n) => n.role === 'peeker' && n.holding === null).length), { timeout: 60_000, intervals: [300] }).toBeGreaterThan(0);
+  await toRoof('booCone', 0, 1.5);
+  await expect.poll(() => row('peek'), { timeout: 60_000 }).toBe(true);
+  expect(await guests()).toBe(5);
   await expect.poll(() => status('picnicGong'), { timeout: 20_000 }).toBe('active');
   await gullTo({ x: ROOF.x + 4.4, y: ROOF.y + 0.6, z: ROOF.z - 1.2 });
   await page.waitForTimeout(500);
@@ -146,7 +162,7 @@ test('1.5 The Warden: three rows, then the boss', async ({ page }) => {
   page.on('pageerror', (e) => errors.push(e.message));
   const { l, status, row, toRoof, gullTo, note } = await open(page, 'a1s5');
   expect(await l((x) => x.gate)).toEqual({ arc: 1, stage: 5 });
-  await expect.poll(note, { timeout: 30_000 }).toContain('The Warden\'s Day 0 / 3');
+  await expect.poll(note, { timeout: 30_000 }).toContain('The Warden\'s Day 0 / 4');
   expect(await status('nemesis')).not.toBe('won');
   await toRoof('rushCone', -1, 1);
   await expect.poll(() => row('rush'), { timeout: 60_000 }).toBe(true);
@@ -159,6 +175,13 @@ test('1.5 The Warden: three rows, then the boss', async ({ page }) => {
   await expect.poll(() => l((x) => x.interaction.props.props.some((q) => q.tag === 'clothBun')), { timeout: 30_000 }).toBe(true);
   await toRoof('clothBun', 0, -1.5);
   await expect.poll(() => row('cloth'), { timeout: 60_000 }).toBe(true);
+  // the domino rally, moved far north-west: peck the first tile and the queue goes over, dropping its cones
+  await gullTo({ x: -66, y: 0.5, z: -80.4 });
+  await page.waitForTimeout(600);
+  expect(await l((x) => x.peckNow())).toBe(true);
+  await expect.poll(() => l((x) => x.npcs.npcs.filter((n) => n.role === 'queuer' && n.x < -40 && n.holding === null).length), { timeout: 120_000, intervals: [500] }).toBeGreaterThan(0);
+  await toRoof('domCone', 0, 1.5);
+  await expect.poll(() => row('domino'), { timeout: 60_000 }).toBe(true);
   await expect.poll(() => status('picnic'), { timeout: 20_000 }).toBe('won');
   // the boss chain opens: the Warden's lunch
   await expect.poll(() => status('nemesis'), { timeout: 20_000 }).toBe('active');

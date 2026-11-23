@@ -5,14 +5,14 @@ import type { NpcSpawn } from '../../gameplay/npc';
 import type { PropSpawn } from '../../gameplay/props';
 import { MAP_AND_CONE, ICE_STALL } from './mapAndCone';
 import { stallGoods } from './chains';
-import { WET_FLOOR, JUKEBOX_HERO, SERVICE_BELL } from './mischief';
+import { WET_FLOOR, JUKEBOX_HERO, SERVICE_BELL, PEEKABOO } from './mischief';
 import { MOOD_SWINGS } from './arc1';
 import { at, crowd, gongQuest, gongSwitch, homeDecor, PICNIC, row, served } from './rowKit';
-import { sh, shSpawns, shStations, shSwitches, shSplat } from './relocate';
+import { sh, shHides, shSpawns, shStations, shSwitches, shSplat } from './relocate';
 
 /**
  * Act 1, stage 4, version two: One Bad Afternoon (M116; plan: docs/design/act1-v2.md). Everybody has a mood now, and a mood can be used: four
- * people in four corners of the square, in two courses, each one's afternoon ruined in a different way, for the flock's tea on the roof.
+ * people in five corners of the square, in two courses, each one's afternoon ruined in a different way, for the flock's tea on the roof.
  *
  *   Sour grapes       the Mapper's cone      (take his map; he chases; taunt him to the stall; he buys comfort food)  west, 100 m
  *                     the Inspector's lunch  (splat his route; he slips; his lunch flies)                              far east, 100 m
@@ -23,25 +23,28 @@ const MAP_S = { dx: -130, dz: -50 }; // the Mapper (20,-14) -> (-110,-64)
 const STALL_S = { dx: -60, dz: -55 }; // the ice cream stall (-8,-27) -> (-68,-82)
 const INSP_S = { dx: 70, dz: -40 }; // the inspector's beat (6..26,-20) -> (76..96,-60)
 const JUKE_S = { dx: 40, dz: -60 }; // the jukebox (-6,-18) -> (34,-78)
-const BELL_S = { dx: 6, dz: -52 }; // waiter (-24,-20) -> (-18,-72), bell (-6,-20) -> (0,-72)
+const BELL_S = { dx: 6, dz: -52 };
+const PEEK_S = { dx: -58, dz: -70 }; // the Peekaboo bush (-8,-16) -> (-66,-86): the fifth row // waiter (-24,-20) -> (-18,-72), bell (-6,-20) -> (0,-72)
 
 const MAPPER = sh(at(20, -14), MAP_S);
 const INSPECTOR = sh(at(16, -20), INSP_S);
 const DANCERS = sh(at(-6, -18), JUKE_S);
 const WAITER = sh(at(-24, -20), BELL_S);
+const PEEKERS_AT = sh(at(-8, -14), PEEK_S);
+const HIDE = shHides(PEEKABOO.hides, PEEK_S)[0];
 const STALL = shStations([{ ...ICE_STALL, sells: 'icecream' as const, tagBought: 'moodCone' }], STALL_S);
 
 export const BAD_AFTERNOON_QUEST: QuestDef = {
   id: 'picnic',
   title: 'One Bad Afternoon',
-  teaser: 'Ruin four afternoons, four ways, for the flock\'s tea.',
+  teaser: 'Ruin five afternoons, five ways, for the flock\'s tea.',
   timed: false,
   collect: {
-    goal: 'Afternoon. Everybody has a mood now, and a mood can be used. Four people in four corners of the square are about to have a bad afternoon, and the flock wants tea on the roof. Hold T to lure anyone who is angry.',
+    goal: 'Afternoon. Everybody has a mood now, and a mood can be used. Four people in five corners of the square are about to have a bad afternoon, and the flock wants tea on the roof. Hold T to lure anyone who is angry.',
     marker: { x: PICNIC.x, z: PICNIC.z, r: 3.5, y: PICNIC.y, label: 'Tea' },
     courses: [
       { name: 'Sour grapes', unlock: '' },
-      { name: 'Good vibrations', unlock: 'opens when the sour grapes are served', where: 'a jukebox to the north-east, and a waiter to the north.' },
+      { name: 'Good vibrations', unlock: 'opens when the sour grapes are served', where: 'a jukebox to the north-east, a waiter to the north, and a bush far to the north-west.' },
     ],
   },
   objectives: [
@@ -81,10 +84,19 @@ export const BAD_AFTERNOON_QUEST: QuestDef = {
       markers: [{ x: WAITER.x + 18, z: WAITER.z, r: 3, label: 'Service bell' }, { ...WAITER, r: 3, label: 'Waiter' }],
       recap: 'You rang the bell and took the bun while he came running',
     }),
+    row('peek', 'A cone from the bush', 'the Peekers', PEEKERS_AT, 'something dropped in fright', 2, 'booCone', {
+      victim: 'peeker',
+      text: 'Take a cone from the Peekers',
+      outcome: 'Take a cone from the Peekers.',
+      nudge: 'Nobody sees a gull in a bush. Nobody expects a honk from one.',
+      hint: 'Walk into the green bush and stay still: they cannot see you. When they stand close, tap T (BOO). They jump and drop their cones: grab one (E) and carry it home.',
+      markers: [{ ...HIDE, r: 3, label: 'The bush' }],
+      recap: 'You hid in the bush, honked BOO and took a dropped cone',
+    }),
   ],
 };
 
-export const BAD_AFTERNOON_GONG = gongQuest('Tea is served', 'Four things on the blanket first.', 'Ring the gong. Tea is served.');
+export const BAD_AFTERNOON_GONG = gongQuest('Tea is served', 'Five things on the blanket first.', 'Ring the gong. Tea is served.');
 
 const person = (sp: NpcSpawn): NpcSpawn => sp;
 const cast: NpcSpawn[] = [
@@ -94,6 +106,7 @@ const cast: NpcSpawn[] = [
   // people with nothing to do who drift to any music
   ...[at(-4, -6), at(8, -4), at(-12, -2)].map((p, i) => person({ ...sh(p, { dx: DANCERS.x + 6, dz: DANCERS.z + 16 }), heading: i, role: 'partygoer', color: [0xc7b5e0, 0xf2a35e, 0x9fd18f][i] })),
   ...shSpawns(SERVICE_BELL.extraTourists, BELL_S),
+  ...shSpawns(PEEKABOO.extraTourists, PEEK_S),
   // somebody to be angry at: two ice-cream tourists near the stall
   person({ x: -90, z: -76, heading: 0.6, ice: true, color: 0x7fd1ae }),
   person({ x: -50, z: -88, heading: -1.2, ice: true, color: 0xffc971 }),
@@ -114,15 +127,17 @@ const things: PropSpawn[] = [
 
 export const ONE_BAD_AFTERNOON = stage(1, 4, {
   name: '1.4 One Bad Afternoon',
-  blurb: 'Four people, four moods, four ways to spoil an afternoon: lure, slip, dance and ring.',
-  intro: { title: 'One Bad Afternoon', text: 'Afternoon. Everybody has a mood now, and a mood can be used. Four people in four corners of the square are about to have a bad afternoon. New: hold T to lure an angry person, wet floors, the jukebox and the service bell.' },
+  blurb: 'Five people, five ways to spoil an afternoon: lure, slip, dance, ring and hide.',
+  intro: { title: 'One Bad Afternoon', text: 'Afternoon. Everybody has a mood now, and a mood can be used. Four people in five corners of the square are about to have a bad afternoon. New: hold T to lure an angry person, wet floors, the jukebox and the service bell. (The bush from the last stage helps too.)' },
   quests: [],
   extraQuests: [BAD_AFTERNOON_QUEST, BAD_AFTERNOON_GONG],
-  picnic: { ...PICNIC, guests: 4 },
+  picnic: { ...PICNIC, guests: 5 },
   triggers: [],
-  extraTriggers: [served('mapper', 'icecream', 'moodCone'), served('inspector', 'bun', 'inspLunch'), served('dancer', 'icecream', 'danceCone'), served('waiter', 'bun', 'bellBun')],
+  extraTriggers: [served('mapper', 'icecream', 'moodCone'), served('inspector', 'bun', 'inspLunch'), served('dancer', 'icecream', 'danceCone'), served('waiter', 'bun', 'bellBun'), served('peek', 'icecream', 'booCone')],
   splatZones: shSplat(WET_FLOOR.splatZones, INSP_S),
-  decor: homeDecor,
+  // the ice cream kiosk the angry tourist is led to: its counter stands 3 m behind the station spot, where the goods lie (the stalls of the old level came with the city)
+  decor: [...homeDecor, { kind: 'kiosk' as const, x: STALL[0].x, z: STALL[0].z + (STALL[0].goods?.dz ?? 0) }],
+  hides: [HIDE],
   stations: STALL,
   switches: [...shSwitches(JUKEBOX_HERO.switches, JUKE_S), ...shSwitches(SERVICE_BELL.switches, BELL_S), gongSwitch('tea gong')],
   reactions: [
@@ -136,8 +151,10 @@ export const ONE_BAD_AFTERNOON = stage(1, 4, {
     { on: 'grab:danceCone', say: 'Still dancing. Still no ice cream.', witness: { role: 'dancer', r: 5, emote: 'laugh' } },
     { on: 'pecked:bell', say: 'The Waiter: "Coming, coming!" (he leaves his tray)', witness: { role: 'waiter', r: 10, emote: 'alert' } },
     { on: 'grab:bellBun', say: 'The Waiter arrives at the bell. Nobody is there. The bun is gone.', witness: { role: 'waiter', r: 12, emote: 'question' } },
-    { on: 'picnicFeast', say: 'Tea is served! The flock tucks in, and all over the square four people with a very bad afternoon look up at once.', sound: 'horn' },
-    ...['mapper', 'inspector', 'dancer', 'waiter'].map((role) => ({ on: 'picnicFeast', witness: { role, r: 8, emote: 'anger' as const } })),
+    { on: 'boo:peeker', say: 'The Peekers: "AAH! The BUSH honked!"', witness: { role: 'peeker', r: 8, emote: 'alert' } },
+    { on: 'grab:booCone', say: 'The bush has an ice cream now.', witness: { role: 'peeker', r: 5, emote: 'anger' } },
+    { on: 'picnicFeast', say: 'Tea is served! The flock tucks in, and all over the square five people with a very bad afternoon look up at once.', sound: 'horn' },
+    ...['mapper', 'inspector', 'dancer', 'waiter', 'peeker'].map((role) => ({ on: 'picnicFeast', witness: { role, r: 8, emote: 'anger' as const } })),
   ],
   coopRequired: MOOD_SWINGS.coopRequired,
   tourists: [],
@@ -146,6 +163,6 @@ export const ONE_BAD_AFTERNOON = stage(1, 4, {
   strollers: 6,
   start: { x: -2, z: -26 },
   defense: false,
-  parTime: 600,
+  parTime: 660,
   reward: 'mimic',
 });
