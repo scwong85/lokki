@@ -47,6 +47,8 @@ export class QuestLog {
   quests: QuestState[] = [];
   /** Switches that unlock quests outside the normal chain ('replay' after the first clear). */
   private flags = new Set<string>();
+  /** Every event seen so far, for steps that `latch` (they count even if they happened before the step opened). */
+  private seen = new Set<string>();
 
   constructor(private defs: readonly QuestDef[]) {
     this.reset();
@@ -93,6 +95,7 @@ export class QuestLog {
   }
 
   reset(): void {
+    this.seen.clear();
     this.quests = this.defs.map((d) => this.fresh(d));
   }
 
@@ -185,8 +188,31 @@ export class QuestLog {
   /** Called for every quest event before it is handled (the world's reactions hang here). */
   hook: ((type: QuestEventType) => void) | null = null;
 
+  /** Complete any open `latch` step whose event already happened; repeat, because one step opening can open the next. */
+  private catchUp(notes: QuestNote[]): void {
+    for (let again = true; again;) {
+      again = false;
+      for (const q of this.quests) {
+        if (q.status !== 'active') continue;
+        const d = this.def(q.id);
+        d.objectives.forEach((od, i) => {
+          const o = q.objectives[i];
+          if (o.done || !od.latch || od.kind !== 'event') return;
+          if (!(od.event && this.seen.has(od.event)) && !od.events?.some((e) => this.seen.has(e))) return;
+          if (od.after && !q.objectives.find((x) => x.id === od.after)?.done) return;
+          if (rowLocked(d, q, i)) return;
+          o.done = true;
+          again = true;
+          notes.push({ type: 'objective', quest: q.id, objective: o.id });
+        });
+        this.finishCheck(q, notes);
+      }
+    }
+  }
+
   onEvent(type: QuestEventType): QuestNote[] {
     this.hook?.(type);
+    this.seen.add(type);
     const notes: QuestNote[] = [];
     for (const q of this.quests) {
       const d = this.def(q.id);
@@ -211,6 +237,7 @@ export class QuestLog {
       });
       this.finishCheck(q, notes);
     }
+    this.catchUp(notes);
     return notes;
   }
 

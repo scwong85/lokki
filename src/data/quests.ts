@@ -28,6 +28,11 @@ export interface ObjectiveDef {
   count?: number;
   /** Only counts once this objective is done. */
   after?: string;
+  /**
+   * Remembered: if this event already happened before the step opened (the quest was still locked, or an earlier step was open), the step
+   * completes the moment it opens and the chain moves on (M125: the Warden's lunch and sandwich).
+   */
+  latch?: boolean;
   /** Short tip shown under the first unfinished objective. */
   hint?: string;
   /**
