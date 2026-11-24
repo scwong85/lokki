@@ -253,6 +253,8 @@ Each milestone ends with: a playable hosted/local build, a `docs/milestones/Mx.m
 - [ ] M118 Playtest fixes: Bottle Service, courses that open early, a softer 1.3 (built on `m118-playtest-fixes`, merged)
 - [ ] M115 to M117 Act 1 on the new formula: 1.3 Market Day Heist, 1.4 One Bad Afternoon, 1.5 The Warden, old chains moved across the map (built on `m115-act1-v2`)
 - [ ] M114 Stage 1.1 First Light, version two: Breakfast on the Roof, four rows in two courses (built on `m114-first-light-v2`)
+- [ ] M126 Latch steps: items taken before a to-do opens still count (built on `m126-latch-steps`)
+- [ ] M125 Plan: Polyfork research draft (`docs/design/polyfork.md`, site unreadable so far)
 - [ ] M113 The level list: the Playground (old levels) behind one button (built on `m113-level-list`)
 
 ### M0 — Foundations (S)
